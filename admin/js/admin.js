@@ -198,25 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (error) throw error;
             
-            // Xabarni to'g'ridan-to'g'ri jo'natamiz (Realtime muammosini aylanib o'tish uchun)
-            const app = allApplications.find(a => a.id === id);
-            if (app && app.telegram_chat_id) {
-                let msg = '';
-                if (newStatus === 'approved') {
-                    msg = `🎉 Tabriklaymiz, <b>${app.first_name}</b>!\n\nSizning zayavkangiz qabul qilindi! 25-iyul kuni boshlanadigan 1-turimizda kutib qolamiz ⚽️🏆`;
-                } else if (newStatus === 'rejected') {
-                    msg = `Hurmatli <b>${app.first_name}</b>,\n\nAfsuski, sizning zayavkangiz rad etildi. Boshqa mavsumlarda kutib qolamiz.`;
-                }
-                
-                if (msg) {
-                    fetch(`https://api.telegram.org/bot8920990708:AAEhrRtX06AEDhJyKNx_CSLWYMNSYviEYHc/sendMessage`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chat_id: app.telegram_chat_id, text: msg, parse_mode: 'HTML' })
-                    }).catch(console.error);
-                }
-            }
-
             detailsModal.classList.add('hidden');
             fetchData(); 
             
