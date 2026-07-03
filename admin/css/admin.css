@@ -480,6 +480,19 @@ body {
 }
 .btn-reject:hover { background: #dc2626; transform: translateY(-2px); }
 
+.action-buttons .btn-delete {
+    background: #f8fafc;
+    color: #ef4444;
+    border: 1px solid #fca5a5;
+    box-shadow: none;
+}
+.action-buttons .btn-delete:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #ef4444;
+    transform: translateY(-2px);
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 900px) {
     .details-grid {
