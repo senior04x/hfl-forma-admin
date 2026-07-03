@@ -88,10 +88,13 @@
 
             <!-- Passport -->
             <div class="form-group">
-                <label class="form-label" for="passportInput">
+                <label class="form-label">
                     <i data-lucide="credit-card" class="label-icon"></i> Pasport seriya va raqami
                 </label>
-                <input type="text" id="passportInput" class="form-control" placeholder="AA 1234567" maxlength="10" required>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="passportSeries" class="form-control" placeholder="AA" maxlength="2" style="width: 80px; text-transform: uppercase;" autocomplete="off" required>
+                    <input type="tel" id="passportNumber" class="form-control" placeholder="1234567" maxlength="7" pattern="[0-9]*" inputmode="numeric" style="flex: 1;" autocomplete="off" required>
+                </div>
             </div>
 
             <!-- Phone -->

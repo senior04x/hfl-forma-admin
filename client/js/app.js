@@ -6,7 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const photoPreview = document.getElementById('photoPreview');
     const photoPlaceholder = document.getElementById('photoPlaceholder');
     const phoneInput = document.getElementById('phone');
-    const passportInput = document.getElementById('passportInput');
+    const passportSeries = document.getElementById('passportSeries');
+    const passportNumber = document.getElementById('passportNumber');
     const submitBtn = document.getElementById('submitBtn');
     const btnText = submitBtn.querySelector('.btn-text');
     const loader = submitBtn.querySelector('.loader');
@@ -24,23 +25,25 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.value = !x[2] ? x[1] : x[1] + ' ' + x[2] + (x[3] ? ' ' + x[3] : '') + (x[4] ? ' ' + x[4] : '');
     });
 
-    // --- Passport Input Validation ---
-    passportInput.addEventListener('input', function(e) {
-        let val = e.target.value.toUpperCase().replace(/\s/g, '');
-        let formatted = '';
-        for (let i = 0; i < val.length; i++) {
-            if (i < 2) {
-                if (/[A-Z]/.test(val[i])) formatted += val[i];
-            } else if (i < 9) {
-                if (/[0-9]/.test(val[i])) {
-                    if (formatted.length === 2) {
-                        formatted += ' ';
-                    }
-                    formatted += val[i];
-                }
-            }
+    // --- Passport Input Validation & Auto-Focus ---
+    passportSeries.addEventListener('input', function(e) {
+        let val = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+        e.target.value = val;
+        
+        // Auto-focus to number input when 2 letters are typed
+        if (val.length === 2) {
+            passportNumber.focus();
         }
-        e.target.value = formatted;
+    });
+
+    passportNumber.addEventListener('input', function(e) {
+        let val = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = val;
+        
+        // Backspace auto-focus back to series if empty
+        if (val.length === 0 && e.inputType === 'deleteContentBackward') {
+            passportSeries.focus();
+        }
     });
 
     // --- Photo Upload Handling ---
@@ -99,9 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const fullPhone = '+998' + phoneVal;
 
-        const cleanPassport = passportInput.value.replace(/\s/g, '');
-        if (cleanPassport.length !== 9) {
-            alert('Pasport seriyasi yoki raqami noto\'g\'ri kiritildi.');
+        const seriesVal = passportSeries.value.toUpperCase();
+        const numberVal = passportNumber.value;
+        if (seriesVal.length !== 2 || numberVal.length !== 7) {
+            alert('Pasport seriyasi yoki raqami to\'liq kiritilmadi.');
             return;
         }
 
@@ -134,8 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 first_name: document.getElementById('firstName').value.trim(),
                 last_name: document.getElementById('lastName').value.trim(),
                 father_name: document.getElementById('fatherName').value.trim(),
-                passport_series: cleanPassport.slice(0, 2),
-                passport_number: cleanPassport.slice(2),
+                passport_series: seriesVal,
+                passport_number: numberVal,
                 phone: fullPhone,
                 comment: document.getElementById('comment').value.trim(),
                 status: 'pending'
