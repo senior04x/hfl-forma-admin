@@ -263,7 +263,7 @@ body {
 .status-approved { background: #d1fae5; color: #059669; }
 .status-rejected { background: #fee2e2; color: #dc2626; }
 
-.btn-view {
+.btn-view, .btn-delete {
     padding: 8px 16px;
     background: var(--bg-main);
     color: var(--text-dark);
@@ -273,11 +273,18 @@ body {
     font-size: 13px;
     font-weight: 500;
     transition: all 0.2s;
+    margin-left: 5px;
 }
 
 .btn-view:hover {
     background: var(--bg-sidebar);
     color: white;
+}
+
+.btn-delete:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
 }
 
 /* Pagination */

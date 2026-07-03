@@ -99,6 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-view" onclick="viewDetails('${app.id}')">
                         <i data-lucide="eye" style="width: 16px; height: 16px; vertical-align: text-bottom; margin-right: 5px;"></i> <span class="btn-text">Ko'rish</span>
                     </button>
+                    <button class="btn-delete" onclick="deleteApplication('${app.id}')" title="O'chirish">
+                        <i data-lucide="trash-2" style="width: 16px; height: 16px; vertical-align: text-bottom;"></i>
+                    </button>
                 </td>
             `;
             tableBody.appendChild(tr);
@@ -146,6 +149,42 @@ document.addEventListener('DOMContentLoaded', () => {
     closeModalBtn.addEventListener('click', () => {
         detailsModal.classList.add('hidden');
     });
+
+    window.deleteApplication = async function(id) {
+        if (confirm("Rostdan ham ushbu zayavkani to'liq o'chirib tashlamoqchimisiz? Bu amalni orqaga qaytarib bo'lmaydi!")) {
+            try {
+                // Find app to get photo url
+                const app = allApplications.find(a => a.id === id);
+                
+                // Delete from applications table
+                const { error } = await db
+                    .from('applications')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                // Delete photo from storage if exists
+                if (app && app.photo_url) {
+                    const fileName = app.photo_url.split('/').pop();
+                    if (fileName) {
+                        await db.storage.from('player-photos').remove([fileName]);
+                    }
+                }
+
+                alert("Zayavka muvaffaqiyatli o'chirildi!");
+                
+                // Refresh list
+                allApplications = allApplications.filter(a => a.id !== id);
+                renderTable();
+                updateStats();
+
+            } catch (error) {
+                console.error("O'chirishda xatolik:", error);
+                alert("O'chirishda xatolik yuz berdi: " + error.message);
+            }
+        }
+    }
 
     async function updateStatus(id, newStatus) {
         try {
