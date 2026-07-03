@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailComment = document.getElementById('detailComment');
     const approveBtn = document.getElementById('approveBtn');
     const rejectBtn = document.getElementById('rejectBtn');
+    const modalDeleteBtn = document.getElementById('modalDeleteBtn');
 
     // State
     let allApplications = [];
@@ -100,9 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-view" onclick="viewDetails('${app.id}')" title="Ko'rish">
                         <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
                     </button>
-                    <button class="btn-delete" onclick="deleteApplication('${app.id}')" title="O'chirish">
-                        <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
-                    </button>
                 </td>
             `;
             tableBody.appendChild(tr);
@@ -177,6 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Refresh list
                 allApplications = allApplications.filter(a => a.id !== id);
+                detailsModal.classList.add('hidden');
                 renderTable();
                 updateStats();
 
@@ -185,6 +184,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("O'chirishda xatolik yuz berdi: " + error.message);
             }
         }
+    }
+
+    if (modalDeleteBtn) {
+        modalDeleteBtn.addEventListener('click', () => {
+            if (currentApplicationId) {
+                deleteApplication(currentApplicationId);
+            }
+        });
     }
 
     async function updateStatus(id, newStatus) {
