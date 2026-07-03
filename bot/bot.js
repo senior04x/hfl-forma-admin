@@ -6,11 +6,24 @@ const TELEGRAM_TOKEN = '8920990708:AAEhrRtX06AEDhJyKNx_CSLWYMNSYviEYHc';
 const SUPABASE_URL = 'https://xzzyhfyazwohdqqbjiiy.supabase.co';
 const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6enloZnlhendvaGRxcWJqaWl5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MzEwMzU1MSwiZXhwIjoyMDk4Njc5NTUxfQ.Z_qdzR5mYepOEyW57WXl9fb1v5FV4xEYDP-LvihiU6I';
 
-// Initialize
+// Initialize Telegram Bot & Supabase
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-console.log('Bot is running...');
+// Render Web Service requires binding to a PORT
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.send('HFL Bot is running...');
+});
+
+app.listen(PORT, () => {
+    console.log(`Web server listening on port ${PORT}`);
+});
+
+console.log('Telegram Bot is running...');
 
 // 1. Deep Link Handler
 bot.onText(/\/start (.+)/, async (msg, match) => {
