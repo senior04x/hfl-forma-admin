@@ -83,9 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const statusClass = `status-${app.status}`;
             let statusText = app.status;
-            if (app.status === 'pending') statusText = 'Kutilmoqda';
-            if (app.status === 'approved') statusText = 'Tasdiqlandi';
-            if (app.status === 'rejected') statusText = 'Rad etildi';
+            let statusIcon = 'circle-dashed';
+            if (app.status === 'pending') { statusText = 'Kutilmoqda'; statusIcon = 'clock'; }
+            if (app.status === 'approved') { statusText = 'Tasdiqlandi'; statusIcon = 'check-circle'; }
+            if (app.status === 'rejected') { statusText = 'Rad etildi'; statusIcon = 'x-circle'; }
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -94,13 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="hide-mobile"><span style="font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">${app.passport_series}${app.passport_number}</span></td>
                 <td class="hide-mobile">${app.phone}</td>
                 <td style="color: #64748b; font-size: 13px;">${date}</td>
-                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                <td>
-                    <button class="btn-view" onclick="viewDetails('${app.id}')">
-                        <i data-lucide="eye" style="width: 16px; height: 16px; vertical-align: text-bottom; margin-right: 5px;"></i> <span class="btn-text">Ko'rish</span>
+                <td style="text-align: center;"><span class="status-icon-badge ${statusClass}" title="${statusText}"><i data-lucide="${statusIcon}" style="width: 18px; height: 18px;"></i></span></td>
+                <td style="text-align: right;">
+                    <button class="btn-view" onclick="viewDetails('${app.id}')" title="Ko'rish">
+                        <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
                     </button>
                     <button class="btn-delete" onclick="deleteApplication('${app.id}')" title="O'chirish">
-                        <i data-lucide="trash-2" style="width: 16px; height: 16px; vertical-align: text-bottom;"></i>
+                        <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
                     </button>
                 </td>
             `;

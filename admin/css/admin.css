@@ -259,12 +259,21 @@ body {
     font-weight: 600;
 }
 
+.status-icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+}
+
 .status-pending { background: #fef3c7; color: #d97706; }
 .status-approved { background: #d1fae5; color: #059669; }
 .status-rejected { background: #fee2e2; color: #dc2626; }
 
 .btn-view, .btn-delete {
-    padding: 8px 16px;
+    padding: 8px 10px;
     background: var(--bg-main);
     color: var(--text-dark);
     border: 1px solid var(--border-color);
