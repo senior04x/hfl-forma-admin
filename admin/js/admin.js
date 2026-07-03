@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="hide-mobile">${app.phone}</td>
                 <td style="color: #64748b; font-size: 13px;">${date}</td>
                 <td style="text-align: center;"><span class="status-icon-badge ${statusClass}" title="${statusText}"><i data-lucide="${statusIcon}" style="width: 18px; height: 18px;"></i></span></td>
-                <td style="text-align: right;">
+                <td style="text-align: right; white-space: nowrap;">
                     <button class="btn-view" onclick="viewDetails('${app.id}')" title="Ko'rish">
                         <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
                     </button>
