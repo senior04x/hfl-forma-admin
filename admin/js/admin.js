@@ -77,10 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         filteredData.forEach(app => {
-            const date = new Date(app.created_at).toLocaleDateString('uz-UZ', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit'
-            });
+            const dateObj = new Date(app.created_at);
+            const dateStr = dateObj.toLocaleDateString('uz-UZ', { year: 'numeric', month: '2-digit', day: '2-digit' });
+            const timeStr = dateObj.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
 
             const statusClass = `status-${app.status}`;
             let statusText = app.status;
@@ -95,7 +94,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td style="font-weight: 500; font-size: 13px;">${app.first_name} ${app.last_name}</td>
                 <td class="hide-mobile"><span style="font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">${app.passport_series}${app.passport_number}</span></td>
                 <td class="hide-mobile">${app.phone}</td>
-                <td style="color: #64748b; font-size: 13px; white-space: nowrap;">${date}</td>
+                <td style="color: #64748b; font-size: 12px; text-align: center;">
+                    <div style="white-space: nowrap;">${dateStr}</div>
+                    <div style="font-size: 11px; opacity: 0.7; margin-top: 2px;">${timeStr}</div>
+                </td>
                 <td style="text-align: center;"><span class="status-icon-badge ${statusClass}" title="${statusText}"><i data-lucide="${statusIcon}" style="width: 18px; height: 18px;"></i></span></td>
                 <td style="text-align: center; white-space: nowrap;">
                     <button class="btn-view" onclick="viewDetails('${app.id}')" title="Ko'rish">
