@@ -544,7 +544,9 @@ body {
     }
 
     .table-container {
-        overflow-x: hidden;
+        overflow-x: auto; /* Let it scroll if it really has to, better than hiding */
+        margin: 0 -15px; /* Pull out to edges of screen to give more room */
+        padding: 0 10px;
     }
 
     .data-table {
@@ -552,7 +554,23 @@ body {
     }
     
     .data-table th, .data-table td {
-        padding: 12px 10px;
+        padding: 8px 4px;
+        font-size: 12px;
+    }
+    
+    .data-table th {
+        font-size: 10px;
+        letter-spacing: 0.5px;
+    }
+    
+    .player-avatar {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .status-icon-badge {
+        width: 22px;
+        height: 22px;
     }
 
     .hide-mobile {
