@@ -757,6 +757,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editPlayerComment').value = app.comment || '';
         document.getElementById('editPlayerPhoto').value = '';
         
+        const teamSelect = document.getElementById('editPlayerTeam');
+        teamSelect.innerHTML = '<option value="">Yakkaxon (Jamoasiz)</option>';
+        if (allTeams && allTeams.length > 0) {
+            allTeams.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.name;
+                teamSelect.appendChild(opt);
+            });
+        }
+        teamSelect.value = app.team_id || '';
+        
         editPlayerModal.style.zIndex = '10000';
         editPlayerModal.classList.remove('hidden');
     }
@@ -779,9 +791,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const position = document.getElementById('editPlayerPosition').value.trim();
             const player_number = document.getElementById('editPlayerNumber').value.trim();
             const comment = document.getElementById('editPlayerComment').value.trim();
+            const team_id = document.getElementById('editPlayerTeam').value || null;
             const photoFile = document.getElementById('editPlayerPhoto').files[0];
             
-            let updates = { first_name, last_name, father_name, passport_series, passport_number, phone, birth_date, position, player_number, comment };
+            let updates = { first_name, last_name, father_name, passport_series, passport_number, phone, birth_date, position, player_number, comment, team_id };
 
             if (photoFile) {
                 const compressed = await compressImage(photoFile);
