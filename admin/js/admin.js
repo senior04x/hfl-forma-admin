@@ -294,6 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
             individualsTableContainer.classList.remove('hidden');
             teamsTableContainer.classList.add('hidden');
             renderTable();
+            updateStats();
         });
 
         tabTeams.addEventListener('click', () => {
@@ -311,6 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
             teamsTableContainer.classList.remove('hidden');
             individualsTableContainer.classList.add('hidden');
             renderTeamsTable();
+            updateStats();
         });
     }
 
