@@ -236,15 +236,15 @@
             
             <form id="playerForm">
                 <!-- Photo Upload -->
-                <div class="form-group">
-                    <label class="form-label">O'yinchi rasmi (3x4)</label>
-                    <div class="photo-upload" id="playerPhotoDropzone" style="min-height: 150px;">
+                <div class="form-group" style="margin-bottom: 30px;">
+                    <label class="form-label">O'yinchi rasmi (1x1 format)</label>
+                    <div class="photo-upload" id="playerPhotoDropzone" style="min-height: 150px; display: flex; align-items: center; justify-content: center;">
                         <input type="file" id="playerPhotoInput" accept="image/*" hidden>
                         <div id="playerPhotoPlaceholder">
                             <i data-lucide="camera" style="width: 32px; height: 32px; color: var(--primary); margin-bottom: 10px;"></i>
                             <p style="font-size: 12px;">Rasm yuklash</p>
                         </div>
-                        <img id="playerPhotoPreview" class="hidden" alt="Rasm" style="width: 100px; height: 120px; border-radius: 8px; object-fit: cover;">
+                        <img id="playerPhotoPreview" class="hidden" alt="Rasm" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover;">
                     </div>
                 </div>
 
