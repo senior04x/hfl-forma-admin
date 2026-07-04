@@ -464,13 +464,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 let teamsToProcess = [];
-                let includeIndividuals = false;
 
                 if (selectedOption === 'all') {
                     teamsToProcess = allTeams;
-                    includeIndividuals = true;
-                } else if (selectedOption === 'individuals_only') {
-                    includeIndividuals = true;
                 } else {
                     const t = allTeams.find(t => t.id === selectedOption);
                     if (t) teamsToProcess.push(t);
@@ -591,14 +587,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let team of teamsToProcess) {
                     const teamPlayers = allApplications.filter(a => a.team_id === team.id);
                     await drawPlayerTable(teamPlayers, `Jamoa: ${team.name}`, team.logo_url);
-                }
-
-                // Generate Individuals
-                if (includeIndividuals) {
-                    const indPlayers = allApplications.filter(a => !a.team_id);
-                    if (indPlayers.length > 0) {
-                        await drawPlayerTable(indPlayers, "Yakkaxon O'yinchilar (Jamoasiz)", null);
-                    }
                 }
 
                 doc.save("Futbolchilar_Royxati.pdf");
