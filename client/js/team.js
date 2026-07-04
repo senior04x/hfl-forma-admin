@@ -370,8 +370,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 telegramBotBtn.href = `https://t.me/${botUsername}?start=team_${teamId}`;
                 successModal.classList.remove('hidden');
             } else {
-                // Fallback
-                window.location.href = `https://t.me/${botUsername}?start=team_${teamId}`;
+                setTimeout(() => {
+                    window.location.href = `https://t.me/${botUsername}?start=team_${teamId}`;
+                }, 3000);
             }
 
         } catch (err) {
