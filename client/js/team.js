@@ -22,9 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const playerFirstName = document.getElementById('playerFirstName');
     const playerLastName = document.getElementById('playerLastName');
+    const playerFatherName = document.getElementById('playerFatherName');
     const playerPassportSeries = document.getElementById('playerPassportSeries');
     const playerPassportNumber = document.getElementById('playerPassportNumber');
     const playerPhone = document.getElementById('playerPhone');
+    const playerComment = document.getElementById('playerComment');
     
     const submitTeamBtn = document.getElementById('submitTeamBtn');
     const submitBtnText = submitTeamBtn.querySelector('.btn-text');
@@ -202,9 +204,11 @@ document.addEventListener('DOMContentLoaded', () => {
             photo: currentPlayerPhotoBase64,
             first_name: playerFirstName.value.trim(),
             last_name: playerLastName.value.trim(),
+            father_name: playerFatherName.value.trim(),
             passport_series: seriesVal,
             passport_number: numberVal,
-            phone: '+998' + phoneVal
+            phone: '+998' + phoneVal,
+            comment: playerComment.value.trim()
         };
 
         players.push(newPlayer);
@@ -227,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function renderPlayers() {
-        playerCountEl.textContent = `${players.length} / 8+`;
+        playerCountEl.textContent = `${players.length} ta`;
         playerCountEl.style.background = players.length >= 8 ? 'var(--success)' : 'var(--primary)';
         
         playerListEl.innerHTML = '';
@@ -258,8 +262,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (players.length < 8) {
-            alert(`Jamoada eng kamida 8 nafar o'yinchi bo'lishi shart! Siz ${players.length} ta qo'shgansiz.`);
+        if (players.length === 0) {
+            alert("Jamoaga kamida 1 nafar o'yinchi qo'shishingiz kerak!");
             return;
         }
 
@@ -334,9 +338,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     photo_url: pPhotoUrl,
                     first_name: p.first_name,
                     last_name: p.last_name,
+                    father_name: p.father_name,
                     passport_series: p.passport_series,
                     passport_number: p.passport_number,
                     phone: p.phone,
+                    comment: p.comment,
                     status: 'pending'
                 });
 

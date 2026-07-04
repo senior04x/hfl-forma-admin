@@ -210,7 +210,7 @@
         <div class="section-card">
             <h2 class="section-title">
                 <i data-lucide="users"></i> O'yinchilar 
-                <span id="playerCount" style="background: var(--primary); padding: 2px 10px; border-radius: 12px; font-size: 14px; margin-left: auto;">0 / 8+</span>
+                <span id="playerCount" style="background: var(--primary); padding: 2px 10px; border-radius: 12px; font-size: 14px; margin-left: auto;">0 ta</span>
             </h2>
             
             <div class="player-list" id="playerList">
@@ -226,7 +226,6 @@
             <span class="btn-text">Jamoani yuborish</span>
             <div class="loader hidden"></div>
         </button>
-        <p style="text-align: center; font-size: 13px; color: #94a3b8; margin-top: 15px;">Eng kamida 8 nafar o'yinchi kiritilishi shart!</p>
     </div>
 
     <!-- ADD PLAYER MODAL -->
@@ -260,6 +259,11 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label" for="playerFatherName">Otasining ismi</label>
+                    <input type="text" id="playerFatherName" class="form-control" placeholder="Masalan: Vali o'g'li" required>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label">Pasport seriyasi va raqami</label>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" id="playerPassportSeries" class="form-control" placeholder="AA" maxlength="2" style="width: 70px; text-transform: uppercase;" autocomplete="off" required>
@@ -269,10 +273,15 @@
 
                 <div class="form-group">
                     <label class="form-label" for="playerPhone">Telefoni</label>
-                    <div class="input-wrapper">
+                    <div class="phone-group">
                         <span class="phone-prefix">+998</span>
-                        <input type="tel" id="playerPhone" class="form-control" placeholder="90 123 45 67" maxlength="12" style="padding-left: 65px;" required>
+                        <input type="tel" id="playerPhone" class="form-control" placeholder="90 123 45 67" maxlength="12" required>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="playerComment">Izoh (Majburiy emas)</label>
+                    <textarea id="playerComment" class="form-control" placeholder="Qo'shimcha ma'lumotlar..."></textarea>
                 </div>
                 
                 <button type="submit" class="btn-submit" style="margin-top: 20px;">Qo'shish</button>
