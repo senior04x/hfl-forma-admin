@@ -205,8 +205,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Add Player Form Submit ---
-    playerForm.addEventListener('submit', (e) => {
+    playerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        const submitBtn = playerForm.querySelector('button[type="submit"]');
+        
+        if (submitBtn.disabled) return; // Prevent double clicking
         
         if (!currentPlayerPhotoBase64) {
             alert('Iltimos, o\'yinchi rasmini yuklang!');
@@ -231,32 +235,48 @@ document.addEventListener('DOMContentLoaded', () => {
         const positionVal = document.getElementById('playerPosition') ? document.getElementById('playerPosition').value : '';
         const numberInputVal = document.getElementById('playerNumber') ? document.getElementById('playerNumber').value : '';
 
-        const newPlayer = {
-            id: crypto.randomUUID(),
-            photo: currentPlayerPhotoBase64,
-            first_name: playerFirstName.value.trim(),
-            last_name: playerLastName.value.trim(),
-            father_name: playerFatherName.value.trim(),
-            passport_series: seriesVal,
-            passport_number: numberVal,
-            phone: fullPhone,
-            birth_date: birthDateVal,
-            position: positionVal,
-            player_number: numberInputVal,
-            comment: playerComment.value.trim()
-        };
+        // UI ni qotib qolmasligi uchun loading holatiga o'tkazish
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.innerHTML = 'Qo\'shilmoqda...';
+        submitBtn.disabled = true;
 
-        players.push(newPlayer);
-        saveDraft();
-        renderPlayers();
+        // Kichik pauza (brauzer UI ni yangilashi uchun)
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Reset form
-        playerForm.reset();
-        currentPlayerPhotoBase64 = null;
-        playerPhotoPreview.classList.add('hidden');
-        playerPhotoPreview.src = "";
-        playerPhotoPlaceholder.classList.remove('hidden');
-        playerModal.classList.add('hidden');
+        try {
+            const newPlayer = {
+                id: crypto.randomUUID(),
+                photo: currentPlayerPhotoBase64,
+                first_name: playerFirstName.value.trim(),
+                last_name: playerLastName.value.trim(),
+                father_name: playerFatherName.value.trim(),
+                passport_series: seriesVal,
+                passport_number: numberVal,
+                phone: fullPhone,
+                birth_date: birthDateVal,
+                position: positionVal,
+                player_number: numberInputVal,
+                comment: playerComment.value.trim()
+            };
+
+            players.push(newPlayer);
+            saveDraft();
+            renderPlayers();
+
+            // Reset form
+            playerForm.reset();
+            currentPlayerPhotoBase64 = null;
+            playerPhotoPreview.classList.add('hidden');
+            playerPhotoPreview.src = "";
+            playerPhotoPlaceholder.classList.remove('hidden');
+            playerModal.classList.add('hidden');
+        } catch (err) {
+            console.error("Xatolik:", err);
+            alert("Xatolik yuz berdi");
+        } finally {
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+        }
     });
 
     window.removePlayer = function(id) {
