@@ -23,7 +23,7 @@ app.listen(PORT, () => {
     console.log(`Web server listening on port ${PORT}`);
 });
 
-console.log('Telegram Bot is running...');
+console.log('Telegram Bot is starting up... waiting for messages');
 
 // 1. Deep Link Handler
 bot.onText(/\/start (.+)/, async (msg, match) => {
