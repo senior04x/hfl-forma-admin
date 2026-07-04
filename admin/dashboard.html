@@ -212,6 +212,9 @@
             <button class="close-modal" id="closeEditTeamBtn"><i data-lucide="x"></i></button>
             <h2 style="margin-bottom: 20px;">Jamoani Tahrirlash</h2>
             <form id="editTeamForm">
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <img id="editTeamCurrentLogo" src="" alt="Joriy Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color);">
+                </div>
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label style="display: block; margin-bottom: 5px; font-weight: 500;">Yangi Jamoa Logotipi (Ixtiyoriy)</label>
                     <input type="file" id="editTeamLogo" accept="image/jpeg, image/png, image/webp" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;">
@@ -237,6 +240,9 @@
             <button class="close-modal" id="closeEditPlayerBtn"><i data-lucide="x"></i></button>
             <h2 style="margin-bottom: 20px;">O'yinchini Tahrirlash</h2>
             <form id="editPlayerForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="text-align: center; grid-column: 1 / -1; margin-bottom: 5px;">
+                    <img id="editPlayerCurrentPhoto" src="" alt="Joriy Rasm" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color);">
+                </div>
                 <div class="form-group" style="grid-column: 1 / -1;">
                     <label style="display: block; margin-bottom: 5px; font-weight: 500;">Yangi Rasm (Ixtiyoriy)</label>
                     <input type="file" id="editPlayerPhoto" accept="image/jpeg, image/png, image/webp" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;">

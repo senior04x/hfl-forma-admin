@@ -516,6 +516,10 @@ document.addEventListener('DOMContentLoaded', () => {
         players.forEach(p => {
             const pStatus = p.status === 'pending' ? 'Kutilmoqda' : p.status === 'approved' ? 'Tasdiqlandi' : 'Rad etildi';
             const color = p.status === 'pending' ? 'orange' : p.status === 'approved' ? 'green' : 'red';
+            let pStatusIcon = 'circle-dashed';
+            if (p.status === 'pending') pStatusIcon = 'clock';
+            if (p.status === 'approved') pStatusIcon = 'check-circle';
+            if (p.status === 'rejected') pStatusIcon = 'x-circle';
             
             listEl.innerHTML += `
                 <div style="display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;">
@@ -524,13 +528,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h4 style="margin: 0 0 4px 0; font-size: 14px;">${p.first_name} ${p.last_name}</h4>
                         <div style="font-size: 12px; color: #94a3b8;">${p.passport_series}${p.passport_number} | ${p.phone}</div>
                     </div>
-                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
-                        <span style="font-size: 11px; font-weight: bold; color: ${color}">${pStatus}</span>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                        <span title="${pStatus}" style="color: ${color}; display: flex; align-items: center; justify-content: center;"><i data-lucide="${pStatusIcon}" style="width: 16px; height: 16px;"></i></span>
                         <div style="display: flex; gap: 5px;">
-                            <button onclick="viewDetails('${p.id}')" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Ko'rish</button>
-                            <button onclick="editPlayer('${p.id}')" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Tahrirlash</button>
-                            ${p.status !== 'approved' ? `<button onclick="updatePlayerStatus('${p.id}', 'approved')" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Tasdiqlash</button>` : ''}
-                            ${p.status !== 'rejected' ? `<button onclick="updatePlayerStatus('${p.id}', 'rejected')" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Rad etish</button>` : ''}
+                            <button onclick="viewDetails('${p.id}')" title="Ko'rish" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: none; padding: 6px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i data-lucide="eye" style="width: 14px; height: 14px;"></i></button>
+                            <button onclick="editPlayer('${p.id}')" title="Tahrirlash" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; border: none; padding: 6px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i data-lucide="edit" style="width: 14px; height: 14px;"></i></button>
+                            ${p.status !== 'approved' ? `<button onclick="updatePlayerStatus('${p.id}', 'approved')" title="Tasdiqlash" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: none; padding: 6px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i data-lucide="check" style="width: 14px; height: 14px;"></i></button>` : ''}
+                            ${p.status !== 'rejected' ? `<button onclick="updatePlayerStatus('${p.id}', 'rejected')" title="Rad etish" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: none; padding: 6px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -665,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const team = allTeams.find(t => t.id === id);
         if(!team) return;
         editingTeamId = id;
+        document.getElementById('editTeamCurrentLogo').src = team.logo_url;
         document.getElementById('editTeamName').value = team.name;
         document.getElementById('editTeamPhone').value = team.captain_phone;
         document.getElementById('editTeamLogo').value = ''; // clear previous file
@@ -721,6 +726,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const app = allApplications.find(a => a.id === id);
         if(!app) return;
         editingPlayerId = id;
+        document.getElementById('editPlayerCurrentPhoto').src = app.photo_url;
         document.getElementById('editPlayerFirstName').value = app.first_name;
         document.getElementById('editPlayerLastName').value = app.last_name;
         document.getElementById('editPlayerFatherName').value = app.father_name;
