@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dateObj = new Date(team.created_at);
             const dateStr = dateObj.toLocaleDateString('uz-UZ');
             
-            const statusClass = \`status-\${team.status}\`;
+            const statusClass = `status-${team.status}`;
             let statusText = team.status;
             let statusIcon = 'circle-dashed';
             if (team.status === 'pending') { statusText = 'Kutilmoqda'; statusIcon = 'clock'; }
@@ -344,18 +344,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (team.status === 'partially_approved') { statusText = 'Qisman'; statusIcon = 'alert-circle'; }
 
             const tr = document.createElement('tr');
-            tr.innerHTML = \`
-                <td><img src="\${team.logo_url}" alt="Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
-                <td style="font-weight: 600;">\${team.name}</td>
-                <td class="hide-mobile">\${team.captain_phone}</td>
-                <td>\${dateStr}</td>
-                <td style="text-align: center;"><span class="status-icon-badge \${statusClass}" title="\${statusText}"><i data-lucide="\${statusIcon}" style="width: 18px; height: 18px;"></i></span></td>
+            tr.innerHTML = `
+                <td><img src="${team.logo_url}" alt="Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
+                <td style="font-weight: 600;">${team.name}</td>
+                <td class="hide-mobile">${team.captain_phone}</td>
+                <td>${dateStr}</td>
+                <td style="text-align: center;"><span class="status-icon-badge ${statusClass}" title="${statusText}"><i data-lucide="${statusIcon}" style="width: 18px; height: 18px;"></i></span></td>
                 <td style="text-align: center; white-space: nowrap;">
-                    <button class="btn-view" onclick="viewTeamDetails('\${team.id}')" title="Ko'rish">
+                    <button class="btn-view" onclick="viewTeamDetails('${team.id}')" title="Ko'rish">
                         <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
                     </button>
                 </td>
-            \`;
+            `;
             tableBody.appendChild(tr);
         });
         lucide.createIcons();
