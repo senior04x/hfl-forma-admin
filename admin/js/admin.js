@@ -143,10 +143,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateStats() {
-        const individualApps = allApplications.filter(a => !a.team_id);
-        const total = individualApps.length;
-        const pending = individualApps.filter(a => a.status === 'pending').length;
-        const approved = individualApps.filter(a => a.status === 'approved').length;
+        let items = [];
+        if (currentTab === 'individuals') {
+            items = allApplications.filter(a => !a.team_id);
+        } else {
+            items = allTeams;
+        }
+
+        const total = items.length;
+        const pending = items.filter(i => i.status === 'pending').length;
+        const approved = items.filter(i => i.status === 'approved' || i.status === 'partially_approved').length;
 
         statTotal.textContent = total;
         statPending.textContent = pending;
