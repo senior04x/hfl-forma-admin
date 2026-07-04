@@ -342,6 +342,29 @@
         </div>
     </div>
 
+    <!-- PDF Export Settings Modal -->
+    <div id="pdfExportModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 450px;">
+            <button class="close-modal" id="closePdfModalBtn"><i data-lucide="x"></i></button>
+            <h2 style="margin-bottom: 20px;">PDF Yuklab Olish</h2>
+            
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Yuklab olinadigan ma'lumotni tanlang:</label>
+                <select id="pdfTeamSelect" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: var(--text-dark); cursor: pointer;">
+                    <option value="all">Barcha Jamoalar va Yakkaxonlar</option>
+                    <option value="individuals_only">Faqat Yakkaxon O'yinchilar (Jamoasiz)</option>
+                    <!-- Teams populated dynamically -->
+                </select>
+            </div>
+            
+            <button id="startPdfDownloadBtn" style="width: 100%; padding: 12px; background: var(--bg-sidebar); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <i data-lucide="download"></i> <span>Tasdiqlash va Yuklash</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Scripts -->
     <script>lucide.createIcons();</script>
     <script src="js/auth.js"></script>

@@ -383,21 +383,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // PDF Export
     const exportBtn = document.getElementById('exportBtn');
+    const pdfExportModal = document.getElementById('pdfExportModal');
+    const closePdfModalBtn = document.getElementById('closePdfModalBtn');
+    const startPdfDownloadBtn = document.getElementById('startPdfDownloadBtn');
+    const pdfTeamSelect = document.getElementById('pdfTeamSelect');
+
     if (exportBtn) {
-        exportBtn.addEventListener('click', async () => {
+        exportBtn.addEventListener('click', () => {
             if (allApplications.length === 0) return alert("Yuklab olish uchun ma'lumot yo'q");
+            
+            // Populate teams
+            const existingOptions = Array.from(pdfTeamSelect.options).map(o => o.value);
+            allTeams.forEach(t => {
+                if (!existingOptions.includes(t.id)) {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = `Jamoa: ${t.name}`;
+                    pdfTeamSelect.appendChild(opt);
+                }
+            });
+            
+            pdfExportModal.style.zIndex = '10000';
+            pdfExportModal.classList.remove('hidden');
+        });
+    }
+
+    if (closePdfModalBtn) {
+        closePdfModalBtn.addEventListener('click', () => {
+            pdfExportModal.classList.add('hidden');
+        });
+    }
+
+    if (startPdfDownloadBtn) {
+        startPdfDownloadBtn.addEventListener('click', async () => {
+            const selectedOption = pdfTeamSelect.value;
+            pdfExportModal.classList.add('hidden');
             
             exportBtn.innerHTML = '<i data-lucide="loader" class="spin"></i> Yuklanmoqda...';
             lucide.createIcons();
             
             try {
                 const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
+                // Landscape orientation for more columns
+                const doc = new jsPDF({ orientation: 'landscape', format: 'a4' });
 
-                doc.setFontSize(16);
-                doc.text("Havas Futbol Ligasi - Zayavkalar", 14, 20);
+                // Load Roboto font to fix Cyrillic/Uzbek characters
+                let fontLoaded = false;
+                try {
+                    const fontRes = await fetch('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Regular.ttf');
+                    const fontBlob = await fontRes.blob();
+                    const base64Font = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                        reader.readAsDataURL(fontBlob);
+                    });
+                    doc.addFileToVFS('Roboto-Regular.ttf', base64Font);
+                    doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+                    doc.setFont('Roboto');
+                    fontLoaded = true;
+                } catch(e) {
+                    console.error("Font yuklanmadi, standart font ishlatiladi", e);
+                }
                 
-                // Helper to fetch images as base64 to embed in PDF
                 const getBase64ImageFromURL = (url) => {
                     return new Promise((resolve, reject) => {
                       var img = new Image();
@@ -416,71 +463,143 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 };
 
-                const tableBody = [];
-                for (let i = 0; i < allApplications.length; i++) {
-                    const app = allApplications[i];
-                    let imgData = null;
-                    try {
-                        imgData = await getBase64ImageFromURL(app.photo_url);
-                    } catch(e) {
-                        console.log('Rasm yuklanmadi:', e);
-                    }
-                    
-                    let statusTxt = 'Kutilmoqda';
-                    if(app.status === 'approved') statusTxt = 'Tasdiqlangan';
-                    if(app.status === 'rejected') statusTxt = 'Rad etilgan';
+                let teamsToProcess = [];
+                let includeIndividuals = false;
 
-                    const dateObj = new Date(app.created_at);
-                    const dateStr = `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth()+1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
-
-                    tableBody.push([
-                        i + 1,
-                        { content: '', styles: { minCellHeight: 22 }, imgData: imgData }, // Rasm uchun joy
-                        `${app.last_name} ${app.first_name}\n${app.father_name || ''}`,
-                        `${app.passport_series}${app.passport_number}`,
-                        app.phone,
-                        app.comment || '-',
-                        dateStr,
-                        statusTxt
-                    ]);
+                if (selectedOption === 'all') {
+                    teamsToProcess = allTeams;
+                    includeIndividuals = true;
+                } else if (selectedOption === 'individuals_only') {
+                    includeIndividuals = true;
+                } else {
+                    const t = allTeams.find(t => t.id === selectedOption);
+                    if (t) teamsToProcess.push(t);
                 }
 
-                doc.autoTable({
-                    startY: 28,
-                    head: [['#', 'Rasm', 'F.I.SH', 'Pasport', 'Telefon', 'Izoh', 'Sana', 'Status']],
-                    body: tableBody,
-                    rowPageBreak: 'avoid',
-                    styles: { 
-                        valign: 'middle', 
-                        halign: 'center',
-                        fontSize: 8, // Kichikroq font
-                        cellPadding: 2,
-                        lineColor: [200, 200, 200],
-                        lineWidth: 0.1
-                    },
-                    headStyles: {
-                        fillColor: [15, 23, 42],
-                        textColor: [255, 255, 255],
-                        fontSize: 9
-                    },
-                    columnStyles: {
-                        1: { cellWidth: 20 }, // Rasm
-                        2: { cellWidth: 35 }, // FISH
-                        5: { cellWidth: 40 }  // Izoh
-                    },
-                    didDrawCell: function(data) {
-                        if (data.column.index === 1 && data.cell.section === 'body') {
-                            const cellData = data.row.raw[1];
-                            if (cellData && cellData.imgData) {
-                                // Rasmni cell o'rtasiga joylashtirish (18x18 o'lchamda)
-                                const imgSize = 18;
-                                const xPos = data.cell.x + (data.cell.width - imgSize) / 2;
-                                const yPos = data.cell.y + (data.cell.height - imgSize) / 2;
-                                doc.addImage(cellData.imgData, 'JPEG', xPos, yPos, imgSize, imgSize);
+                let currentY = 15;
+
+                // Function to draw a table for a set of players
+                const drawPlayerTable = async (players, title, logoUrl) => {
+                    if (players.length === 0 && !title.includes('Yakkaxon')) return; // Skip empty teams unless it's individuals
+
+                    // Add Page break if not enough space for header
+                    if (currentY > 170) {
+                        doc.addPage();
+                        currentY = 15;
+                    }
+
+                    // Draw Header
+                    if (logoUrl) {
+                        try {
+                            const logoB64 = await getBase64ImageFromURL(logoUrl);
+                            doc.addImage(logoB64, 'JPEG', 14, currentY, 12, 12);
+                            doc.setFontSize(14);
+                            doc.text(title, 30, currentY + 8);
+                        } catch(e) {
+                            doc.setFontSize(14);
+                            doc.text(title, 14, currentY + 8);
+                        }
+                    } else {
+                        doc.setFontSize(14);
+                        doc.text(title, 14, currentY + 8);
+                    }
+                    
+                    currentY += 15;
+
+                    const tableBody = [];
+                    for (let i = 0; i < players.length; i++) {
+                        const app = players[i];
+                        let imgData = null;
+                        if (app.photo_url) {
+                            try { imgData = await getBase64ImageFromURL(app.photo_url); } catch(e) {}
+                        }
+                        
+                        let statusTxt = '⏳ Kutilmoqda';
+                        if(app.status === 'approved') statusTxt = '✓ Tasdiqlangan';
+                        if(app.status === 'rejected') statusTxt = '✗ Rad etilgan';
+
+                        const dateObj = new Date(app.created_at);
+                        const dateStr = `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth()+1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
+
+                        const pSeries = app.passport_series || '';
+                        const pNum = app.passport_number || '';
+                        const passStr = (pSeries || pNum) ? `${pSeries}${pNum}` : '-';
+
+                        tableBody.push([
+                            i + 1,
+                            { content: '', styles: { minCellHeight: 18 }, imgData: imgData },
+                            `${app.last_name} ${app.first_name}\n${app.father_name || ''}`,
+                            app.birth_date || '-',
+                            app.position || '-',
+                            app.player_number || '-',
+                            passStr,
+                            app.phone || '-',
+                            app.comment || '-',
+                            statusTxt
+                        ]);
+                    }
+
+                    doc.autoTable({
+                        startY: currentY,
+                        head: [['#', 'Rasm', 'F.I.SH', 'Tug.Sana', 'Amplua', 'Raqam', 'Pasport', 'Telefon', 'Izoh', 'Status']],
+                        body: tableBody,
+                        rowPageBreak: 'avoid',
+                        styles: { 
+                            valign: 'middle', 
+                            halign: 'center',
+                            fontSize: 7,
+                            font: fontLoaded ? 'Roboto' : 'helvetica',
+                            cellPadding: 1.5,
+                            lineColor: [200, 200, 200],
+                            lineWidth: 0.1
+                        },
+                        headStyles: {
+                            fillColor: [15, 23, 42],
+                            textColor: [255, 255, 255],
+                            fontSize: 8,
+                            font: fontLoaded ? 'Roboto' : 'helvetica'
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 8 },
+                            1: { cellWidth: 15 },
+                            2: { cellWidth: 40 },
+                            3: { cellWidth: 18 },
+                            4: { cellWidth: 20 },
+                            5: { cellWidth: 12 },
+                            6: { cellWidth: 20 },
+                            7: { cellWidth: 25 },
+                            8: { cellWidth: 90 }, // Izoh
+                            9: { cellWidth: 20 }
+                        },
+                        didDrawCell: function(data) {
+                            if (data.column.index === 1 && data.cell.section === 'body') {
+                                const cellData = data.row.raw[1];
+                                if (cellData && cellData.imgData) {
+                                    const imgSize = 14;
+                                    const xPos = data.cell.x + (data.cell.width - imgSize) / 2;
+                                    const yPos = data.cell.y + (data.cell.height - imgSize) / 2;
+                                    doc.addImage(cellData.imgData, 'JPEG', xPos, yPos, imgSize, imgSize);
+                                }
                             }
                         }
+                    });
+
+                    currentY = doc.lastAutoTable.finalY + 15;
+                };
+
+                // Generate Teams
+                for (let team of teamsToProcess) {
+                    const teamPlayers = allApplications.filter(a => a.team_id === team.id);
+                    await drawPlayerTable(teamPlayers, `Jamoa: ${team.name}`, team.logo_url);
+                }
+
+                // Generate Individuals
+                if (includeIndividuals) {
+                    const indPlayers = allApplications.filter(a => !a.team_id);
+                    if (indPlayers.length > 0) {
+                        await drawPlayerTable(indPlayers, "Yakkaxon O'yinchilar (Jamoasiz)", null);
                     }
-                });
+                }
 
                 doc.save("Futbolchilar_Royxati.pdf");
                 
