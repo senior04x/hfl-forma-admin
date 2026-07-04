@@ -18,8 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailPhone = document.getElementById('detailPhone');
     const detailDate = document.getElementById('detailDate');
     const detailComment = document.getElementById('detailComment');
-    const approveBtn = document.getElementById('approveBtn');
-    const rejectBtn = document.getElementById('rejectBtn');
+    
+    
     const modalDeleteBtn = document.getElementById('modalDeleteBtn');
 
     // State
@@ -241,8 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function updateStatus(id, newStatus) {
         try {
-            approveBtn.disabled = true;
-            rejectBtn.disabled = true;
             const { error } = await db
                 .from('applications')
                 .update({ status: newStatus })
@@ -256,9 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error updating status:', error);
             alert('Statusni o\'zgartirishda xatolik yuz berdi! Xato: ' + error.message);
-        } finally {
-            approveBtn.disabled = false;
-            rejectBtn.disabled = false;
         }
     }
 
