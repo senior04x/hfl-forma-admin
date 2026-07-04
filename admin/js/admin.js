@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-view" onclick="viewDetails('${app.id}')" title="Ko'rish">
                         <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
                     </button>
-                    <button class="btn-view" onclick="editPlayer('${app.id}')" title="Tahrirlash" style="color: var(--primary);">
+                    <button class="btn-view" onclick="editPlayer('${app.id}')" title="Tahrirlash" style="color: #3b82f6;">
                         <i data-lucide="edit" style="width: 16px; height: 16px;"></i>
                     </button>
                 </td>
@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tabIndividuals.addEventListener('click', () => {
             currentTab = 'individuals';
             tabIndividuals.classList.add('active');
-            tabIndividuals.style.background = 'var(--primary)';
+            tabIndividuals.style.background = 'var(--bg-sidebar)';
             tabIndividuals.style.color = 'white';
             tabIndividuals.style.border = 'none';
 
@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tabTeams.addEventListener('click', () => {
             currentTab = 'teams';
             tabTeams.classList.add('active');
-            tabTeams.style.background = 'var(--primary)';
+            tabTeams.style.background = 'var(--bg-sidebar)';
             tabTeams.style.color = 'white';
             tabTeams.style.border = 'none';
 
@@ -366,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-view" onclick="viewTeamDetails('${team.id}')" title="Ko'rish">
                         <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
                     </button>
-                    <button class="btn-view" onclick="editTeam('${team.id}')" title="Tahrirlash" style="color: var(--primary);">
+                    <button class="btn-view" onclick="editTeam('${team.id}')" title="Tahrirlash" style="color: #3b82f6;">
                         <i data-lucide="edit" style="width: 16px; height: 16px;"></i>
                     </button>
                 </td>
