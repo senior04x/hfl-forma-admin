@@ -114,6 +114,18 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(file);
     }
 
+    // --- Paste Image Handling ---
+    document.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let item of items) {
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                handleFileSelect(file);
+                break;
+            }
+        }
+    });
+
     // --- Form Submission ---
     form.addEventListener('submit', async (e) => {
         e.preventDefault();

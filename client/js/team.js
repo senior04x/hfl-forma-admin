@@ -177,6 +177,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Paste Image Handling for Team and Players ---
+    document.addEventListener('paste', async (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let item of items) {
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (!playerModal.classList.contains('hidden')) {
+                    // Paste to player photo
+                    const base64 = await compressImageToBase64(file, 500, 500, 0.7);
+                    currentPlayerPhotoBase64 = base64;
+                    playerPhotoPreview.src = base64;
+                    playerPhotoPreview.classList.remove('hidden');
+                    playerPhotoPlaceholder.classList.add('hidden');
+                } else {
+                    // Paste to team logo
+                    const base64 = await compressImageToBase64(file, 400, 400, 0.7);
+                    teamLogoBase64 = base64;
+                    teamLogoPreview.src = base64;
+                    teamLogoPreview.classList.remove('hidden');
+                    teamLogoPlaceholder.classList.add('hidden');
+                    saveDraft();
+                }
+                break;
+            }
+        }
+    });
+
     // --- Add Player Form Submit ---
     playerForm.addEventListener('submit', (e) => {
         e.preventDefault();
