@@ -167,8 +167,13 @@
                     </div>
 
                     <div class="action-buttons" style="flex-wrap: wrap; gap: 10px;">
-                        <button class="btn-approve" id="approveBtn" style="flex: 1; min-width: 120px;"><i data-lucide="check"></i> Tasdiqlash</button>
-                        <button class="btn-reject" id="rejectBtn" style="flex: 1; min-width: 120px;"><i data-lucide="x"></i> Rad etish</button>
+                        <div style="flex: 2; min-width: 200px;">
+                            <select id="statusSelect" class="form-input" style="padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-color); width: 100%; background: var(--bg-card); color: var(--text-dark);">
+                                <option value="pending">⏳ Kutilmoqda</option>
+                                <option value="approved">✅ Tasdiqlangan</option>
+                                <option value="rejected">❌ Rad etilgan</option>
+                            </select>
+                        </div>
                         <button class="btn-delete" id="modalDeleteBtn" style="flex: 1; min-width: 120px; padding: 12px; border-radius: 8px; justify-content: center; display: flex; align-items: center; gap: 8px;"><i data-lucide="trash-2"></i> O'chirish</button>
                     </div>
                 </div>
@@ -198,8 +203,14 @@
             </div>
 
             <div class="action-buttons" style="flex-wrap: wrap; gap: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                <button class="btn-approve" id="approveTeamBtn" style="flex: 1; min-width: 120px;"><i data-lucide="check-square"></i> Jamoani to'liq tasdiqlash</button>
-                <button class="btn-reject" id="rejectTeamBtn" style="flex: 1; min-width: 120px;"><i data-lucide="x-square"></i> Jamoani rad etish</button>
+                <div style="flex: 2; min-width: 200px;">
+                    <select id="teamStatusSelect" class="form-input" style="padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-color); width: 100%; background: var(--bg-card); color: var(--text-dark);">
+                        <option value="pending" disabled selected hidden>Jamoa holatini o'zgartirish</option>
+                        <option value="pending">⏳ Barcha a'zolarni kutilmoqda qilish</option>
+                        <option value="approved">✅ Barcha a'zolarni tasdiqlash</option>
+                        <option value="rejected">❌ Barcha a'zolarni rad etish</option>
+                    </select>
+                </div>
                 <button class="btn-delete" id="deleteTeamBtn" style="flex: 1; min-width: 120px; padding: 12px; border-radius: 8px; justify-content: center; display: flex; align-items: center; gap: 8px;"><i data-lucide="trash-2"></i> Jamoani o'chirish</button>
             </div>
         </div>

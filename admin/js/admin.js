@@ -177,13 +177,10 @@ document.addEventListener('DOMContentLoaded', () => {
         detailDate.textContent = new Date(app.created_at).toLocaleString('uz-UZ');
         detailComment.textContent = app.comment;
 
-        // Hide action buttons if not pending
-        if (app.status === 'pending') {
-            approveBtn.style.display = 'flex';
-            rejectBtn.style.display = 'flex';
-        } else {
-            approveBtn.style.display = 'none';
-            rejectBtn.style.display = 'none';
+        // Set select value
+        const statusSelect = document.getElementById('statusSelect');
+        if (statusSelect) {
+            statusSelect.value = app.status;
         }
 
         detailsModal.classList.remove('hidden');
@@ -261,8 +258,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    approveBtn.addEventListener('click', () => updateStatus(currentApplicationId, 'approved'));
-    rejectBtn.addEventListener('click', () => updateStatus(currentApplicationId, 'rejected'));
+    const statusSelect = document.getElementById('statusSelect');
+    if (statusSelect) {
+        statusSelect.addEventListener('change', (e) => {
+            if(currentApplicationId) {
+                updateStatus(currentApplicationId, e.target.value);
+            }
+        });
+    }
 
     // Search and Filter Events
     searchInput.addEventListener('input', () => {
@@ -533,8 +536,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="display: flex; gap: 5px;">
                             <button onclick="viewDetails('${p.id}')" title="Ko'rish" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: none; padding: 6px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i data-lucide="eye" style="width: 14px; height: 14px;"></i></button>
                             <button onclick="editPlayer('${p.id}')" title="Tahrirlash" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; border: none; padding: 6px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i data-lucide="edit" style="width: 14px; height: 14px;"></i></button>
-                            ${p.status !== 'approved' ? `<button onclick="updatePlayerStatus('${p.id}', 'approved')" title="Tasdiqlash" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: none; padding: 6px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i data-lucide="check" style="width: 14px; height: 14px;"></i></button>` : ''}
-                            ${p.status !== 'rejected' ? `<button onclick="updatePlayerStatus('${p.id}', 'rejected')" title="Rad etish" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: none; padding: 6px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>` : ''}
+                            <select onchange="updatePlayerStatus('${p.id}', this.value)" style="padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 12px; cursor: pointer; outline: none; background: var(--bg-card); color: var(--text-dark);">
+                                <option value="pending" ${p.status === 'pending' ? 'selected' : ''}>⏳ Kutilmoqda</option>
+                                <option value="approved" ${p.status === 'approved' ? 'selected' : ''}>✅ Tasdiqlash</option>
+                                <option value="rejected" ${p.status === 'rejected' ? 'selected' : ''}>❌ Rad etish</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -585,8 +591,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    document.getElementById('approveTeamBtn')?.addEventListener('click', () => bulkUpdateTeam('approved'));
-    document.getElementById('rejectTeamBtn')?.addEventListener('click', () => bulkUpdateTeam('rejected'));
+    const teamStatusSelect = document.getElementById('teamStatusSelect');
+    if (teamStatusSelect) {
+        teamStatusSelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if(confirm(`Jamoaning barcha o'yinchilari holati o'zgartiriladi. Tasdiqlaysizmi?`)) {
+                bulkUpdateTeam(val);
+            }
+            // reset select back to placeholder
+            e.target.value = "pending";
+        });
+    }
     document.getElementById('deleteTeamBtn')?.addEventListener('click', async () => {
         if (confirm("Rostdan ham ushbu jamoani to'liq o'chirmoqchimisiz?")) {
             try {
