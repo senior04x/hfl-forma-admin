@@ -187,17 +187,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const phoneVal = playerPhone.value.replace(/\s/g, '');
-        if (phoneVal.length !== 9) {
+        if (phoneVal.length > 0 && phoneVal.length !== 9) {
             alert('Telefon raqami noto\'g\'ri kiritildi.');
             return;
         }
+        const fullPhone = phoneVal.length === 9 ? '+998' + phoneVal : '';
 
         const seriesVal = playerPassportSeries.value.toUpperCase();
         const numberVal = playerPassportNumber.value;
-        if (seriesVal.length !== 2 || numberVal.length !== 7) {
+        if ((seriesVal.length > 0 || numberVal.length > 0) && (seriesVal.length !== 2 || numberVal.length !== 7)) {
             alert('Pasport seriyasi yoki raqami to\'liq kiritilmadi.');
             return;
         }
+
+        const birthDateVal = document.getElementById('playerBirthDate') ? document.getElementById('playerBirthDate').value.trim() : '';
+        const positionVal = document.getElementById('playerPosition') ? document.getElementById('playerPosition').value : '';
+        const numberInputVal = document.getElementById('playerNumber') ? document.getElementById('playerNumber').value : '';
 
         const newPlayer = {
             id: crypto.randomUUID(),
@@ -207,7 +212,10 @@ document.addEventListener('DOMContentLoaded', () => {
             father_name: playerFatherName.value.trim(),
             passport_series: seriesVal,
             passport_number: numberVal,
-            phone: '+998' + phoneVal,
+            phone: fullPhone,
+            birth_date: birthDateVal,
+            position: positionVal,
+            player_number: numberInputVal,
             comment: playerComment.value.trim()
         };
 
@@ -342,6 +350,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     passport_series: p.passport_series,
                     passport_number: p.passport_number,
                     phone: p.phone,
+                    birth_date: p.birth_date,
+                    position: p.position,
+                    player_number: p.player_number,
                     comment: p.comment,
                     status: 'pending'
                 });

@@ -123,8 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.innerHTML = `
                 <td><img src="${app.photo_url}" alt="Rasm" class="player-avatar"></td>
                 <td style="font-weight: 500; font-size: 13px;">${app.first_name} ${app.last_name}</td>
-                <td class="hide-mobile"><span style="font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">${app.passport_series}${app.passport_number}</span></td>
-                <td class="hide-mobile">${app.phone}</td>
+                <td class="hide-mobile"><span style="font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">${(app.passport_series || app.passport_number) ? (app.passport_series || '') + (app.passport_number || '') : '-'}</span></td>
+                <td class="hide-mobile">${app.phone || '-'}</td>
                 <td style="color: #64748b; font-size: 12px; text-align: center;">
                     <div style="white-space: nowrap;">${dateStr}</div>
                     <div style="font-size: 11px; opacity: 0.7; margin-top: 2px;">${timeStr}</div>
@@ -172,8 +172,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         detailPhoto.src = app.photo_url;
         detailName.textContent = `${app.first_name} ${app.last_name} ${app.father_name}`;
-        detailPassport.textContent = `${app.passport_series} ${app.passport_number}`;
-        detailPhone.textContent = app.phone;
+        detailPassport.textContent = (app.passport_series || app.passport_number) ? `${app.passport_series || ''} ${app.passport_number || ''}` : 'Kiritilmagan';
+        detailPhone.textContent = app.phone || 'Kiritilmagan';
+        document.getElementById('detailBirthDate').textContent = app.birth_date || 'Kiritilmagan';
+        document.getElementById('detailPosition').textContent = app.position || 'Kiritilmagan';
+        document.getElementById('detailPlayerNumber').textContent = app.player_number || 'Kiritilmagan';
         detailDate.textContent = new Date(app.created_at).toLocaleString('uz-UZ');
         let displayComment = app.comment || '';
         if (displayComment.startsWith('[INDIVIDUAL]')) {
@@ -529,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <img src="${p.photo_url}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                     <div style="flex: 1;">
                         <h4 style="margin: 0 0 4px 0; font-size: 14px;">${p.first_name} ${p.last_name}</h4>
-                        <div style="font-size: 12px; color: #94a3b8;">${p.passport_series}${p.passport_number} | ${p.phone}</div>
+                        <div style="font-size: 12px; color: #94a3b8;">${(p.passport_series || p.passport_number) ? (p.passport_series || '') + (p.passport_number || '') : '-'} | ${p.phone || '-'}</div>
                     </div>
                     <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
                         <span title="${pStatus}" style="color: ${color}; display: flex; align-items: center; justify-content: center;"><i data-lucide="${pStatusIcon}" style="width: 16px; height: 16px;"></i></span>
@@ -745,9 +748,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editPlayerFirstName').value = app.first_name;
         document.getElementById('editPlayerLastName').value = app.last_name;
         document.getElementById('editPlayerFatherName').value = app.father_name;
-        document.getElementById('editPlayerPassSeries').value = app.passport_series;
-        document.getElementById('editPlayerPassNumber').value = app.passport_number;
-        document.getElementById('editPlayerPhone').value = app.phone;
+        document.getElementById('editPlayerPassSeries').value = app.passport_series || '';
+        document.getElementById('editPlayerPassNumber').value = app.passport_number || '';
+        document.getElementById('editPlayerPhone').value = app.phone || '';
+        document.getElementById('editPlayerBirthDate').value = app.birth_date || '';
+        document.getElementById('editPlayerPosition').value = app.position || '';
+        document.getElementById('editPlayerNumber').value = app.player_number || '';
         document.getElementById('editPlayerComment').value = app.comment || '';
         document.getElementById('editPlayerPhoto').value = '';
         
@@ -769,10 +775,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const passport_series = document.getElementById('editPlayerPassSeries').value.trim().toUpperCase();
             const passport_number = document.getElementById('editPlayerPassNumber').value.trim();
             const phone = document.getElementById('editPlayerPhone').value.trim();
+            const birth_date = document.getElementById('editPlayerBirthDate').value.trim();
+            const position = document.getElementById('editPlayerPosition').value.trim();
+            const player_number = document.getElementById('editPlayerNumber').value.trim();
             const comment = document.getElementById('editPlayerComment').value.trim();
             const photoFile = document.getElementById('editPlayerPhoto').files[0];
             
-            let updates = { first_name, last_name, father_name, passport_series, passport_number, phone, comment };
+            let updates = { first_name, last_name, father_name, passport_series, passport_number, phone, birth_date, position, player_number, comment };
 
             if (photoFile) {
                 const compressed = await compressImage(photoFile);
@@ -793,9 +802,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if(!detailsModal.classList.contains('hidden') && currentApplicationId === editingPlayerId) {
                 document.getElementById('detailName').textContent = `${first_name} ${last_name} ${father_name}`;
-                document.getElementById('detailPassport').textContent = `${passport_series} ${passport_number}`;
-                document.getElementById('detailPhone').textContent = phone;
-                document.getElementById('detailComment').textContent = comment;
+                document.getElementById('detailPassport').textContent = (passport_series || passport_number) ? `${passport_series || ''} ${passport_number || ''}` : 'Kiritilmagan';
+                document.getElementById('detailPhone').textContent = phone || 'Kiritilmagan';
+                document.getElementById('detailBirthDate').textContent = birth_date || 'Kiritilmagan';
+                document.getElementById('detailPosition').textContent = position || 'Kiritilmagan';
+                document.getElementById('detailPlayerNumber').textContent = player_number || 'Kiritilmagan';
+                document.getElementById('detailComment').textContent = comment || '';
                 if(updates.photo_url) document.getElementById('detailPhoto').src = updates.photo_url;
             }
 

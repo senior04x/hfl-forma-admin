@@ -260,18 +260,39 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Pasport seriyasi va raqami</label>
+                    <label class="form-label" for="playerBirthDate">Tug'ilgan sana (ixtiyoriy)</label>
+                    <input type="text" id="playerBirthDate" class="form-control" placeholder="01.04.1990">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="playerPosition">Amplua (ixtiyoriy)</label>
+                    <select id="playerPosition" class="form-control" style="appearance: auto; padding-right: 15px;">
+                        <option value="">Tanlang...</option>
+                        <option value="Darvozabon">Darvozabon</option>
+                        <option value="Himoyachi">Himoyachi</option>
+                        <option value="Yarim himoyachi">Yarim himoyachi</option>
+                        <option value="Hujumchi">Hujumchi</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="playerNumber">O'yinchi raqami (ixtiyoriy)</label>
+                    <input type="number" id="playerNumber" class="form-control" placeholder="Masalan: 20" min="1" max="99">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Pasport seriyasi va raqami (ixtiyoriy)</label>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="playerPassportSeries" class="form-control" placeholder="AA" maxlength="2" style="width: 70px; text-transform: uppercase;" autocomplete="off" required>
-                        <input type="tel" id="playerPassportNumber" class="form-control" placeholder="1234567" maxlength="7" pattern="[0-9]*" inputmode="numeric" style="flex: 1;" autocomplete="off" required>
+                        <input type="text" id="playerPassportSeries" class="form-control" placeholder="AA" maxlength="2" style="width: 70px; text-transform: uppercase;" autocomplete="off">
+                        <input type="tel" id="playerPassportNumber" class="form-control" placeholder="1234567" maxlength="7" pattern="[0-9]*" inputmode="numeric" style="flex: 1;" autocomplete="off">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="playerPhone">Telefoni</label>
+                    <label class="form-label" for="playerPhone">Telefoni (ixtiyoriy)</label>
                     <div class="phone-group">
                         <span class="phone-prefix">+998</span>
-                        <input type="tel" id="playerPhone" class="form-control" placeholder="90 123 45 67" maxlength="12" required>
+                        <input type="tel" id="playerPhone" class="form-control" placeholder="90 123 45 67" maxlength="12">
                     </div>
                 </div>
 

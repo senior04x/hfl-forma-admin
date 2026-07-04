@@ -148,12 +148,27 @@
                     
                     <div class="info-group">
                         <span class="info-label">Pasport:</span>
-                        <span class="info-value" id="detailPassport">AA1234567</span>
+                        <span class="info-value" id="detailPassport">Kiritilmagan</span>
                     </div>
                     
                     <div class="info-group">
                         <span class="info-label">Telefon:</span>
-                        <span class="info-value" id="detailPhone">+998901234567</span>
+                        <span class="info-value" id="detailPhone">Kiritilmagan</span>
+                    </div>
+                    
+                    <div class="info-group">
+                        <span class="info-label">Tug'ilgan sana:</span>
+                        <span class="info-value" id="detailBirthDate">Kiritilmagan</span>
+                    </div>
+
+                    <div class="info-group">
+                        <span class="info-label">Amplua:</span>
+                        <span class="info-value" id="detailPosition">Kiritilmagan</span>
+                    </div>
+
+                    <div class="info-group">
+                        <span class="info-label">Raqam:</span>
+                        <span class="info-value" id="detailPlayerNumber">Kiritilmagan</span>
                     </div>
                     
                     <div class="info-group">
@@ -274,19 +289,38 @@
                 
                 <div class="form-group">
                     <label style="display: block; margin-bottom: 5px; font-weight: 500;">Pasport Seriya</label>
-                    <input type="text" id="editPlayerPassSeries" required maxlength="2" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; text-transform: uppercase;">
+                    <input type="text" id="editPlayerPassSeries" maxlength="2" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; text-transform: uppercase;">
                 </div>
                 <div class="form-group">
                     <label style="display: block; margin-bottom: 5px; font-weight: 500;">Pasport Raqami</label>
-                    <input type="text" id="editPlayerPassNumber" required maxlength="7" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;">
+                    <input type="text" id="editPlayerPassNumber" maxlength="7" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;">
                 </div>
                 
                 <div class="form-group" style="grid-column: 1 / -1;">
                     <label style="display: block; margin-bottom: 5px; font-weight: 500;">Telefon</label>
-                    <input type="text" id="editPlayerPhone" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;">
+                    <input type="text" id="editPlayerPhone" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;">
+                </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Tug'ilgan sana</label>
+                    <input type="text" id="editPlayerBirthDate" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;" placeholder="01.04.1990">
+                </div>
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">O'yinchi raqami</label>
+                    <input type="number" id="editPlayerNumber" min="1" max="99" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;">
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Amplua</label>
+                    <select id="editPlayerPosition" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: var(--text-dark);">
+                        <option value="">Tanlang...</option>
+                        <option value="Darvozabon">Darvozabon</option>
+                        <option value="Himoyachi">Himoyachi</option>
+                        <option value="Yarim himoyachi">Yarim himoyachi</option>
+                        <option value="Hujumchi">Hujumchi</option>
+                    </select>
                 </div>
                 
-                <div class="form-group" style="grid-column: 1 / -1;">
+                <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 10px;">
                     <label style="display: block; margin-bottom: 5px; font-weight: 500;">Izoh</label>
                     <textarea id="editPlayerComment" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; min-height: 80px;"></textarea>
                 </div>

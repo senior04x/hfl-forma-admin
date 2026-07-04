@@ -123,18 +123,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const phoneVal = phoneInput.value.replace(/\s/g, '');
-        if (phoneVal.length !== 9) {
+        if (phoneVal.length > 0 && phoneVal.length !== 9) {
             alert('Telefon raqami noto\'g\'ri kiritildi.');
             return;
         }
-        const fullPhone = '+998' + phoneVal;
+        const fullPhone = phoneVal.length === 9 ? '+998' + phoneVal : '';
 
         const seriesVal = passportSeries.value.toUpperCase();
         const numberVal = passportNumber.value;
-        if (seriesVal.length !== 2 || numberVal.length !== 7) {
+        if ((seriesVal.length > 0 || numberVal.length > 0) && (seriesVal.length !== 2 || numberVal.length !== 7)) {
             alert('Pasport seriyasi yoki raqami to\'liq kiritilmadi.');
             return;
         }
+
+        const birthDateVal = document.getElementById('birthDate') ? document.getElementById('birthDate').value.trim() : '';
+        const positionVal = document.getElementById('playerPosition') ? document.getElementById('playerPosition').value : '';
+        const numberInputVal = document.getElementById('playerNumber') ? document.getElementById('playerNumber').value : '';
 
         setLoading(true);
 
@@ -168,6 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 passport_series: seriesVal,
                 passport_number: numberVal,
                 phone: fullPhone,
+                birth_date: birthDateVal,
+                position: positionVal,
+                player_number: numberInputVal,
                 comment: '[INDIVIDUAL]' + document.getElementById('comment').value.trim(),
                 team_id: teamSelect ? (teamSelect.value || null) : null,
                 status: 'pending'
