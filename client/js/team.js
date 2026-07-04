@@ -240,9 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.innerHTML = 'Qo\'shilmoqda...';
         submitBtn.disabled = true;
 
-        // Kichik pauza (brauzer UI ni yangilashi uchun)
-        await new Promise(resolve => setTimeout(resolve, 100));
-
         try {
             const newPlayer = {
                 id: crypto.randomUUID(),
