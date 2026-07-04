@@ -362,15 +362,24 @@ document.addEventListener('DOMContentLoaded', () => {
             
             progressModal.classList.add('hidden');
             
-            // Redirect to telegram bot to get notifications
+            // Show Success Modal
             const botUsername = 'havasmedialiga_bot';
-            window.location.href = `https://t.me/${botUsername}?start=team_${teamId}`;
+            const successModal = document.getElementById('successModal');
+            const telegramBotBtn = document.getElementById('telegramBotBtn');
+            if (successModal && telegramBotBtn) {
+                telegramBotBtn.href = `https://t.me/${botUsername}?start=team_${teamId}`;
+                successModal.classList.remove('hidden');
+            } else {
+                // Fallback
+                window.location.href = `https://t.me/${botUsername}?start=team_${teamId}`;
+            }
 
         } catch (err) {
             console.error("Yuborishda xatolik:", err);
             alert("Xatolik yuz berdi: " + err.message);
             progressModal.classList.add('hidden');
-            submitTeamBtn.disabled = false;
+            const submitTeamBtn = document.getElementById('submitTeamBtn');
+            if (submitTeamBtn) submitTeamBtn.disabled = false;
         }
     });
 
