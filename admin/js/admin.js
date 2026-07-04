@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateStats() {
         let items = [];
         if (currentTab === 'individuals') {
-            items = allApplications.filter(a => !a.team_id);
+            items = allApplications.filter(a => !a.team_id || (a.comment && a.comment.startsWith('[INDIVIDUAL]')));
         } else {
             items = allTeams;
         }
@@ -175,7 +175,11 @@ document.addEventListener('DOMContentLoaded', () => {
         detailPassport.textContent = `${app.passport_series} ${app.passport_number}`;
         detailPhone.textContent = app.phone;
         detailDate.textContent = new Date(app.created_at).toLocaleString('uz-UZ');
-        detailComment.textContent = app.comment;
+        let displayComment = app.comment || '';
+        if (displayComment.startsWith('[INDIVIDUAL]')) {
+            displayComment = displayComment.substring(12);
+        }
+        detailComment.textContent = displayComment;
 
         // Set select value
         const statusSelect = document.getElementById('statusSelect');
@@ -510,7 +514,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                team.status === 'partially_approved' ? 'Qisman' : 'Rad etilgan';
 
         // Load players for this team
-        const players = allApplications.filter(a => a.team_id === id);
+        // Load players for this team (exclude individual applicants if they are not approved)
+        const players = allApplications.filter(a => a.team_id === id && (!(a.comment && a.comment.startsWith('[INDIVIDUAL]')) || a.status === 'approved'));
         document.getElementById('teamPlayerCount').textContent = players.length;
         
         const listEl = document.getElementById('teamPlayersList');

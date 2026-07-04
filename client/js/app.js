@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 passport_series: seriesVal,
                 passport_number: numberVal,
                 phone: fullPhone,
-                comment: document.getElementById('comment').value.trim(),
+                comment: '[INDIVIDUAL]' + document.getElementById('comment').value.trim(),
                 team_id: teamSelect ? (teamSelect.value || null) : null,
                 status: 'pending'
             };
