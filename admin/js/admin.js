@@ -165,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!app) return;
 
         currentApplicationId = id;
+        detailsModal.style.zIndex = '9999';
         
         detailPhoto.src = app.photo_url;
         detailName.textContent = `${app.first_name} ${app.last_name} ${app.father_name}`;
@@ -520,6 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
                         <span style="font-size: 11px; font-weight: bold; color: ${color}">${pStatus}</span>
                         <div style="display: flex; gap: 5px;">
+                            <button onclick="viewDetails('${p.id}')" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Ko'rish</button>
                             ${p.status !== 'approved' ? `<button onclick="updatePlayerStatus('${p.id}', 'approved')" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Tasdiqlash</button>` : ''}
                             ${p.status !== 'rejected' ? `<button onclick="updatePlayerStatus('${p.id}', 'rejected')" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Rad etish</button>` : ''}
                         </div>
