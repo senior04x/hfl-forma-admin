@@ -512,8 +512,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                team.status === 'partially_approved' ? 'Qisman' : 'Rad etilgan';
 
         // Load players for this team
-        // Load players for this team (exclude individual applicants if they are not approved)
-        const players = allApplications.filter(a => a.team_id === id && (!(a.comment && a.comment.startsWith('[INDIVIDUAL]')) || a.status === 'approved'));
+        // Load players for this team
+        const players = allApplications.filter(a => a.team_id === id);
         document.getElementById('teamPlayerCount').textContent = players.length;
         
         const listEl = document.getElementById('teamPlayersList');
