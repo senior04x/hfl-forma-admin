@@ -24,8 +24,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // State
     let allApplications = [];
+    let allTeams = [];
     let currentFilter = 'all';
+    let currentTab = 'individuals'; // 'individuals' or 'teams'
     let currentApplicationId = null;
+    let currentTeamId = null;
+
+    // Tabs
+    const tabIndividuals = document.getElementById('tabIndividuals');
+    const tabTeams = document.getElementById('tabTeams');
+    const individualsTableContainer = document.getElementById('individualsTableContainer');
+    const teamsTableContainer = document.getElementById('teamsTableContainer');
+    
+    // Team Modal
+    const teamDetailsModal = document.getElementById('teamDetailsModal');
+    const closeTeamModalBtn = document.getElementById('closeTeamModalBtn');
 
     // Fetch initial data
     fetchData();
@@ -40,14 +53,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Functions
     async function fetchData() {
         try {
-            const { data, error } = await db
+            const { data: appsData, error: appsError } = await db
                 .from('applications')
                 .select('*')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            allApplications = data;
-            renderTable();
+            if (appsError) throw appsError;
+            allApplications = appsData;
+
+            const { data: teamsData, error: teamsError } = await db
+                .from('teams')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (teamsError && teamsError.code !== '42P01') { // Ignore if teams table doesn't exist yet for some reason
+                console.error(teamsError);
+            } else if (teamsData) {
+                allTeams = teamsData;
+            }
+
+            if (currentTab === 'individuals') {
+                renderTable();
+            } else {
+                renderTeamsTable();
+            }
             updateStats();
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -59,6 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchTerm = searchInput.value.toLowerCase();
         
         let filteredData = allApplications.filter(app => {
+            if (app.team_id) return false; // Faqat yakkaxon zayavkalar
+
             const matchesSearch = 
                 app.first_name.toLowerCase().includes(searchTerm) || 
                 app.last_name.toLowerCase().includes(searchTerm) ||
@@ -112,9 +143,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateStats() {
-        const total = allApplications.length;
-        const pending = allApplications.filter(a => a.status === 'pending').length;
-        const approved = allApplications.filter(a => a.status === 'approved').length;
+        const individualApps = allApplications.filter(a => !a.team_id);
+        const total = individualApps.length;
+        const pending = individualApps.filter(a => a.status === 'pending').length;
+        const approved = individualApps.filter(a => a.status === 'approved').length;
 
         statTotal.textContent = total;
         statPending.textContent = pending;
@@ -223,7 +255,10 @@ document.addEventListener('DOMContentLoaded', () => {
     rejectBtn.addEventListener('click', () => updateStatus(currentApplicationId, 'rejected'));
 
     // Search and Filter Events
-    searchInput.addEventListener('input', renderTable);
+    searchInput.addEventListener('input', () => {
+        if (currentTab === 'individuals') renderTable();
+        else renderTeamsTable();
+    });
 
     filterBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -231,9 +266,100 @@ document.addEventListener('DOMContentLoaded', () => {
             filterBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentFilter = btn.dataset.filter;
-            renderTable();
+            if (currentTab === 'individuals') renderTable();
+            else renderTeamsTable();
         });
     });
+
+    // --- Tab Switching ---
+    if (tabIndividuals && tabTeams) {
+        tabIndividuals.addEventListener('click', () => {
+            currentTab = 'individuals';
+            tabIndividuals.classList.add('active');
+            tabIndividuals.style.background = 'var(--primary)';
+            tabIndividuals.style.color = 'white';
+            tabIndividuals.style.border = 'none';
+
+            tabTeams.classList.remove('active');
+            tabTeams.style.background = 'var(--bg-card)';
+            tabTeams.style.color = 'var(--text-dark)';
+            tabTeams.style.border = '1px solid var(--border-color)';
+
+            individualsTableContainer.classList.remove('hidden');
+            teamsTableContainer.classList.add('hidden');
+            renderTable();
+        });
+
+        tabTeams.addEventListener('click', () => {
+            currentTab = 'teams';
+            tabTeams.classList.add('active');
+            tabTeams.style.background = 'var(--primary)';
+            tabTeams.style.color = 'white';
+            tabTeams.style.border = 'none';
+
+            tabIndividuals.classList.remove('active');
+            tabIndividuals.style.background = 'var(--bg-card)';
+            tabIndividuals.style.color = 'var(--text-dark)';
+            tabIndividuals.style.border = '1px solid var(--border-color)';
+
+            teamsTableContainer.classList.remove('hidden');
+            individualsTableContainer.classList.add('hidden');
+            renderTeamsTable();
+        });
+    }
+
+    // --- Teams Rendering & Logic ---
+    function renderTeamsTable() {
+        const tableBody = document.getElementById('teamsTableBody');
+        if (!tableBody) return;
+        const searchTerm = searchInput.value.toLowerCase();
+        
+        let filteredData = allTeams.filter(team => {
+            const matchesSearch = 
+                team.name.toLowerCase().includes(searchTerm) || 
+                team.captain_phone.includes(searchTerm);
+            
+            const matchesFilter = currentFilter === 'all' || team.status === currentFilter;
+            
+            return matchesSearch && matchesFilter;
+        });
+
+        tableBody.innerHTML = '';
+
+        if (filteredData.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: #64748b;">Hech qanday jamoa topilmadi</td></tr>';
+            return;
+        }
+
+        filteredData.forEach(team => {
+            const dateObj = new Date(team.created_at);
+            const dateStr = dateObj.toLocaleDateString('uz-UZ');
+            
+            const statusClass = \`status-\${team.status}\`;
+            let statusText = team.status;
+            let statusIcon = 'circle-dashed';
+            if (team.status === 'pending') { statusText = 'Kutilmoqda'; statusIcon = 'clock'; }
+            if (team.status === 'approved') { statusText = 'Tasdiqlandi'; statusIcon = 'check-circle'; }
+            if (team.status === 'rejected') { statusText = 'Rad etildi'; statusIcon = 'x-circle'; }
+            if (team.status === 'partially_approved') { statusText = 'Qisman'; statusIcon = 'alert-circle'; }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = \`
+                <td><img src="\${team.logo_url}" alt="Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
+                <td style="font-weight: 600;">\${team.name}</td>
+                <td class="hide-mobile">\${team.captain_phone}</td>
+                <td>\${dateStr}</td>
+                <td style="text-align: center;"><span class="status-icon-badge \${statusClass}" title="\${statusText}"><i data-lucide="\${statusIcon}" style="width: 18px; height: 18px;"></i></span></td>
+                <td style="text-align: center; white-space: nowrap;">
+                    <button class="btn-view" onclick="viewTeamDetails('\${team.id}')" title="Ko'rish">
+                        <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </td>
+            \`;
+            tableBody.appendChild(tr);
+        });
+        lucide.createIcons();
+    }
 
     // PDF Export
     const exportBtn = document.getElementById('exportBtn');
@@ -346,6 +472,128 @@ document.addEventListener('DOMContentLoaded', () => {
                 lucide.createIcons();
             }
         });
+    }
+
+    // --- Team Modal Logic ---
+    window.viewTeamDetails = async function(id) {
+        const team = allTeams.find(t => t.id === id);
+        if (!team) return;
+
+        currentTeamId = id;
+        
+        document.getElementById('teamDetailLogo').src = team.logo_url;
+        document.getElementById('teamDetailName').textContent = team.name;
+        document.getElementById('teamDetailPhone').innerHTML = `<i data-lucide="phone" style="width: 14px; height: 14px; vertical-align: middle;"></i> ${team.captain_phone}`;
+        
+        const statusEl = document.getElementById('teamDetailStatus');
+        statusEl.className = `status-badge status-${team.status}`;
+        statusEl.textContent = team.status === 'pending' ? 'Kutilmoqda' : 
+                               team.status === 'approved' ? 'Tasdiqlangan' : 
+                               team.status === 'partially_approved' ? 'Qisman' : 'Rad etilgan';
+
+        // Load players for this team
+        const players = allApplications.filter(a => a.team_id === id);
+        document.getElementById('teamPlayerCount').textContent = players.length;
+        
+        const listEl = document.getElementById('teamPlayersList');
+        listEl.innerHTML = '';
+        
+        players.forEach(p => {
+            const pStatus = p.status === 'pending' ? 'Kutilmoqda' : p.status === 'approved' ? 'Tasdiqlandi' : 'Rad etildi';
+            const color = p.status === 'pending' ? 'orange' : p.status === 'approved' ? 'green' : 'red';
+            
+            listEl.innerHTML += `
+                <div style="display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;">
+                    <img src="${p.photo_url}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 4px 0; font-size: 14px;">${p.first_name} ${p.last_name}</h4>
+                        <div style="font-size: 12px; color: #94a3b8;">${p.passport_series}${p.passport_number} | ${p.phone}</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+                        <span style="font-size: 11px; font-weight: bold; color: ${color}">${pStatus}</span>
+                        <div style="display: flex; gap: 5px;">
+                            ${p.status !== 'approved' ? `<button onclick="updatePlayerStatus('${p.id}', 'approved')" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Tasdiqlash</button>` : ''}
+                            ${p.status !== 'rejected' ? `<button onclick="updatePlayerStatus('${p.id}', 'rejected')" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Rad etish</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        lucide.createIcons();
+        teamDetailsModal.classList.remove('hidden');
+    }
+
+    if (closeTeamModalBtn) {
+        closeTeamModalBtn.addEventListener('click', () => {
+            teamDetailsModal.classList.add('hidden');
+        });
+    }
+
+    window.updatePlayerStatus = async function(playerId, newStatus) {
+        try {
+            const { error } = await db.from('applications').update({ status: newStatus }).eq('id', playerId);
+            if (error) throw error;
+            
+            // Check overall team status locally
+            const tPlayers = allApplications.filter(a => a.team_id === currentTeamId);
+            const pIndex = tPlayers.findIndex(a => a.id === playerId);
+            if(pIndex !== -1) tPlayers[pIndex].status = newStatus;
+
+            let newTeamStatus = 'pending';
+            const allApproved = tPlayers.every(p => p.status === 'approved');
+            const allRejected = tPlayers.every(p => p.status === 'rejected');
+            const someApproved = tPlayers.some(p => p.status === 'approved');
+
+            if (allApproved) newTeamStatus = 'approved';
+            else if (allRejected) newTeamStatus = 'rejected';
+            else if (someApproved) newTeamStatus = 'partially_approved';
+
+            // Update team status in DB silently
+            await db.from('teams').update({ status: newTeamStatus }).eq('id', currentTeamId);
+            
+            // Re-fetch to update everything
+            fetchData().then(() => {
+                if(!teamDetailsModal.classList.contains('hidden')) {
+                    viewTeamDetails(currentTeamId); // Refresh modal
+                }
+            });
+        } catch (err) {
+            console.error(err);
+            alert("Xatolik: " + err.message);
+        }
+    }
+
+    document.getElementById('approveTeamBtn')?.addEventListener('click', () => bulkUpdateTeam('approved'));
+    document.getElementById('rejectTeamBtn')?.addEventListener('click', () => bulkUpdateTeam('rejected'));
+    document.getElementById('deleteTeamBtn')?.addEventListener('click', async () => {
+        if (confirm("Rostdan ham ushbu jamoani to'liq o'chirmoqchimisiz?")) {
+            try {
+                // Because of ON DELETE CASCADE on applications(team_id), this deletes players too!
+                const { error } = await db.from('teams').delete().eq('id', currentTeamId);
+                if (error) throw error;
+                teamDetailsModal.classList.add('hidden');
+                alert("Jamoa o'chirildi!");
+                fetchData();
+            } catch (err) {
+                alert("Xatolik: " + err.message);
+            }
+        }
+    });
+
+    async function bulkUpdateTeam(newStatus) {
+        try {
+            const { error: teamErr } = await db.from('teams').update({ status: newStatus }).eq('id', currentTeamId);
+            if (teamErr) throw teamErr;
+
+            const { error: appErr } = await db.from('applications').update({ status: newStatus }).eq('team_id', currentTeamId);
+            if (appErr) throw appErr;
+
+            teamDetailsModal.classList.add('hidden');
+            fetchData();
+        } catch (err) {
+            alert("Xatolik: " + err.message);
+        }
     }
 
     // Logout

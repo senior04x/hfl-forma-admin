@@ -82,7 +82,14 @@
             </header>
 
             <div class="content-area">
-                <div class="table-container">
+                
+                <!-- View Tabs -->
+                <div class="view-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button id="tabIndividuals" class="tab-btn active" style="padding: 10px 20px; border-radius: 12px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: 600;">Yakkaxon Zayavkalar</button>
+                    <button id="tabTeams" class="tab-btn" style="padding: 10px 20px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-dark); cursor: pointer; font-weight: 600;">Jamoalar</button>
+                </div>
+
+                <div class="table-container" id="individualsTableContainer">
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -97,6 +104,24 @@
                         </thead>
                         <tbody id="tableBody">
                             <!-- Data will be populated here by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="table-container hidden" id="teamsTableContainer">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Logotip</th>
+                                <th>Jamoa nomi</th>
+                                <th class="hide-mobile">Sardor tel.</th>
+                                <th>Sana</th>
+                                <th>Status</th>
+                                <th>Amallar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teamsTableBody">
+                            <!-- Teams Data will be populated here by JS -->
                         </tbody>
                     </table>
                 </div>
@@ -147,6 +172,35 @@
                         <button class="btn-delete" id="modalDeleteBtn" style="flex: 1; min-width: 120px; padding: 12px; border-radius: 8px; justify-content: center; display: flex; align-items: center; gap: 8px;"><i data-lucide="trash-2"></i> O'chirish</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Details Modal -->
+    <div id="teamDetailsModal" class="modal hidden">
+        <div class="modal-content large" style="max-width: 800px;">
+            <button class="close-modal" id="closeTeamModalBtn"><i data-lucide="x"></i></button>
+            
+            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px;">
+                <img id="teamDetailLogo" src="" alt="Jamoa logosi" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
+                <div>
+                    <h2 id="teamDetailName" style="margin: 0 0 5px 0;">Jamoa Nomi</h2>
+                    <p id="teamDetailPhone" style="color: #94a3b8; margin: 0;"><i data-lucide="phone" style="width: 14px; height: 14px; vertical-align: middle;"></i> +998901234567</p>
+                </div>
+                <div style="margin-left: auto; text-align: right;">
+                    <div id="teamDetailStatus">Kutilmoqda</div>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 15px;">Jamoa a'zolari (<span id="teamPlayerCount">0</span> ta)</h3>
+            <div id="teamPlayersList" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 10px; margin-bottom: 20px;">
+                <!-- Player items will appear here -->
+            </div>
+
+            <div class="action-buttons" style="flex-wrap: wrap; gap: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                <button class="btn-approve" id="approveTeamBtn" style="flex: 1; min-width: 120px;"><i data-lucide="check-square"></i> Jamoani to'liq tasdiqlash</button>
+                <button class="btn-reject" id="rejectTeamBtn" style="flex: 1; min-width: 120px;"><i data-lucide="x-square"></i> Jamoani rad etish</button>
+                <button class="btn-delete" id="deleteTeamBtn" style="flex: 1; min-width: 120px; padding: 12px; border-radius: 8px; justify-content: center; display: flex; align-items: center; gap: 8px;"><i data-lucide="trash-2"></i> Jamoani o'chirish</button>
             </div>
         </div>
     </div>

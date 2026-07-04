@@ -81,6 +81,53 @@ Sizning zayavkangiz tizimga muvaffaqiyatli qabul qilindi.
             console.error(err);
             bot.sendMessage(chatId, "Xatolik yuz berdi. Iltimos keyinroq qayta urinib ko'ring.");
         }
+    } else if (deepLinkParam.startsWith('team_')) {
+        const teamId = deepLinkParam.replace('team_', '');
+        
+        try {
+            const { data, error } = await supabase
+                .from('teams')
+                .select('*')
+                .eq('id', teamId)
+                .single();
+
+            if (error || !data) {
+                return bot.sendMessage(chatId, "Bunday jamoa topilmadi. Yoki id noto'g'ri.");
+            }
+
+            const { error: updateError } = await supabase
+                .from('teams')
+                .update({ telegram_chat_id: chatId })
+                .eq('id', teamId);
+
+            if (updateError) {
+                console.error('Error updating chat ID:', updateError);
+            }
+
+            let statusText = '⏳ Kutilmoqda';
+            if (data.status === 'approved') statusText = '✅ Tasdiqlangan';
+            if (data.status === 'rejected') statusText = '❌ Rad etilgan';
+            if (data.status === 'partially_approved') statusText = '⚠️ Qisman';
+
+            const message = `
+🎉 <b>Havas Futbol Ligasi</b>
+
+Assalomu alaykum! <b>${data.name}</b> jamoasi tizimga qabul qilindi.
+
+<b>Jamoa ma'lumotlari:</b>
+📞 Sardor telefoni: ${data.captain_phone}
+
+<b>Hozirgi holat:</b> ${statusText}
+
+<i>Jamoa holati o'zgarganda shu yerda avtomatik xabar olasiz!</i>
+            `;
+
+            bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+
+        } catch (err) {
+            console.error(err);
+            bot.sendMessage(chatId, "Xatolik yuz berdi. Iltimos keyinroq qayta urinib ko'ring.");
+        }
     }
 });
 
@@ -102,18 +149,50 @@ supabase
 
       // Only send if status actually changed and telegram_chat_id exists
       if (oldRecord.status !== newRecord.status && newRecord.telegram_chat_id) {
-          let notificationMsg = '';
-          
-          if (newRecord.status === 'approved') {
-              notificationMsg = `🎉 Tabriklaymiz, <b>${newRecord.first_name}</b>!\n\nSizning zayavkangiz qabul qilindi! 25-iyul kuni boshlanadigan 1-turimizda kutib qolamiz ⚽️🏆`;
-          } else if (newRecord.status === 'rejected') {
-              notificationMsg = `Hurmatli <b>${newRecord.first_name}</b>,\n\nAfsuski, sizning zayavkangiz rad etildi. Boshqa mavsumlarda kutib qolamiz.`;
-          }
+          let statusText = '⏳ Kutilmoqda';
+          if (newRecord.status === 'approved') statusText = '✅ Tasdiqlangan';
+          if (newRecord.status === 'rejected') statusText = '❌ Rad etilgan';
 
-          if (notificationMsg) {
-              bot.sendMessage(newRecord.telegram_chat_id, notificationMsg, { parse_mode: 'HTML' })
-                 .catch(err => console.error('Error sending message:', err));
-          }
+          const message = `
+🔔 <b>Zayavka holati o'zgardi!</b>
+
+Hurmatli ${newRecord.first_name}, sizning zayavkangiz tekshirildi.
+<b>Yangi holat:</b> ${statusText}
+          `;
+          
+          bot.sendMessage(newRecord.telegram_chat_id, message, { parse_mode: 'HTML' })
+             .catch(err => console.error('Error sending message:', err));
+      }
+  })
+  .subscribe();
+
+// 3. Realtime listener for team status changes
+supabase
+  .channel('teams-status')
+  .on('postgres_changes', { 
+      event: 'UPDATE', 
+      schema: 'public', 
+      table: 'teams' 
+  }, (payload) => {
+      const oldRecord = payload.old;
+      const newRecord = payload.new;
+
+      if (oldRecord.status !== newRecord.status && newRecord.telegram_chat_id) {
+          let statusText = '⏳ Kutilmoqda';
+          if (newRecord.status === 'approved') statusText = '✅ Tasdiqlangan (Barcha o\'yinchilar)';
+          if (newRecord.status === 'rejected') statusText = '❌ Rad etilgan (Barcha o\'yinchilar)';
+          if (newRecord.status === 'partially_approved') statusText = '⚠️ Qisman (Ba\'zi o\'yinchilar rad etilgan)';
+
+          const message = `
+🔔 <b>${newRecord.name}</b> jamoasi holati o'zgardi!
+
+<b>Yangi holat:</b> ${statusText}
+
+Admin panel orqali ma'lumotlar tekshirildi. To'liq tafsilotlarni bilish uchun adminlar bilan bog'lanishingiz mumkin.
+          `;
+          
+          bot.sendMessage(newRecord.telegram_chat_id, message, { parse_mode: 'HTML' })
+             .catch(err => console.error('Error sending message:', err));
       }
   })
   .subscribe();
