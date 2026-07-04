@@ -17,7 +17,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // State
     let selectedFile = null;
     const BOT_USERNAME = 'havasmedialiga_bot'; 
+    const teamSelect = document.getElementById('teamSelect');
 
+    // Fetch Teams
+    async function fetchTeams() {
+        if (!teamSelect) return;
+        try {
+            const { data, error } = await db
+                .from('teams')
+                .select('id, name')
+                .eq('status', 'approved')
+                .order('name');
+                
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+                data.forEach(team => {
+                    const option = document.createElement('option');
+                    option.value = team.id;
+                    option.textContent = team.name;
+                    teamSelect.appendChild(option);
+                });
+            }
+        } catch (err) {
+            console.error('Error fetching teams:', err);
+        }
+    }
+    
+    fetchTeams();
     // --- Phone Number Formatting ---
     phoneInput.addEventListener('input', function (e) {
         let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,3})(\d{0,2})(\d{0,2})/);
@@ -142,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 passport_number: numberVal,
                 phone: fullPhone,
                 comment: document.getElementById('comment').value.trim(),
+                team_id: teamSelect ? (teamSelect.value || null) : null,
                 status: 'pending'
             };
 
