@@ -237,8 +237,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // UI ni qotib qolmasligi uchun loading holatiga o'tkazish
         const originalBtnText = submitBtn.innerHTML;
-        submitBtn.innerHTML = 'Qo\'shilmoqda...';
+        submitBtn.innerHTML = '<i data-lucide="loader" class="spin" style="width: 18px; height: 18px; margin-right: 5px; vertical-align: middle;"></i> Qo\'shilmoqda...';
         submitBtn.disabled = true;
+        lucide.createIcons();
+
+        // Brauzer ekranni chizib olishi uchun kutish (sun'iy pauza emas, faqat UI render uchun)
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
         try {
             const newPlayer = {
