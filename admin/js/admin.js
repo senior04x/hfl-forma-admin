@@ -134,6 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-view" onclick="viewDetails('${app.id}')" title="Ko'rish">
                         <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
                     </button>
+                    <button class="btn-view" onclick="editPlayer('${app.id}')" title="Tahrirlash" style="color: var(--primary);">
+                        <i data-lucide="edit" style="width: 16px; height: 16px;"></i>
+                    </button>
                 </td>
             `;
             tableBody.appendChild(tr);
@@ -363,6 +366,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-view" onclick="viewTeamDetails('${team.id}')" title="Ko'rish">
                         <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
                     </button>
+                    <button class="btn-view" onclick="editTeam('${team.id}')" title="Tahrirlash" style="color: var(--primary);">
+                        <i data-lucide="edit" style="width: 16px; height: 16px;"></i>
+                    </button>
                 </td>
             `;
             tableBody.appendChild(tr);
@@ -522,6 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span style="font-size: 11px; font-weight: bold; color: ${color}">${pStatus}</span>
                         <div style="display: flex; gap: 5px;">
                             <button onclick="viewDetails('${p.id}')" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Ko'rish</button>
+                            <button onclick="editPlayer('${p.id}')" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Tahrirlash</button>
                             ${p.status !== 'approved' ? `<button onclick="updatePlayerStatus('${p.id}', 'approved')" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Tasdiqlash</button>` : ''}
                             ${p.status !== 'rejected' ? `<button onclick="updatePlayerStatus('${p.id}', 'rejected')" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Rad etish</button>` : ''}
                         </div>
@@ -605,6 +612,185 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Xatolik: " + err.message);
         }
     }
+    // --- Image Compressor ---
+    async function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.6) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round((width * maxHeight) / height);
+                            height = maxHeight;
+                        }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob((blob) => {
+                        if (!blob) return reject(new Error('Canvas to Blob failed'));
+                        const newFileName = file.name.replace(/\.[^/.]+$/, "") + "_compressed.jpg";
+                        const compressedFile = new File([blob], newFileName, { type: 'image/jpeg', lastModified: Date.now() });
+                        resolve(compressedFile);
+                    }, 'image/jpeg', quality);
+                };
+                img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+        });
+    }
+
+    // --- Edit Modals Logic ---
+    const editTeamModal = document.getElementById('editTeamModal');
+    const editPlayerModal = document.getElementById('editPlayerModal');
+    let editingTeamId = null;
+    let editingPlayerId = null;
+
+    document.getElementById('closeEditTeamBtn')?.addEventListener('click', () => editTeamModal.classList.add('hidden'));
+    document.getElementById('closeEditPlayerBtn')?.addEventListener('click', () => editPlayerModal.classList.add('hidden'));
+
+    window.editTeam = function(id) {
+        const team = allTeams.find(t => t.id === id);
+        if(!team) return;
+        editingTeamId = id;
+        document.getElementById('editTeamName').value = team.name;
+        document.getElementById('editTeamPhone').value = team.captain_phone;
+        document.getElementById('editTeamLogo').value = ''; // clear previous file
+        editTeamModal.style.zIndex = '10000';
+        editTeamModal.classList.remove('hidden');
+    }
+
+    document.getElementById('editTeamForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById('editTeamSubmitBtn');
+        submitBtn.innerHTML = '<i data-lucide="loader" class="spin"></i> <span>Saqlanmoqda...</span>';
+        submitBtn.disabled = true;
+        lucide.createIcons();
+
+        try {
+            const name = document.getElementById('editTeamName').value.trim();
+            const phone = document.getElementById('editTeamPhone').value.trim();
+            const logoFile = document.getElementById('editTeamLogo').files[0];
+            
+            let updates = { name, captain_phone: phone };
+
+            if (logoFile) {
+                const compressed = await compressImage(logoFile);
+                const fileExt = compressed.name.split('.').pop();
+                const fileName = `team_${Date.now()}.${fileExt}`;
+                const { error: uploadError } = await db.storage.from('player-photos').upload(fileName, compressed);
+                if (uploadError) throw uploadError;
+                
+                const { data: { publicUrl } } = db.storage.from('player-photos').getPublicUrl(fileName);
+                updates.logo_url = publicUrl;
+            }
+
+            const { error } = await db.from('teams').update(updates).eq('id', editingTeamId);
+            if(error) throw error;
+
+            alert('Jamoa muvaffaqiyatli tahrirlandi!');
+            editTeamModal.classList.add('hidden');
+            if(!teamDetailsModal.classList.contains('hidden') && currentTeamId === editingTeamId) {
+                document.getElementById('teamDetailName').textContent = name;
+                document.getElementById('teamDetailPhone').innerHTML = `<i data-lucide="phone" style="width: 14px; height: 14px; vertical-align: middle;"></i> ${phone}`;
+                if(updates.logo_url) document.getElementById('teamDetailLogo').src = updates.logo_url;
+            }
+            await fetchData();
+        } catch (err) {
+            alert("Xatolik: " + err.message);
+        } finally {
+            submitBtn.innerHTML = '<i data-lucide="save"></i> <span>Saqlash</span>';
+            submitBtn.disabled = false;
+            lucide.createIcons();
+        }
+    });
+
+    window.editPlayer = function(id) {
+        const app = allApplications.find(a => a.id === id);
+        if(!app) return;
+        editingPlayerId = id;
+        document.getElementById('editPlayerFirstName').value = app.first_name;
+        document.getElementById('editPlayerLastName').value = app.last_name;
+        document.getElementById('editPlayerFatherName').value = app.father_name;
+        document.getElementById('editPlayerPassSeries').value = app.passport_series;
+        document.getElementById('editPlayerPassNumber').value = app.passport_number;
+        document.getElementById('editPlayerPhone').value = app.phone;
+        document.getElementById('editPlayerComment').value = app.comment || '';
+        document.getElementById('editPlayerPhoto').value = '';
+        
+        editPlayerModal.style.zIndex = '10000';
+        editPlayerModal.classList.remove('hidden');
+    }
+
+    document.getElementById('editPlayerForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById('editPlayerSubmitBtn');
+        submitBtn.innerHTML = '<i data-lucide="loader" class="spin"></i> <span>Saqlanmoqda...</span>';
+        submitBtn.disabled = true;
+        lucide.createIcons();
+
+        try {
+            const first_name = document.getElementById('editPlayerFirstName').value.trim();
+            const last_name = document.getElementById('editPlayerLastName').value.trim();
+            const father_name = document.getElementById('editPlayerFatherName').value.trim();
+            const passport_series = document.getElementById('editPlayerPassSeries').value.trim().toUpperCase();
+            const passport_number = document.getElementById('editPlayerPassNumber').value.trim();
+            const phone = document.getElementById('editPlayerPhone').value.trim();
+            const comment = document.getElementById('editPlayerComment').value.trim();
+            const photoFile = document.getElementById('editPlayerPhoto').files[0];
+            
+            let updates = { first_name, last_name, father_name, passport_series, passport_number, phone, comment };
+
+            if (photoFile) {
+                const compressed = await compressImage(photoFile);
+                const fileExt = compressed.name.split('.').pop();
+                const fileName = `player_${Date.now()}.${fileExt}`;
+                const { error: uploadError } = await db.storage.from('player-photos').upload(fileName, compressed);
+                if (uploadError) throw uploadError;
+                
+                const { data: { publicUrl } } = db.storage.from('player-photos').getPublicUrl(fileName);
+                updates.photo_url = publicUrl;
+            }
+
+            const { error } = await db.from('applications').update(updates).eq('id', editingPlayerId);
+            if(error) throw error;
+
+            alert('O\'yinchi muvaffaqiyatli tahrirlandi!');
+            editPlayerModal.classList.add('hidden');
+            
+            if(!detailsModal.classList.contains('hidden') && currentApplicationId === editingPlayerId) {
+                document.getElementById('detailName').textContent = `${first_name} ${last_name} ${father_name}`;
+                document.getElementById('detailPassport').textContent = `${passport_series} ${passport_number}`;
+                document.getElementById('detailPhone').textContent = phone;
+                document.getElementById('detailComment').textContent = comment;
+                if(updates.photo_url) document.getElementById('detailPhoto').src = updates.photo_url;
+            }
+
+            await fetchData();
+
+            if(!teamDetailsModal.classList.contains('hidden')) {
+                setTimeout(() => { viewTeamDetails(currentTeamId); }, 100);
+            }
+        } catch (err) {
+            alert("Xatolik: " + err.message);
+        } finally {
+            submitBtn.innerHTML = '<i data-lucide="save"></i> <span>Saqlash</span>';
+            submitBtn.disabled = false;
+            lucide.createIcons();
+        }
+    });
 
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', async () => {
