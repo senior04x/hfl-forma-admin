@@ -20,19 +20,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Image optimization proxy
-        function optimizeImageUrl(url) {
-            if (!url || url.includes('via.placeholder.com') || url.includes('wsrv.nl')) return url;
-            return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=400&output=webp&q=80`;
-        }
-
         data.forEach(team => {
             const card = document.createElement('a');
             card.href = `team-details.html?id=${team.id}`;
             card.className = 'team-card-public';
             
             card.innerHTML = `
-                <img src="${optimizeImageUrl(team.logo_url)}" alt="${team.name}" loading="lazy" decoding="async" onerror="this.src='https://via.placeholder.com/100x100?text=Logo'">
+                <img src="${team.logo_url}" alt="${team.name}" loading="lazy" decoding="async" onerror="this.src='https://via.placeholder.com/100x100?text=Logo'">
                 <h3>${team.name}</h3>
                 <p>Batafsil ko'rish &rarr;</p>
             `;
