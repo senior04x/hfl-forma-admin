@@ -45,13 +45,13 @@ async function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.
                         reject(new Error('Canvas to Blob conversion failed'));
                         return;
                     }
-                    const newFileName = file.name.replace(/\.[^/.]+$/, "") + "_compressed.jpg";
+                    const newFileName = file.name.replace(/\.[^/.]+$/, "") + "_compressed.webp";
                     const compressedFile = new File([blob], newFileName, {
-                        type: 'image/jpeg',
+                        type: 'image/webp',
                         lastModified: Date.now(),
                     });
                     resolve(compressedFile);
-                }, 'image/jpeg', quality);
+                }, 'image/webp', 0.8);
             };
             img.onerror = (error) => reject(error);
         };
