@@ -13,9 +13,6 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Google Model Viewer for 3D Models -->
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/main.css">
@@ -24,42 +21,6 @@
     
     <!-- Floating particles background -->
     <div class="particles" id="particles"></div>
-
-    <!-- 3D Models Background -->
-    <div class="models-bg-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; z-index: 0;">
-        <!-- Top Left Model -->
-        <model-viewer 
-            src="assets/models/soccer_ball.glb" 
-            auto-rotate 
-            rotation-per-second="15deg" 
-            environment-image="neutral" 
-            exposure="1.2" 
-            camera-orbit="45deg 55deg 105%"
-            style="position: absolute; top: 5%; left: -5%; width: 400px; height: 400px; opacity: 0.9; filter: drop-shadow(0 0 30px rgba(240, 208, 96, 0.4));">
-        </model-viewer>
-        
-        <!-- Center Right Model -->
-        <model-viewer 
-            src="assets/models/soccer_ball.glb" 
-            auto-rotate 
-            rotation-per-second="-12deg" 
-            environment-image="neutral" 
-            exposure="1.2" 
-            camera-orbit="120deg 60deg 105%"
-            style="position: absolute; top: 45%; right: -8%; width: 550px; height: 550px; opacity: 0.8; filter: drop-shadow(0 0 30px rgba(240, 208, 96, 0.3));">
-        </model-viewer>
-
-        <!-- Bottom Left Small Model -->
-        <model-viewer 
-            src="assets/models/soccer_ball.glb" 
-            auto-rotate 
-            rotation-per-second="20deg" 
-            environment-image="neutral" 
-            exposure="1.2" 
-            camera-orbit="-45deg 70deg 105%"
-            style="position: absolute; bottom: -5%; left: 20%; width: 300px; height: 300px; opacity: 0.7; filter: drop-shadow(0 0 20px rgba(240, 208, 96, 0.2));">
-        </model-viewer>
-    </div>
 
     <div class="site-container" style="z-index: 1; position: relative;">
         <div class="hero">
