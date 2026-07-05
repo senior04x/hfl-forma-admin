@@ -90,7 +90,11 @@
 /* Page Layout */
 body {
     padding-top: 80px !important;
-    display: block !important;
+    display: flex !important;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+    overflow-x: hidden;
 }
 
 .site-container {
@@ -98,6 +102,8 @@ body {
     margin: 0 auto;
     padding: 40px 20px;
     z-index: 1;
+    flex: 1;
+
     position: relative;
 }
 
@@ -298,4 +304,55 @@ body {
     .hero h1 {
         font-size: 36px;
     }
+}
+
+/* Footer */
+.site-footer {
+    width: 100%;
+    background: rgba(10, 10, 15, 0.95);
+    padding: 25px 20px;
+    margin-top: auto;
+    display: flex;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.footer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    max-width: 400px;
+    width: 100%;
+}
+
+.footer-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--text-muted);
+    text-align: center;
+    align-items: center;
+}
+
+.footer-item i {
+    width: 28px;
+    height: 28px;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+}
+
+.footer-text {
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+.footer-link {
+    color: var(--gold-primary);
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.footer-link:hover {
+    color: #fff;
 }
