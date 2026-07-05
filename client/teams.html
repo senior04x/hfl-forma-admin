@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Havas Futbol Ligasi - Bosh Sahifa</title>
+    <title>Havas Futbol Ligasi - Jamoalar</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,6 +12,9 @@
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
@@ -23,23 +26,22 @@
     <div class="particles" id="particles"></div>
 
     <div class="site-container">
-        <div class="hero">
-            <h1>Havas Futbol Ligasi</h1>
-            <p>O'zbekistonning eng katta va qiziqarli havaskorlar futbol ligasi. O'z jamoangiz bilan chempionlik sari qadam tashlang yoki yakkaxon sifatida o'zingizga yangi jamoa toping!</p>
-            
-            <div class="hero-btns">
-                <a href="apply.html" class="btn-large btn-primary">
-                    <i data-lucide="user-plus"></i> Ro'yxatdan o'tish
-                </a>
-                <a href="teams.html" class="btn-large btn-secondary">
-                    <i data-lucide="shield"></i> Jamoalarni ko'rish
-                </a>
-            </div>
+        <h1 style="text-align: center; margin-bottom: 40px; font-family: 'Outfit', sans-serif;">Tasdiqlangan Jamoalar</h1>
+        
+        <div id="loadingTeams" style="text-align: center; padding: 40px;">
+            <i data-lucide="loader" class="spin" style="width: 40px; height: 40px; color: var(--gold-primary);"></i>
+            <p style="margin-top: 15px; color: var(--text-muted);">Jamoalar yuklanmoqda...</p>
+        </div>
+
+        <div id="teamsGrid" class="teams-grid hidden">
+            <!-- Teams will be injected here -->
         </div>
     </div>
 
     <!-- Scripts -->
     <script>lucide.createIcons();</script>
     <script src="js/layout.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/teams-public.js"></script>
 </body>
 </html>

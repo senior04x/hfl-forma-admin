@@ -109,12 +109,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveDraft() {
-        sessionStorage.setItem('hfl_team_info', JSON.stringify({
-            name: teamNameInput.value,
-            phone: captainPhoneInput.value,
-            logo: teamLogoBase64
-        }));
-        sessionStorage.setItem('hfl_team_players', JSON.stringify(players));
+        try {
+            sessionStorage.setItem('hfl_team_info', JSON.stringify({
+                name: teamNameInput.value,
+                captainPhone: captainPhoneInput.value,
+                logo: teamLogoBase64
+            }));
+            sessionStorage.setItem('hfl_team_players', JSON.stringify(players));
+        } catch (e) {
+            console.error("Storage error:", e);
+            if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                alert("Diqqat! Brauzeringiz vaqtinchalik xotirasi (Session Storage) to'lib qoldi. Bunga sabab juda ko'p yoki hajmi katta rasmlar yuklaganingizdir. Iltimos, arizani hozir yuboring yoki bazi rasmlarni qayta kichik hajmda yuklang!");
+            }
+        }
     }
 
     [teamNameInput, captainPhoneInput].forEach(el => {
@@ -354,21 +361,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             updateProgress();
 
-            // 2. Insert Team Record
-            const fullCaptainPhone = '+998' + captainPhoneVal;
-            const { error: teamInsertError } = await db
-                .from('teams')
-                .insert([{
-                    id: teamId,
-                    name: teamName,
-                    logo_url: teamLogoUrl,
-                    captain_phone: fullCaptainPhone,
-                    status: 'pending'
-                }]);
+            // Track uploaded files for rollback in case of error
+            let uploadedFiles = [logoFileName];
             
-            if (teamInsertError) throw teamInsertError;
-
-            // 3. Upload Player Photos and Prepare Player Records
+            // 2. Upload Player Photos and Prepare Player Records
             // Using a loop to not overwhelm the network and to track progress smoothly
             const applicationsToInsert = [];
             
@@ -382,7 +378,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     .from('player-photos')
                     .upload(pFileName, playerBlob);
                 
-                if (pUploadError) throw pUploadError;
+                if (pUploadError) {
+                    // Rollback all uploaded files so far
+                    await db.storage.from('player-photos').remove(uploadedFiles);
+                    throw pUploadError;
+                }
+                
+                uploadedFiles.push(pFileName);
 
                 const { data: { publicUrl: pPhotoUrl } } = db.storage
                     .from('player-photos')
@@ -408,12 +410,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateProgress();
             }
 
+            // 3. Insert Team Record (ONLY after all photos succeeded)
+            const fullCaptainPhone = '+998' + captainPhoneVal;
+            const { error: teamInsertError } = await db
+                .from('teams')
+                .insert([{
+                    id: teamId,
+                    name: teamName,
+                    logo_url: teamLogoUrl,
+                    captain_phone: fullCaptainPhone,
+                    status: 'pending'
+                }]);
+            
+            if (teamInsertError) {
+                await db.storage.from('player-photos').remove(uploadedFiles);
+                throw teamInsertError;
+            }
+
             // 4. Bulk Insert Players
             const { error: playersInsertError } = await db
                 .from('applications')
                 .insert(applicationsToInsert);
 
-            if (playersInsertError) throw playersInsertError;
+            if (playersInsertError) {
+                // We could delete the team record here too, but at least clean storage
+                await db.from('teams').delete().eq('id', teamId);
+                await db.storage.from('player-photos').remove(uploadedFiles);
+                throw playersInsertError;
+            }
 
             // Done!
             sessionStorage.removeItem('hfl_team_info');

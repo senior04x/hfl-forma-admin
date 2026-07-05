@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Havas Futbol Ligasi - Jamoa Tarkibi</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    
+    <!-- Floating particles background -->
+    <div class="particles" id="particles"></div>
+
+    <div class="site-container">
+        
+        <div id="loadingDetails" style="text-align: center; padding: 40px;">
+            <i data-lucide="loader" class="spin" style="width: 40px; height: 40px; color: var(--gold-primary);"></i>
+            <p style="margin-top: 15px; color: var(--text-muted);">Jamoa ma'lumotlari yuklanmoqda...</p>
+        </div>
+
+        <div id="teamContent" class="hidden">
+            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 40px; background: var(--bg-card); padding: 25px; border-radius: var(--border-radius); border: 1px solid var(--glass-border);">
+                <img id="tdLogo" src="" alt="Logo" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-primary);">
+                <div>
+                    <h1 id="tdName" style="font-family: 'Outfit', sans-serif; margin-bottom: 5px;">Jamoa Nomi</h1>
+                    <p id="tdCount" style="color: var(--text-muted);">0 ta o'yinchi</p>
+                </div>
+            </div>
+
+            <h2 style="font-family: 'Outfit', sans-serif; margin-bottom: 20px; border-left: 4px solid var(--gold-primary); padding-left: 15px;">Asosiy Tarkib</h2>
+            
+            <div id="playersGrid" class="players-grid">
+                <!-- Players injected here -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Player Details Modal -->
+    <div id="playerDetailModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <button class="close-modal" id="closePlayerModal"><i data-lucide="x"></i></button>
+            <img id="pdPhoto" src="" alt="Rasm" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold-primary); margin: 0 auto 20px auto;">
+            <h2 id="pdName" style="margin-bottom: 5px; font-family: 'Outfit', sans-serif;">Ism Familiya</h2>
+            <p id="pdNumber" style="font-size: 24px; font-weight: 800; color: var(--gold-primary); margin-bottom: 20px;">#10</p>
+            
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: left; margin-bottom: 10px;">
+                <p style="margin-bottom: 8px;"><span style="color: var(--text-muted);">Amplua:</span> <strong id="pdPosition" style="float: right;">Hujumchi</strong></p>
+                <p><span style="color: var(--text-muted);">Tug'ilgan sana:</span> <strong id="pdBirth" style="float: right;">01.01.2000</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>lucide.createIcons();</script>
+    <script src="js/layout.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/team-details-public.js"></script>
+</body>
+</html>

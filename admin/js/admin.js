@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const escapeHTML = (str) => {
+        if (!str) return '';
+        return String(str).replace(/[&<>'"]/g, tag => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[tag] || tag));
+    };
     // DOM Elements
     const tableBody = document.getElementById('tableBody');
     const searchInput = document.getElementById('searchInput');
@@ -121,10 +127,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><img src="${app.photo_url}" alt="Rasm" class="player-avatar"></td>
-                <td style="font-weight: 500; font-size: 13px;">${app.first_name} ${app.last_name}</td>
-                <td class="hide-mobile"><span style="font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">${(app.passport_series || app.passport_number) ? (app.passport_series || '') + (app.passport_number || '') : '-'}</span></td>
-                <td class="hide-mobile">${app.phone || '-'}</td>
+                <td><img src="${escapeHTML(app.photo_url)}" alt="Rasm" class="player-avatar"></td>
+                <td style="font-weight: 500; font-size: 13px;">${escapeHTML(app.first_name)} ${escapeHTML(app.last_name)}</td>
+                <td class="hide-mobile"><span style="font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">${escapeHTML((app.passport_series || app.passport_number) ? (app.passport_series || '') + (app.passport_number || '') : '-')}</span></td>
+                <td class="hide-mobile">${escapeHTML(app.phone || '-')}</td>
                 <td style="color: #64748b; font-size: 12px; text-align: center;">
                     <div style="white-space: nowrap;">${dateStr}</div>
                     <div style="font-size: 11px; opacity: 0.7; margin-top: 2px;">${timeStr}</div>
@@ -362,9 +368,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><img src="${team.logo_url}" alt="Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
-                <td style="font-weight: 600;">${team.name}</td>
-                <td class="hide-mobile">${team.captain_phone}</td>
+                <td><img src="${escapeHTML(team.logo_url)}" alt="Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
+                <td style="font-weight: 600;">${escapeHTML(team.name)}</td>
+                <td class="hide-mobile">${escapeHTML(team.captain_phone)}</td>
                 <td>${dateStr}</td>
                 <td style="text-align: center;"><span class="status-icon-badge ${statusClass}" title="${statusText}"><i data-lucide="${statusIcon}" style="width: 18px; height: 18px;"></i></span></td>
                 <td style="text-align: center; white-space: nowrap;">
@@ -636,10 +642,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             listEl.innerHTML += `
                 <div style="display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;">
-                    <img src="${p.photo_url}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                    <img src="${escapeHTML(p.photo_url)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                     <div style="flex: 1;">
-                        <h4 style="margin: 0 0 4px 0; font-size: 14px;">${p.first_name} ${p.last_name}</h4>
-                        <div style="font-size: 12px; color: #94a3b8;">${(p.passport_series || p.passport_number) ? (p.passport_series || '') + (p.passport_number || '') : '-'} | ${p.phone || '-'}</div>
+                        <h4 style="margin: 0 0 4px 0; font-size: 14px;">${escapeHTML(p.first_name)} ${escapeHTML(p.last_name)}</h4>
+                        <div style="font-size: 12px; color: #94a3b8;">${escapeHTML((p.passport_series || p.passport_number) ? (p.passport_series || '') + (p.passport_number || '') : '-')} | ${escapeHTML(p.phone || '-')}</div>
                     </div>
                     <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
                         <span title="${pStatus}" style="color: ${color}; display: flex; align-items: center; justify-content: center;"><i data-lucide="${pStatusIcon}" style="width: 16px; height: 16px;"></i></span>
@@ -715,11 +721,33 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('deleteTeamBtn')?.addEventListener('click', async () => {
         if (confirm("Rostdan ham ushbu jamoani to'liq o'chirmoqchimisiz?")) {
             try {
+                // Find team to get logo url
+                const team = allTeams.find(t => t.id === currentTeamId);
+                // Find all players of this team to get photo urls
+                const players = allApplications.filter(a => a.team_id === currentTeamId);
+                
+                let filesToRemove = [];
+                if (team && team.logo_url) {
+                    const logoName = team.logo_url.split('/').pop();
+                    if (logoName) filesToRemove.push(logoName);
+                }
+                players.forEach(p => {
+                    if (p.photo_url) {
+                        const pName = p.photo_url.split('/').pop();
+                        if (pName) filesToRemove.push(pName);
+                    }
+                });
+
                 // Because of ON DELETE CASCADE on applications(team_id), this deletes players too!
                 const { error } = await db.from('teams').delete().eq('id', currentTeamId);
                 if (error) throw error;
+                
+                if (filesToRemove.length > 0) {
+                    await db.storage.from('player-photos').remove(filesToRemove);
+                }
+
                 teamDetailsModal.classList.add('hidden');
-                alert("Jamoa o'chirildi!");
+                alert("Jamoa va barcha o'yinchilarning rasmlari xotiradan to'liq o'chirildi!");
                 fetchData();
             } catch (err) {
                 alert("Xatolik: " + err.message);
