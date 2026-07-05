@@ -41,25 +41,35 @@
     <!-- Footer -->
     <footer class="site-footer">
         <div class="footer-content" style="align-items: center;">
-            <div style="display: flex; flex-direction: column; gap: 12px; text-align: left;">
+            <div style="display: flex; flex-direction: column; gap: 20px; text-align: center;">
                 
-                <div style="display: flex; align-items: center; gap: 12px; color: #e2e8f0; font-size: 18px;">
-                    <i data-lucide="phone" style="width: 26px; height: 26px; color: #e2e8f0;"></i>
-                    <span>Liga boshlig'i: <a href="tel:+998903580899" style="color: #3b82f6; text-decoration: none;">+998 90 358 08 99</a></span>
+                <!-- Row 1: Phone and Social Icons -->
+                <div style="display: flex; align-items: center; justify-content: center; gap: 25px; flex-wrap: wrap;">
+                    
+                    <!-- Phone -->
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 18px;">
+                        <i data-lucide="phone" style="width: 22px; height: 22px; color: #94a3b8;"></i>
+                        <a href="tel:+998903580899" style="color: #e2e8f0; text-decoration: none; font-weight: 500; transition: color 0.3s;" onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='#e2e8f0'">+998 90 358 08 99</a>
+                    </div>
+
+                    <!-- Separator line (hidden on very small screens) -->
+                    <div style="width: 1px; height: 24px; background: rgba(255,255,255,0.15);" class="hide-mobile"></div>
+
+                    <!-- Social Icons (No text) -->
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <a href="https://t.me/havasliga" target="_blank" style="color: #e2e8f0; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; transition: all 0.3s;" onmouseover="this.style.background='rgba(59, 130, 246, 0.2)'; this.style.borderColor='rgba(59, 130, 246, 0.5)'; this.style.color='#3b82f6';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.1)'; this.style.color='#e2e8f0';">
+                            <i data-lucide="send" style="width: 20px; height: 20px;"></i>
+                        </a>
+                        <a href="https://www.instagram.com/havas_football/" target="_blank" style="color: #e2e8f0; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; transition: all 0.3s;" onmouseover="this.style.background='rgba(236, 72, 153, 0.2)'; this.style.borderColor='rgba(236, 72, 153, 0.5)'; this.style.color='#ec4899';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.1)'; this.style.color='#e2e8f0';">
+                            <i data-lucide="instagram" style="width: 20px; height: 20px;"></i>
+                        </a>
+                    </div>
+
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 12px; color: #e2e8f0; font-size: 18px;">
-                    <i data-lucide="send" style="width: 26px; height: 26px; color: #e2e8f0;"></i>
-                    <span>Telegram kanal: <a href="https://t.me/havasliga" target="_blank" style="color: #3b82f6; text-decoration: none;">@havasliga</a></span>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 12px; color: #e2e8f0; font-size: 18px;">
-                    <i data-lucide="instagram" style="width: 26px; height: 26px; color: #e2e8f0;"></i>
-                    <span>Instagram: <a href="https://www.instagram.com/havas_football/" target="_blank" style="color: #3b82f6; text-decoration: none;">@havas_football</a></span>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 12px; color: #e2e8f0; font-size: 18px;">
-                    <i data-lucide="calendar" style="width: 26px; height: 26px; color: #e2e8f0;"></i>
+                <!-- Row 2: Founded Year -->
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; color: #94a3b8; font-size: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; margin-top: -5px;">
+                    <i data-lucide="calendar" style="width: 16px; height: 16px; color: #94a3b8;"></i>
                     <span>Tashkil topgan: 2023-yil</span>
                 </div>
 
