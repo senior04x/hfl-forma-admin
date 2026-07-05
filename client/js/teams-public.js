@@ -20,11 +20,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Vercel Smart Image Optimization
+        // Temporary fallback: return original url to fix broken images
         function optimizeImage(url) {
-            if (!url || url.includes('via.placeholder.com')) return url;
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return url;
-            return `/_vercel/image?url=${encodeURIComponent(url)}&w=400&q=75`;
+            return url;
         }
 
         data.forEach(team => {
