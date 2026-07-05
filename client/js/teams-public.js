@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             card.className = 'team-card-public';
             
             card.innerHTML = `
-                <img src="${team.logo_url}" alt="${team.name}" onerror="this.src='https://via.placeholder.com/100x100?text=Logo'">
+                <img src="${team.logo_url}" alt="${team.name}" loading="lazy" decoding="async" onerror="this.src='https://via.placeholder.com/100x100?text=Logo'">
                 <h3>${team.name}</h3>
                 <p>Batafsil ko'rish &rarr;</p>
             `;
