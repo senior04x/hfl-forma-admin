@@ -34,8 +34,7 @@
             auto-rotate 
             rotation-per-second="15deg" 
             environment-image="neutral" 
-            exposure="1.4" 
-            shadow-intensity="1"
+            exposure="1.1" 
             camera-orbit="45deg 55deg 105%">
         </model-viewer>
         
@@ -46,8 +45,7 @@
             auto-rotate 
             rotation-per-second="-12deg" 
             environment-image="neutral" 
-            exposure="1.4" 
-            shadow-intensity="1"
+            exposure="1.1" 
             camera-orbit="120deg 60deg 105%">
         </model-viewer>
 
@@ -58,8 +56,7 @@
             auto-rotate 
             rotation-per-second="20deg" 
             environment-image="neutral" 
-            exposure="1.4" 
-            shadow-intensity="1"
+            exposure="1.1" 
             camera-orbit="-45deg 70deg 105%">
         </model-viewer>
     </div>
@@ -124,7 +121,33 @@
         </div>
     </footer>
     <!-- Scripts -->
-    <script>lucide.createIcons();</script>
+    <script>
+        lucide.createIcons();
+        
+        // 3D Models Exit Animation
+        document.addEventListener('DOMContentLoaded', () => {
+            const links = document.querySelectorAll('a');
+            links.forEach(link => {
+                // Only animate for internal links
+                if (link.hostname === window.location.hostname && link.target !== '_blank' && !link.href.includes('tel:')) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const targetUrl = link.href;
+                        
+                        // Add slide out class to models
+                        document.querySelectorAll('model-viewer').forEach(model => {
+                            model.classList.add('slide-out');
+                        });
+                        
+                        // Wait for animation then navigate
+                        setTimeout(() => {
+                            window.location.href = targetUrl;
+                        }, 500);
+                    });
+                }
+            });
+        });
+    </script>
     <script src="js/layout.js"></script>
 </body>
 </html>
