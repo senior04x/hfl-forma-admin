@@ -33,7 +33,7 @@
     <!-- 3D Models Background -->
     <div class="models-bg-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; z-index: 0;">
         <!-- Top Left Model -->
-        <div class="model-wrap-1">
+        <div class="model-wrap-1 slide-out">
             <model-viewer 
                 class="model-bg-1"
                 src="assets/models/soccer_ball.glb" 
@@ -46,7 +46,7 @@
         </div>
         
         <!-- Center Right Model -->
-        <div class="model-wrap-2">
+        <div class="model-wrap-2 slide-out">
             <model-viewer 
                 class="model-bg-2"
                 src="assets/models/soccer_ball.glb" 
@@ -59,7 +59,7 @@
         </div>
 
         <!-- Bottom Left Small Model -->
-        <div class="model-wrap-3">
+        <div class="model-wrap-3 slide-out">
             <model-viewer 
                 class="model-bg-3"
                 src="assets/models/soccer_ball.glb" 
@@ -135,6 +135,16 @@
     <script>
         lucide.createIcons();
         
+        // 3D Models Entrance Animation
+        window.addEventListener('load', () => {
+            // Wait 1 second after page loads before sliding models in
+            setTimeout(() => {
+                document.querySelector('.model-wrap-1')?.classList.remove('slide-out');
+                document.querySelector('.model-wrap-2')?.classList.remove('slide-out');
+                document.querySelector('.model-wrap-3')?.classList.remove('slide-out');
+            }, 1000);
+        });
+
         // 3D Models Exit Animation
         document.addEventListener('DOMContentLoaded', () => {
             const links = document.querySelectorAll('a');
