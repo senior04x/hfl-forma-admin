@@ -137,7 +137,7 @@
         
         // 3D Models Entrance Animation
         document.addEventListener('DOMContentLoaded', () => {
-            // Wait a short time for CSS to register, then slide in
+            // Wait exactly 2 seconds for everything to settle before sliding in
             setTimeout(() => {
                 const w1 = document.querySelector('.model-wrap-1');
                 const w2 = document.querySelector('.model-wrap-2');
@@ -146,7 +146,7 @@
                 if(w1) w1.classList.remove('slide-out');
                 if(w2) w2.classList.remove('slide-out');
                 if(w3) w3.classList.remove('slide-out');
-            }, 600);
+            }, 2000);
         });
 
         // 3D Models Exit Animation
