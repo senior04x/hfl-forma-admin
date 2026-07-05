@@ -88,13 +88,16 @@
 }
 
 /* Page Layout */
+html, body {
+    margin: 0 !important;
+    padding: 0;
+    overflow-x: hidden;
+}
 body {
     padding-top: 80px !important;
     display: flex !important;
     flex-direction: column;
     min-height: 100vh;
-    margin: 0;
-    overflow-x: hidden;
 }
 
 .site-container {
@@ -310,6 +313,7 @@ body {
 .site-footer {
     width: 100%;
     background: rgba(10, 10, 15, 0.95);
+    border-top: 1px solid var(--glass-border);
     padding: 25px 20px;
     margin-top: auto;
     display: flex;
