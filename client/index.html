@@ -136,13 +136,17 @@
         lucide.createIcons();
         
         // 3D Models Entrance Animation
-        window.addEventListener('load', () => {
-            // Wait 1 second after page loads before sliding models in
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait a short time for CSS to register, then slide in
             setTimeout(() => {
-                document.querySelector('.model-wrap-1')?.classList.remove('slide-out');
-                document.querySelector('.model-wrap-2')?.classList.remove('slide-out');
-                document.querySelector('.model-wrap-3')?.classList.remove('slide-out');
-            }, 1000);
+                const w1 = document.querySelector('.model-wrap-1');
+                const w2 = document.querySelector('.model-wrap-2');
+                const w3 = document.querySelector('.model-wrap-3');
+                
+                if(w1) w1.classList.remove('slide-out');
+                if(w2) w2.classList.remove('slide-out');
+                if(w3) w3.classList.remove('slide-out');
+            }, 600);
         });
 
         // 3D Models Exit Animation
@@ -156,9 +160,13 @@
                         const targetUrl = link.href;
                         
                         // Add slide out class to wrappers instead of model-viewers directly
-                        document.querySelector('.model-wrap-1')?.classList.add('slide-out');
-                        document.querySelector('.model-wrap-2')?.classList.add('slide-out');
-                        document.querySelector('.model-wrap-3')?.classList.add('slide-out');
+                        const w1 = document.querySelector('.model-wrap-1');
+                        const w2 = document.querySelector('.model-wrap-2');
+                        const w3 = document.querySelector('.model-wrap-3');
+                        
+                        if(w1) w1.classList.add('slide-out');
+                        if(w2) w2.classList.add('slide-out');
+                        if(w3) w3.classList.add('slide-out');
                         
                         // Wait for animation then navigate
                         setTimeout(() => {
