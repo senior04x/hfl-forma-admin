@@ -23,8 +23,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             throw new Error("Jamoa topilmadi yoki tasdiqlanmagan");
         }
 
+        // Vercel Smart Image Optimization
+        function optimizeImage(url) {
+            if (!url || url.includes('via.placeholder.com')) return url;
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return url;
+            return `/_vercel/image?url=${encodeURIComponent(url)}&w=400&q=75`;
+        }
+
         // Set Team UI
-        document.getElementById('tdLogo').src = teamData.logo_url;
+        document.getElementById('tdLogo').src = optimizeImage(teamData.logo_url);
         document.getElementById('tdName').textContent = teamData.name;
 
         // Fetch Approved Players (NO passport info in select!)
@@ -57,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             card.innerHTML = `
                 <div class="player-number-badge">${pNumber}</div>
-                <img src="${player.photo_url}" alt="${player.first_name}" loading="lazy" decoding="async" onerror="this.src='https://via.placeholder.com/100x100?text=Rasm'">
+                <img src="${optimizeImage(player.photo_url)}" alt="${player.first_name}" loading="lazy" decoding="async" onerror="this.src='https://via.placeholder.com/100x100?text=Rasm'">
                 <h4>${player.first_name}</h4>
                 <p>${player.last_name}</p>
             `;

@@ -1,0 +1,6 @@
+{
+  "images": {
+    "domains": ["xzzyhfyazwohdqqbjiiy.supabase.co"],
+    "minimumCacheTTL": 86400
+  }
+}

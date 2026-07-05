@@ -20,13 +20,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        // Vercel Smart Image Optimization
+        function optimizeImage(url) {
+            if (!url || url.includes('via.placeholder.com')) return url;
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return url;
+            return `/_vercel/image?url=${encodeURIComponent(url)}&w=400&q=75`;
+        }
+
         data.forEach(team => {
             const card = document.createElement('a');
             card.href = `team-details.html?id=${team.id}`;
             card.className = 'team-card-public';
             
             card.innerHTML = `
-                <img src="${team.logo_url}" alt="${team.name}" loading="lazy" decoding="async" onerror="this.src='https://via.placeholder.com/100x100?text=Logo'">
+                <img src="${optimizeImage(team.logo_url)}" alt="${team.name}" loading="lazy" decoding="async" onerror="this.src='https://via.placeholder.com/100x100?text=Logo'">
                 <h3>${team.name}</h3>
                 <p>Batafsil ko'rish &rarr;</p>
             `;
