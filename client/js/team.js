@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let teamLogoBase64 = null;
     let currentPlayerPhotoBase64 = null;
     let players = [];
+    let currentCropTarget = null; // 'team' or 'player'
 
     // --- Compression Utility (to save space in sessionStorage and fast uploads) ---
     function compressImageToBase64(file, maxWidth, maxHeight, quality) {
@@ -123,16 +124,80 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('input', saveDraft);
     });
 
+    // --- Cropper Handler ---
+    function openCropper(file, target) {
+        if (!file.type.startsWith('image/')) {
+            alert('Iltimos, faqat rasm yuklang (JPEG, PNG).');
+            return;
+        }
+        currentCropTarget = target;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const cropperModal = document.getElementById('cropperModal');
+            const cropperImage = document.getElementById('cropperImage');
+            
+            cropperImage.src = e.target.result;
+            cropperModal.classList.remove('hidden');
+            
+            if (window.cropper) {
+                window.cropper.destroy();
+            }
+            
+            window.cropper = new Cropper(cropperImage, {
+                aspectRatio: 1,
+                viewMode: 1,
+                autoCropArea: 1,
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+
+    const cancelCropBtn = document.getElementById('cancelCropBtn');
+    const confirmCropBtn = document.getElementById('confirmCropBtn');
+
+    if (cancelCropBtn) {
+        cancelCropBtn.addEventListener('click', () => {
+            document.getElementById('cropperModal').classList.add('hidden');
+            if (window.cropper) window.cropper.destroy();
+        });
+    }
+
+    if (confirmCropBtn) {
+        confirmCropBtn.addEventListener('click', () => {
+            if (!window.cropper) return;
+            
+            const canvas = window.cropper.getCroppedCanvas({
+                maxWidth: 500,
+                maxHeight: 500
+            });
+            
+            if (canvas) {
+                const base64 = canvas.toDataURL('image/webp', 0.8);
+                
+                if (currentCropTarget === 'team') {
+                    teamLogoBase64 = base64;
+                    teamLogoPreview.src = base64;
+                    teamLogoPreview.classList.remove('hidden');
+                    teamLogoPlaceholder.classList.add('hidden');
+                    saveDraft();
+                } else if (currentCropTarget === 'player') {
+                    currentPlayerPhotoBase64 = base64;
+                    playerPhotoPreview.src = base64;
+                    playerPhotoPreview.classList.remove('hidden');
+                    playerPhotoPlaceholder.classList.add('hidden');
+                }
+                
+                document.getElementById('cropperModal').classList.add('hidden');
+                window.cropper.destroy();
+            }
+        });
+    }
+
     // --- Team Logo Handling ---
     teamLogoDropzone.addEventListener('click', () => teamLogoInput.click());
-    teamLogoInput.addEventListener('change', async (e) => {
+    teamLogoInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
-            const base64 = await compressImageToBase64(e.target.files[0], 400, 400, 0.7);
-            teamLogoBase64 = base64;
-            teamLogoPreview.src = base64;
-            teamLogoPreview.classList.remove('hidden');
-            teamLogoPlaceholder.classList.add('hidden');
-            saveDraft();
+            openCropper(e.target.files[0], 'team');
         }
     });
 
@@ -169,37 +234,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Player Photo Handling ---
     playerPhotoDropzone.addEventListener('click', () => playerPhotoInput.click());
-    playerPhotoInput.addEventListener('change', async (e) => {
+    playerPhotoInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
-            const base64 = await compressImageToBase64(e.target.files[0], 500, 500, 0.7);
-            currentPlayerPhotoBase64 = base64;
-            playerPhotoPreview.src = base64;
-            playerPhotoPreview.classList.remove('hidden');
-            playerPhotoPlaceholder.classList.add('hidden');
+            openCropper(e.target.files[0], 'player');
         }
     });
 
     // --- Paste Image Handling for Team and Players ---
-    document.addEventListener('paste', async (e) => {
+    document.addEventListener('paste', (e) => {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
         for (let item of items) {
             if (item.kind === 'file' && item.type.startsWith('image/')) {
                 const file = item.getAsFile();
                 if (!playerModal.classList.contains('hidden')) {
                     // Paste to player photo
-                    const base64 = await compressImageToBase64(file, 500, 500, 0.7);
-                    currentPlayerPhotoBase64 = base64;
-                    playerPhotoPreview.src = base64;
-                    playerPhotoPreview.classList.remove('hidden');
-                    playerPhotoPlaceholder.classList.add('hidden');
+                    openCropper(file, 'player');
                 } else {
                     // Paste to team logo
-                    const base64 = await compressImageToBase64(file, 400, 400, 0.7);
-                    teamLogoBase64 = base64;
-                    teamLogoPreview.src = base64;
-                    teamLogoPreview.classList.remove('hidden');
-                    teamLogoPlaceholder.classList.add('hidden');
-                    saveDraft();
+                    openCropper(file, 'team');
                 }
                 break;
             }

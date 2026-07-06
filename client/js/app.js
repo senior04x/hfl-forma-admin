@@ -104,16 +104,62 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Iltimos, faqat rasm yuklang (JPEG, PNG).');
             return;
         }
-        selectedFile = file;
+        
         const reader = new FileReader();
         reader.onload = (e) => {
-            photoPreview.src = e.target.result;
-            photoPreview.classList.remove('hidden');
-            photoPlaceholder.classList.add('hidden');
+            const cropperModal = document.getElementById('cropperModal');
+            const cropperImage = document.getElementById('cropperImage');
+            
+            cropperImage.src = e.target.result;
+            cropperModal.classList.remove('hidden');
+            
+            if (window.cropper) {
+                window.cropper.destroy();
+            }
+            
+            window.cropper = new Cropper(cropperImage, {
+                aspectRatio: 1,
+                viewMode: 1,
+                autoCropArea: 1,
+            });
         };
         reader.readAsDataURL(file);
     }
 
+    // --- Cropper Buttons ---
+    const cancelCropBtn = document.getElementById('cancelCropBtn');
+    const confirmCropBtn = document.getElementById('confirmCropBtn');
+
+    if (cancelCropBtn) {
+        cancelCropBtn.addEventListener('click', () => {
+            document.getElementById('cropperModal').classList.add('hidden');
+            if (window.cropper) window.cropper.destroy();
+        });
+    }
+
+    if (confirmCropBtn) {
+        confirmCropBtn.addEventListener('click', () => {
+            if (!window.cropper) return;
+            
+            const canvas = window.cropper.getCroppedCanvas({
+                maxWidth: 600,
+                maxHeight: 600
+            });
+            
+            if (canvas) {
+                canvas.toBlob((blob) => {
+                    selectedFile = new File([blob], "cropped_image.webp", { type: 'image/webp', lastModified: Date.now() });
+                    
+                    photoPreview.src = canvas.toDataURL('image/webp', 0.8);
+                    photoPreview.classList.remove('hidden');
+                    photoPlaceholder.classList.add('hidden');
+                    
+                    document.getElementById('cropperModal').classList.add('hidden');
+                    window.cropper.destroy();
+                }, 'image/webp', 0.8);
+            }
+        });
+    }
     // --- Paste Image Handling ---
     document.addEventListener('paste', (e) => {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;

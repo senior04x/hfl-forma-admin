@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/main.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -303,6 +304,20 @@
         </div>
     </div>
 
+    <!-- CROPPER MODAL -->
+    <div id="cropperModal" class="modal hidden" style="z-index: 10000;">
+        <div class="modal-content" style="max-width: 500px; padding: 20px;">
+            <h3 style="margin-bottom: 15px; font-family: 'Outfit', sans-serif;">Rasmni qirqish</h3>
+            <div class="img-container" style="max-height: 400px; margin-bottom: 15px; background: #000; border-radius: 8px; overflow: hidden;">
+                <img id="cropperImage" src="" style="max-width: 100%; display: block;">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" id="cancelCropBtn" style="padding: 10px 20px; border-radius: 8px; border: 1px solid var(--glass-border); background: transparent; color: white; cursor: pointer; transition: 0.3s;">Bekor qilish</button>
+                <button type="button" id="confirmCropBtn" class="submit-btn" style="padding: 10px 20px; width: auto; margin-top: 0;">Qirqish</button>
+            </div>
+        </div>
+    </div>
+
     <!-- PROGRESS MODAL -->
     <div id="progressModal" class="modal hidden">
         <div class="modal-content" style="text-align: center;">
@@ -333,6 +348,7 @@
     </div>
 
     <script>lucide.createIcons();</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <script src="js/layout.js"></script>
     <script src="js/supabase.js"></script>
     <script src="js/team.js"></script>
