@@ -18,27 +18,21 @@ async function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.
             const img = new Image();
             img.src = event.target.result;
             img.onload = () => {
-                let width = img.width;
-                let height = img.height;
+                // 1x1 Center Crop Logic
+                const minDim = Math.min(img.width, img.height);
+                const sx = (img.width - minDim) / 2;
+                const sy = (img.height - minDim) / 2;
 
-                if (width > height) {
-                    if (width > maxWidth) {
-                        height = Math.round((height * maxWidth) / width);
-                        width = maxWidth;
-                    }
-                } else {
-                    if (height > maxHeight) {
-                        width = Math.round((width * maxHeight) / height);
-                        height = maxHeight;
-                    }
-                }
+                // Max target size is maxWidth (e.g. 600px)
+                const targetSize = Math.min(minDim, Math.max(maxWidth, maxHeight));
 
                 const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
+                canvas.width = targetSize;
+                canvas.height = targetSize;
                 const ctx = canvas.getContext('2d');
                 
-                ctx.drawImage(img, 0, 0, width, height);
+                // Draw center cropped image to canvas
+                ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, targetSize, targetSize);
 
                 canvas.toBlob((blob) => {
                     if (!blob) {

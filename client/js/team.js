@@ -50,26 +50,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const img = new Image();
                 img.src = event.target.result;
                 img.onload = function () {
+                    // 1x1 Center Crop Logic
+                    const minDim = Math.min(img.width, img.height);
+                    const sx = (img.width - minDim) / 2;
+                    const sy = (img.height - minDim) / 2;
+
+                    // Max target size based on parameters
+                    const targetSize = Math.min(minDim, Math.max(maxWidth, maxHeight));
+
                     const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                        if (width > maxWidth) {
-                            height = Math.round((height *= maxWidth / width));
-                            width = maxWidth;
-                        }
-                    } else {
-                        if (height > maxHeight) {
-                            width = Math.round((width *= maxHeight / height));
-                            height = maxHeight;
-                        }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
+                    canvas.width = targetSize;
+                    canvas.height = targetSize;
                     const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Draw center cropped image to canvas
+                    ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, targetSize, targetSize);
                     resolve(canvas.toDataURL('image/webp', 0.8));
                 };
             };
