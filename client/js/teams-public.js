@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { data, error } = await db
             .from('teams')
             .select('id, name, logo_url')
-            .eq('status', 'approved')
+            .in('status', ['approved', 'partially_approved'])
             .order('created_at', { ascending: false });
 
         if (error) throw error;

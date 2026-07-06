@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .eq('id', teamId)
             .single();
 
-        if (teamError || !teamData || teamData.status !== 'approved') {
+        if (teamError || !teamData || !['approved', 'partially_approved'].includes(teamData.status)) {
             throw new Error("Jamoa topilmadi yoki tasdiqlanmagan");
         }
 
