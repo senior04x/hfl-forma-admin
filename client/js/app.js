@@ -17,27 +17,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // State
     let selectedFile = null;
     const BOT_USERNAME = 'havasmedialiga_bot'; 
+    const tournamentSelect = document.getElementById('tournamentSelect');
     const teamSelect = document.getElementById('teamSelect');
+    const viewTeamBtn = document.getElementById('viewTeamBtn');
+    let allTeams = [];
 
     // Fetch Teams
     async function fetchTeams() {
         if (!teamSelect) return;
         try {
+            // Also include partially_approved if they are registering players? Wait, usually approved. Let's add partially_approved too.
             const { data, error } = await db
                 .from('teams')
-                .select('id, name')
-                .eq('status', 'approved')
+                .select('id, name, league')
+                .in('status', ['approved', 'partially_approved'])
                 .order('name');
                 
             if (error) throw error;
             
-            if (data && data.length > 0) {
-                data.forEach(team => {
-                    const option = document.createElement('option');
-                    option.value = team.id;
-                    option.textContent = team.name;
-                    teamSelect.appendChild(option);
-                });
+            if (data) {
+                allTeams = data;
             }
         } catch (err) {
             console.error('Error fetching teams:', err);
@@ -45,6 +44,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     fetchTeams();
+
+    // Cascading dropdown logic
+    if (tournamentSelect && teamSelect) {
+        tournamentSelect.addEventListener('change', () => {
+            const selectedLeague = tournamentSelect.value;
+            teamSelect.innerHTML = '<option value="" disabled selected>Jamoani tanlang</option>';
+            
+            const filteredTeams = allTeams.filter(t => t.league === selectedLeague);
+            
+            if (filteredTeams.length > 0) {
+                filteredTeams.forEach(team => {
+                    const option = document.createElement('option');
+                    option.value = team.id;
+                    option.textContent = team.name;
+                    teamSelect.appendChild(option);
+                });
+                teamSelect.disabled = false;
+            } else {
+                teamSelect.innerHTML = '<option value="" disabled selected>Bu turnirda tasdiqlangan jamoalar yo\'q</option>';
+                teamSelect.disabled = true;
+            }
+            
+            if (viewTeamBtn) viewTeamBtn.style.display = 'none';
+        });
+        
+        teamSelect.addEventListener('change', () => {
+            if (teamSelect.value && viewTeamBtn) {
+                viewTeamBtn.style.display = 'flex';
+            } else if (viewTeamBtn) {
+                viewTeamBtn.style.display = 'none';
+            }
+        });
+        
+        if (viewTeamBtn) {
+            viewTeamBtn.addEventListener('click', () => {
+                if (teamSelect.value) {
+                    window.location.href = `team-details.html?id=${teamSelect.value}&from=individual`;
+                }
+            });
+        }
+    }
     // --- Phone Number Formatting ---
     phoneInput.addEventListener('input', function (e) {
         let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,3})(\d{0,2})(\d{0,2})/);

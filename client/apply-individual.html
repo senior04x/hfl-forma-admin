@@ -55,16 +55,36 @@
                     </div>
                 </div>
 
+            <!-- Tournament Selection -->
+            <div class="form-group">
+                <label class="form-label" for="tournamentSelect">
+                    <i data-lucide="trophy" class="label-icon"></i> Turnir (Liga)
+                </label>
+                <div class="input-wrapper">
+                    <select id="tournamentSelect" class="form-control" required style="appearance: auto; padding-right: 15px;">
+                        <option value="" disabled selected>Turnirni tanlang</option>
+                        <option value="Super liga">Super liga</option>
+                        <option value="Pro liga">Pro liga</option>
+                        <option value="3-liga">3-liga</option>
+                        <option value="Europa ligasi">Europa ligasi</option>
+                        <option value="Chempionlar ligasi">Chempionlar ligasi</option>
+                    </select>
+                </div>
+            </div>
+
             <!-- Team Selection -->
             <div class="form-group">
                 <label class="form-label" for="teamSelect">
-                    <i data-lucide="shield" class="label-icon"></i> Jamoa (ixtiyoriy)
+                    <i data-lucide="shield" class="label-icon"></i> Jamoa
                 </label>
-                <div class="input-wrapper">
-                    <select id="teamSelect" class="form-control" style="appearance: auto; padding-right: 15px;">
-                        <option value="">Erkin agent (Hech qaysi)</option>
+                <div class="input-wrapper" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <select id="teamSelect" class="form-control" required disabled style="appearance: auto; padding-right: 15px; flex: 1; min-width: 200px;">
+                        <option value="" disabled selected>Avval turnirni tanlang</option>
                         <!-- Teams will be loaded here dynamically -->
                     </select>
+                    <button type="button" id="viewTeamBtn" class="btn-secondary" style="padding: 0 20px; border-radius: var(--border-radius); display: none; align-items: center; justify-content: center; gap: 5px; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; cursor: pointer; height: 50px;">
+                        <i data-lucide="external-link" style="width: 16px; height: 16px;"></i> Ko'rish
+                    </button>
                 </div>
             </div>
 

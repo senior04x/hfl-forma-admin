@@ -364,11 +364,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Submit Full Team ---
     submitTeamBtn.addEventListener('click', async () => {
+        const teamLeagueInput = document.getElementById('teamLeague');
+        const teamLeague = teamLeagueInput ? teamLeagueInput.value : '';
         const teamName = teamNameInput.value.trim();
         const captainPhoneVal = captainPhoneInput.value.replace(/\s/g, '');
 
-        if (!teamName || captainPhoneVal.length !== 9 || !teamLogoBase64) {
-            alert("Iltimos, jamoa nomi, sardor telefoni va logotipini to'liq kiriting!");
+        if (!teamLeague || !teamName || captainPhoneVal.length !== 9 || !teamLogoBase64) {
+            alert("Iltimos, turnir, jamoa nomi, sardor telefoni va logotipini to'liq kiriting!");
             return;
         }
 
@@ -464,6 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .insert([{
                     id: teamId,
                     name: teamName,
+                    league: teamLeague,
                     logo_url: teamLogoUrl,
                     captain_phone: fullCaptainPhone,
                     status: 'pending'

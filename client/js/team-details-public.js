@@ -2,6 +2,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const teamId = urlParams.get('id');
 
+    const fromIndividual = urlParams.get('from') === 'individual';
+    const backBtn = document.getElementById('backBtn');
+    
+    if (backBtn && fromIndividual) {
+        backBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.history.back();
+        });
+    }
+
     if (!teamId) {
         window.location.href = 'teams.html';
         return;

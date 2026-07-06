@@ -369,7 +369,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><img src="${escapeHTML(team.logo_url)}" alt="Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
-                <td style="font-weight: 600;">${escapeHTML(team.name)}</td>
+                <td style="font-weight: 600;">
+                    ${escapeHTML(team.name)}
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: normal; margin-top: 2px;">
+                        ${escapeHTML(team.league || 'Kiritilmagan')}
+                    </div>
+                </td>
                 <td class="hide-mobile">${escapeHTML(team.captain_phone)}</td>
                 <td>${dateStr}</td>
                 <td style="text-align: center;"><span class="status-icon-badge ${statusClass}" title="${statusText}"><i data-lucide="${statusIcon}" style="width: 18px; height: 18px;"></i></span></td>

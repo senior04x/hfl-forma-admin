@@ -37,3 +37,7 @@ CREATE POLICY "Allow service_role full access on teams" ON public.teams
     TO service_role
     USING (true)
     WITH CHECK (true);
+
+-- 6. Add league column to teams table
+ALTER TABLE public.teams ADD COLUMN league text DEFAULT 'Super liga';
+

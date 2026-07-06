@@ -115,6 +115,7 @@ Sizning zayavkangiz tizimga muvaffaqiyatli qabul qilindi.
 Assalomu alaykum! <b>${data.name}</b> jamoasi tizimga qabul qilindi.
 
 <b>Jamoa ma'lumotlari:</b>
+🏆 Turnir: ${data.league || 'Kiritilmagan'}
 📞 Sardor telefoni: ${data.captain_phone}
 
 <b>Hozirgi holat:</b> ${statusText}
