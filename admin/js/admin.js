@@ -621,6 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.getElementById('teamDetailLogo').src = team.logo_url;
         document.getElementById('teamDetailName').textContent = team.name;
+        document.getElementById('teamDetailLeague').innerHTML = `<i data-lucide="trophy" style="width: 14px; height: 14px; vertical-align: middle;"></i> ${escapeHTML(team.league || 'Kiritilmagan')}`;
         document.getElementById('teamDetailPhone').innerHTML = `<i data-lucide="phone" style="width: 14px; height: 14px; vertical-align: middle;"></i> ${team.captain_phone}`;
         
         const statusEl = document.getElementById('teamDetailStatus');
