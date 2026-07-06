@@ -824,15 +824,63 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('closeEditTeamBtn')?.addEventListener('click', () => editTeamModal.classList.add('hidden'));
     document.getElementById('closeEditPlayerBtn')?.addEventListener('click', () => editPlayerModal.classList.add('hidden'));
 
+    const leagueContainer = document.getElementById('leagueContainer');
+    const addLeagueBtn = document.getElementById('addLeagueBtn');
+
+    addLeagueBtn?.addEventListener('click', () => {
+        const row = document.createElement('div');
+        row.className = 'league-select-row';
+        row.style.display = 'flex';
+        row.style.gap = '10px';
+        row.style.marginBottom = '10px';
+        row.innerHTML = `
+            <select class="editTeamLeagueSelect" required style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: var(--text-dark);">
+                <option value="Super liga">Super liga</option>
+                <option value="Pro liga">Pro liga</option>
+                <option value="3-liga">3-liga</option>
+                <option value="Europa ligasi">Europa ligasi</option>
+                <option value="Chempionlar ligasi">Chempionlar ligasi</option>
+            </select>
+            <button type="button" class="btn-delete remove-league-btn" style="padding: 10px; border-radius: 8px;"><i data-lucide="trash-2" style="width: 18px; height: 18px;"></i></button>
+        `;
+        leagueContainer.appendChild(row);
+        lucide.createIcons();
+    });
+
+    leagueContainer?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.remove-league-btn');
+        if (btn) {
+            btn.closest('.league-select-row').remove();
+        }
+    });
+
     window.editTeam = function(id) {
         const team = allTeams.find(t => t.id === id);
         if(!team) return;
         editingTeamId = id;
         document.getElementById('editTeamCurrentLogo').src = team.logo_url;
         document.getElementById('editTeamName').value = team.name;
-        if(team.league) document.getElementById('editTeamLeague').value = team.league;
         document.getElementById('editTeamPhone').value = team.captain_phone;
         document.getElementById('editTeamLogo').value = ''; // clear previous file
+
+        // Clear existing selects
+        const rows = leagueContainer.querySelectorAll('.league-select-row');
+        for (let i = 1; i < rows.length; i++) rows[i].remove();
+        
+        const firstSelect = leagueContainer.querySelector('.editTeamLeagueSelect');
+        const firstRemoveBtn = leagueContainer.querySelector('.remove-league-btn');
+        if (firstRemoveBtn) firstRemoveBtn.style.display = 'none';
+
+        if (team.league) {
+            const leagues = team.league.split(',').map(l => l.trim());
+            firstSelect.value = leagues[0];
+            for (let i = 1; i < leagues.length; i++) {
+                addLeagueBtn.click();
+                const newRows = leagueContainer.querySelectorAll('.editTeamLeagueSelect');
+                newRows[newRows.length - 1].value = leagues[i];
+            }
+        }
+
         editTeamModal.style.zIndex = '10000';
         editTeamModal.classList.remove('hidden');
     }
@@ -847,8 +895,12 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const name = document.getElementById('editTeamName').value.trim();
             const phone = document.getElementById('editTeamPhone').value.trim();
-            const league = document.getElementById('editTeamLeague').value;
             const logoFile = document.getElementById('editTeamLogo').files[0];
+            
+            const leagueSelects = document.querySelectorAll('.editTeamLeagueSelect');
+            const leagues = Array.from(leagueSelects).map(s => s.value).filter(v => v);
+            const uniqueLeagues = [...new Set(leagues)];
+            const league = uniqueLeagues.join(', ');
             
             let updates = { name, captain_phone: phone, league };
 

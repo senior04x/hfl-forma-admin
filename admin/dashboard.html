@@ -252,16 +252,20 @@
                     <label style="display: block; margin-bottom: 5px; font-weight: 500;">Jamoa Nomi</label>
                     <input type="text" id="editTeamName" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;">
                 </div>
-                <div class="form-group" style="margin-bottom: 15px;">
+                <div class="form-group" style="margin-bottom: 10px;" id="leagueContainer">
                     <label style="display: block; margin-bottom: 5px; font-weight: 500;">Turnir (Liga)</label>
-                    <select id="editTeamLeague" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: var(--text-dark);">
-                        <option value="Super liga">Super liga</option>
-                        <option value="Pro liga">Pro liga</option>
-                        <option value="3-liga">3-liga</option>
-                        <option value="Europa ligasi">Europa ligasi</option>
-                        <option value="Chempionlar ligasi">Chempionlar ligasi</option>
-                    </select>
+                    <div class="league-select-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <select class="editTeamLeagueSelect" required style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: var(--text-dark);">
+                            <option value="Super liga">Super liga</option>
+                            <option value="Pro liga">Pro liga</option>
+                            <option value="3-liga">3-liga</option>
+                            <option value="Europa ligasi">Europa ligasi</option>
+                            <option value="Chempionlar ligasi">Chempionlar ligasi</option>
+                        </select>
+                        <button type="button" class="btn-delete remove-league-btn" style="padding: 10px; border-radius: 8px; display: none;"><i data-lucide="trash-2" style="width: 18px; height: 18px;"></i></button>
+                    </div>
                 </div>
+                <button type="button" id="addLeagueBtn" style="margin-bottom: 15px; padding: 8px 15px; background: rgba(0, 114, 255, 0.1); border: 1px dashed var(--primary); color: var(--primary); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 100%; gap: 5px;"><i data-lucide="plus" style="width: 16px; height: 16px;"></i> Qo'shimcha turnir qo'shish</button>
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 5px; font-weight: 500;">Sardor Telefoni</label>
                     <input type="text" id="editTeamPhone" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;">
