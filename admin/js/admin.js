@@ -830,6 +830,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editingTeamId = id;
         document.getElementById('editTeamCurrentLogo').src = team.logo_url;
         document.getElementById('editTeamName').value = team.name;
+        if(team.league) document.getElementById('editTeamLeague').value = team.league;
         document.getElementById('editTeamPhone').value = team.captain_phone;
         document.getElementById('editTeamLogo').value = ''; // clear previous file
         editTeamModal.style.zIndex = '10000';
@@ -846,9 +847,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const name = document.getElementById('editTeamName').value.trim();
             const phone = document.getElementById('editTeamPhone').value.trim();
+            const league = document.getElementById('editTeamLeague').value;
             const logoFile = document.getElementById('editTeamLogo').files[0];
             
-            let updates = { name, captain_phone: phone };
+            let updates = { name, captain_phone: phone, league };
 
             if (logoFile) {
                 const compressed = await compressImage(logoFile);
