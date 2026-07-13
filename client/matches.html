@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
@@ -253,8 +253,87 @@
         .timeline-minute {
             font-weight: 800;
             color: var(--gold-primary);
-            min-width: 35px;
+            font-size: 14px;
+            width: 25px;
         }
+        
+        /* Skeleton Loader */
+        .skeleton {
+            animation: skeleton-loading 1.5s infinite linear;
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+            background-size: 200% 100%;
+            border-radius: 4px;
+        }
+
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+            margin-top: 15px;
+            height: 250px;
+        }
+
+        .skeleton-badge {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 24px;
+            border-radius: 20px;
+        }
+
+        .skeleton-teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .skeleton-logo {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+        }
+
+        .skeleton-name {
+            width: 80px;
+            height: 15px;
+            margin-top: 8px;
+            align-self: center;
+        }
+
+        .skeleton-score {
+            width: 60px;
+            height: 32px;
+        }
+
+        .skeleton-details {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .skeleton-row {
+            width: 80%;
+            height: 14px;
+        }
+        
         .timeline-icon { font-size: 18px; }
         .timeline-details {
             flex: 1;
@@ -285,8 +364,33 @@
             <button class="filter-btn" data-filter="finished">Yakunlangan</button>
         </div>
 
+        <!-- Loading State -->
         <div id="loadingMatches" class="matches-grid">
-            <div style="text-align: center; grid-column: 1 / -1; color: var(--gold-primary);">Yuklanmoqda...</div>
+            <script>
+                for(let i=0; i<6; i++) {
+                    document.write(`
+                        <div class="skeleton-card">
+                            <div class="skeleton skeleton-badge"></div>
+                            <div class="skeleton-teams">
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div class="skeleton skeleton-logo"></div>
+                                    <div class="skeleton skeleton-name"></div>
+                                </div>
+                                <div class="skeleton skeleton-score"></div>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div class="skeleton skeleton-logo"></div>
+                                    <div class="skeleton skeleton-name"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-details">
+                                <div class="skeleton skeleton-row"></div>
+                                <div class="skeleton skeleton-row" style="width: 60%;"></div>
+                                <div class="skeleton skeleton-row" style="width: 90%;"></div>
+                            </div>
+                        </div>
+                    `);
+                }
+            </script>
         </div>
 
         <div id="matchesGrid" class="matches-grid hidden">
