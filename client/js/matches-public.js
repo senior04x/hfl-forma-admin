@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const html = `
-                <div class="match-card" onclick="window.location.href='match-details.html?id=${match.id}'">
+                <a href="match-details.html?id=${match.id}" class="match-card" style="text-decoration: none; display: flex;">
                     <div class="match-badges-container">
                         <div class="badge badge-league">${match.league}</div>
                         ${statusBadge}
@@ -104,8 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <a href="${match.youtube_link}" target="_blank" rel="noreferrer" class="btn-live" onclick="event.stopPropagation()">
                         <i data-lucide="play-circle"></i> Jonli ko'rish
                     </a>
+                    </a>
                     ` : ''}
-                </div>
+                </a>
             `;
             matchesGrid.insertAdjacentHTML('beforeend', html);
         });
