@@ -148,13 +148,15 @@
         }
 
         .match-details {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             padding: 12px;
             border-radius: 12px;
             display: flex;
             flex-direction: column;
             gap: 8px;
-            border: 1px solid rgba(255,255,255,0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .detail-row {
             display: flex;
@@ -165,9 +167,11 @@
         }
         
         .btn-live {
-            background: linear-gradient(135deg, #ef4444, #b91c1c);
-            color: white;
-            border: none;
+            background: rgba(239, 68, 68, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #ff7b7b;
+            border: 1px solid rgba(239, 68, 68, 0.4);
             padding: 12px;
             border-radius: 12px;
             font-weight: 700;
