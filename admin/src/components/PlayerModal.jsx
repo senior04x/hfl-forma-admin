@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { X, Trash2, Save, Eye } from 'lucide-react';
 import './Modal.css';
@@ -18,8 +18,31 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     passport_number: player.passport_number || '',
     birth_date: player.birth_date || '',
     position: player.position || '',
-    player_number: player.player_number || ''
+    player_number: player.player_number || '',
+    photo_url: player.photo_url || ''
   });
+
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `admin_edit_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const { error } = await supabase.storage.from('player-photos').upload(fileName, file);
+      if (error) throw error;
+      
+      const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
+      setFormData(prev => ({...prev, photo_url: data.publicUrl}));
+    } catch (error) {
+      console.error(error);
+      alert('Rasm yuklashda xatolik yuz berdi');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -110,6 +133,14 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
           <div className="modal-edit">
             <h2>O'yinchini Tahrirlash</h2>
             <div className="edit-form-grid">
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Rasm (Yangi rasm yuklash)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  {formData.photo_url && <img src={formData.photo_url} alt="Preview" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover' }} />}
+                  <input type="file" accept="image/*" onChange={handleFileUpload} disabled={uploadingImage} />
+                  {uploadingImage && <span style={{fontSize: 12, color: '#666'}}>Yuklanmoqda...</span>}
+                </div>
+              </div>
               <div className="form-group">
                 <label>Ism</label>
                 <input name="first_name" value={formData.first_name} onChange={handleChange} />

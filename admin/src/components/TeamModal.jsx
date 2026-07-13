@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { X, Trash2, Save, Eye } from 'lucide-react';
 import './Modal.css';
@@ -15,8 +15,31 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
     captain_phone: team.captain_phone || '',
     league: team.league || '',
     region: team.region || '',
-    payment_receipt: team.payment_receipt || ''
+    payment_receipt: team.payment_receipt || '',
+    logo_url: team.logo_url || ''
   });
+
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `admin_edit_team_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const { error } = await supabase.storage.from('player-photos').upload(fileName, file);
+      if (error) throw error;
+      
+      const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
+      setFormData(prev => ({...prev, logo_url: data.publicUrl}));
+    } catch (error) {
+      console.error(error);
+      alert('Rasm yuklashda xatolik yuz berdi');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -118,6 +141,14 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
           <div className="modal-edit">
             <h2>Jamoani Tahrirlash</h2>
             <div className="edit-form-grid">
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Logotip (Yangi logotip yuklash)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  {formData.logo_url && <img src={formData.logo_url} alt="Preview" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover' }} />}
+                  <input type="file" accept="image/*" onChange={handleFileUpload} disabled={uploadingImage} />
+                  {uploadingImage && <span style={{fontSize: 12, color: '#666'}}>Yuklanmoqda...</span>}
+                </div>
+              </div>
               <div className="form-group">
                 <label>Jamoa nomi</label>
                 <input name="name" value={formData.name} onChange={handleChange} />
