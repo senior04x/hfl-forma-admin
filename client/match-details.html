@@ -28,17 +28,23 @@
 
         /* Header */
         .match-header {
-            background: rgba(10, 10, 15, 0.85);
-            backdrop-filter: blur(12px);
-            padding: 20px;
             display: flex;
             align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
             border-bottom: 1px solid var(--glass-border);
         }
         .back-btn {
-            color: var(--gold-primary);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-muted);
             cursor: pointer;
-            margin-right: 15px;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .back-btn:hover {
+            color: var(--gold-primary);
         }
         .league-title {
             font-family: 'Outfit', sans-serif;
@@ -54,27 +60,34 @@
         /* Tabs */
         .tabs {
             display: flex;
-            background: rgba(10, 10, 15, 0.85);
-            border-bottom: 1px solid var(--glass-border);
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
             overflow-x: auto;
-            padding: 0 10px;
         }
         .tab-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            padding: 15px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 10px 30px;
+            border-radius: 20px;
             font-weight: 600;
             font-size: 15px;
             cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
+            transition: all 0.3s;
             white-space: nowrap;
+            backdrop-filter: blur(10px);
+        }
+        .tab-btn:hover {
+            border-color: var(--gold-primary);
+            color: var(--gold-primary);
         }
         .tab-btn.active {
-            color: var(--gold-primary);
-            border-bottom-color: var(--gold-primary);
-            text-shadow: 0 0 10px var(--gold-glow);
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-accent));
+            color: #000;
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 15px var(--gold-glow);
+            text-shadow: none;
         }
 
         .tab-content {
@@ -423,21 +436,27 @@
     
     <!-- Floating particles background -->
     <div class="particles" id="particles"></div>
-    <div class="match-header">
-        <div class="back-btn" onclick="window.location.href='matches.html'">
-            <i data-lucide="chevron-left"></i>
+    
+    <!-- Navbar injected here -->
+    <div id="navbar"></div>
+
+    <div class="site-container" style="max-width: 800px; padding-top: 20px;">
+        
+        <div class="match-header">
+            <a href="matches.html" class="back-btn">
+                <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i> Orqaga
+            </a>
+            <div class="league-title" id="headerLeague">YUKLANMOQDA...</div>
         </div>
-        <div class="league-title" id="headerLeague">YUKLANMOQDA...</div>
-    </div>
 
-    <div class="tabs">
-        <button class="tab-btn active" data-tab="obzor">Obzor</button>
-        <button class="tab-btn" data-tab="sostavy">Sostavlar</button>
-    </div>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="obzor">Obzor</button>
+            <button class="tab-btn" data-tab="sostavy">Sostavlar</button>
+        </div>
 
-    <div id="loading" style="text-align: center; padding: 40px; color: #3b82f6;">
-        <i data-lucide="loader-2" class="spin"></i> Yuklanmoqda...
-    </div>
+        <div id="loading" style="text-align: center; padding: 40px; color: var(--gold-primary);">
+            <i data-lucide="loader-2" class="spin"></i> Yuklanmoqda...
+        </div>
 
     <div id="content" style="display: none;">
         
@@ -488,12 +507,10 @@
 
         </div>
 
-    </div>
+    </div> <!-- End of site-container -->
 
     <!-- Scripts -->
-    <script>
-        // Simple manual icon injection if needed, but we call lucide.createIcons() later
-    </script>
+    <script src="js/layout.js"></script>
     <script src="js/supabase.js"></script>
     <script src="js/match-details.js"></script>
 </body>
