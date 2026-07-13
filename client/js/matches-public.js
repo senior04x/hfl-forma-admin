@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     const loadingMatches = document.getElementById('loadingMatches');
     const matchesGrid = document.getElementById('matchesGrid');
     const filterBtns = document.querySelectorAll('.filter-btn');
@@ -120,5 +120,8 @@
             renderMatches(e.target.dataset.filter);
         });
     });
+
+    fetchMatches();
+});
 
     
