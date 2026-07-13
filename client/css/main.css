@@ -186,9 +186,9 @@ body {
     transition: all 0.3s;
     text-decoration: none;
     color: white;
-    display: flex;
     flex-direction: column;
     align-items: center;
+    position: relative;
 }
 .team-card-public:hover {
     transform: translateY(-5px);

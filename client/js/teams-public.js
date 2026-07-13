@@ -27,6 +27,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             return url;
         }
 
+        function getLeagueBadgeHTML(leagueStr) {
+            if (!leagueStr) return '';
+            
+            const primaryLeague = leagueStr.split(',')[0].trim();
+            const lowerLeague = primaryLeague.toLowerCase();
+            
+            let badgeClass = 'badge-default';
+            if (lowerLeague.includes('super')) {
+                badgeClass = 'badge-super';
+            } else if (lowerLeague.includes('pro')) {
+                badgeClass = 'badge-pro';
+            } else if (lowerLeague.includes('3-liga') || lowerLeague.includes('3 liga') || lowerLeague === '3liga') {
+                badgeClass = 'badge-3liga';
+            } else if (lowerLeague.includes('europa') || lowerLeague.includes('yevropa')) {
+                badgeClass = 'badge-europa';
+            } else if (lowerLeague.includes('chempion')) {
+                badgeClass = 'badge-champions';
+            }
+            
+            return `<div class="team-league-badge ${badgeClass}">${primaryLeague}</div>`;
+        }
+
         function renderTeams(teamsList) {
             teamsGrid.innerHTML = '';
             
@@ -44,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
                 
                 card.innerHTML = `
+                    ${getLeagueBadgeHTML(team.league)}
                     <img src="${optimizeImage(team.logo_url)}" alt="${team.name}" loading="lazy" decoding="async" onerror="this.src='https://via.placeholder.com/100x100?text=Logo'">
                     <h3>${team.name}</h3>
                     <p>Batafsil ko'rish &rarr;</p>
