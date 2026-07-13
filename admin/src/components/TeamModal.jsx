@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { X, Trash2, Save, Eye } from 'lucide-react';
+import PlayerModal from './PlayerModal';
 import './Modal.css';
 
 const TeamModal = ({ team, mode, onClose, onRefresh }) => {
@@ -18,6 +19,7 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
 
   const [players, setPlayers] = useState([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   useEffect(() => {
     if (currentMode === 'view') {
@@ -181,8 +183,13 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {players.map(p => (
                     <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '15px', background: '#f8fafc', padding: '10px', borderRadius: '10px' }}>
-                      <img src={p.photo_url} alt="Profile" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
-                      <div style={{ flex: 1 }}>
+                      <img 
+                        src={p.photo_url} 
+                        alt="Profile" 
+                        style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', cursor: 'pointer' }} 
+                        onClick={() => setSelectedPlayer(p)}
+                      />
+                      <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setSelectedPlayer(p)}>
                         <div style={{ fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>{p.first_name} {p.last_name}</div>
                         <div style={{ fontSize: '12px', color: '#64748b' }}>{p.position} • #{p.player_number}</div>
                       </div>
@@ -251,6 +258,14 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
           </div>
         )}
       </div>
+      {selectedPlayer && (
+        <PlayerModal 
+          player={selectedPlayer} 
+          mode="view" 
+          onClose={() => setSelectedPlayer(null)} 
+          onRefresh={fetchPlayers} 
+        />
+      )}
     </div>
   );
 };
