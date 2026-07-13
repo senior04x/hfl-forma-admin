@@ -29,3 +29,10 @@
     gap: 15px;
 }
 
+
+.list-row {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 15px;
+}
