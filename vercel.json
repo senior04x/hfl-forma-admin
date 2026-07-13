@@ -1,6 +1,9 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/client/$1" }
+  ],
   "images": {
     "sizes": [256, 384, 640, 750, 828, 1080, 1200, 1920],
     "domains": ["xzzyhfyazwohdqqbjiiy.supabase.co"],
