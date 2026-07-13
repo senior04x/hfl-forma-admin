@@ -265,6 +265,11 @@ const MatchControl = () => {
             🏁 Yakunlash
           </button>
         )}
+        {match.status === 'finished' && (
+          <button className="control-btn" style={{background: '#475569', color: 'white'}} onClick={() => requestStatusUpdate('scheduled', "O'yin holatini orqaga qaytarishni tasdiqlaysizmi? O'yin qayta 'Rejalashtirilgan' holatiga o'tadi.")}>
+            ⏪ Holatni qayta tiklash
+          </button>
+        )}
       </div>
 
       {/* Event Buttons */}
