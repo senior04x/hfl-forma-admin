@@ -1,0 +1,192 @@
+﻿<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Havas Futbol Ligasi - O'yinlar</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        .filters {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+        }
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .filter-btn.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+        
+        .matches-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .match-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+            margin-top: 15px;
+        }
+
+        .match-badges-container {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .badge-league { background: #0f172a; color: white; border: 1px solid rgba(255,255,255,0.2); }
+        .badge-scheduled { background: rgba(255,255,255,0.1); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.2); }
+        .badge-live { background: #dc2626; color: white; animation: pulse 2s infinite; }
+        .badge-finished { background: #059669; color: white; }
+
+        .match-teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .team {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+        .team-logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #1e293b;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+        .team-name {
+            font-weight: 600;
+            font-size: 14px;
+            text-align: center;
+            color: #f8fafc;
+        }
+        .match-score {
+            font-size: 24px;
+            font-weight: 800;
+            color: #fff;
+            padding: 0 15px;
+        }
+        .match-vs {
+            font-size: 18px;
+            font-weight: 700;
+            color: #64748b;
+            padding: 0 15px;
+        }
+
+        .match-details {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .detail-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        .youtube-link {
+            color: #ef4444;
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .youtube-link:hover { text-decoration: underline; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Floating particles background -->
+    <div class="particles" id="particles"></div>
+
+    <div class="site-container">
+        <h1 style="text-align: center; margin-bottom: 20px; font-family: 'Outfit', sans-serif;">O'yinlar Jadvali</h1>
+        
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all">Barchasi</button>
+            <button class="filter-btn" data-filter="scheduled">Rejalashtirilgan</button>
+            <button class="filter-btn" data-filter="live">Jonli (Live)</button>
+            <button class="filter-btn" data-filter="finished">Yakunlangan</button>
+        </div>
+
+        <div id="loadingMatches" class="matches-grid">
+            <div style="text-align: center; grid-column: 1 / -1; color: #94a3b8;">Yuklanmoqda...</div>
+        </div>
+
+        <div id="matchesGrid" class="matches-grid hidden">
+            <!-- Matches will be injected here -->
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>lucide.createIcons();</script>
+    <script src="js/layout.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/matches-public.js"></script>
+</body>
+</html>

@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="nav-links" id="navLinks">
                 <a href="index.html" class="${window.location.pathname.endsWith('index.html') || window.location.pathname === '/' ? 'active' : ''}">Bosh Sahifa</a>
                 <a href="teams.html" class="${window.location.pathname.endsWith('teams.html') || window.location.pathname.endsWith('team-details.html') ? 'active' : ''}">Jamoalar</a>
+                <a href="matches.html" class="${window.location.pathname.endsWith('matches.html') ? 'active' : ''}">O'yinlar</a>
                 <a href="apply.html" class="nav-btn">Ro'yxatdan o'tish</a>
             </div>
             
