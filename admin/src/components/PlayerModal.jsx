@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { X, Trash2, Save, Eye } from 'lucide-react';
 import './Modal.css';
@@ -7,6 +7,24 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   const [currentMode, setCurrentMode] = useState(mode);
   const [status, setStatus] = useState(player.status);
   const [loading, setLoading] = useState(false);
+
+  const [teams, setTeams] = useState([]);
+  const [selectedLeague, setSelectedLeague] = useState('');
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      const { data } = await supabase.from('teams').select('id, name, league');
+      if (data) setTeams(data);
+    };
+    fetchTeams();
+  }, []);
+
+  useEffect(() => {
+    if (player.team_id && teams.length > 0) {
+      const t = teams.find(t => t.id === player.team_id);
+      if (t) setSelectedLeague(t.league);
+    }
+  }, [player.team_id, teams]);
 
   // Form states for edit mode
   const [formData, setFormData] = useState({
@@ -19,7 +37,8 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     birth_date: player.birth_date || '',
     position: player.position || '',
     player_number: player.player_number || '',
-    photo_url: player.photo_url || ''
+    photo_url: player.photo_url || '',
+    team_id: player.team_id || ''
   });
 
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -98,6 +117,14 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
               <img src={player.photo_url} alt="Profile" className="modal-avatar" onClick={() => window.openImageViewer(player.photo_url)} />
               <h2>{player.first_name} {player.last_name} {player.father_name}</h2>
               <p>{player.phone || 'Telefon kiritilmagan'}</p>
+              {teams.length > 0 && player.team_id ? (() => {
+                const pTeam = teams.find(t => t.id === player.team_id);
+                return pTeam ? (
+                  <p style={{ marginTop: '5px', fontSize: '14px', fontWeight: 'bold', color: '#3b82f6' }}>
+                    {pTeam.name} ({pTeam.league || 'Liga yo\'q'})
+                  </p>
+                ) : null;
+              })() : null}
             </div>
             
             <div className="modal-details-grid">
@@ -176,6 +203,37 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
               <div className="form-group">
                 <label>Raqam</label>
                 <input type="number" name="player_number" value={formData.player_number} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label>Liga</label>
+                <select 
+                  value={selectedLeague} 
+                  onChange={(e) => {
+                    setSelectedLeague(e.target.value);
+                    setFormData({...formData, team_id: ''});
+                  }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' }}
+                >
+                  <option value="">Ligani tanlang</option>
+                  {[...new Set(teams.map(t => t.league).filter(Boolean))].map(l => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Jamoa</label>
+                <select 
+                  name="team_id" 
+                  value={formData.team_id} 
+                  onChange={handleChange}
+                  disabled={!selectedLeague}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' }}
+                >
+                  <option value="">Jamoani tanlang</option>
+                  {teams.filter(t => t.league === selectedLeague).map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="modal-actions">
