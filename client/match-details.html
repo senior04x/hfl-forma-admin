@@ -46,14 +46,26 @@
         .back-btn:hover {
             color: var(--gold-primary);
         }
-        .league-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 20px;
-            font-weight: 700;
+        .header-score-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
             flex: 1;
-            text-align: center;
-            margin-right: 24px;
+            gap: 15px;
+        }
+        .header-team-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--glass-border);
+            background: #111;
+        }
+        .header-score {
+            font-size: 24px;
+            font-weight: 800;
             color: var(--gold-primary);
+            font-family: 'Outfit', sans-serif;
             text-shadow: 0 0 10px var(--gold-glow);
         }
 
@@ -440,13 +452,17 @@
     <!-- Navbar injected here -->
     <div id="navbar"></div>
 
-    <div class="site-container" style="max-width: 800px; padding-top: 20px;">
+    <div class="site-container">
         
+        <!-- Match Header -->
         <div class="match-header">
-            <a href="matches.html" class="back-btn">
+            <a href="matches.html" class="back-btn" id="backBtn">
                 <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i> Orqaga
             </a>
-            <div class="league-title" id="headerLeague">YUKLANMOQDA...</div>
+            <div class="header-score-area" id="headerScoreArea">
+                <!-- JS orqali to'ldiriladi -->
+            </div>
+            <div style="width: 80px;"></div> <!-- To balance flex layout -->
         </div>
 
         <div class="tabs">

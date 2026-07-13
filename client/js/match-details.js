@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const loadingEl = document.getElementById('loading');
     const contentEl = document.getElementById('content');
-    const headerLeague = document.getElementById('headerLeague');
+    const headerScoreArea = document.getElementById('headerScoreArea');
     
     // Elements
     const statusCard = document.getElementById('matchStatusCard');
@@ -61,9 +61,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             .single();
 
         if (matchErr) throw matchErr;
+        if (headerScoreArea) {
+            headerScoreArea.innerHTML = `
+                <img src="${match.home_team?.logo_url || 'images/logo.png'}" class="header-team-logo" alt="Home">
+                <span class="header-score">${match.home_score || 0} - ${match.away_score || 0}</span>
+                <img src="${match.away_team?.logo_url || 'images/logo.png'}" class="header-team-logo" alt="Away">
+            `;
+        }
+        
         currentMatch = match;
-
-        headerLeague.innerText = (match.league || 'Turnir').toUpperCase();
         
         // Fetch Events
         const { data: events } = await db
