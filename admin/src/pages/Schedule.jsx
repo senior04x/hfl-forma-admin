@@ -18,6 +18,7 @@ const Schedule = () => {
   const [teams, setTeams] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all'); // all, scheduled, live, finished
 
   // Form states
   const [selectedLeague, setSelectedLeague] = useState('');
@@ -118,13 +119,43 @@ const Schedule = () => {
         </button>
       </div>
 
+      <div className="schedule-filters">
+        <button 
+          className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`} 
+          onClick={() => setFilterStatus('all')}
+        >Barchasi</button>
+        <button 
+          className={`filter-btn ${filterStatus === 'scheduled' ? 'active' : ''}`} 
+          onClick={() => setFilterStatus('scheduled')}
+        >Rejalashtirilgan</button>
+        <button 
+          className={`filter-btn ${filterStatus === 'live' ? 'active' : ''}`} 
+          onClick={() => setFilterStatus('live')}
+        >Jonli (Live)</button>
+        <button 
+          className={`filter-btn ${filterStatus === 'finished' ? 'active' : ''}`} 
+          onClick={() => setFilterStatus('finished')}
+        >Tugagan</button>
+      </div>
+
       <div className="matches-grid">
-        {matches.map(match => (
+        {matches
+          .filter(m => {
+            if (filterStatus === 'all') return true;
+            if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
+            return m.status === filterStatus;
+          })
+          .map(match => (
           <div key={match.id} className="match-card">
             <button className="delete-match-btn" onClick={() => handleDelete(match.id)}>
               <Trash2 size={16} />
             </button>
-            <div className="match-league-badge">{match.league}</div>
+            <div className="match-badges-container">
+               <div className="match-league-badge">{match.league}</div>
+               {match.status === 'scheduled' && <div className="match-status-badge scheduled">Rejalashtirilgan</div>}
+               {(match.status === 'first_half' || match.status === 'second_half' || match.status === 'half_time') && <div className="match-status-badge live">Jonli (Live)</div>}
+               {match.status === 'finished' && <div className="match-status-badge finished">Yakunlangan</div>}
+            </div>
             
             <div className="match-teams">
               <div className="team">
