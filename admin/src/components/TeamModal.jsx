@@ -156,7 +156,15 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
               </div>
               <div className="form-group">
                 <label>Liga</label>
-                <input name="league" value={formData.league} onChange={handleChange} />
+                <select name="league" value={formData.league} onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', outline: 'none' }}>
+                  <option value="">Ligani tanlang</option>
+                  <option value="Super liga">Super liga</option>
+                  <option value="Pro liga">Pro liga</option>
+                  <option value="1-liga">1-liga</option>
+                  <option value="2-liga">2-liga</option>
+                  <option value="3-liga">3-liga</option>
+                  <option value="3-liga, Europa ligasi">3-liga, Europa ligasi</option>
+                </select>
               </div>
             </div>
             <div className="modal-actions">
