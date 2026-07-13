@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import SwipeRow from './SwipeRow';
+import TeamModal from './TeamModal';
 // Reusing same CSS as PlayersTable
 import './PlayersTable.css';
 
 const TeamsTable = ({ onStatusChange }) => {
   const [teams, setTeams] = useState([]);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [modalMode, setModalMode] = useState('view');
   const [loading, setLoading] = useState(true);
   
   // Pagination & Filtering
@@ -165,5 +168,6 @@ const TeamsTable = ({ onStatusChange }) => {
 };
 
 export default TeamsTable;
+
 
 

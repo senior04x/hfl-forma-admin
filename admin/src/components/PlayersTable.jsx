@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import SwipeRow from './SwipeRow';
+import PlayerModal from './PlayerModal';
 import './PlayersTable.css';
 
 const PlayersTable = ({ onStatusChange }) => {
   const [players, setPlayers] = useState([]);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [modalMode, setModalMode] = useState('view');
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -140,7 +143,7 @@ const PlayersTable = ({ onStatusChange }) => {
                 <div className="player-name">{app.first_name} {app.last_name}</div>
                 <div className="player-team">{getTeamName(app.team_id)}</div>
                 <div className="player-meta hide-mobile">
-                  {app.passport_series}{app.passport_number} • {app.phone}
+                  {app.passport_series}{app.passport_number} вЂў {app.phone}
                 </div>
               </div>
               <div className="list-cell status-cell">
@@ -179,5 +182,6 @@ const PlayersTable = ({ onStatusChange }) => {
 };
 
 export default PlayersTable;
+
 
 

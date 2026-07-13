@@ -1,6 +1,6 @@
 ﻿.admin-layout {
     display: flex;
-    height: 100vh;
+    height: 100dvh;
     background-color: var(--bg-main, #f4f7fb);
     width: 100vw;
     overflow: hidden;
@@ -161,4 +161,5 @@
         box-sizing: border-box;
     }
 }
+
 
