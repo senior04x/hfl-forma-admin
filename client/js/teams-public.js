@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     displayText = 'EUROPE';
                 } else if (lowerLeague.includes('chempion')) {
                     badgeClass = 'badge-champions';
-                    displayText = 'CHAMPION';
+                    displayText = 'LIGA CHEMP';
                 }
                 
                 // We use relative positioning for multiple badges in a container

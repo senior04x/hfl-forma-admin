@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     displayText = 'EUROPE';
                 } else if (lowerLeague.includes('chempion')) {
                     badgeClass = 'badge-champions';
-                    displayText = 'CHAMPION';
+                    displayText = 'LIGA CHEMP';
                 }
                 
                 badgesHTML += `<div class="team-league-badge ${badgeClass}">${displayText}</div>`;
