@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Calendar, Plus, MapPin, Clock, Youtube, Trash2 } from 'lucide-react';
+import { Calendar, Plus, MapPin, Clock, Video, Trash2 } from 'lucide-react';
 import './Schedule.css';
 
 const LEAGUES = [
@@ -148,7 +148,7 @@ const Schedule = () => {
               </div>
               {match.youtube_link && (
                 <div className="detail-row">
-                  <Youtube size={14} color="#ef4444" /> 
+                  <Video size={14} color="#ef4444" /> 
                   <a href={match.youtube_link} target="_blank" rel="noreferrer" className="youtube-link">Jonli ko'rish</a>
                 </div>
               )}
