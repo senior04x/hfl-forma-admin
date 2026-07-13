@@ -11,11 +11,8 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
   // Form states for edit mode
   const [formData, setFormData] = useState({
     name: team.name || '',
-    captain_name: team.captain_name || '',
     captain_phone: team.captain_phone || '',
     league: team.league || '',
-    region: team.region || '',
-    payment_receipt: team.payment_receipt || '',
     logo_url: team.logo_url || ''
   });
 
@@ -154,20 +151,12 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
                 <input name="name" value={formData.name} onChange={handleChange} />
               </div>
               <div className="form-group">
-                <label>Sardor ismi</label>
-                <input name="captain_name" value={formData.captain_name} onChange={handleChange} />
-              </div>
-              <div className="form-group">
                 <label>Sardor telefoni</label>
                 <input name="captain_phone" value={formData.captain_phone} onChange={handleChange} />
               </div>
               <div className="form-group">
                 <label>Liga</label>
                 <input name="league" value={formData.league} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Viloyat</label>
-                <input name="region" value={formData.region} onChange={handleChange} />
               </div>
             </div>
             <div className="modal-actions">
@@ -182,3 +171,4 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
 };
 
 export default TeamModal;
+
