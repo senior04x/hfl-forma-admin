@@ -94,12 +94,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchTerm = searchInput.value.toLowerCase();
         
         let filteredData = allApplications.filter(app => {
-            if (app.team_id) return false; // Faqat yakkaxon zayavkalar
+            const team = app.team_id ? allTeams.find(t => t.id === app.team_id) : null;
+            const teamName = team ? team.name.toLowerCase() : 'yakkaxon';
 
             const matchesSearch = 
                 app.first_name.toLowerCase().includes(searchTerm) || 
                 app.last_name.toLowerCase().includes(searchTerm) ||
-                app.phone.includes(searchTerm);
+                app.phone.includes(searchTerm) ||
+                teamName.includes(searchTerm);
             
             const matchesFilter = currentFilter === 'all' || app.status === currentFilter;
             
@@ -109,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = '';
 
         if (filteredData.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px; color: #64748b;">Hech qanday ma\'lumot topilmadi</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 30px; color: #64748b;">Hech qanday ma\'lumot topilmadi</td></tr>';
             return;
         }
 
@@ -125,10 +127,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (app.status === 'approved') { statusText = 'Tasdiqlandi'; statusIcon = 'check-circle'; }
             if (app.status === 'rejected') { statusText = 'Rad etildi'; statusIcon = 'x-circle'; }
 
+            const team = app.team_id ? allTeams.find(t => t.id === app.team_id) : null;
+            const teamNameDisplay = team ? team.name : '<span style="color:#94a3b8; font-style:italic;">Yakkaxon</span>';
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><img src="${escapeHTML(app.photo_url)}" alt="Rasm" class="player-avatar"></td>
+                <td><img src="${escapeHTML(app.photo_url)}" alt="Rasm" class="player-avatar" style="cursor: pointer;" onclick="openImageViewer('${escapeHTML(app.photo_url)}')"></td>
                 <td style="font-weight: 500; font-size: 13px;">${escapeHTML(app.first_name)} ${escapeHTML(app.last_name)}</td>
+                <td style="font-size: 13px; font-weight: 500;">${teamNameDisplay}</td>
                 <td class="hide-mobile"><span style="font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">${escapeHTML((app.passport_series || app.passport_number) ? (app.passport_series || '') + (app.passport_number || '') : '-')}</span></td>
                 <td class="hide-mobile">${escapeHTML(app.phone || '-')}</td>
                 <td style="color: #64748b; font-size: 12px; text-align: center;">
@@ -154,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateStats() {
         let items = [];
         if (currentTab === 'individuals') {
-            items = allApplications.filter(a => !a.team_id || (a.comment && a.comment.startsWith('[INDIVIDUAL]')));
+            items = allApplications;
         } else {
             items = allTeams;
         }
@@ -368,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><img src="${escapeHTML(team.logo_url)}" alt="Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
+                <td><img src="${escapeHTML(team.logo_url)}" alt="Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer;" onclick="openImageViewer('${escapeHTML(team.logo_url)}')"></td>
                 <td style="font-weight: 600;">
                     ${escapeHTML(team.name)}
                     <div style="font-size: 11px; color: var(--text-muted); font-weight: normal; margin-top: 2px;">
@@ -1038,4 +1044,21 @@ document.addEventListener('DOMContentLoaded', () => {
         await db.auth.signOut();
         window.location.href = 'index.html';
     });
+
+    // Image Viewer Logic
+    window.openImageViewer = function(url) {
+        const modal = document.getElementById('imageViewerModal');
+        const img = document.getElementById('fullScreenImage');
+        if(modal && img && url) {
+            img.src = url;
+            modal.classList.remove('hidden');
+        }
+    };
+    
+    const closeImageViewer = document.getElementById('closeImageViewer');
+    if (closeImageViewer) {
+        closeImageViewer.addEventListener('click', () => {
+            document.getElementById('imageViewerModal').classList.add('hidden');
+        });
+    }
 });
