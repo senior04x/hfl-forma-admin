@@ -38,6 +38,9 @@ const MatchControl = () => {
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
   const [eventMinute, setEventMinute] = useState('');
 
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '' });
+
   useEffect(() => {
     fetchMatchData();
   }, [id]);
@@ -96,36 +99,37 @@ const MatchControl = () => {
     setEvents(data || []);
   };
 
-  const updateMatchStatus = async (newStatus) => {
-    const { error } = await supabase
-      .from('matches')
-      .update({ status: newStatus })
-      .eq('id', id);
-    
-    if (!error) {
-      setMatch(prev => ({ ...prev, status: newStatus }));
-    }
+  const requestStatusUpdate = (newStatus, message) => {
+    setConfirmModal({
+      isOpen: true,
+      message,
+      action: async () => {
+        const { error } = await supabase.from('matches').update({ status: newStatus }).eq('id', id);
+        if (!error) setMatch(prev => ({ ...prev, status: newStatus }));
+        setConfirmModal({ isOpen: false, action: null, message: '' });
+      }
+    });
   };
 
-  const handleFinishMatch = async () => {
-    if (!window.confirm("O'yinni yakunlashni tasdiqlaysizmi?")) return;
-    
-    // Calculate final scores from events
-    const homeGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.home_team_id).length;
-    const awayGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.away_team_id).length;
+  const requestFinishMatch = () => {
+    setConfirmModal({
+      isOpen: true,
+      message: "O'yinni yakunlashni tasdiqlaysizmi? (Bu amalni orqaga qaytarib bo'lmaydi va bot orqali barchaga xabar ketadi)",
+      action: async () => {
+        const homeGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.home_team_id).length;
+        const awayGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.away_team_id).length;
 
-    const { error } = await supabase
-      .from('matches')
-      .update({ 
-        status: 'finished',
-        home_score: homeGoals,
-        away_score: awayGoals
-      })
-      .eq('id', id);
-    
-    if (!error) {
-      setMatch(prev => ({ ...prev, status: 'finished', home_score: homeGoals, away_score: awayGoals }));
-    }
+        const { error } = await supabase
+          .from('matches')
+          .update({ status: 'finished', home_score: homeGoals, away_score: awayGoals })
+          .eq('id', id);
+        
+        if (!error) {
+          setMatch(prev => ({ ...prev, status: 'finished', home_score: homeGoals, away_score: awayGoals }));
+        }
+        setConfirmModal({ isOpen: false, action: null, message: '' });
+      }
+    });
   };
 
   const openEventModal = (type) => {
@@ -242,22 +246,22 @@ const MatchControl = () => {
       {/* Match Status Controls */}
       <div className="match-controls">
         {match.status === 'scheduled' && (
-          <button className="control-btn start" onClick={() => updateMatchStatus('first_half')}>
+          <button className="control-btn start" onClick={() => requestStatusUpdate('first_half', "1-Taymni boshlashni tasdiqlaysizmi?")}>
             ▶ 1-Taym Boshlash
           </button>
         )}
         {match.status === 'first_half' && (
-          <button className="control-btn halftime" onClick={() => updateMatchStatus('half_time')}>
+          <button className="control-btn halftime" onClick={() => requestStatusUpdate('half_time', "Tanaffusni boshlashni tasdiqlaysizmi?")}>
             ⏸ Tanaffus
           </button>
         )}
         {match.status === 'half_time' && (
-          <button className="control-btn start" onClick={() => updateMatchStatus('second_half')}>
+          <button className="control-btn start" onClick={() => requestStatusUpdate('second_half', "2-Taymni boshlashni tasdiqlaysizmi?")}>
             ▶ 2-Taym Boshlash
           </button>
         )}
         {(match.status === 'first_half' || match.status === 'second_half') && (
-          <button className="control-btn finish" onClick={handleFinishMatch}>
+          <button className="control-btn finish" onClick={requestFinishMatch}>
             🏁 Yakunlash
           </button>
         )}
@@ -354,6 +358,20 @@ const MatchControl = () => {
               >
                 Saqlash
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="event-modal-overlay">
+          <div className="event-modal confirm-modal">
+            <h3>Tasdiqlash</h3>
+            <p>{confirmModal.message}</p>
+            <div className="event-modal-actions">
+              <button className="btn-modal-cancel" onClick={() => setConfirmModal({ isOpen: false, action: null, message: '' })}>Bekor qilish</button>
+              <button className="btn-modal-save" style={{background: '#ef4444'}} onClick={confirmModal.action}>Tasdiqlash</button>
             </div>
           </div>
         </div>
