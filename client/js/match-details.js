@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const matchId = urlParams.get('id');
 
@@ -47,11 +47,11 @@
         // Fetch match data
         const { data: match, error: matchErr } = await db
             .from('matches')
-            .select(\
+            .select(`
                 *,
                 home_team:home_team_id (id, name, logo_url),
                 away_team:away_team_id (id, name, logo_url)
-            \)
+            `)
             .eq('id', matchId)
             .single();
 
@@ -127,10 +127,10 @@
         else if (currentMatch.status === 'second_half') statusTitle = "2-Taym ketyapdi";
         else if (currentMatch.status === 'finished') statusTitle = "O'yin yakunlangan";
 
-        statusCard.innerHTML = \
-            <div class="status-title">\</div>
-            <div class="status-score">Natija: \ \ - \ \</div>
-        \;
+        statusCard.innerHTML = `
+            <div class="status-title">${statusTitle}</div>
+            <div class="status-score">Natija: ${currentMatch.home_team?.name} ${currentMatch.home_score || 0} - ${currentMatch.away_score || 0} ${currentMatch.away_team?.name}</div>
+        `;
 
         // Timeline
         if (matchEvents.length === 0) {
@@ -142,14 +142,14 @@
         matchEvents.forEach((ev, idx) => {
             let iconStr = '';
             let title = '';
-            let desc = ev.player ? \\. \\ : 'Noma\\'lum o\\'yinchi';
+            let desc = ev.player ? `${ev.player.first_name[0]||''}. ${ev.player.last_name}` : 'Noma\'lum o\'yinchi';
 
             if (ev.event_type === 'goal') {
                 iconStr = '<i data-lucide="goal" style="color:white; width:16px;"></i>';
                 title = 'Gol!';
                 desc += ' gol urdi.';
                 if (ev.assist) {
-                    desc += \ Pas berdi: \. \\;
+                    desc += ` Pas berdi: ${ev.assist.first_name[0]||''}. ${ev.assist.last_name}`;
                 }
             } else if (ev.event_type === 'yellow_card') {
                 iconStr = '<div style="width:12px; height:16px; background:#FACC15; border-radius:2px;"></div>';
@@ -161,29 +161,29 @@
                 desc += ' qizil kartochka oldi.';
             } else if (ev.event_type === 'substitution') {
                 iconStr = '<i data-lucide="refresh-cw" style="color:#3b82f6; width:16px;"></i>';
-                title = 'O\\'zgarish';
+                title = 'O\'zgarish';
                 desc += ' maydonga tushdi.';
             }
 
             const isHome = ev.team_id === currentMatch.home_team_id;
             const logo = ev.team?.logo_url || 'images/default-team.png';
 
-            const html = \
+            const html = `
                 <div class="timeline-item">
                     <div class="timeline-left">
-                        <div class="timeline-minute">\'</div>
-                        <div class="timeline-icon">\</div>
+                        <div class="timeline-minute">${ev.minute}'</div>
+                        <div class="timeline-icon">${iconStr}</div>
                         <div class="timeline-line"></div>
                     </div>
                     <div class="timeline-card">
                         <div class="timeline-info">
-                            <h4>\</h4>
-                            <p>\</p>
+                            <h4>${title}</h4>
+                            <p>${desc}</p>
                         </div>
-                        <img src="\" class="team-mini-logo" alt="team">
+                        <img src="${logo}" class="team-mini-logo" alt="team">
                     </div>
                 </div>
-            \;
+            `;
             timelineContainer.insertAdjacentHTML('beforeend', html);
         });
     }
@@ -194,7 +194,7 @@
         // --- Render List ---
         playersList.innerHTML = '';
         if (players.length === 0) {
-            playersList.innerHTML = '<div style="padding: 20px; text-align:center; color:#64748b;">O\\'yinchilar topilmadi</div>';
+            playersList.innerHTML = '<div style="padding: 20px; text-align:center; color:#64748b;">O\'yinchilar topilmadi</div>';
             formationLayer.innerHTML = '';
             return;
         }
@@ -214,28 +214,28 @@
         players.forEach(p => {
             const stats = getPlayerEvents(p.id);
             let badgesHTML = '';
-            if (stats.goals > 0) badgesHTML += \<span class="event-badge"><i data-lucide="goal"></i>x\</span>\;
-            if (stats.yellows > 0) badgesHTML += \<span class="event-badge"><div style="width:10px;height:14px;background:#facc15;border-radius:2px;"></div></span>\;
-            if (stats.reds > 0) badgesHTML += \<span class="event-badge"><div style="width:10px;height:14px;background:#ef4444;border-radius:2px;"></div></span>\;
+            if (stats.goals > 0) badgesHTML += `<span class="event-badge"><i data-lucide="goal"></i>x${stats.goals}</span>`;
+            if (stats.yellows > 0) badgesHTML += `<span class="event-badge"><div style="width:10px;height:14px;background:#facc15;border-radius:2px;"></div></span>`;
+            if (stats.reds > 0) badgesHTML += `<span class="event-badge"><div style="width:10px;height:14px;background:#ef4444;border-radius:2px;"></div></span>`;
 
             const imgUrl = p.photo_url || 'images/default-avatar.png';
-            const position = p.position || 'O\\'yinchi';
-            const number = p.number ? \#\\ : '';
+            const position = p.position || 'O\'yinchi';
+            const number = p.number ? `#${p.number}` : '';
 
-            const html = \
+            const html = `
                 <div class="player-list-item">
                     <div class="player-list-avatar">
-                        <img src="\" alt="player">
+                        <img src="${imgUrl}" alt="player">
                     </div>
                     <div class="player-list-info">
-                        <div class="player-list-name">\. \ <span class="player-number">\</span></div>
-                        <div class="player-position">\</div>
+                        <div class="player-list-name">${p.first_name[0]||''}. ${p.last_name} <span class="player-number">${number}</span></div>
+                        <div class="player-position">${position}</div>
                     </div>
                     <div class="player-list-events">
-                        \
+                        ${badgesHTML}
                     </div>
                 </div>
-            \;
+            `;
             playersList.insertAdjacentHTML('beforeend', html);
         });
 
@@ -276,19 +276,19 @@
             rowPlayers.forEach(p => {
                 const stats = getPlayerEvents(p.id);
                 let eventBadge = '';
-                if (stats.goals > 0) eventBadge = \<div class="shirt-event"><i data-lucide="goal" style="width:10px;height:10px;"></i> x\</div>\;
-                else if (stats.reds > 0) eventBadge = \<div class="shirt-event" style="background:#ef4444;"></div>\;
-                else if (stats.yellows > 0) eventBadge = \<div class="shirt-event" style="background:#facc15;"></div>\;
+                if (stats.goals > 0) eventBadge = `<div class="shirt-event"><i data-lucide="goal" style="width:10px;height:10px;"></i> x${stats.goals}</div>`;
+                else if (stats.reds > 0) eventBadge = `<div class="shirt-event" style="background:#ef4444;"></div>`;
+                else if (stats.yellows > 0) eventBadge = `<div class="shirt-event" style="background:#facc15;"></div>`;
 
-                rowHTML += \
+                rowHTML += `
                     <div class="player-marker">
                         <div class="shirt">
-                            \
-                            \
+                            ${p.number || ''}
+                            ${eventBadge}
                         </div>
-                        <div class="player-name-pitch">\. \</div>
+                        <div class="player-name-pitch">${p.first_name[0]||''}. ${p.last_name}</div>
                     </div>
-                \;
+                `;
             });
             rowHTML += '</div>';
             formationLayer.insertAdjacentHTML('beforeend', rowHTML);
