@@ -82,11 +82,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Set up Lineups
         if (match.home_team) {
-            homeSelectLogo.src = match.home_team.logo_url || 'images/default-team.png';
+            homeSelectLogo.src = match.home_team.logo_url || 'images/logo.png';
             homeSelectName.innerText = match.home_team.name;
         }
         if (match.away_team) {
-            awaySelectLogo.src = match.away_team.logo_url || 'images/default-team.png';
+            awaySelectLogo.src = match.away_team.logo_url || 'images/logo.png';
             awaySelectName.innerText = match.away_team.name;
         }
 
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const isHome = ev.team_id === currentMatch.home_team_id;
-            const logo = ev.team?.logo_url || 'images/default-team.png';
+            const logo = ev.team?.logo_url || 'images/logo.png';
 
             const html = `
                 <div class="timeline-item">
@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (stats.yellows > 0) badgesHTML += `<span class="event-badge"><div style="width:10px;height:14px;background:#facc15;border-radius:2px;"></div></span>`;
             if (stats.reds > 0) badgesHTML += `<span class="event-badge"><div style="width:10px;height:14px;background:#ef4444;border-radius:2px;"></div></span>`;
 
-            const imgUrl = p.photo_url || 'images/default-avatar.png';
+            const imgUrl = p.photo_url || 'https://ui-avatars.com/api/?name=' + (p.first_name[0]||'P') + '&background=1e293b&color=ffffff';
             const position = p.position || 'O\'yinchi';
             const number = p.number ? `#${p.number}` : '';
 

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
@@ -22,20 +22,21 @@
     
     <style>
         body {
-            background-color: #030816; /* Dark blue background like the screenshot */
-            color: white;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
         }
 
         /* Header */
         .match-header {
-            background: #060e25;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(12px);
             padding: 20px;
             display: flex;
             align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid var(--glass-border);
         }
         .back-btn {
-            color: #3b82f6;
+            color: var(--gold-primary);
             cursor: pointer;
             margin-right: 15px;
         }
@@ -45,21 +46,23 @@
             font-weight: 700;
             flex: 1;
             text-align: center;
-            margin-right: 24px; /* balance out back btn */
+            margin-right: 24px;
+            color: var(--gold-primary);
+            text-shadow: 0 0 10px var(--gold-glow);
         }
 
         /* Tabs */
         .tabs {
             display: flex;
-            background: #060e25;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: rgba(10, 10, 15, 0.85);
+            border-bottom: 1px solid var(--glass-border);
             overflow-x: auto;
             padding: 0 10px;
         }
         .tab-btn {
             background: none;
             border: none;
-            color: #64748b;
+            color: var(--text-muted);
             padding: 15px 20px;
             font-weight: 600;
             font-size: 15px;
@@ -69,8 +72,9 @@
             white-space: nowrap;
         }
         .tab-btn.active {
-            color: white;
-            border-bottom-color: #3b82f6;
+            color: var(--gold-primary);
+            border-bottom-color: var(--gold-primary);
+            text-shadow: 0 0 10px var(--gold-glow);
         }
 
         .tab-content {
@@ -85,8 +89,10 @@
 
         /* Overview (Obzor) */
         .status-card {
-            background: #0a1536;
-            border-radius: 12px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
             padding: 15px 20px;
             margin-bottom: 20px;
         }
@@ -94,9 +100,10 @@
             font-weight: 700;
             font-size: 16px;
             margin-bottom: 5px;
+            color: var(--gold-primary);
         }
         .status-score {
-            color: #94a3b8;
+            color: var(--text-muted);
             font-size: 14px;
         }
 
@@ -123,7 +130,7 @@
             top: 30px;
             bottom: -15px;
             width: 1px;
-            background: rgba(255,255,255,0.1);
+            background: var(--glass-border);
         }
         .timeline-item:last-child .timeline-line {
             display: none;
@@ -132,12 +139,14 @@
             width: 30px;
             height: 30px;
             border-radius: 50%;
-            background: #060e25;
+            background: var(--bg-dark);
+            border: 1px solid var(--gold-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 5px;
             z-index: 1;
+            box-shadow: 0 0 10px var(--gold-glow);
         }
         .timeline-minute {
             font-weight: 700;
@@ -146,8 +155,10 @@
         
         .timeline-card {
             flex: 1;
-            background: #0a1536;
-            border-radius: 12px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
             padding: 15px;
             display: flex;
             justify-content: space-between;
@@ -158,15 +169,16 @@
             margin: 0 0 5px 0;
             font-size: 16px;
             font-family: 'Inter';
+            color: var(--gold-primary);
         }
         .timeline-info p {
             margin: 0;
             font-size: 14px;
-            color: #e2e8f0;
+            color: var(--text-main);
             font-weight: 600;
         }
         .timeline-info span {
-            color: #94a3b8;
+            color: var(--text-muted);
             font-size: 13px;
             font-weight: 400;
         }
@@ -175,34 +187,41 @@
             height: 30px;
             border-radius: 50%;
             object-fit: cover;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid var(--glass-border);
         }
 
         /* Sostavy (Lineups) */
         .team-selector {
             display: flex;
-            background: #0a1536;
-            border-radius: 12px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
             margin-bottom: 20px;
             overflow: hidden;
+            padding: 5px;
+            gap: 5px;
         }
         .team-select-btn {
             flex: 1;
             padding: 12px;
-            background: none;
-            border: none;
-            color: #64748b;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            color: var(--text-muted);
             font-weight: 600;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s;
         }
         .team-select-btn.active {
-            background: #1e3a8a;
-            color: white;
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-accent));
+            color: #000;
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 15px var(--gold-glow);
         }
         .team-select-logo {
             width: 24px;
@@ -328,25 +347,35 @@
 
         /* Player List */
         .players-header {
-            background: #1e3a8a;
-            color: white;
-            padding: 10px 20px;
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-accent));
+            color: #000;
+            padding: 12px 20px;
             font-weight: 700;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
+            border-top-left-radius: var(--border-radius);
+            border-top-right-radius: var(--border-radius);
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: 0.5px;
         }
         .player-list-item {
             display: flex;
             align-items: center;
             padding: 15px;
-            background: #0a1536;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--glass-border);
+            border-right: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .player-list-item:last-child {
+            border-bottom-left-radius: var(--border-radius);
+            border-bottom-right-radius: var(--border-radius);
         }
         .player-list-avatar {
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
-            background: #1e293b;
+            background: var(--bg-dark);
+            border: 2px solid var(--glass-border);
             margin-right: 15px;
             display: flex;
             align-items: center;
@@ -367,10 +396,10 @@
             margin-bottom: 2px;
         }
         .player-number {
-            color: #3b82f6;
+            color: var(--gold-primary);
         }
         .player-position {
-            color: #94a3b8;
+            color: var(--text-muted);
             font-size: 13px;
         }
         .player-list-events {

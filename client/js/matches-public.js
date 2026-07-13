@@ -61,8 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (isFinished) statusBadge = '<div class="badge badge-finished">Yakunlangan</div>';
             else statusBadge = '<div class="badge badge-scheduled">Rejalashtirilgan</div>';
 
-            const homeLogo = match.home_team?.logo_url || 'images/default-team.png';
-            const awayLogo = match.away_team?.logo_url || 'images/default-team.png';
+            const homeLogo = match.home_team?.logo_url || 'images/logo.png';
+            const awayLogo = match.away_team?.logo_url || 'images/logo.png';
             
             let scoreArea = '<div class="match-vs">VS</div>';
             if (isLive || isFinished || (match.home_score > 0 || match.away_score > 0)) {
