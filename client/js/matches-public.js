@@ -101,10 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     
                     ${match.youtube_link ? `
-                    <a href="${match.youtube_link}" target="_blank" rel="noreferrer" class="btn-live" onclick="event.stopPropagation()">
+                    <div class="btn-live" onclick="event.preventDefault(); window.open('${match.youtube_link}', '_blank')">
                         <i data-lucide="play-circle"></i> Jonli ko'rish
-                    </a>
-                    </a>
+                    </div>
                     ` : ''}
                 </a>
             `;
