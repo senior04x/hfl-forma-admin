@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import './SwipeRow.css';
 
 const SwipeRow = ({ children, actions }) => {
@@ -71,7 +71,7 @@ const SwipeRow = ({ children, actions }) => {
       <div 
         className="swipe-content"
         style={{ 
-          transform: 	ranslateX(px),
+          transform: `translateX(${translateX}px)`,
           transition: isSwiping ? 'none' : 'transform 0.3s cubic-bezier(0.1, 0.7, 0.1, 1)'
         }}
         onTouchStart={handleTouchStart}
