@@ -28,7 +28,7 @@
             flex-wrap: wrap;
         }
         .filter-btn {
-            background: var(--bg-card);
+            background: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--glass-border);
             padding: 10px 20px;
             border-radius: 20px;
@@ -38,15 +38,18 @@
             font-family: 'Inter', sans-serif;
             font-weight: 500;
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
         .filter-btn:hover {
             border-color: var(--gold-primary);
             color: var(--gold-primary);
         }
         .filter-btn.active {
-            background: linear-gradient(135deg, var(--gold-primary), var(--gold-accent));
+            background: rgba(240, 208, 96, 0.15);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             border-color: var(--gold-primary);
-            color: #000;
+            color: var(--gold-primary);
             font-weight: 700;
             box-shadow: 0 0 15px var(--gold-glow);
         }
