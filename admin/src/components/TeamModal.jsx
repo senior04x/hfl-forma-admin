@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { X, Trash2, Save, Eye } from 'lucide-react';
 import './Modal.css';
@@ -15,6 +15,54 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
     league: team.league || '',
     logo_url: team.logo_url || ''
   });
+
+  const [players, setPlayers] = useState([]);
+  const [loadingPlayers, setLoadingPlayers] = useState(false);
+
+  useEffect(() => {
+    if (currentMode === 'view') {
+      fetchPlayers();
+    }
+  }, [currentMode, team.id]);
+
+  const fetchPlayers = async () => {
+    setLoadingPlayers(true);
+    try {
+      const { data, error } = await supabase.from('applications').select('*').eq('team_id', team.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      if (data) setPlayers(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingPlayers(false);
+    }
+  };
+
+  const updatePlayerStatus = async (playerId, newStatus) => {
+    try {
+      const { error } = await supabase.from('applications').update({ status: newStatus }).eq('id', playerId);
+      if (error) throw error;
+      
+      const newPlayers = players.map(p => p.id === playerId ? { ...p, status: newStatus } : p);
+      setPlayers(newPlayers);
+      
+      const allApproved = newPlayers.every(p => p.status === 'approved');
+      const allRejected = newPlayers.every(p => p.status === 'rejected');
+      const someApproved = newPlayers.some(p => p.status === 'approved');
+      
+      let newTeamStatus = 'pending';
+      if (allApproved) newTeamStatus = 'approved';
+      else if (allRejected) newTeamStatus = 'rejected';
+      else if (someApproved) newTeamStatus = 'partially_approved';
+      
+      setStatus(newTeamStatus);
+      await supabase.from('teams').update({ status: newTeamStatus }).eq('id', team.id);
+      onRefresh();
+    } catch (err) {
+      console.error(err);
+      alert('Xatolik yuz berdi');
+    }
+  };
 
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -54,6 +102,7 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
         
         await supabase.from('applications').update({ status: pStatus }).eq('team_id', team.id);
         
+        fetchPlayers();
         onRefresh();
       } catch (error) {
         console.error(error);
@@ -123,6 +172,35 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
                 <img src={team.payment_receipt} style={{maxWidth: '100px', cursor:'pointer', borderRadius: '8px'}} onClick={() => window.openImageViewer(team.payment_receipt)} />
               </div>
             )}
+
+            <div className="team-players-section" style={{ marginTop: '25px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+              <h3 style={{ marginBottom: '15px', fontSize: '16px', color: '#1e293b' }}>Jamoa o'yinchilari ({players.length})</h3>
+              {loadingPlayers ? (
+                <p style={{ color: '#64748b', fontSize: '14px' }}>Yuklanmoqda...</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {players.map(p => (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '15px', background: '#f8fafc', padding: '10px', borderRadius: '10px' }}>
+                      <img src={p.photo_url} alt="Profile" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>{p.first_name} {p.last_name}</div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>{p.position} • #{p.player_number}</div>
+                      </div>
+                      <select 
+                        value={p.status} 
+                        onChange={(e) => updatePlayerStatus(p.id, e.target.value)}
+                        style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', outline: 'none' }}
+                      >
+                        <option value="pending">Kutilmoqda</option>
+                        <option value="approved">Tasdiqlangan</option>
+                        <option value="rejected">Rad etilgan</option>
+                      </select>
+                    </div>
+                  ))}
+                  {players.length === 0 && <p style={{ color: '#64748b', fontSize: '14px' }}>O'yinchilar topilmadi.</p>}
+                </div>
+              )}
+            </div>
 
             <div className="modal-actions mt-4">
               <select value={status} onChange={(e) => handleStatusChange(e.target.value)} className="status-select">
