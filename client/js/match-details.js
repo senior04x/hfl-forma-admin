@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Fetch Events
         const { data: events } = await db
             .from('match_events')
-            .select('*, player:player_id(first_name, last_name), assist:assist_player_id(first_name, last_name), team:team_id(id, name, logo_url)')
+            .select('*, player:player_id(first_name, last_name), team:team_id(id, name, logo_url)')
             .eq('match_id', matchId)
             .order('minute', { ascending: true });
         
@@ -153,8 +153,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 iconStr = '<i data-lucide="goal" style="color:white; width:16px;"></i>';
                 title = 'Gol!';
                 desc += ' gol urdi.';
-                if (ev.assist) {
-                    desc += ` Pas berdi: ${ev.assist.first_name[0]||''}. ${ev.assist.last_name}`;
+                
+                if (ev.assist_player_id) {
+                    const isHome = ev.team_id === currentMatch.home_team_id;
+                    const teamPlayers = isHome ? homePlayers : awayPlayers;
+                    const assistPlayer = teamPlayers.find(p => p.id === ev.assist_player_id || p._id === ev.assist_player_id);
+                    if (assistPlayer) {
+                        desc += ` Pas berdi: ${assistPlayer.first_name[0]||''}. ${assistPlayer.last_name}`;
+                    }
                 }
             } else if (ev.event_type === 'yellow_card') {
                 iconStr = '<div style="width:12px; height:16px; background:#FACC15; border-radius:2px;"></div>';
