@@ -37,21 +37,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             leagues.forEach(league => {
                 const lowerLeague = league.toLowerCase();
                 let badgeClass = 'badge-default';
+                let displayText = league;
                 
                 if (lowerLeague.includes('super')) {
                     badgeClass = 'badge-super';
+                    displayText = 'SUPER';
                 } else if (lowerLeague.includes('pro')) {
                     badgeClass = 'badge-pro';
+                    displayText = 'PRO';
                 } else if (lowerLeague.includes('3-liga') || lowerLeague.includes('3 liga') || lowerLeague === '3liga') {
                     badgeClass = 'badge-3liga';
+                    displayText = '3-LIGA';
                 } else if (lowerLeague.includes('europa') || lowerLeague.includes('yevropa')) {
                     badgeClass = 'badge-europa';
+                    displayText = 'EUROPE';
                 } else if (lowerLeague.includes('chempion')) {
                     badgeClass = 'badge-champions';
+                    displayText = 'CHAMPION';
                 }
                 
                 // We use relative positioning for multiple badges in a container
-                badgesHTML += `<div class="team-league-badge ${badgeClass}" style="position: relative; top: auto; right: auto;">${league}</div>`;
+                badgesHTML += `<div class="team-league-badge ${badgeClass}" style="position: relative; top: auto; right: auto;">${displayText}</div>`;
             });
             
             return `<div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 5px; flex-direction: column; align-items: flex-end; z-index: 2;">${badgesHTML}</div>`;

@@ -54,13 +54,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             leagues.forEach(league => {
                 const lowerLeague = league.toLowerCase();
                 let badgeClass = 'badge-default';
-                if (lowerLeague.includes('super')) badgeClass = 'badge-super';
-                else if (lowerLeague.includes('pro')) badgeClass = 'badge-pro';
-                else if (lowerLeague.includes('3-liga') || lowerLeague.includes('3 liga') || lowerLeague === '3liga') badgeClass = 'badge-3liga';
-                else if (lowerLeague.includes('europa') || lowerLeague.includes('yevropa')) badgeClass = 'badge-europa';
-                else if (lowerLeague.includes('chempion')) badgeClass = 'badge-champions';
+                let displayText = league;
                 
-                badgesHTML += `<div class="team-league-badge ${badgeClass}">${league}</div>`;
+                if (lowerLeague.includes('super')) {
+                    badgeClass = 'badge-super';
+                    displayText = 'SUPER';
+                } else if (lowerLeague.includes('pro')) {
+                    badgeClass = 'badge-pro';
+                    displayText = 'PRO';
+                } else if (lowerLeague.includes('3-liga') || lowerLeague.includes('3 liga') || lowerLeague === '3liga') {
+                    badgeClass = 'badge-3liga';
+                    displayText = '3-LIGA';
+                } else if (lowerLeague.includes('europa') || lowerLeague.includes('yevropa')) {
+                    badgeClass = 'badge-europa';
+                    displayText = 'EUROPE';
+                } else if (lowerLeague.includes('chempion')) {
+                    badgeClass = 'badge-champions';
+                    displayText = 'CHAMPION';
+                }
+                
+                badgesHTML += `<div class="team-league-badge ${badgeClass}">${displayText}</div>`;
             });
             tdLeagues.innerHTML = badgesHTML;
         }
