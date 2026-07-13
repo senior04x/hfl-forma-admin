@@ -175,7 +175,9 @@ body {
     gap: 30px;
 }
 .team-card-public {
-    background: var(--bg-card);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius);
     padding: 25px;
@@ -225,7 +227,9 @@ body {
     }
 }
 .player-card-public {
-    background: var(--bg-card);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius);
     padding: 15px;
