@@ -1,6 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const matchId = urlParams.get('id');
+    let matchId = urlParams.get('id');
+
+    if (!matchId) {
+        // Fallback for local servers that strip URL parameters
+        matchId = localStorage.getItem('selectedMatchId');
+    }
 
     if (!matchId) {
         document.getElementById('loading').innerHTML = 'O\'yin topilmadi';

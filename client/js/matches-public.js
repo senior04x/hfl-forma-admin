@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const html = `
-                <a href="match-details.html?id=${match.id}" class="match-card" style="text-decoration: none; display: flex;">
+                <div class="match-card" onclick="localStorage.setItem('selectedMatchId', '${match.id}'); window.location.href='match-details.html?id=${match.id}';" style="cursor: pointer;">
                     <div class="match-badges-container">
                         <div class="badge badge-league">${match.league}</div>
                         ${statusBadge}
@@ -101,11 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     
                     ${match.youtube_link ? `
-                    <div class="btn-live" onclick="event.preventDefault(); window.open('${match.youtube_link}', '_blank')">
+                    <div class="btn-live" onclick="event.stopPropagation(); window.open('${match.youtube_link}', '_blank')">
                         <i data-lucide="play-circle"></i> Jonli ko'rish
                     </div>
                     ` : ''}
-                </a>
+                </div>
             `;
             matchesGrid.insertAdjacentHTML('beforeend', html);
         });
