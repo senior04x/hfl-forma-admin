@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import SwipeRow from './SwipeRow';
@@ -177,6 +177,14 @@ const PlayersTable = ({ onStatusChange }) => {
           Keyingi <ChevronRight size={18} />
         </button>
       </div>
+      {selectedPlayer && (
+        <PlayerModal 
+          player={selectedPlayer} 
+          mode={modalMode} 
+          onClose={() => setSelectedPlayer(null)} 
+          onRefresh={() => { fetchPlayers(); onStatusChange(); }} 
+        />
+      )}
     </div>
   );
 };

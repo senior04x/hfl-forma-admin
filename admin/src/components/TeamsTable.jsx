@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import SwipeRow from './SwipeRow';
@@ -163,6 +163,14 @@ const TeamsTable = ({ onStatusChange }) => {
           Keyingi <ChevronRight size={18} />
         </button>
       </div>
+      {selectedTeam && (
+        <TeamModal 
+          team={selectedTeam} 
+          mode={modalMode} 
+          onClose={() => setSelectedTeam(null)} 
+          onRefresh={() => { fetchTeams(); onStatusChange(); }} 
+        />
+      )}
     </div>
   );
 };
