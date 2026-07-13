@@ -1,0 +1,469 @@
+﻿<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>O'yin Tafsilotlari</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/main.css">
+    
+    <style>
+        body {
+            background-color: #030816; /* Dark blue background like the screenshot */
+            color: white;
+        }
+
+        /* Header */
+        .match-header {
+            background: #060e25;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .back-btn {
+            color: #3b82f6;
+            cursor: pointer;
+            margin-right: 15px;
+        }
+        .league-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            flex: 1;
+            text-align: center;
+            margin-right: 24px; /* balance out back btn */
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: #060e25;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            overflow-x: auto;
+            padding: 0 10px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #64748b;
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .tab-btn.active {
+            color: white;
+            border-bottom-color: #3b82f6;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Overview (Obzor) */
+        .status-card {
+            background: #0a1536;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+        }
+        .status-title {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .status-score {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            margin-top: 10px;
+        }
+        .timeline-item {
+            display: flex;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .timeline-left {
+            width: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        .timeline-line {
+            position: absolute;
+            top: 30px;
+            bottom: -15px;
+            width: 1px;
+            background: rgba(255,255,255,0.1);
+        }
+        .timeline-item:last-child .timeline-line {
+            display: none;
+        }
+        .timeline-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #060e25;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 5px;
+            z-index: 1;
+        }
+        .timeline-minute {
+            font-weight: 700;
+            font-size: 13px;
+        }
+        
+        .timeline-card {
+            flex: 1;
+            background: #0a1536;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-left: 10px;
+        }
+        .timeline-info h4 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+            font-family: 'Inter';
+        }
+        .timeline-info p {
+            margin: 0;
+            font-size: 14px;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+        .timeline-info span {
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 400;
+        }
+        .team-mini-logo {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Sostavy (Lineups) */
+        .team-selector {
+            display: flex;
+            background: #0a1536;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .team-select-btn {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: #64748b;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .team-select-btn.active {
+            background: #1e3a8a;
+            color: white;
+        }
+        .team-select-logo {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+        }
+
+        /* Pitch */
+        .pitch-container {
+            width: 100%;
+            aspect-ratio: 3/4;
+            background: #4ade80; /* Grass green */
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-radius: 8px;
+            border: 2px solid white;
+            position: relative;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        /* Pitch markings */
+        .pitch-center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            border: 2px solid white;
+            border-radius: 50%;
+        }
+        .pitch-center-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: white;
+            transform: translateY(-50%);
+        }
+        .pitch-penalty-top {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 20%;
+            border: 2px solid white;
+            border-top: none;
+        }
+        .pitch-penalty-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 20%;
+            border: 2px solid white;
+            border-bottom: none;
+        }
+        
+        /* Players on Pitch (Dynamic grid) */
+        .formation-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+        .formation-row {
+            display: flex;
+            justify-content: space-evenly;
+            width: 100%;
+        }
+        .player-marker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .shirt {
+            width: 35px;
+            height: 35px;
+            background: #ef4444; /* Default red */
+            clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 60%, 80% 60%, 80% 100%, 20% 100%, 20% 60%, 0% 60%, 0% 20%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 14px;
+            position: relative;
+        }
+        .shirt-event {
+            position: absolute;
+            top: -10px;
+            right: -15px;
+            background: white;
+            color: black;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            font-weight: 700;
+            border: 1px solid #ccc;
+        }
+        .player-name-pitch {
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            margin-top: 2px;
+            text-align: center;
+            width: 60px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Player List */
+        .players-header {
+            background: #1e3a8a;
+            color: white;
+            padding: 10px 20px;
+            font-weight: 700;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+        .player-list-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #0a1536;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .player-list-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #1e293b;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .player-list-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .player-list-info {
+            flex: 1;
+        }
+        .player-list-name {
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+        .player-number {
+            color: #3b82f6;
+        }
+        .player-position {
+            color: #94a3b8;
+            font-size: 13px;
+        }
+        .player-list-events {
+            display: flex;
+            gap: 10px;
+        }
+        .event-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .event-badge i {
+            width: 14px;
+            height: 14px;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="match-header">
+        <div class="back-btn" onclick="window.location.href='matches.html'">
+            <i data-lucide="chevron-left"></i>
+        </div>
+        <div class="league-title" id="headerLeague">YUKLANMOQDA...</div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="obzor">Obzor</button>
+        <button class="tab-btn" data-tab="sostavy">Sostavlar</button>
+    </div>
+
+    <div id="loading" style="text-align: center; padding: 40px; color: #3b82f6;">
+        <i data-lucide="loader-2" class="spin"></i> Yuklanmoqda...
+    </div>
+
+    <div id="content" style="display: none;">
+        
+        <!-- Obzor Tab -->
+        <div id="obzor" class="tab-content active">
+            
+            <div class="status-card" id="matchStatusCard">
+                <!-- Injected via JS -->
+            </div>
+
+            <div class="timeline" id="matchTimeline">
+                <!-- Injected via JS -->
+            </div>
+            
+        </div>
+
+        <!-- Sostavy Tab -->
+        <div id="sostavy" class="tab-content">
+            
+            <div class="team-selector" id="teamSelector">
+                <button class="team-select-btn active" id="homeTeamSelectBtn">
+                    <img src="images/default-team.png" class="team-select-logo" id="homeSelectLogo">
+                    <span id="homeSelectName">Jamoa A</span>
+                </button>
+                <button class="team-select-btn" id="awayTeamSelectBtn">
+                    <img src="images/default-team.png" class="team-select-logo" id="awaySelectLogo">
+                    <span id="awaySelectName">Jamoa B</span>
+                </button>
+            </div>
+
+            <div class="pitch-container">
+                <div class="pitch-center-circle"></div>
+                <div class="pitch-center-line"></div>
+                <div class="pitch-penalty-top"></div>
+                <div class="pitch-penalty-bottom"></div>
+                
+                <!-- Dynamic players will be placed here -->
+                <div class="formation-layer" id="formationLayer">
+                </div>
+            </div>
+
+            <div class="players-list-container">
+                <div class="players-header">O'yinchilar</div>
+                <div id="playersList">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Simple manual icon injection if needed, but we call lucide.createIcons() later
+    </script>
+    <script src="js/supabase.js"></script>
+    <script src="js/match-details.js"></script>
+</body>
+</html>
