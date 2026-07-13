@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Fetch Team Info
         const { data: teamData, error: teamError } = await db
             .from('teams')
-            .select('name, logo_url, status')
+            .select('name, logo_url, status, league')
             .eq('id', teamId)
             .single();
 
@@ -45,6 +45,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Set Team UI
         document.getElementById('tdLogo').src = optimizeImage(teamData.logo_url);
         document.getElementById('tdName').textContent = teamData.name;
+        
+        // Render Leagues
+        const tdLeagues = document.getElementById('tdLeagues');
+        if (teamData.league) {
+            const leagues = teamData.league.split(',').map(l => l.trim()).filter(l => l);
+            let badgesHTML = '';
+            leagues.forEach(league => {
+                const lowerLeague = league.toLowerCase();
+                let badgeClass = 'badge-default';
+                if (lowerLeague.includes('super')) badgeClass = 'badge-super';
+                else if (lowerLeague.includes('pro')) badgeClass = 'badge-pro';
+                else if (lowerLeague.includes('3-liga') || lowerLeague.includes('3 liga') || lowerLeague === '3liga') badgeClass = 'badge-3liga';
+                else if (lowerLeague.includes('europa') || lowerLeague.includes('yevropa')) badgeClass = 'badge-europa';
+                else if (lowerLeague.includes('chempion')) badgeClass = 'badge-champions';
+                
+                badgesHTML += `<div class="team-league-badge ${badgeClass}">${league}</div>`;
+            });
+            tdLeagues.innerHTML = badgesHTML;
+        }
 
         // Fetch Approved Players (NO passport info in select!)
         const { data: playersData, error: playersError } = await db

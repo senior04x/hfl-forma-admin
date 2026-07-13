@@ -30,23 +30,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         function getLeagueBadgeHTML(leagueStr) {
             if (!leagueStr) return '';
             
-            const primaryLeague = leagueStr.split(',')[0].trim();
-            const lowerLeague = primaryLeague.toLowerCase();
+            const leagues = leagueStr.split(',').map(l => l.trim()).filter(l => l);
+            if (leagues.length === 0) return '';
             
-            let badgeClass = 'badge-default';
-            if (lowerLeague.includes('super')) {
-                badgeClass = 'badge-super';
-            } else if (lowerLeague.includes('pro')) {
-                badgeClass = 'badge-pro';
-            } else if (lowerLeague.includes('3-liga') || lowerLeague.includes('3 liga') || lowerLeague === '3liga') {
-                badgeClass = 'badge-3liga';
-            } else if (lowerLeague.includes('europa') || lowerLeague.includes('yevropa')) {
-                badgeClass = 'badge-europa';
-            } else if (lowerLeague.includes('chempion')) {
-                badgeClass = 'badge-champions';
-            }
+            let badgesHTML = '';
+            leagues.forEach(league => {
+                const lowerLeague = league.toLowerCase();
+                let badgeClass = 'badge-default';
+                
+                if (lowerLeague.includes('super')) {
+                    badgeClass = 'badge-super';
+                } else if (lowerLeague.includes('pro')) {
+                    badgeClass = 'badge-pro';
+                } else if (lowerLeague.includes('3-liga') || lowerLeague.includes('3 liga') || lowerLeague === '3liga') {
+                    badgeClass = 'badge-3liga';
+                } else if (lowerLeague.includes('europa') || lowerLeague.includes('yevropa')) {
+                    badgeClass = 'badge-europa';
+                } else if (lowerLeague.includes('chempion')) {
+                    badgeClass = 'badge-champions';
+                }
+                
+                // We use relative positioning for multiple badges in a container
+                badgesHTML += `<div class="team-league-badge ${badgeClass}" style="position: relative; top: auto; right: auto;">${league}</div>`;
+            });
             
-            return `<div class="team-league-badge ${badgeClass}">${primaryLeague}</div>`;
+            return `<div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 5px; flex-direction: column; align-items: flex-end; z-index: 2;">${badgesHTML}</div>`;
         }
 
         function renderTeams(teamsList) {

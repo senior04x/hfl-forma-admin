@@ -19,6 +19,41 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/main.css">
+    <style>
+        /* League Badges */
+        .team-league-badge {
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 800;
+            color: white;
+            text-transform: uppercase;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        .badge-super {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.8), rgba(249, 115, 22, 0.8));
+        }
+        .badge-pro {
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.8), rgba(56, 189, 248, 0.8));
+        }
+        .badge-3liga {
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.8), rgba(236, 72, 153, 0.8));
+        }
+        .badge-europa {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.8), rgba(217, 119, 6, 0.8));
+        }
+        .badge-champions {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(37, 99, 235, 0.8));
+        }
+        .badge-default {
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
 </head>
 <body>
     
@@ -81,6 +116,7 @@
                 <img id="tdLogo" src="" alt="Logo" loading="lazy" decoding="async" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-primary);">
                 <div>
                     <h1 id="tdName" style="font-family: 'Outfit', sans-serif; margin-bottom: 5px;">Jamoa Nomi</h1>
+                    <div id="tdLeagues" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;"></div>
                     <p id="tdCount" style="color: var(--text-muted);">0 ta o'yinchi</p>
                 </div>
             </div>
