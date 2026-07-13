@@ -60,8 +60,9 @@
         }
 
         .match-card {
-            background: var(--bg-card);
+            background: rgba(255, 255, 255, 0.03); /* Removed solid background for glassmorphism */
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
             border-radius: var(--border-radius);
             padding: 20px;
