@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import './SwipeRow.css';
 
 const SwipeRow = ({ children, actions }) => {
@@ -11,6 +11,7 @@ const SwipeRow = ({ children, actions }) => {
   const maxSwipe = 120; // 2 buttons * 60px width
   
   const handleTouchStart = (e) => {
+    if (window.innerWidth > 768) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     isVerticalScroll.current = false;
@@ -87,3 +88,4 @@ const SwipeRow = ({ children, actions }) => {
 };
 
 export default SwipeRow;
+

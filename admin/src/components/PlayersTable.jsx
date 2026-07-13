@@ -131,8 +131,8 @@ const PlayersTable = ({ onStatusChange }) => {
               key={app.id} 
               actions={
                 <>
-                  <button className="action-btn view" title="Ko'rish"><Eye size={20} /></button>
-                  <button className="action-btn edit" title="Tahrirlash"><Edit size={20} /></button>
+                  <button className="action-btn view" title="Ko'rish" onClick={() => { setSelectedPlayer(app); setModalMode('view'); }}><Eye size={20} /></button>
+                  <button className="action-btn edit" title="Tahrirlash" onClick={() => { setSelectedPlayer(app); setModalMode('edit'); }}><Edit size={20} /></button>
                 </>
               }
             >
@@ -152,8 +152,8 @@ const PlayersTable = ({ onStatusChange }) => {
               
               {/* Desktop Actions - Only visible on large screens */}
               <div className="list-cell desktop-actions hide-mobile">
-                <button className="btn-icon" title="Ko'rish"><Eye size={18} /></button>
-                <button className="btn-icon text-blue" title="Tahrirlash"><Edit size={18} /></button>
+                <button className="btn-icon" title="Ko'rish" onClick={() => { setSelectedPlayer(app); setModalMode('view'); }}><Eye size={18} /></button>
+                <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => { setSelectedPlayer(app); setModalMode('edit'); }}><Edit size={18} /></button>
               </div>
             </SwipeRow>
           ))

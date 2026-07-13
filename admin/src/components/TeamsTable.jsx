@@ -118,8 +118,8 @@ const TeamsTable = ({ onStatusChange }) => {
               key={team.id} 
               actions={
                 <>
-                  <button className="action-btn view" title="Ko'rish"><Eye size={20} /></button>
-                  <button className="action-btn edit" title="Tahrirlash"><Edit size={20} /></button>
+                  <button className="action-btn view" title="Ko'rish" onClick={() => { setSelectedTeam(team); setModalMode('view'); }}><Eye size={20} /></button>
+                  <button className="action-btn edit" title="Tahrirlash" onClick={() => { setSelectedTeam(team); setModalMode('edit'); }}><Edit size={20} /></button>
                 </>
               }
             >
@@ -138,8 +138,8 @@ const TeamsTable = ({ onStatusChange }) => {
               </div>
               
               <div className="list-cell desktop-actions hide-mobile">
-                <button className="btn-icon" title="Ko'rish"><Eye size={18} /></button>
-                <button className="btn-icon text-blue" title="Tahrirlash"><Edit size={18} /></button>
+                <button className="btn-icon" title="Ko'rish" onClick={() => { setSelectedTeam(team); setModalMode('view'); }}><Eye size={18} /></button>
+                <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => { setSelectedTeam(team); setModalMode('edit'); }}><Edit size={18} /></button>
               </div>
             </SwipeRow>
           ))
