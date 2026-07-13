@@ -79,7 +79,7 @@ const PlayersTable = ({ onStatusChange }) => {
       approved: 'Tasdiqlandi',
       rejected: 'Rad etildi'
     };
-    return <span className={status-badge  + (classes[status] || '')}>{labels[status] || status}</span>;
+    return <span className={`status-badge ${classes[status] || ''}`}>{labels[status] || status}</span>;
   };
 
   const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;

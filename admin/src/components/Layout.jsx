@@ -53,7 +53,7 @@ const Layout = () => {
       </header>
 
       {/* Sidebar */}
-      <aside className={sidebar }>
+      <aside className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="sidebar-header hide-mobile">
           <img src="/images/logo.png" alt="HFL Logo" className="sidebar-logo" />
         </div>

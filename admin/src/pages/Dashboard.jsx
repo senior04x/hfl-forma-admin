@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import PlayersTable from '../components/PlayersTable';
 import TeamsTable from '../components/TeamsTable';
@@ -60,13 +60,13 @@ const Dashboard = () => {
 
       <div className="tabs-container">
         <button 
-          className={	ab-btn }
+          className={`tab-btn ${currentTab === 'players' ? 'active' : ''}`}
           onClick={() => setCurrentTab('players')}
         >
           Barcha O'yinchilar
         </button>
         <button 
-          className={	ab-btn }
+          className={`tab-btn ${currentTab === 'teams' ? 'active' : ''}`}
           onClick={() => setCurrentTab('teams')}
         >
           Jamoalar
