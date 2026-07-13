@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { Calendar, Plus, MapPin, Clock, Video, Trash2 } from 'lucide-react';
 import './Schedule.css';
@@ -12,6 +13,7 @@ const LEAGUES = [
 ];
 
 const Schedule = () => {
+  const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
   const [teams, setTeams] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -129,7 +131,11 @@ const Schedule = () => {
                 <img src={match.home_team?.logo_url || '/images/default-team.png'} alt="Home" className="team-logo" />
                 <span className="team-name">{match.home_team?.name}</span>
               </div>
-              <div className="match-vs">VS</div>
+              <div className="match-vs">
+              {(match.status === 'finished' || match.home_score > 0 || match.away_score > 0) 
+                ? <>{match.home_score || 0} : {match.away_score || 0}</>
+                : 'VS'}
+            </div>
               <div className="team">
                 <img src={match.away_team?.logo_url || '/images/default-team.png'} alt="Away" className="team-logo" />
                 <span className="team-name">{match.away_team?.name}</span>
@@ -153,6 +159,14 @@ const Schedule = () => {
                 </div>
               )}
             </div>
+
+            <button
+              className="btn-add-match"
+              style={{width: '100%', justifyContent: 'center', borderRadius: '10px', marginTop: '0'}}
+              onClick={() => navigate('/match/' + match.id)}
+            >
+              ⚙️ Boshqarish
+            </button>
           </div>
         ))}
         {matches.length === 0 && (
