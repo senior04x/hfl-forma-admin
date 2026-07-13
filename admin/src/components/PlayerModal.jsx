@@ -194,7 +194,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
               </div>
               <div className="form-group">
                 <label>Tug'ilgan sana</label>
-                <input type="date" name="birth_date" value={formData.birth_date} onChange={handleChange} />
+                <input type="text" name="birth_date" value={formData.birth_date} onChange={handleChange} placeholder="masalan: 10.07.1991" />
               </div>
               <div className="form-group">
                 <label>Pozitsiya</label>
