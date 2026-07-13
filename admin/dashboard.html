@@ -584,6 +584,11 @@
     <script src="js/auth.js"></script>
     <script src="js/admin.js"></script>
 
+    <!-- Fullscreen Image Modal -->
+    <div id="imageViewerModal" class="modal hidden" style="z-index: 999999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);">
+        <span id="closeImageViewer" style="position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
+        <img id="fullScreenImage" src="" style="max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;">
+    </div>
 </body>
 </html>
 
