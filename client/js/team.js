@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const teamLogoInput = document.getElementById('teamLogoInput');
     const teamLogoPreview = document.getElementById('teamLogoPreview');
     const teamLogoPlaceholder = document.getElementById('teamLogoPlaceholder');
+    const validationStatus = document.getElementById('validationStatus');
+    const playersSection = document.getElementById('playersSection');
     
     const playerListEl = document.getElementById('playerList');
     const playerCountEl = document.getElementById('playerCount');
@@ -121,8 +123,73 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     [teamNameInput, captainPhoneInput].forEach(el => {
-        el.addEventListener('input', saveDraft);
+        el.addEventListener('input', () => {
+            saveDraft();
+            debouncedCheckTeam();
+        });
     });
+
+    // --- Validation Logic ---
+    let checkTimeout;
+    function debouncedCheckTeam() {
+        clearTimeout(checkTimeout);
+        checkTimeout = setTimeout(checkTeamExists, 500);
+    }
+
+    async function checkTeamExists() {
+        const teamName = teamNameInput.value.trim();
+        let phoneVal = captainPhoneInput.value.replace(/\D/g, ''); // just digits
+
+        // Reset visibility
+        playersSection.style.display = 'none';
+        playersSection.style.opacity = '0';
+        submitTeamBtn.style.display = 'none';
+        submitTeamBtn.style.opacity = '0';
+        validationStatus.innerHTML = '';
+
+        if (teamName.length < 2 || phoneVal.length !== 9) {
+            return; // Not enough info to check yet
+        }
+
+        // Show loading
+        validationStatus.innerHTML = `<span style="color: #94a3b8; display: flex; align-items: center; gap: 8px;"><i data-lucide="loader" class="spin" style="width: 16px; height: 16px;"></i> Ma'lumotlaringizni tekshiryapmiz...</span>`;
+        if (window.lucide) lucide.createIcons();
+
+        try {
+            // Check db
+            const { data, error } = await db
+                .from('teams')
+                .select('id, name, captain_phone')
+                .or(`name.ilike.${teamName},captain_phone.eq.${phoneVal}`);
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                // Duplicate found
+                validationStatus.innerHTML = `<span style="color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 10px 15px; border-radius: 8px; display: flex; align-items: center; gap: 8px;"><i data-lucide="alert-circle" style="width: 18px; height: 18px;"></i> Kechirasiz, bu jamoa nomi yoki telefon raqami allaqachon ro'yxatdan o'tgan!</span>`;
+                if (window.lucide) lucide.createIcons();
+            } else {
+                // Success
+                validationStatus.innerHTML = `<span style="color: #10b981; display: flex; align-items: center; gap: 8px;"><i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> Davom etishingiz mumkin</span>`;
+                if (window.lucide) lucide.createIcons();
+                
+                // Show players section
+                playersSection.style.display = 'block';
+                submitTeamBtn.style.display = 'block';
+                // slight delay for animation
+                setTimeout(() => {
+                    playersSection.style.opacity = '1';
+                    submitTeamBtn.style.opacity = '1';
+                }, 50);
+            }
+        } catch (err) {
+            console.error('Validation error:', err);
+            validationStatus.innerHTML = `<span style="color: #ef4444;">Xatolik yuz berdi. Iltimos qayta urinib ko'ring.</span>`;
+        }
+    }
+
+    // Call check on load in case draft was loaded
+    setTimeout(debouncedCheckTeam, 500);
 
     // --- Cropper Handler ---
     function openCropper(file, target) {

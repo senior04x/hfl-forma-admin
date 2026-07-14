@@ -216,7 +216,10 @@
 
         <!-- Success Modal -->
         <div id="successModal" class="modal hidden">
-            <div class="modal-content">
+            <div class="modal-content" style="position: relative;">
+                <button type="button" onclick="window.location.href = 'apply.html'" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: rgba(255,255,255,0.7); cursor: pointer; padding: 5px; transition: color 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">
+                    <i data-lucide="x" size="24"></i>
+                </button>
                 <div class="success-icon">
                     <i data-lucide="party-popper" size="64"></i>
                 </div>

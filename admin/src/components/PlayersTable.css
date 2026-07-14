@@ -1,4 +1,4 @@
-﻿.table-wrapper {
+.table-wrapper {
     background: var(--bg-card, #fff);
     border-radius: 16px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.05);
@@ -82,6 +82,13 @@
     font-weight: 600;
     font-size: 14px;
     color: var(--text-dark, #1e293b);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.player-name:hover {
+    color: #3b82f6;
+    text-decoration: underline;
 }
 
 .player-team {
@@ -128,7 +135,7 @@
     color: white;
 }
 
-.action-btn.view { background: #3b82f6; }
+.action-btn.delete { background: #ef4444; }
 .action-btn.edit { background: #10b981; }
 
 .desktop-actions {
@@ -149,6 +156,7 @@
 
 .btn-icon:hover { color: var(--text-dark, #1e293b); }
 .btn-icon.text-blue:hover { color: #3b82f6; }
+.btn-icon.text-red:hover { color: #ef4444; }
 
 .pagination {
     display: flex;
@@ -189,3 +197,40 @@
     }
 }
 
+/* Quick Actions in Table */
+.quick-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.quick-btn {
+    width: auto;
+    height: auto;
+    background: transparent !important;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    padding: 4px;
+}
+
+.quick-btn.approve {
+    color: #10b981;
+}
+
+.quick-btn.approve:hover {
+    transform: scale(1.2);
+}
+
+.quick-btn.reject {
+    color: #ef4444;
+}
+
+.quick-btn.reject:hover {
+    transform: scale(1.2);
+}
