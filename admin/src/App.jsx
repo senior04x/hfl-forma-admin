@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Schedule from './pages/Schedule';
+import Standings from './pages/Standings';
 import MatchControl from './pages/MatchControl';
 import Layout from './components/Layout';
 import ImageViewer from './components/ImageViewer';
@@ -25,6 +26,7 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/schedule" element={<Schedule />} />
+          <Route path="/standings" element={<Standings />} />
         </Route>
         <Route path="/match/:id" element={<MatchControl />} />
       </Routes>

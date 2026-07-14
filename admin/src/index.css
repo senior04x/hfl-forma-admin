@@ -1,7 +1,7 @@
-﻿/* Admin CSS Reset & Variables (Premium) */
+/* Admin CSS Reset & Variables (Premium) */
 :root {
     --bg-main: #f8fafc;
-    --bg-sidebar: #0f172a;
+    --bg-sidebar: #050910;
     --bg-card: #ffffff;
     --gold-primary: #f0d060;
     --gold-hover: #c9a84c;
@@ -35,19 +35,17 @@ body {
 /* Sidebar */
 .sidebar {
     width: 260px;
-    background-color: var(--bg-sidebar);
+    background-color: #050910 !important;
     color: var(--text-light);
     display: flex;
     flex-direction: column;
     transition: all 0.3s ease;
-    box-shadow: 4px 0 10px rgba(0,0,0,0.05);
     z-index: 10;
 }
 
 .sidebar-header {
     padding: 25px 20px;
     text-align: center;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 .sidebar-logo {

@@ -5,10 +5,11 @@ import { ArrowLeft, Trash2 } from 'lucide-react';
 import './MatchControl.css';
 
 const EVENT_TYPES = {
-  goal: { icon: '\u26BD', label: 'Gol' },
-  yellow_card: { icon: '\uD83D\uDFE8', label: 'Sariq kartochka' },
-  red_card: { icon: '\uD83D\uDFE5', label: 'Qizil kartochka' },
-  substitution: { icon: '\uD83D\uDD04', label: 'Almashtirish' }
+  goal: { icon: '⚽', label: 'Gol' },
+  assist: { icon: '👟', label: 'Assist' },
+  yellow_card: { icon: '🟨', label: 'Sariq kartochka' },
+  red_card: { icon: '🟥', label: 'Qizil kartochka' },
+  substitution: { icon: '🔄', label: 'Almashtirish' }
 };
 
 const STATUS_LABELS = {

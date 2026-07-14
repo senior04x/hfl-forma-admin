@@ -7,6 +7,7 @@ import './Layout.css';
 const Layout = () => {
   const [session, setSession] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -28,14 +29,20 @@ const Layout = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleLogout = async () => {
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+    setMobileMenuOpen(false); // close sidebar on mobile if open
+  };
+
+  const confirmLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
   };
 
   const menuItems = [
     { path: '/dashboard', label: 'Zayavkalar', icon: <Users size={20} /> },
-    { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> }
+    { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> },
+    { path: '/standings', label: 'Turnir jadvali', icon: <LayoutDashboard size={20} /> }
   ];
 
   if (!session) return <div>Loading...</div>;
@@ -47,10 +54,16 @@ const Layout = () => {
         <div className="logo-container">
           <img src="/images/logo.png" alt="HFL Logo" className="header-logo" />
         </div>
-        <button className="menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        <button className={`menu-toggle ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <Menu size={24} className="icon-menu" />
+          <X size={24} className="icon-close" />
         </button>
       </header>
+
+      {/* Mobile Overlay */}
+      {mobileMenuOpen && (
+        <div className="mobile-overlay" onClick={() => setMobileMenuOpen(false)}></div>
+      )}
 
       {/* Sidebar */}
       <aside className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}>
@@ -78,21 +91,33 @@ const Layout = () => {
         </nav>
 
         <div className="sidebar-footer">
-          <button onClick={handleLogout} className="logout-btn">
+          <button onClick={handleLogoutClick} className="logout-btn">
             <LogOut size={20} /> <span>Tizimdan chiqish</span>
           </button>
         </div>
       </aside>
 
-      {/* Mobile Overlay */}
-      {mobileMenuOpen && (
-        <div className="mobile-overlay" onClick={() => setMobileMenuOpen(false)}></div>
-      )}
-
       {/* Main Content */}
       <main className="main-content">
         <Outlet />
       </main>
+
+      {/* Premium Logout Modal */}
+      {showLogoutModal && (
+        <div className="logout-modal-overlay">
+          <div className="logout-modal">
+            <div className="logout-modal-icon">
+              <LogOut size={32} />
+            </div>
+            <h3>Tizimdan chiqish</h3>
+            <p>Haqiqatan ham tizimdan chiqmoqchimisiz?</p>
+            <div className="logout-modal-actions">
+              <button className="btn-cancel" onClick={() => setShowLogoutModal(false)}>Yo'q</button>
+              <button className="btn-confirm" onClick={confirmLogout}>Ha</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

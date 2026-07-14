@@ -1,0 +1,474 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '../supabaseClient';
+import { Download, Save } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import './Standings.css';
+
+export default function Standings() {
+  const [teams, setTeams] = useState([]);
+  const [matches, setMatches] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [selectedLeague, setSelectedLeague] = useState('Super liga');
+  const [selectedRound, setSelectedRound] = useState('');
+  
+  // Computed states
+  const [standings, setStandings] = useState([]);
+  const [recentMatches, setRecentMatches] = useState([]);
+  const [topScorers, setTopScorers] = useState([]);
+  const [topAssists, setTopAssists] = useState([]);
+  
+  const [penalties, setPenalties] = useState({});
+  const [savingPenalty, setSavingPenalty] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [sponsorLogo, setSponsorLogo] = useState(null);
+
+  const exportRef = useRef(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch Teams
+      // We also try to select penalty_points, if it exists
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, name, logo_url, league, penalty_points')
+        .in('status', ['approved', 'partially_approved']);
+      
+      if (teamsError) throw teamsError;
+      setTeams(teamsData || []);
+      
+      // Initialize penalties state
+      const initialPenalties = {};
+      (teamsData || []).forEach(t => {
+        initialPenalties[t.id] = t.penalty_points || 0;
+      });
+      setPenalties(initialPenalties);
+
+      // Fetch Matches
+      const { data: matchesData, error: matchesError } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('status', 'finished')
+        .order('match_date', { ascending: false });
+
+      if (matchesError) throw matchesError;
+      setMatches(matchesData || []);
+
+      if (matchesData && matchesData.length > 0) {
+        let maxR = 0;
+        matchesData.forEach(m => {
+          if (m.round && parseInt(m.round) > maxR) maxR = parseInt(m.round);
+        });
+        setSelectedRound(maxR.toString());
+      }
+
+      // Fetch Events
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('match_events')
+        .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name), team:team_id(name, logo_url, league)')
+        .in('event_type', ['goal', 'assist']);
+
+      if (eventsError) throw eventsError;
+      setEvents(eventsData || []);
+
+    } catch (err) {
+      console.error("Error fetching standings data:", err);
+      // We don't block the UI entirely, let it show empty tables
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    computeStandings();
+  }, [teams, matches, events, selectedLeague, selectedRound, penalties]);
+
+  const computeStandings = () => {
+    // Filter teams by selected league
+    const filteredTeams = teams.filter(t => (t.league || 'Super liga').includes(selectedLeague));
+    const filteredTeamIds = new Set(filteredTeams.map(t => t.id));
+
+    // Filter matches
+    let filteredMatches = matches.filter(m => filteredTeamIds.has(m.home_team_id));
+    if (selectedRound && selectedRound !== 'all') {
+      filteredMatches = filteredMatches.filter(m => String(m.round) === String(selectedRound));
+    }
+
+    // Filter events
+    const filteredEvents = events.filter(e => filteredTeamIds.has(e.team_id));
+
+    // 1. Table
+    const tableMap = {};
+    filteredTeams.forEach(t => {
+      tableMap[t.id] = {
+        ...t,
+        played: 0,
+        won: 0,
+        drawn: 0,
+        lost: 0,
+        gf: 0,
+        ga: 0,
+        gd: 0,
+        points: penalties[t.id] || 0 // start with penalty/bonus points
+      };
+    });
+
+    filteredMatches.forEach(m => {
+      const hId = m.home_team_id;
+      const aId = m.away_team_id;
+      const hScore = parseInt(m.home_score || 0);
+      const aScore = parseInt(m.away_score || 0);
+
+      if (tableMap[hId]) {
+        tableMap[hId].played += 1;
+        tableMap[hId].gf += hScore;
+        tableMap[hId].ga += aScore;
+        if (hScore > aScore) {
+          tableMap[hId].won += 1;
+          tableMap[hId].points += 3;
+        } else if (hScore === aScore) {
+          tableMap[hId].drawn += 1;
+          tableMap[hId].points += 1;
+        } else {
+          tableMap[hId].lost += 1;
+        }
+      }
+
+      if (tableMap[aId]) {
+        tableMap[aId].played += 1;
+        tableMap[aId].gf += aScore;
+        tableMap[aId].ga += hScore;
+        if (aScore > hScore) {
+          tableMap[aId].won += 1;
+          tableMap[aId].points += 3;
+        } else if (aScore === hScore) {
+          tableMap[aId].drawn += 1;
+          tableMap[aId].points += 1;
+        } else {
+          tableMap[aId].lost += 1;
+        }
+      }
+    });
+
+    const computedStandings = Object.values(tableMap).map(t => {
+      t.gd = t.gf - t.ga;
+      return t;
+    }).sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.gd !== a.gd) return b.gd - a.gd;
+      return b.gf - a.gf;
+    });
+
+    setStandings(computedStandings);
+    setRecentMatches(filteredMatches.slice(0, 5));
+
+    // 2. Top Scorers & Assists
+    const playerStats = {};
+    filteredEvents.forEach(e => {
+      if (!e.player || !e.player_id) return;
+      if (!playerStats[e.player_id]) {
+        playerStats[e.player_id] = {
+          id: e.player_id,
+          name: `${e.player.first_name} ${e.player.last_name}`,
+          teamLogo: e.team?.logo_url || '',
+          goals: 0,
+          assists: 0
+        };
+      }
+      if (e.event_type === 'goal') playerStats[e.player_id].goals += 1;
+      if (e.event_type === 'assist') playerStats[e.player_id].assists += 1;
+    });
+
+    const scorers = Object.values(playerStats)
+      .filter(p => p.goals > 0)
+      .sort((a, b) => b.goals - a.goals)
+      .slice(0, 5);
+
+    const assists = Object.values(playerStats)
+      .filter(p => p.assists > 0)
+      .sort((a, b) => b.assists - a.assists)
+      .slice(0, 5);
+
+    setTopScorers(scorers);
+    setTopAssists(assists);
+  };
+
+  const handleSavePenalty = async (teamId) => {
+    setSavingPenalty(teamId);
+    try {
+      const pval = parseInt(penalties[teamId]) || 0;
+      const { error } = await supabase
+        .from('teams')
+        .update({ penalty_points: pval })
+        .eq('id', teamId);
+      
+      if (error) {
+        // If column doesn't exist, they will get an error here.
+        alert("Xatolik! penalty_points ustuni bazada yo'q bo'lishi mumkin. SQL: ALTER TABLE teams ADD COLUMN penalty_points int4 DEFAULT 0;");
+        throw error;
+      }
+      alert('Muvaffaqiyatli saqlandi!');
+      // Update local teams state as well so re-filter works accurately
+      setTeams(prev => prev.map(t => t.id === teamId ? { ...t, penalty_points: pval } : t));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSavingPenalty(null);
+    }
+  };
+
+  const handleExport = async () => {
+    if (!exportRef.current || isExporting) return;
+    setIsExporting(true);
+    try {
+      // Ensure specific layout scaling before capture
+      const canvas = await html2canvas(exportRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `turnir_jadvali_${selectedLeague}_${selectedRound}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Export error:", err);
+      alert("Rasmni yuklab olishda xatolik yuz berdi.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleSponsorLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setSponsorLogo(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Get dynamic rounds
+  let maxRound = 0;
+  matches.forEach(m => {
+    if (m.round && parseInt(m.round) > maxRound) maxRound = parseInt(m.round);
+  });
+  const roundOptions = [];
+  for (let i = 1; i <= maxRound; i++) roundOptions.push(i);
+
+  const displayRound = selectedRound || '1';
+
+  // Background mapping for export
+  let exportThemeClass = 'theme-export-Super';
+  if (selectedLeague.includes('Pro')) exportThemeClass = 'theme-export-Pro';
+  else if (selectedLeague.includes('3-liga') || selectedLeague.includes('3 liga')) exportThemeClass = 'theme-export-3-liga';
+  else if (selectedLeague.includes('Europa')) exportThemeClass = 'theme-export-Europa';
+  else if (selectedLeague.includes('Chempion')) exportThemeClass = 'theme-export-Chempion';
+
+  if (loading) return <div>Yuklanmoqda...</div>;
+
+  return (
+    <div className="standings-page">
+      <div className="standings-header">
+        <h1>Turnir Jadvali va Export</h1>
+        <button className="btn-download" onClick={handleExport} disabled={isExporting}>
+          <Download size={18} /> {isExporting ? 'Yuklanmoqda...' : 'Rasmni yuklab olish'}
+        </button>
+      </div>
+
+      <div className="filters-row">
+        <div className="filter-group">
+          <label>Liga</label>
+          <select value={selectedLeague} onChange={(e) => setSelectedLeague(e.target.value)}>
+            <option value="Super">Super liga</option>
+            <option value="Pro">Pro liga</option>
+            <option value="3-liga">3-liga</option>
+            <option value="Europa">Europa ligasi</option>
+            <option value="Chempion">Chempionlar ligasi</option>
+          </select>
+        </div>
+        <div className="filter-group">
+          <label>Tur</label>
+          <select value={selectedRound} onChange={(e) => setSelectedRound(e.target.value)}>
+            {roundOptions.map(r => <option key={r} value={r}>{r}-tur</option>)}
+          </select>
+        </div>
+        <div className="filter-group">
+          <label>Homiy Logosi</label>
+          <input type="file" accept="image/*" onChange={handleSponsorLogoUpload} style={{padding: '5px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px'}} />
+        </div>
+      </div>
+
+      <div className="admin-table-container">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Jamoa</th>
+              <th>O'yin</th>
+              <th>Farq</th>
+              <th>Ochko</th>
+              <th>Jarima / Bonus (Ochko)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {standings.map((t, i) => (
+              <tr key={t.id}>
+                <td>{i + 1}</td>
+                <td>
+                  <div className="team-info">
+                    <img src={t.logo_url} alt="" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                    {t.name}
+                  </div>
+                </td>
+                <td>{t.played}</td>
+                <td>{t.gd > 0 ? `+${t.gd}` : t.gd}</td>
+                <td><strong>{t.points}</strong></td>
+                <td>
+                  <input 
+                    type="number" 
+                    className="penalty-input"
+                    value={penalties[t.id] ?? 0}
+                    onChange={(e) => setPenalties({...penalties, [t.id]: e.target.value})}
+                  />
+                  <button 
+                    className="btn-save-penalty"
+                    onClick={() => handleSavePenalty(t.id)}
+                    disabled={savingPenalty === t.id}
+                  >
+                    <Save size={14} /> Saqlash
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* EXPORT TEMPLATE (Hidden from normal view but available for canvas) */}
+      <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
+        <div className={`export-wrapper ${exportThemeClass}`} ref={exportRef}>
+          <div className="export-container">
+            
+            {/* Header */}
+            <div className="export-header">
+              <div className="export-logo-left" style={{flexDirection: 'row', alignItems: 'center', gap: '20px'}}>
+                <img src="/logo-for-jadval.png" alt="Havas Futbol" crossOrigin="anonymous" style={{ height: '110px', objectFit: 'contain' }} />
+                {sponsorLogo && (
+                  <>
+                    <span style={{fontSize: '40px', fontWeight: '900', color: 'rgba(255,255,255,0.7)', fontFamily: 'Outfit, sans-serif'}}>X</span>
+                    <img src={sponsorLogo} alt="Sponsor" crossOrigin="anonymous" style={{ height: '110px', objectFit: 'contain' }} />
+                  </>
+                )}
+              </div>
+              <div className="export-logo-right" style={{textAlign: 'right', marginTop: '10px'}}>
+                <h2 style={{margin:0, fontSize: '36px', fontWeight: '900', fontStyle: 'italic'}}>{displayRound}-TUR</h2>
+                <span style={{fontSize: '18px', fontWeight: '600', letterSpacing: '2px', opacity: 0.9}}>
+                  {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
+                  {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1} MAVSUM
+                </span>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="export-body">
+              
+              {/* Left Col: Table */}
+              <div className="export-table-container">
+                <div className="export-table-header">
+                  <div className="export-col-hash">#</div>
+                  <div className="export-col-team">JAMOA</div>
+                  <div className="export-col-stat">O'</div>
+                  <div className="export-col-stat">T/N</div>
+                  <div className="export-col-stat">O</div>
+                </div>
+                {standings.slice(0, 13).map((t, idx) => (
+                  <div className="export-table-row" key={t.id}>
+                    <div className="export-col-hash">{idx + 1}</div>
+                    <div className="export-col-team" style={{display: 'flex', alignItems: 'center'}}>
+                      <img src={t.logo_url} className="team-img" alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                      <span style={{textTransform: 'uppercase'}}>{t.name}</span>
+                    </div>
+                    <div className="export-col-stat">{t.played}</div>
+                    <div className="export-col-stat">{t.gd}</div>
+                    <div className="export-col-stat">{t.points}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Right Col: Results, Top Scorers, Assists */}
+              <div className="export-right-col">
+                
+                {/* Results */}
+                <div className="export-card" style={{flex: 1}}>
+                  <div className="export-card-title">{displayRound}-TUR NATIJALARI</div>
+                  <div style={{padding: '10px 15px'}}>
+                    {recentMatches.slice(0, 6).map(m => {
+                      const hTeam = teams.find(t => t.id === m.home_team_id);
+                      const aTeam = teams.find(t => t.id === m.away_team_id);
+                      if(!hTeam || !aTeam) return null;
+                      return (
+                        <div className="export-result-row" key={m.id}>
+                          <div className="export-result-team">
+                            <img src={hTeam.logo_url} alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                            <span style={{textTransform:'uppercase', fontSize: '13px'}}>{hTeam.name}</span>
+                          </div>
+                          <div className="export-result-score">{m.home_score}-{m.away_score}</div>
+                          <div className="export-result-team away">
+                            <img src={aTeam.logo_url} alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                            <span style={{textTransform:'uppercase', fontSize: '13px'}}>{aTeam.name}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Top Scorers */}
+                <div className="export-card">
+                  <div className="export-card-title">TO'PURARLAR <span style={{float:'right', fontSize:'14px'}}>O'   G</span></div>
+                  <div>
+                    {topScorers.slice(0, 3).map(p => (
+                      <div className="export-stats-row" key={p.id}>
+                        <img src={p.teamLogo} className="stat-img" alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                        <div style={{flex: 1, textTransform: 'uppercase'}}>{p.name}</div>
+                        <div style={{width: '30px', textAlign: 'center'}}>{matches.length > 0 ? matches[0].round : 1}</div>
+                        <div style={{width: '30px', textAlign: 'center', fontWeight: '900'}}>{p.goals}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Top Assists */}
+                <div className="export-card">
+                  <div className="export-card-title">ASSISTENTLAR <span style={{float:'right', fontSize:'14px'}}>O'   A</span></div>
+                  <div>
+                    {topAssists.slice(0, 3).map(p => (
+                      <div className="export-stats-row" key={p.id}>
+                        <img src={p.teamLogo} className="stat-img" alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                        <div style={{flex: 1, textTransform: 'uppercase'}}>{p.name}</div>
+                        <div style={{width: '30px', textAlign: 'center'}}>{matches.length > 0 ? matches[0].round : 1}</div>
+                        <div style={{width: '30px', textAlign: 'center', fontWeight: '900'}}>{p.assists}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
