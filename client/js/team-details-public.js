@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             card.innerHTML = `
                 <div class="player-number-badge">${pNumber}</div>
-                <img src="${optimizeImage(player.photo_url)}" alt="${player.first_name}" loading="lazy" decoding="async" onerror="this.src='https://via.placeholder.com/100x100?text=Rasm'">
+                <img src="${optimizeImage(player.photo_url)}" alt="${player.first_name}" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='https://via.placeholder.com/100x100?text=Rasm'">
                 <h4>${player.first_name}</h4>
                 <p>${player.last_name}</p>
             `;

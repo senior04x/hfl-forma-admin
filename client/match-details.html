@@ -68,6 +68,37 @@
             font-family: 'Outfit', sans-serif;
             text-shadow: 0 0 10px var(--gold-glow);
         }
+        @media (max-width: 500px) {
+            .match-header {
+                flex-direction: column;
+                position: relative;
+                padding-top: 30px;
+                gap: 10px;
+            }
+            .back-btn {
+                position: absolute;
+                top: 0;
+                left: 0;
+                font-size: 14px;
+            }
+            .match-header > div:last-child {
+                display: none;
+            }
+            .header-score-area {
+                gap: 10px;
+                width: 100%;
+            }
+            .header-team-logo {
+                width: 30px;
+                height: 30px;
+            }
+            .header-score {
+                font-size: 20px;
+            }
+            .header-team-abbr {
+                font-size: 14px !important;
+            }
+        }
 
         /* Tabs */
         .tabs {

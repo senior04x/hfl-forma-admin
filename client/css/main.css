@@ -4,14 +4,24 @@
     top: 0;
     left: 0;
     width: 100%;
-    background: rgba(10, 10, 15, 0.85);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(240, 208, 96, 0.15);
     z-index: 1000;
     padding: 15px 5%;
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+.navbar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 10, 15, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(240, 208, 96, 0.15);
+    z-index: -1;
 }
 .nav-logo {
     display: flex;
@@ -69,21 +79,53 @@
 }
 @media (max-width: 768px) {
     .nav-links {
-        display: none;
         position: absolute;
         top: 100%;
         left: 0;
         width: 100%;
-        background: rgba(10, 10, 15, 0.95);
+        background: rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
         flex-direction: column;
-        padding: 20px;
+        padding: 20px 20px 35px 20px;
         border-bottom: 1px solid var(--glass-border);
+        border-radius: 0 0 25px 25px;
+        
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-15px);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
     }
     .nav-links.active {
-        display: flex;
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
     }
     .mobile-menu-btn {
         display: block;
+        position: relative;
+        width: 24px;
+        height: 24px;
+    }
+    .mobile-menu-btn svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+    }
+    .mobile-menu-btn .icon-x {
+        opacity: 0;
+        transform: rotate(-90deg) scale(0.5);
+    }
+    .mobile-menu-btn.active .icon-menu {
+        opacity: 0;
+        transform: rotate(90deg) scale(0.5);
+    }
+    .mobile-menu-btn.active .icon-x {
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
     }
 }
 
@@ -494,4 +536,58 @@ body {
     .model-bg-1 { opacity: 0.6; }
     .model-bg-2 { opacity: 0.5; }
     .model-bg-3 { opacity: 0.4; }
+}
+
+/* Skeleton Loading Base */
+.skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.03) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: 6px;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Skeleton utilities */
+.skeleton-text { height: 18px; width: 100%; margin-bottom: 8px; border-radius: 4px; }
+.skeleton-title { height: 24px; width: 60%; margin-bottom: 15px; border-radius: 6px; }
+.skeleton-avatar { width: 35px; height: 35px; border-radius: 50%; }
+.skeleton-box { border-radius: 12px; }
+
+/* Dynamic League Background Layers */
+.league-bg-layer {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+}
+
+.league-bg-layer.theme-super {
+    background: radial-gradient(circle at top right, rgba(249, 115, 22, 0.25), transparent 60%),
+                radial-gradient(circle at bottom left, rgba(234, 179, 8, 0.25), transparent 60%);
+}
+
+.league-bg-layer.theme-pro {
+    background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.25), transparent 60%),
+                radial-gradient(circle at bottom left, rgba(30, 58, 138, 0.25), transparent 60%);
+}
+
+.league-bg-layer.theme-3liga {
+    background: radial-gradient(circle at top right, rgba(236, 72, 153, 0.25), transparent 60%),
+                radial-gradient(circle at bottom left, rgba(147, 51, 234, 0.25), transparent 60%);
+}
+
+.league-bg-layer.theme-europa {
+    background: radial-gradient(circle at top right, rgba(217, 119, 6, 0.25), transparent 60%),
+                radial-gradient(circle at bottom left, rgba(234, 179, 8, 0.25), transparent 60%);
+}
+
+.league-bg-layer.theme-champions {
+    background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.25), transparent 60%),
+                radial-gradient(circle at bottom left, rgba(17, 24, 39, 0.25), transparent 60%);
 }

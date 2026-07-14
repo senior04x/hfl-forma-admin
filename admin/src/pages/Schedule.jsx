@@ -28,6 +28,7 @@ const Schedule = () => {
   const [matchTime, setMatchTime] = useState('');
   const [location, setLocation] = useState('');
   const [youtubeLink, setYoutubeLink] = useState('');
+  const [matchRound, setMatchRound] = useState('');
 
   useEffect(() => {
     fetchTeams();
@@ -61,6 +62,7 @@ const Schedule = () => {
     setMatchTime('');
     setLocation('');
     setYoutubeLink('');
+    setMatchRound('');
     setIsModalOpen(true);
   };
 
@@ -83,7 +85,8 @@ const Schedule = () => {
         match_date: matchDate,
         match_time: matchTime,
         location: location,
-        youtube_link: youtubeLink
+        youtube_link: youtubeLink,
+        round: matchRound ? parseInt(matchRound) : null
       }]);
 
       if (error) throw error;
@@ -152,6 +155,7 @@ const Schedule = () => {
             </button>
             <div className="match-badges-container">
                <div className="match-league-badge">{match.league}</div>
+               {match.round && <div className="match-league-badge" style={{background: '#3b82f6'}}>{match.round}-Tur</div>}
                {match.status === 'scheduled' && <div className="match-status-badge scheduled">Rejalashtirilgan</div>}
                {(match.status === 'first_half' || match.status === 'second_half' || match.status === 'half_time') && <div className="match-status-badge live">Jonli (Live)</div>}
                {match.status === 'finished' && <div className="match-status-badge finished">Yakunlangan</div>}
@@ -260,6 +264,11 @@ const Schedule = () => {
             <div className="form-group">
               <label>Manzil / Stadion</label>
               <input type="text" placeholder="Masalan: Paxtakor stadioni" value={location} onChange={(e) => setLocation(e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>Nechanchi tur? (Majburiy emas)</label>
+              <input type="number" placeholder="Masalan: 1" value={matchRound} onChange={(e) => setMatchRound(e.target.value)} />
             </div>
 
             <div className="form-group">

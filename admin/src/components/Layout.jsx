@@ -41,7 +41,8 @@ const Layout = () => {
 
   const menuItems = [
     { path: '/dashboard', label: 'Zayavkalar', icon: <Users size={20} /> },
-    { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> }
+    { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> },
+    { path: '/standings', label: 'Turnir jadvali', icon: <LayoutDashboard size={20} /> }
   ];
 
   if (!session) return <div>Loading...</div>;

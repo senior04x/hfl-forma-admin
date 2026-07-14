@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 card.innerHTML = `
                     ${getLeagueBadgeHTML(team.league)}
-                    <img src="${optimizeImage(team.logo_url)}" alt="${team.name}" loading="lazy" decoding="async" onerror="this.src='https://via.placeholder.com/100x100?text=Logo'">
+                    <img src="${optimizeImage(team.logo_url)}" alt="${team.name}" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='https://via.placeholder.com/100x100?text=Logo'">
                     <h3>${team.name}</h3>
                     <p>Batafsil ko'rish &rarr;</p>
                 `;
@@ -117,8 +117,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                     trigger.querySelector('span').innerText = e.target.innerText;
                     
                     if(selectedValue === 'all') {
+                        document.querySelectorAll('.league-bg-layer').forEach(el => el.style.opacity = '0');
                         renderTeams(window.allTeamsData);
                     } else {
+                        // Background theme update
+                        document.querySelectorAll('.league-bg-layer').forEach(el => el.style.opacity = '0');
+                        if (selectedValue.includes('Super')) {
+                            const el = document.getElementById('bgThemeSuper');
+                            if(el) el.style.opacity = '1';
+                        } else if (selectedValue.includes('Pro')) {
+                            const el = document.getElementById('bgThemePro');
+                            if(el) el.style.opacity = '1';
+                        } else if (selectedValue.includes('3-liga') || selectedValue.includes('3 liga') || selectedValue === '3liga') {
+                            const el = document.getElementById('bgTheme3liga');
+                            if(el) el.style.opacity = '1';
+                        } else if (selectedValue.includes('Europa') || selectedValue.includes('yevropa')) {
+                            const el = document.getElementById('bgThemeEuropa');
+                            if(el) el.style.opacity = '1';
+                        } else if (selectedValue.includes('Chempion')) {
+                            const el = document.getElementById('bgThemeChampions');
+                            if(el) el.style.opacity = '1';
+                        }
+
                         // Liga bo'yicha filter qilish (team.league ustunidan qidiramiz, u bitta yoki bir necha liga bo'lishi mumkin)
                         const filtered = window.allTeamsData.filter(t => {
                             if (!t.league) return false;
