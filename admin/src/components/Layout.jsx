@@ -47,8 +47,9 @@ const Layout = () => {
         <div className="logo-container">
           <img src="/images/logo.png" alt="HFL Logo" className="header-logo" />
         </div>
-        <button className="menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        <button className={`menu-toggle ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <Menu size={24} className="icon-menu" />
+          <X size={24} className="icon-close" />
         </button>
       </header>
 

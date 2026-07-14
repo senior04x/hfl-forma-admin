@@ -1,4 +1,4 @@
-﻿.admin-layout {
+.admin-layout {
     display: flex;
     height: 100dvh;
     background-color: var(--bg-main, #f4f7fb);
@@ -32,6 +32,35 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    width: 30px;
+    height: 30px;
+    z-index: 1001;
+}
+
+.menu-toggle svg {
+    position: absolute;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.icon-menu {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+.icon-close {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0);
+}
+
+.menu-toggle.open .icon-menu {
+    opacity: 0;
+    transform: rotate(90deg) scale(0);
+}
+
+.menu-toggle.open .icon-close {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
 }
 
 .sidebar {
@@ -126,7 +155,7 @@
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.5);
-    z-index: 999;
+    z-index: 998;
 }
 
 @media (max-width: 768px) {
@@ -138,12 +167,22 @@
         position: fixed;
         left: 0;
         top: 70px;
-        bottom: 0;
-        transform: translateX(-100%);
+        right: 0;
+        width: 100%;
+        height: auto;
+        bottom: auto;
+        transform: translateY(-150%);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 999;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
 
     .sidebar.open {
-        transform: translateX(0);
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
     }
 
     .hide-mobile {
