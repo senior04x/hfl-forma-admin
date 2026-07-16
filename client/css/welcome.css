@@ -1,0 +1,95 @@
+/* Welcome Screen */
+#welcome-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #000;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: opacity 0.8s ease-in-out, visibility 0.8s ease-in-out;
+}
+
+#welcome-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.welcome-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.welcome-logo {
+    width: 120px;
+    height: auto;
+    opacity: 0;
+    transform: translateY(-20px);
+    margin-bottom: 20px;
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.welcome-logo.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.welcome-text {
+    font-family: 'Outfit', sans-serif;
+    font-size: 3rem;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    white-space: nowrap;
+    
+    /* Start state: off-screen right */
+    transform: translateX(100vw);
+}
+
+/* Animations */
+@keyframes flyInAndDrop {
+    0% {
+        transform: translateX(100vw) translateY(0);
+    }
+    40% {
+        /* Fly to center */
+        transform: translateX(0) translateY(0);
+    }
+    60% {
+        /* Pause slightly at center */
+        transform: translateX(0) translateY(0);
+    }
+    100% {
+        /* Drop down */
+        transform: translateX(0) translateY(60px);
+    }
+}
+
+.welcome-text.animate {
+    animation: flyInAndDrop 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@media (max-width: 768px) {
+    .welcome-text {
+        font-size: 2rem;
+    }
+    .welcome-logo {
+        width: 100px;
+    }
+    @keyframes flyInAndDrop {
+        0% { transform: translateX(100vw) translateY(0); }
+        40% { transform: translateX(0) translateY(0); }
+        60% { transform: translateX(0) translateY(0); }
+        100% { transform: translateX(0) translateY(50px); }
+    }
+}

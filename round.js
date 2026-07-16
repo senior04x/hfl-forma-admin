@@ -10,11 +10,11 @@ async function roundImage() {
     const metadata = await sharp(inputPath).metadata();
     const size = Math.min(metadata.width, metadata.height);
 
-    // Create an SVG mask for a circle
-    const r = size / 2;
-    const circleSvg = `
+    // Create an SVG mask for a rounded rectangle (border radius 15%)
+    const rx = size * 0.15; // 15% radius
+    const svgMask = `
       <svg width="${size}" height="${size}">
-        <circle cx="${r}" cy="${r}" r="${r}" fill="white"/>
+        <rect x="0" y="0" width="${size}" height="${size}" rx="${rx}" ry="${rx}" fill="white"/>
       </svg>
     `;
 
@@ -22,7 +22,7 @@ async function roundImage() {
     const buffer = await sharp(inputPath)
         .resize(size, size)
         .composite([{
-            input: Buffer.from(circleSvg),
+            input: Buffer.from(svgMask),
             blend: 'dest-in'
         }])
         .png()
@@ -30,7 +30,7 @@ async function roundImage() {
 
     fs.writeFileSync(outputPath, buffer);
     fs.writeFileSync(adminOutputPath, buffer);
-    console.log('Rounded image created successfully!');
+    console.log('Rounded rect image created successfully!');
 }
 
 roundImage().catch(console.error);
