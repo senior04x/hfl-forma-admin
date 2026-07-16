@@ -1,10 +1,24 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Check if we already showed the welcome screen in this session
+    if (sessionStorage.getItem('hfl_welcome_shown')) {
+        const welcomeScreen = document.getElementById('welcome-screen');
+        if (welcomeScreen) {
+            welcomeScreen.style.display = 'none';
+        }
+        // Tell the rest of the app (like 3D models) to proceed immediately
+        window.dispatchEvent(new Event('welcomeScreenFinished'));
+        return;
+    }
+
     const welcomeScreen = document.getElementById('welcome-screen');
     const welcomeTextContainer = document.querySelector('.welcome-text');
 
     if (welcomeScreen && welcomeTextContainer) {
         // Block body scrolling
         document.body.style.overflow = 'hidden';
+        
+        // Mark as shown for this session so it won't show if they return to home page
+        sessionStorage.setItem('hfl_welcome_shown', 'true');
 
         // Split text into spans for letter-by-letter animation
         const text = "HAVAS LIGA";
