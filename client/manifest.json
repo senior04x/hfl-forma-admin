@@ -3,8 +3,8 @@
   "name": "Havas Futbol Ligasi",
   "icons": [
     {
-      "src": "images/logo.png",
-      "type": "image/png",
+      "src": "images/app-icon.jpg",
+      "type": "image/jpeg",
       "sizes": "512x512"
     }
   ],
