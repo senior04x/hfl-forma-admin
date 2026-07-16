@@ -9,7 +9,8 @@ const LEAGUES = [
   'Pro liga',
   '3-liga',
   'Europa ligasi',
-  'Chempionlar ligasi'
+  'Chempionlar ligasi',
+  '7x7 liga'
 ];
 
 const Schedule = () => {

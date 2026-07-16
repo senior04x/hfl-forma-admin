@@ -273,6 +273,7 @@ export default function Standings() {
   else if (selectedLeague.includes('3-liga') || selectedLeague.includes('3 liga')) exportThemeClass = 'theme-export-3-liga';
   else if (selectedLeague.includes('Europa')) exportThemeClass = 'theme-export-Europa';
   else if (selectedLeague.includes('Chempion')) exportThemeClass = 'theme-export-Chempion';
+  else if (selectedLeague.includes('7x7')) exportThemeClass = 'theme-export-7x7-liga';
 
   if (loading) return <div>Yuklanmoqda...</div>;
 
@@ -294,6 +295,7 @@ export default function Standings() {
             <option value="3-liga">3-liga</option>
             <option value="Europa">Europa ligasi</option>
             <option value="Chempion">Chempionlar ligasi</option>
+            <option value="7x7 liga">7x7 liga</option>
           </select>
         </div>
         <div className="filter-group">
