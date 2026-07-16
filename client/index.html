@@ -61,7 +61,7 @@
     <!-- Welcome Screen -->
     <div id="welcome-screen">
         <div class="welcome-content">
-            <img src="images/app-icon-rounded.png" alt="Havas Futbol Ligasi Logo" class="welcome-logo">
+            
             <div class="welcome-text">HAVAS LIGA</div>
         </div>
     </div>
@@ -179,16 +179,27 @@
         
         // 3D Models Entrance Animation
         document.addEventListener('DOMContentLoaded', () => {
-            // Wait 1 second for everything to settle before sliding in
-            setTimeout(() => {
+            const showModels = () => {
                 const w1 = document.querySelector('.model-wrap-1');
                 const w2 = document.querySelector('.model-wrap-2');
                 const w3 = document.querySelector('.model-wrap-3');
-                
                 if(w1) w1.classList.remove('slide-out');
                 if(w2) w2.classList.remove('slide-out');
                 if(w3) w3.classList.remove('slide-out');
-            }, 1000);
+            };
+
+            if (sessionStorage.getItem('hfl_welcome_shown')) {
+                // If welcome screen already shown in previous loads, show immediately with a slight delay
+                setTimeout(showModels, 1000);
+            } else {
+                // Wait for the welcome screen to finish animating
+                window.addEventListener('welcomeScreenFinished', () => {
+                    setTimeout(showModels, 500); // Wait slightly after fade out starts
+                }, { once: true });
+                
+                // Fallback
+                setTimeout(showModels, 4500);
+            }
         });
 
         // 3D Models Exit Animation

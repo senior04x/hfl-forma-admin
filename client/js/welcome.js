@@ -9,32 +9,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const welcomeScreen = document.getElementById('welcome-screen');
-    const welcomeText = document.querySelector('.welcome-text');
-    const welcomeLogo = document.querySelector('.welcome-logo');
+    const welcomeTextContainer = document.querySelector('.welcome-text');
 
-    if (welcomeScreen && welcomeText && welcomeLogo) {
+    if (welcomeScreen && welcomeTextContainer) {
         // Block body scrolling
         document.body.style.overflow = 'hidden';
 
-        // Start text animation slightly after load
-        setTimeout(() => {
-            welcomeText.classList.add('animate');
-        }, 300);
+        // Split text into spans for letter-by-letter animation
+        const text = "HAVAS LIGA";
+        welcomeTextContainer.innerHTML = '';
+        text.split('').forEach((char, index) => {
+            const span = document.createElement('span');
+            span.textContent = char === ' ' ? '\u00A0' : char; // Keep space
+            span.className = 'welcome-letter';
+            span.style.animationDelay = `${index * 0.15}s`; // Stagger effect
+            welcomeTextContainer.appendChild(span);
+        });
 
-        // The text animation takes 2 seconds.
-        // It drops down at the end (from 60% to 100% of the 2s, so around 1.2s to 2.0s).
-        // Let's fade in the logo right as the text starts dropping (e.g. at 1.5s).
-        setTimeout(() => {
-            welcomeLogo.classList.add('show');
-        }, 1500);
-
-        // Hide the whole screen after everything is done + a little reading time
-        // 2000ms text animation + 1000ms pause = 3000ms
+        // The longest animation delay is for the 9th character (index 9) * 0.15s = 1.35s
+        // Animation itself takes around 1s. Total ~2.5s.
+        // Let's hide the screen at 3.5s.
         setTimeout(() => {
             welcomeScreen.classList.add('hidden');
             
             // Mark as shown for this session
             sessionStorage.setItem('hfl_welcome_shown', 'true');
+            
+            // Dispatch event to notify that welcome screen is done
+            window.dispatchEvent(new Event('welcomeScreenFinished'));
             
             // Restore body scrolling
             document.body.style.overflow = '';
