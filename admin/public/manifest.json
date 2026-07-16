@@ -3,7 +3,7 @@
   "name": "Havas Futbol Ligasi Admin Panel",
   "icons": [
     {
-      "src": "/app-icon.jpg",
+      "src": "/app-icon-rounded.png",
       "type": "image/jpeg",
       "sizes": "512x512"
     }
