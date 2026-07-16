@@ -1,13 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if we already showed the welcome screen in this session
-    if (sessionStorage.getItem('hfl_welcome_shown')) {
-        const welcomeScreen = document.getElementById('welcome-screen');
-        if (welcomeScreen) {
-            welcomeScreen.style.display = 'none';
-        }
-        return;
-    }
-
     const welcomeScreen = document.getElementById('welcome-screen');
     const welcomeTextContainer = document.querySelector('.welcome-text');
 
@@ -32,9 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             welcomeScreen.classList.add('hidden');
             
-            // Mark as shown for this session
-            sessionStorage.setItem('hfl_welcome_shown', 'true');
-            
             // Dispatch event to notify that welcome screen is done
             window.dispatchEvent(new Event('welcomeScreenFinished'));
             
@@ -44,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Remove from DOM entirely after fade out
             setTimeout(() => {
                 welcomeScreen.remove();
-            }, 800); // Wait for the transition to finish
-        }, 3500);
+            }, 1500); // Wait for the transition to finish (1.5s)
+        }, 3000); // 3 seconds until fade out begins
     }
 });

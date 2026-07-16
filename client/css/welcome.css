@@ -5,14 +5,14 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: linear-gradient(135deg, #111111 0%, #000000 100%);
+    background: linear-gradient(135deg, #0a0a0a 0%, #000000 100%);
     z-index: 99999;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    transition: opacity 0.8s ease-in-out, visibility 0.8s ease-in-out;
+    transition: opacity 1.5s ease-in-out, visibility 1.5s ease-in-out;
 }
 
 #welcome-screen.hidden {
@@ -29,26 +29,27 @@
 
 .welcome-text {
     font-family: 'Outfit', sans-serif;
-    font-size: 4rem;
-    font-weight: 800;
+    font-size: 3.5rem;
+    font-weight: 700;
     color: #D4AF37; /* Match logo gold color */
     text-transform: uppercase;
-    letter-spacing: 5px;
+    letter-spacing: 8px;
     white-space: nowrap;
     display: flex;
+    text-shadow: 0px 4px 15px rgba(212, 175, 55, 0.4);
 }
 
 .welcome-letter {
     display: inline-block;
     opacity: 0;
-    transform: translateX(50px) scale(0.8);
-    animation: letterFlyIn 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    transform: translateX(30px);
+    animation: letterFlyIn 0.6s ease-out forwards;
 }
 
 @keyframes letterFlyIn {
     0% {
         opacity: 0;
-        transform: translateX(100px) scale(0.8);
+        transform: translateX(40px) scale(0.9);
     }
     100% {
         opacity: 1;
@@ -58,6 +59,7 @@
 
 @media (max-width: 768px) {
     .welcome-text {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
+        letter-spacing: 4px;
     }
 }

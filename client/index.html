@@ -188,18 +188,13 @@
                 if(w3) w3.classList.remove('slide-out');
             };
 
-            if (sessionStorage.getItem('hfl_welcome_shown')) {
-                // If welcome screen already shown in previous loads, show immediately with a slight delay
-                setTimeout(showModels, 1000);
-            } else {
-                // Wait for the welcome screen to finish animating
-                window.addEventListener('welcomeScreenFinished', () => {
-                    setTimeout(showModels, 500); // Wait slightly after fade out starts
-                }, { once: true });
-                
-                // Fallback
-                setTimeout(showModels, 4500);
-            }
+            // Always wait for the welcome screen to finish animating
+            window.addEventListener('welcomeScreenFinished', () => {
+                setTimeout(showModels, 200); // Small delay after fade out starts
+            }, { once: true });
+            
+            // Fallback just in case
+            setTimeout(showModels, 4500);
         });
 
         // 3D Models Exit Animation
