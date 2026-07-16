@@ -13,13 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const span = document.createElement('span');
             span.textContent = char === ' ' ? '\u00A0' : char; // Keep space
             span.className = 'welcome-letter';
-            span.style.animationDelay = `${index * 0.15}s`; // Stagger effect
+            span.style.animationDelay = `${index * 0.08}s`; // Faster stagger effect
             welcomeTextContainer.appendChild(span);
         });
 
-        // The longest animation delay is for the 9th character (index 9) * 0.15s = 1.35s
-        // Animation itself takes around 1s. Total ~2.5s.
-        // Let's hide the screen at 3.5s.
+        // Hide the screen at 1.5s total time (animation finishes around 1.1s)
         setTimeout(() => {
             welcomeScreen.classList.add('hidden');
             
@@ -32,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Remove from DOM entirely after fade out
             setTimeout(() => {
                 welcomeScreen.remove();
-            }, 1500); // Wait for the transition to finish (1.5s)
-        }, 3000); // 3 seconds until fade out begins
+            }, 500); // Wait for the transition to finish (0.5s)
+        }, 1500); // 1.5 seconds until fade out begins
     }
 });

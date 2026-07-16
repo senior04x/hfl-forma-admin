@@ -12,12 +12,12 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    transition: opacity 1.5s ease-in-out, visibility 1.5s ease-in-out;
+    transition: opacity 0.5s ease-out;
 }
 
 #welcome-screen.hidden {
     opacity: 0;
-    visibility: hidden;
+    pointer-events: none;
 }
 
 .welcome-content {
@@ -43,7 +43,7 @@
     display: inline-block;
     opacity: 0;
     transform: translateX(30px);
-    animation: letterFlyIn 0.6s ease-out forwards;
+    animation: letterFlyIn 0.4s ease-out forwards;
 }
 
 @keyframes letterFlyIn {
