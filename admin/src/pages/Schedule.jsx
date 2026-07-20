@@ -19,7 +19,8 @@ const LEAGUE_LOGOS = {
   'Pro liga': '/Pro-liga.PNG',
   '3-liga': '/3-liga.PNG',
   'Europa ligasi': '/europen-liga.PNG',
-  'Chempionlar ligasi': '/chemp-liga.PNG'
+  'Chempionlar ligasi': '/chemp-liga.PNG',
+  '7x7 liga': '/7x7-liga.PNG'
 };
 
 const Schedule = () => {
