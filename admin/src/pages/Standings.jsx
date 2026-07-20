@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { Download, Save } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import SponsorModal from '../components/SponsorModal';
 import './Standings.css';
 
 export default function Standings() {
@@ -22,7 +23,8 @@ export default function Standings() {
   const [penalties, setPenalties] = useState({});
   const [savingPenalty, setSavingPenalty] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [sponsorLogo, setSponsorLogo] = useState(null);
+  const [selectedSponsors, setSelectedSponsors] = useState([]);
+  const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
 
   const exportRef = useRef(null);
 
@@ -246,16 +248,7 @@ export default function Standings() {
     }
   };
 
-  const handleSponsorLogoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setSponsorLogo(event.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  // Replaced handleSponsorLogoUpload with modal logic
 
   // Get dynamic rounds
   let maxRound = 0;
@@ -305,8 +298,13 @@ export default function Standings() {
           </select>
         </div>
         <div className="filter-group">
-          <label>Homiy Logosi</label>
-          <input type="file" accept="image/*" onChange={handleSponsorLogoUpload} style={{padding: '5px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px'}} />
+          <label>Homiylar</label>
+          <button 
+            onClick={() => setIsSponsorModalOpen(true)}
+            style={{padding: '6px 12px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', fontWeight: '500'}}
+          >
+            Boshqarish
+          </button>
         </div>
       </div>
 
@@ -371,12 +369,7 @@ export default function Standings() {
                     <img src="/LLF-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
                   </>
                 )}
-                {sponsorLogo && (
-                  <>
-                    <img src="/x.png" crossOrigin="anonymous" style={{ height: '20px', objectFit: 'contain', opacity: 0.6 }} />
-                    <img src={sponsorLogo} alt="Sponsor" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain' }} />
-                  </>
-                )}
+                {/* Homiylar endi faqat pastda footer qismida ko'rinadi */}
               </div>
               <div className="export-logo-right" style={{textAlign: 'right'}}>
                 <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
@@ -476,7 +469,7 @@ export default function Standings() {
               opacity: selectedLeague === '7x7 liga' ? 0.9 : 0.6, 
               fontSize: '12px', 
               marginTop: '15px',
-              marginBottom: '20px',
+              marginBottom: selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 ? '5px' : '20px',
               textTransform: 'uppercase',
               letterSpacing: '2px',
               fontWeight: '500'
@@ -485,9 +478,40 @@ export default function Standings() {
               {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM {displayRound}-TUR
             </div>
 
+            {selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '15px',
+                marginBottom: '15px'
+              }}>
+                {selectedSponsors.map((s, idx) => (
+                  <React.Fragment key={s.id}>
+                    <img 
+                      src={s.logo_url} 
+                      alt={s.name} 
+                      crossOrigin="anonymous" 
+                      style={{ height: '30px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} 
+                    />
+                    {idx < selectedSponsors.length - 1 && (
+                      <div style={{ height: '20px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+
           </div>
         </div>
       </div>
+      
+      <SponsorModal 
+        isOpen={isSponsorModalOpen} 
+        onClose={() => setIsSponsorModalOpen(false)} 
+        selectedSponsors={selectedSponsors}
+        onSelectSponsors={setSelectedSponsors}
+      />
     </div>
   );
 }
