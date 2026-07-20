@@ -503,7 +503,7 @@ export default function Standings() {
               color: selectedLeague === '7x7 liga' ? '#09408b' : '#ffffff', 
               opacity: selectedLeague === '7x7 liga' ? 0.9 : 0.6, 
               fontSize: '12px', 
-              marginTop: selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 ? '5px' : '15px',
+              marginTop: selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 ? '25px' : '15px',
               marginBottom: '20px',
               textTransform: 'uppercase',
               letterSpacing: '2px',
