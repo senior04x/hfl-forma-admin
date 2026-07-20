@@ -463,28 +463,13 @@ export default function Standings() {
               </div>
             </div>
 
-            <div style={{
-              textAlign: 'center', 
-              color: selectedLeague === '7x7 liga' ? '#09408b' : '#ffffff', 
-              opacity: selectedLeague === '7x7 liga' ? 0.9 : 0.6, 
-              fontSize: '12px', 
-              marginTop: '15px',
-              marginBottom: selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 ? '5px' : '20px',
-              textTransform: 'uppercase',
-              letterSpacing: '2px',
-              fontWeight: '500'
-            }}>
-              {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
-              {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM {displayRound}-TUR
-            </div>
-
             {selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 && (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '15px',
-                marginBottom: '15px'
+                marginTop: '15px'
               }}>
                 {selectedSponsors.map((s, idx) => (
                   <React.Fragment key={s.id}>
@@ -501,6 +486,21 @@ export default function Standings() {
                 ))}
               </div>
             )}
+
+            <div style={{
+              textAlign: 'center', 
+              color: selectedLeague === '7x7 liga' ? '#09408b' : '#ffffff', 
+              opacity: selectedLeague === '7x7 liga' ? 0.9 : 0.6, 
+              fontSize: '12px', 
+              marginTop: selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 ? '5px' : '15px',
+              marginBottom: '20px',
+              textTransform: 'uppercase',
+              letterSpacing: '2px',
+              fontWeight: '500'
+            }}>
+              {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
+              {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM {displayRound}-TUR
+            </div>
 
           </div>
         </div>
