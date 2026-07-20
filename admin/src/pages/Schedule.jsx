@@ -382,8 +382,8 @@ const Schedule = () => {
               .map(match => (
                 <div key={match.id} className="sch-match-row">
                   <div className="sch-team home">
-                    <span>{match.home_team?.name}</span>
                     <img src={match.home_team?.logo_url} alt="Home" crossOrigin="anonymous" />
+                    <span>{match.home_team?.name}</span>
                   </div>
                   
                   <div className="sch-time-container">
@@ -396,24 +396,24 @@ const Schedule = () => {
                   </div>
 
                   <div className="sch-team away">
-                    <img src={match.away_team?.logo_url} alt="Away" crossOrigin="anonymous" />
                     <span>{match.away_team?.name}</span>
+                    <img src={match.away_team?.logo_url} alt="Away" crossOrigin="anonymous" />
                   </div>
                 </div>
               ))}
           </div>
 
           <div className="sch-export-footer">
-            <div className="sch-social" style={{ color: exportLeague === '7x7 liga' ? '#09408b' : 'white', marginBottom: '20px' }}>
-              @havas_football
-            </div>
-            <div style={{ display: 'flex', gap: '30px', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', gap: '30px', alignItems: 'center', marginBottom: '20px' }}>
               {exportLeague !== '7x7 liga' && selectedSponsors.map((s, idx) => (
                 <React.Fragment key={s.id}>
                   <img src={s.logo_url} alt="Sponsor" style={{ height: '45px', filter: 'brightness(0) invert(1)' }} crossOrigin="anonymous" />
                   {idx < selectedSponsors.length - 1 && <div style={{ height: '30px', width: '1px', background: '#fff', opacity: 0.5 }}></div>}
                 </React.Fragment>
               ))}
+            </div>
+            <div className="sch-social" style={{ color: exportLeague === '7x7 liga' ? '#09408b' : 'white', marginBottom: '10px' }}>
+              @havas_football
             </div>
           </div>
         </div>
