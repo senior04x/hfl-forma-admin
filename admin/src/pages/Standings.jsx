@@ -23,7 +23,18 @@ export default function Standings() {
   const [penalties, setPenalties] = useState({});
   const [savingPenalty, setSavingPenalty] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [selectedSponsors, setSelectedSponsors] = useState([]);
+  const [selectedSponsors, setSelectedSponsors] = useState(() => {
+    try {
+      const saved = localStorage.getItem('hfl_selectedSponsors');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('hfl_selectedSponsors', JSON.stringify(selectedSponsors));
+  }, [selectedSponsors]);
   const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
 
   const exportRef = useRef(null);
