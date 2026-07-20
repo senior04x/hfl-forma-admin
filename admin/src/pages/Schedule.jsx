@@ -14,6 +14,14 @@ const LEAGUES = [
   '7x7 liga'
 ];
 
+const LEAGUE_LOGOS = {
+  'Super liga': '/super-liga.PNG',
+  'Pro liga': '/Pro-liga.PNG',
+  '3-liga': '/3-liga.PNG',
+  'Europa ligasi': '/europen-liga.PNG',
+  'Chempionlar ligasi': '/chemp-liga.PNG'
+};
+
 const Schedule = () => {
   const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
@@ -380,7 +388,13 @@ const Schedule = () => {
                 </>
               )}
             </div>
-            <h1>{exportLeague}</h1>
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              {LEAGUE_LOGOS[exportLeague] ? (
+                <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ height: '140px', objectFit: 'contain' }} />
+              ) : (
+                <h1 style={{ flex: 'none' }}>{exportLeague}</h1>
+              )}
+            </div>
             <img src="/Joma-logo.png" alt="Joma" style={{ height: '60px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none' }} crossOrigin="anonymous" />
           </div>
 
