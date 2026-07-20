@@ -371,9 +371,9 @@ const Schedule = () => {
           className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
         >
           <div className="sch-export-header">
-            <img src="/images/logo-for-jadval.png" alt="HFL" style={{ height: '70px' }} />
+            <img src="/logo-for-jadval.png" alt="HFL" style={{ height: '70px' }} crossOrigin="anonymous" />
             <h1>{exportLeague}</h1>
-            <img src="/images/joma.png" alt="Joma" style={{ height: '60px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none' }} />
+            <img src="/Joma-logo.png" alt="Joma" style={{ height: '60px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none' }} crossOrigin="anonymous" />
           </div>
 
           <div className="sch-export-body">
