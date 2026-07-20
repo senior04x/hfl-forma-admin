@@ -444,9 +444,16 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 700;
   text-transform: uppercase;
+  min-width: 0;
+}
+
+.sch-team span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sch-team.home {
