@@ -479,7 +479,7 @@ export default function Standings() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '15px',
+                gap: '30px',
                 marginTop: '15px'
               }}>
                 {selectedSponsors.map((s, idx) => (
@@ -488,10 +488,10 @@ export default function Standings() {
                       src={s.logo_url} 
                       alt={s.name} 
                       crossOrigin="anonymous" 
-                      style={{ height: '30px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} 
+                      style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} 
                     />
                     {idx < selectedSponsors.length - 1 && (
-                      <div style={{ height: '20px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
+                      <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
                     )}
                   </React.Fragment>
                 ))}
