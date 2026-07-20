@@ -392,9 +392,9 @@
   flex-direction: column;
 }
 
-.schedule-export-container.theme-export-Super { background: linear-gradient(135deg, #1e3a8a, #000000); }
-.schedule-export-container.theme-export-Pro { background: linear-gradient(135deg, #166534, #000000); }
-.schedule-export-container.theme-export-3-liga { background: linear-gradient(135deg, #4b0082, #8b008b); }
+.schedule-export-container.theme-export-Super { background: linear-gradient(to bottom, #BB1308, #F7842B); }
+.schedule-export-container.theme-export-Pro { background: linear-gradient(to bottom, #003E9D, #00BAEF); }
+.schedule-export-container.theme-export-3-liga { background: linear-gradient(to bottom, #A200D2, #EB00F4); }
 .schedule-export-container.theme-export-Europa { background: linear-gradient(135deg, #b91c1c, #000000); }
 .schedule-export-container.theme-export-Chempionlar { background: linear-gradient(135deg, #4338ca, #1e1b4b); }
 .schedule-export-container.theme-export-7x7 { background: linear-gradient(to bottom, #013C82, #589AFB); color: white; }
