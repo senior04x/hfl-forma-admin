@@ -34,7 +34,7 @@ const Schedule = () => {
 
   // Export states
   const [exportLeague, setExportLeague] = useState(LEAGUES[0]);
-  const [exportDate, setExportDate] = useState('');
+  const [exportRound, setExportRound] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [selectedSponsors, setSelectedSponsors] = useState([]);
   const exportRef = useRef(null);
@@ -48,10 +48,20 @@ const Schedule = () => {
     } catch (e) {}
   }, []);
 
+  useEffect(() => {
+    const leagueMatches = matches.filter(m => m.league === exportLeague && m.round);
+    if (leagueMatches.length > 0) {
+      const maxR = Math.max(...leagueMatches.map(m => m.round));
+      setExportRound(maxR.toString());
+    } else {
+      setExportRound('');
+    }
+  }, [matches, exportLeague]);
+
   const handleExport = async () => {
     if (!exportRef.current || isExporting) return;
-    if (!exportLeague || !exportDate) {
-      alert("Iltimos eksport qilish uchun liga va sanani tanlang.");
+    if (!exportLeague || !exportRound) {
+      alert("Iltimos eksport qilish uchun liga va turni tanlang.");
       return;
     }
     setIsExporting(true);
@@ -63,7 +73,7 @@ const Schedule = () => {
       });
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = `jadval_${exportLeague}_${exportDate}.png`;
+      link.download = `jadval_${exportLeague}_${exportRound}_tur.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -188,8 +198,13 @@ const Schedule = () => {
           </select>
         </div>
         <div className="filter-group" style={{ width: '100%' }}>
-          <label>Sana (Eksport uchun)</label>
-          <input type="date" value={exportDate} onChange={(e) => setExportDate(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+          <label>Tur (Eksport va ekranda ko'rish uchun)</label>
+          <select value={exportRound} onChange={(e) => setExportRound(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+            <option value="">Barchasi</option>
+            {Array.from(new Set(matches.filter(m => m.league === exportLeague && m.round).map(m => m.round)))
+              .sort((a, b) => b - a)
+              .map(r => <option key={r} value={r}>{r}-tur</option>)}
+          </select>
         </div>
         <div className="filter-group" style={{ width: '100%', display: 'flex' }}>
           <button 
@@ -205,7 +220,7 @@ const Schedule = () => {
 
       <div className="matches-grid">
         {matches
-          .filter(m => m.league === exportLeague)
+          .filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound))
           .filter(m => {
             if (filterStatus === 'all') return true;
             if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
@@ -363,7 +378,7 @@ const Schedule = () => {
 
           <div className="sch-export-body">
             {matches
-              .filter(m => m.league === exportLeague && m.match_date === exportDate)
+              .filter(m => m.league === exportLeague && m.round == exportRound)
               .map(match => (
                 <div key={match.id} className="sch-match-row">
                   <div className="sch-team home">
