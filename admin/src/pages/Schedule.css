@@ -431,10 +431,12 @@
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 12px 12px 60px 60px;
-  padding: 15px 30px;
+  padding: 12px 25px;
   position: relative;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-bottom: none;
+  width: 90%;
+  margin: 0 auto;
 }
 
 .sch-team {
@@ -448,12 +450,12 @@
 }
 
 .sch-team.home {
-  justify-content: flex-end;
+  justify-content: space-between;
   text-align: right;
 }
 
 .sch-team.away {
-  justify-content: flex-start;
+  justify-content: space-between;
   text-align: left;
 }
 
@@ -487,7 +489,7 @@
 
 .sch-time-box {
   color: white;
-  font-size: 52px;
+  font-size: 40px;
   font-weight: 900;
   text-align: center;
   text-shadow: 0 2px 10px rgba(0,0,0,0.3);
