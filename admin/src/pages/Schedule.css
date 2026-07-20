@@ -450,12 +450,12 @@
 }
 
 .sch-team.home {
-  justify-content: space-between;
+  justify-content: center;
   text-align: right;
 }
 
 .sch-team.away {
-  justify-content: space-between;
+  justify-content: center;
   text-align: left;
 }
 
