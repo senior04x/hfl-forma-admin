@@ -43,9 +43,10 @@ const MatchControl = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '' });
 
   const copyObsLink = () => {
-    const link = `${window.location.origin}/obs/scoreboard/${id}`;
+    // Unik bitta link: 'live' orqali kirilsa o'zi eng oxirgi faol o'yinni topadi
+    const link = `${window.location.origin}/obs/scoreboard/live`;
     navigator.clipboard.writeText(link);
-    alert('OBS Link nusxalandi: ' + link);
+    alert("Unik OBS Link nusxalandi! Endi buni OBS'ga bir marta qo'shsangiz kifoya.\n" + link);
   };
 
   useEffect(() => {

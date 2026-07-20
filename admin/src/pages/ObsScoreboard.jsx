@@ -5,23 +5,67 @@ import './ObsScoreboard.css';
 
 const ObsScoreboard = () => {
   const { id } = useParams();
+  const [activeMatchId, setActiveMatchId] = useState(id !== 'live' ? id : null);
   const [match, setMatch] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
 
+  // Auto-track live match if id === 'live'
   useEffect(() => {
-    fetchData();
+    if (id !== 'live') return;
+
+    const findLiveMatch = async () => {
+      const { data } = await supabase
+        .from('matches')
+        .select('id')
+        .in('status', ['first_half', 'half_time', 'second_half'])
+        .order('id', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0) {
+        setActiveMatchId(data[0].id);
+      } else {
+        const { data: latest } = await supabase
+          .from('matches')
+          .select('id')
+          .order('id', { ascending: false })
+          .limit(1);
+        if (latest && latest.length > 0) setActiveMatchId(latest[0].id);
+      }
+    };
+
+    findLiveMatch();
+
+    const globalSub = supabase
+      .channel('global-matches')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches' }, (payload) => {
+        const newMatch = payload.new;
+        if (['first_half', 'half_time', 'second_half'].includes(newMatch.status)) {
+          setActiveMatchId(newMatch.id);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(globalSub);
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (!activeMatchId) return;
+
+    fetchData(activeMatchId);
 
     // Subscribe to real-time changes for this match
     const matchSubscription = supabase
-      .channel(`match-${id}`)
+      .channel(`match-${activeMatchId}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'matches',
-          filter: `id=eq.${id}`
+          filter: `id=eq.${activeMatchId}`
         },
         (payload) => {
           setMatch((prev) => ({ ...prev, ...payload.new }));
@@ -32,14 +76,14 @@ const ObsScoreboard = () => {
     return () => {
       supabase.removeChannel(matchSubscription);
     };
-  }, [id]);
+  }, [activeMatchId]);
 
-  const fetchData = async () => {
+  const fetchData = async (matchId) => {
     try {
       const { data: matchData } = await supabase
         .from('matches')
         .select('*')
-        .eq('id', id)
+        .eq('id', matchId)
         .single();
       
       if (matchData) {
