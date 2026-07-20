@@ -355,13 +355,9 @@ const Schedule = () => {
           className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
         >
           <div className="sch-export-header">
-            {selectedSponsors.length > 0 ? (
-               <img src={selectedSponsors[0].logo_url} alt="Sponsor" style={{ height: '50px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} crossOrigin="anonymous" />
-            ) : (
-               <div style={{ width: '50px' }}></div>
-            )}
-            <h1>{exportLeague}</h1>
             <img src="/images/logo-for-jadval.png" alt="HFL" style={{ height: '70px' }} />
+            <h1>{exportLeague}</h1>
+            <img src="/images/joma.png" alt="Joma" style={{ height: '60px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none' }} />
           </div>
 
           <div className="sch-export-body">
@@ -400,7 +396,7 @@ const Schedule = () => {
                 </React.Fragment>
               ))}
             </div>
-            <div className="sch-social">
+            <div className="sch-social" style={{ color: exportLeague === '7x7 liga' ? '#09408b' : 'white' }}>
               @havas_football
             </div>
           </div>

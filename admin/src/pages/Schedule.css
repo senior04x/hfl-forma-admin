@@ -402,23 +402,24 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 50px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-  padding-bottom: 20px;
+  padding: 0 20px;
 }
 
 .sch-export-header h1 {
-  font-size: 56px;
+  font-size: 50px;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 2px;
   margin: 0;
   text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  text-align: center;
+  flex: 1;
 }
 
 .sch-export-body {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 25px;
 }
 
 .sch-match-row {
@@ -426,17 +427,20 @@
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 10px 20px;
+  backdrop-filter: blur(10px);
+  border-radius: 12px 12px 60px 60px;
+  padding: 15px 30px;
   position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: none;
 }
 
 .sch-team {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 15px;
-  font-size: 24px;
+  gap: 20px;
+  font-size: 26px;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -452,13 +456,16 @@
 }
 
 .sch-team img {
-  width: 60px;
-  height: 60px;
-  object-fit: contain;
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: white;
 }
 
 .sch-time-container {
-  width: 250px;
+  width: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -468,25 +475,21 @@
 }
 
 .sch-time-date {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
-  color: #fff;
-  background: rgba(0,0,0,0.5);
-  padding: 2px 10px;
-  border-radius: 4px;
-  margin-bottom: -10px;
-  z-index: 2;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .sch-time-box {
-  background: #d500f9;
   color: white;
-  font-size: 48px;
+  font-size: 52px;
   font-weight: 900;
-  padding: 15px 40px;
-  clip-path: polygon(10% 0, 90% 0, 100% 100%, 0% 100%);
   text-align: center;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  line-height: 1;
 }
 
 .sch-export-footer {
@@ -499,14 +502,16 @@
 }
 
 .sch-social {
-  background: #d500f9;
-  padding: 10px 30px;
-  border-radius: 10px 10px 0 0;
-  font-size: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  padding: 15px 40px;
+  border-radius: 30px;
+  font-size: 22px;
   font-weight: bold;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   position: absolute;
-  bottom: 0;
+  bottom: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
