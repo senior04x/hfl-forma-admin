@@ -273,7 +273,7 @@ export default function Standings() {
   else if (selectedLeague.includes('3-liga') || selectedLeague.includes('3 liga')) exportThemeClass = 'theme-export-3-liga';
   else if (selectedLeague.includes('Europa')) exportThemeClass = 'theme-export-Europa';
   else if (selectedLeague.includes('Chempion')) exportThemeClass = 'theme-export-Chempion';
-  else if (selectedLeague.includes('7x7')) exportThemeClass = 'theme-export-7x7-liga';
+  else if (selectedLeague.includes('7x7')) exportThemeClass = 'theme-export-7x7';
 
   if (loading) return <div>Yuklanmoqda...</div>;
 
@@ -362,22 +362,24 @@ export default function Standings() {
           <div className="export-container">
             
             {/* Header */}
-            <div className="export-header">
-              <div className="export-logo-left" style={{flexDirection: 'row', alignItems: 'center', gap: '20px'}}>
-                <img src="/logo-for-jadval.png" alt="Havas Futbol" crossOrigin="anonymous" style={{ height: '110px', objectFit: 'contain' }} />
+            <div className="export-header" style={{ alignItems: 'flex-end', marginBottom: '10px' }}>
+              <div className="export-logo-left" style={{flexDirection: 'row', alignItems: 'center', gap: '15px'}}>
+                <img src="/logo-for-jadval.png" alt="Havas Futbol" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain' }} />
+                {selectedLeague === '7x7 liga' && (
+                  <>
+                    <img src="/x.png" crossOrigin="anonymous" style={{ height: '20px', objectFit: 'contain', opacity: 0.6 }} />
+                    <img src="/LLF-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
+                  </>
+                )}
                 {sponsorLogo && (
                   <>
-                    <span style={{fontSize: '40px', fontWeight: '900', color: 'rgba(255,255,255,0.7)', fontFamily: 'Outfit, sans-serif'}}>X</span>
-                    <img src={sponsorLogo} alt="Sponsor" crossOrigin="anonymous" style={{ height: '110px', objectFit: 'contain' }} />
+                    <img src="/x.png" crossOrigin="anonymous" style={{ height: '20px', objectFit: 'contain', opacity: 0.6 }} />
+                    <img src={sponsorLogo} alt="Sponsor" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain' }} />
                   </>
                 )}
               </div>
-              <div className="export-logo-right" style={{textAlign: 'right', marginTop: '10px'}}>
-                <h2 style={{margin:0, fontSize: '36px', fontWeight: '900', fontStyle: 'italic'}}>{displayRound}-TUR</h2>
-                <span style={{fontSize: '18px', fontWeight: '600', letterSpacing: '2px', opacity: 0.9}}>
-                  {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
-                  {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1} MAVSUM
-                </span>
+              <div className="export-logo-right" style={{textAlign: 'right'}}>
+                <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
               </div>
             </div>
 
@@ -466,6 +468,21 @@ export default function Standings() {
                 </div>
 
               </div>
+            </div>
+
+            <div style={{
+              textAlign: 'center', 
+              color: selectedLeague === '7x7 liga' ? '#09408b' : '#ffffff', 
+              opacity: selectedLeague === '7x7 liga' ? 0.9 : 0.6, 
+              fontSize: '12px', 
+              marginTop: '15px',
+              marginBottom: '20px',
+              textTransform: 'uppercase',
+              letterSpacing: '2px',
+              fontWeight: '500'
+            }}>
+              {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
+              {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM {displayRound}-TUR
             </div>
 
           </div>
