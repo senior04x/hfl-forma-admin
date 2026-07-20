@@ -248,6 +248,7 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
                   <option value="3-liga">3-liga</option>
                   <option value="Europa ligasi">Europa ligasi</option>
                   <option value="Chempionlar ligasi">Chempionlar ligasi</option>
+                  <option value="7x7 liga">7x7 liga</option>
                 </select>
               </div>
             </div>
