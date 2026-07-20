@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { Calendar, Plus, MapPin, Clock, Video, Trash2 } from 'lucide-react';
+import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import './Schedule.css';
 
 const LEAGUES = [
@@ -31,10 +32,47 @@ const Schedule = () => {
   const [youtubeLink, setYoutubeLink] = useState('');
   const [matchRound, setMatchRound] = useState('');
 
+  // Export states
+  const [exportLeague, setExportLeague] = useState(LEAGUES[0]);
+  const [exportDate, setExportDate] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [selectedSponsors, setSelectedSponsors] = useState([]);
+  const exportRef = useRef(null);
+
   useEffect(() => {
     fetchTeams();
     fetchMatches();
+    try {
+      const saved = localStorage.getItem('hfl_selectedSponsors');
+      if (saved) setSelectedSponsors(JSON.parse(saved));
+    } catch (e) {}
   }, []);
+
+  const handleExport = async () => {
+    if (!exportRef.current || isExporting) return;
+    if (!exportLeague || !exportDate) {
+      alert("Iltimos eksport qilish uchun liga va sanani tanlang.");
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(exportRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `jadval_${exportLeague}_${exportDate}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error(err);
+      alert("Xatolik yuz berdi");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const fetchTeams = async () => {
     const { data } = await supabase.from('teams').select('id, name, logo_url, league').eq('status', 'approved');
@@ -140,6 +178,29 @@ const Schedule = () => {
           className={`filter-btn ${filterStatus === 'finished' ? 'active' : ''}`} 
           onClick={() => setFilterStatus('finished')}
         >Tugagan</button>
+      </div>
+
+      <div className="admin-controls" style={{ display: 'flex', gap: '15px', alignItems: 'center', marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+        <div className="filter-group">
+          <label>Liga (Eksport uchun)</label>
+          <select value={exportLeague} onChange={(e) => setExportLeague(e.target.value)}>
+            {LEAGUES.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </div>
+        <div className="filter-group">
+          <label>Sana (Eksport uchun)</label>
+          <input type="date" value={exportDate} onChange={(e) => setExportDate(e.target.value)} />
+        </div>
+        <div className="filter-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
+          <button 
+            className="btn-export" 
+            onClick={handleExport} 
+            disabled={isExporting}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
+          >
+            <Download size={18} /> {isExporting ? 'Yuklanmoqda...' : 'Rasmni yuklab olish'}
+          </button>
+        </div>
       </div>
 
       <div className="matches-grid">
@@ -286,6 +347,66 @@ const Schedule = () => {
           </div>
         </div>
       )}
+
+      {/* HIDDEN EXPORT TEMPLATE */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+        <div 
+          ref={exportRef} 
+          className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
+        >
+          <div className="sch-export-header">
+            {selectedSponsors.length > 0 ? (
+               <img src={selectedSponsors[0].logo_url} alt="Sponsor" style={{ height: '50px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} crossOrigin="anonymous" />
+            ) : (
+               <div style={{ width: '50px' }}></div>
+            )}
+            <h1>{exportLeague}</h1>
+            <img src="/images/logo-for-jadval.png" alt="HFL" style={{ height: '70px' }} />
+          </div>
+
+          <div className="sch-export-body">
+            {matches
+              .filter(m => m.league === exportLeague && m.match_date === exportDate)
+              .map(match => (
+                <div key={match.id} className="sch-match-row">
+                  <div className="sch-team home">
+                    <span>{match.home_team?.name}</span>
+                    <img src={match.home_team?.logo_url} alt="Home" crossOrigin="anonymous" />
+                  </div>
+                  
+                  <div className="sch-time-container">
+                    <div className="sch-time-date">
+                      {match.match_date.split('-').reverse().join('.')}
+                    </div>
+                    <div className="sch-time-box">
+                      {match.match_time ? match.match_time.substring(0, 5) : '00:00'}
+                    </div>
+                  </div>
+
+                  <div className="sch-team away">
+                    <img src={match.away_team?.logo_url} alt="Away" crossOrigin="anonymous" />
+                    <span>{match.away_team?.name}</span>
+                  </div>
+                </div>
+              ))}
+          </div>
+
+          <div className="sch-export-footer">
+            <div style={{ display: 'flex', gap: '30px', alignItems: 'center', marginBottom: '20px' }}>
+              {exportLeague !== '7x7 liga' && selectedSponsors.map((s, idx) => (
+                <React.Fragment key={s.id}>
+                  <img src={s.logo_url} alt="Sponsor" style={{ height: '42px', filter: 'brightness(0) invert(1)' }} crossOrigin="anonymous" />
+                  {idx < selectedSponsors.length - 1 && <div style={{ height: '28px', width: '1px', background: '#fff', opacity: 0.5 }}></div>}
+                </React.Fragment>
+              ))}
+            </div>
+            <div className="sch-social">
+              @havas_football
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 };

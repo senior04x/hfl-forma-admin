@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { Download, Save } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import SponsorModal from '../components/SponsorModal';
 import './Standings.css';
 
 export default function Standings() {
@@ -308,15 +307,7 @@ export default function Standings() {
             {roundOptions.map(r => <option key={r} value={r}>{r}-tur</option>)}
           </select>
         </div>
-        <div className="filter-group">
-          <label>Homiylar</label>
-          <button 
-            onClick={() => setIsSponsorModalOpen(true)}
-            style={{padding: '6px 12px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', fontWeight: '500'}}
-          >
-            Boshqarish
-          </button>
-        </div>
+        {/* Homiylarni boshqarish alohida sahifaga o'tkazildi */}
       </div>
 
       <div className="admin-table-container">
@@ -517,12 +508,6 @@ export default function Standings() {
         </div>
       </div>
       
-      <SponsorModal 
-        isOpen={isSponsorModalOpen} 
-        onClose={() => setIsSponsorModalOpen(false)} 
-        selectedSponsors={selectedSponsors}
-        onSelectSponsors={setSelectedSponsors}
-      />
     </div>
   );
 }

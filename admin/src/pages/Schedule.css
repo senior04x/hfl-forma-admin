@@ -379,3 +379,134 @@
   50% { opacity: 0.7; }
 }
 
+/* EXPORT TEMPLATE */
+.schedule-export-container {
+  width: 1080px;
+  min-height: 1080px;
+  position: relative;
+  font-family: 'Inter', sans-serif;
+  color: white;
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+.schedule-export-container .theme-export-Super { background: linear-gradient(135deg, #1e3a8a, #000000); }
+.schedule-export-container .theme-export-Pro { background: linear-gradient(135deg, #166534, #000000); }
+.schedule-export-container .theme-export-3-liga { background: linear-gradient(135deg, #4b0082, #8b008b); }
+.schedule-export-container .theme-export-Europa { background: linear-gradient(135deg, #b91c1c, #000000); }
+.schedule-export-container .theme-export-Chempion { background: linear-gradient(135deg, #4338ca, #1e1b4b); }
+.schedule-export-container .theme-export-7x7 { background: linear-gradient(135deg, #0ea5e9, #ffffff); color: #0f172a; }
+
+.sch-export-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 50px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 20px;
+}
+
+.sch-export-header h1 {
+  font-size: 56px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.sch-export-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sch-match-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 20px;
+  position: relative;
+}
+
+.sch-team {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 24px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sch-team.home {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.sch-team.away {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.sch-team img {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+.sch-time-container {
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 20px;
+  position: relative;
+}
+
+.sch-time-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0,0,0,0.5);
+  padding: 2px 10px;
+  border-radius: 4px;
+  margin-bottom: -10px;
+  z-index: 2;
+}
+
+.sch-time-box {
+  background: #d500f9;
+  color: white;
+  font-size: 48px;
+  font-weight: 900;
+  padding: 15px 40px;
+  clip-path: polygon(10% 0, 90% 0, 100% 100%, 0% 100%);
+  text-align: center;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+
+.sch-export-footer {
+  margin-top: auto;
+  padding-top: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.sch-social {
+  background: #d500f9;
+  padding: 10px 30px;
+  border-radius: 10px 10px 0 0;
+  font-size: 20px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: absolute;
+  bottom: 0;
+}

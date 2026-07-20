@@ -1,0 +1,139 @@
+.sponsors-page {
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  min-height: calc(100vh - 100px);
+}
+
+.sponsors-header {
+  margin-bottom: 25px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 15px;
+}
+
+.sponsors-header h1 {
+  font-size: 24px;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.sponsors-header p {
+  color: #64748b;
+  margin: 0;
+  font-size: 14px;
+}
+
+.upload-section-page {
+  margin-bottom: 30px;
+}
+
+.upload-btn-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #2563eb;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.upload-btn-page:hover {
+  background: #1d4ed8;
+}
+
+.sponsors-grid-page {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 25px;
+}
+
+.sponsor-card-page {
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 140px;
+}
+
+.sponsor-card-page:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.sponsor-card-page.selected {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.sponsor-img-container-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sponsor-img-container-page img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.sponsor-check-page {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.sponsor-delete-btn-page {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s;
+}
+
+.sponsor-card-page:hover .sponsor-delete-btn-page {
+  opacity: 1;
+}
+
+.sponsor-delete-btn-page:hover {
+  background: #dc2626;
+  transform: scale(1.05);
+}
+
+.empty-state-page {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
+  font-style: italic;
+  font-size: 16px;
+  background: #f1f5f9;
+  border-radius: 12px;
+}
