@@ -392,8 +392,8 @@ const Schedule = () => {
             <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               {LEAGUE_LOGOS[exportLeague] ? (
                 exportLeague === '7x7 liga' ? (
-                  <div style={{ width: '400px', height: '120px' }}>
-                    <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ width: '450px', height: '120px', overflow: 'hidden', position: 'relative' }}>
+                    <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ position: 'absolute', top: '50%', left: '0', width: '100%', height: 'auto', transform: 'translateY(-50%)' }} />
                   </div>
                 ) : (
                   <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ height: '180px', objectFit: 'contain' }} />
