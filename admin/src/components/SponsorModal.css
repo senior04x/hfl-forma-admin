@@ -179,13 +179,13 @@
 }
 
 .btn-cancel {
-  background: #f1f5f9;
-  color: #475569;
-  border: none;
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .btn-cancel:hover {
