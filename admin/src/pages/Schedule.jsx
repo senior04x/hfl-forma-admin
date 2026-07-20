@@ -180,23 +180,23 @@ const Schedule = () => {
         >Tugagan</button>
       </div>
 
-      <div className="admin-controls" style={{ display: 'flex', gap: '15px', alignItems: 'center', marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-        <div className="filter-group">
-          <label>Liga (Eksport uchun)</label>
-          <select value={exportLeague} onChange={(e) => setExportLeague(e.target.value)}>
+      <div className="admin-controls" style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+        <div className="filter-group" style={{ width: '100%' }}>
+          <label>Liga tanlang (Ekranda ko'rish va Eksport uchun)</label>
+          <select value={exportLeague} onChange={(e) => setExportLeague(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
             {LEAGUES.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
         </div>
-        <div className="filter-group">
+        <div className="filter-group" style={{ width: '100%' }}>
           <label>Sana (Eksport uchun)</label>
-          <input type="date" value={exportDate} onChange={(e) => setExportDate(e.target.value)} />
+          <input type="date" value={exportDate} onChange={(e) => setExportDate(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
         </div>
-        <div className="filter-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
+        <div className="filter-group" style={{ width: '100%', display: 'flex' }}>
           <button 
             className="btn-export" 
             onClick={handleExport} 
             disabled={isExporting}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
+            style={{ display: 'flex', width: '100%', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '12px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
           >
             <Download size={18} /> {isExporting ? 'Yuklanmoqda...' : 'Rasmni yuklab olish'}
           </button>
@@ -205,6 +205,7 @@ const Schedule = () => {
 
       <div className="matches-grid">
         {matches
+          .filter(m => m.league === exportLeague)
           .filter(m => {
             if (filterStatus === 'all') return true;
             if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
