@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Monitor, Camera, Gamepad2 } from 'lucide-react';
 import './MatchControl.css';
 
 const EVENT_TYPES = {
@@ -41,6 +41,12 @@ const MatchControl = () => {
 
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '' });
+
+  const copyObsLink = () => {
+    const link = `${window.location.origin}/obs/scoreboard/${id}`;
+    navigator.clipboard.writeText(link);
+    alert('OBS Link nusxalandi: ' + link);
+  };
 
   useEffect(() => {
     fetchMatchData();
@@ -209,10 +215,29 @@ const MatchControl = () => {
     <div className="match-control">
       {/* Header */}
       <div className="match-control-header">
-        <button className="btn-back" onClick={() => navigate('/schedule')}>
-          <ArrowLeft size={20} />
-        </button>
-        <h1>O'yin Boshqaruvi</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <button className="btn-back" onClick={() => navigate('/schedule')}>
+            <ArrowLeft size={20} />
+          </button>
+          <h1 style={{ margin: 0 }}>O'yin Boshqaruvi</h1>
+        </div>
+        
+        <div className="match-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button className="obs-action-btn" onClick={copyObsLink} title="OBS Linkini nusxalash">
+            <Monitor size={18} />
+          </button>
+          <button className="obs-action-btn obs-text-btn" onClick={copyObsLink} title="OBS Linkini nusxalash">
+            Output settings
+          </button>
+          <div className="obs-divider"></div>
+          <button className="obs-action-btn">
+            <Camera size={18} />
+          </button>
+          <div className="obs-divider"></div>
+          <button className="obs-action-btn">
+            <Gamepad2 size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Scoreboard */}

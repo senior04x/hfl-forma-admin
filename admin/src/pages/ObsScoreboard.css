@@ -1,0 +1,123 @@
+/* 
+  Shaffof fon qilinadi, chunki bu oyna OBS ustidan tushadi. 
+  Agar test qilish kerak bo'lsa, OBS o'zida shaffof bo'ladi.
+*/
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: transparent !important;
+}
+
+#root {
+  background-color: transparent !important;
+}
+
+/* Yagona konteyner */
+.obs-container {
+  padding: 20px;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Gradient mavzulari (user so'roviga asosan tepasi->pasti) */
+.theme-3liga {
+  --obs-grad: linear-gradient(to bottom, #A200D2, #EB00F4);
+}
+.theme-pro {
+  --obs-grad: linear-gradient(to bottom, #003E9D, #00BAEF);
+}
+.theme-super {
+  --obs-grad: linear-gradient(to bottom, #BB1308, #F7842B);
+}
+.theme-europa {
+  --obs-grad: linear-gradient(to bottom, #ff7e00, #ffb200);
+}
+.theme-chemp {
+  --obs-grad: linear-gradient(to bottom, #001f5b, #004ab5);
+}
+.theme-7x7 {
+  --obs-grad: linear-gradient(to bottom, #013C82, #589AFB);
+}
+.theme-default {
+  --obs-grad: linear-gradient(to bottom, #475569, #94a3b8);
+}
+
+/* Asosiy blok */
+.obs-scoreboard {
+  display: inline-flex;
+  flex-direction: column;
+  /* Chap va o'ng chetlarini tekislash uchun */
+  padding-left: 15px; 
+}
+
+/* Yuqori qator (Jamoalar va Hisob) */
+.obs-top-row {
+  display: flex;
+  height: 50px;
+}
+
+/* Qiya qutichalar */
+.obs-team, .obs-score {
+  transform: skewX(-20deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Yozuvlarni to'g'irlab qo'yish (unskew) */
+.obs-team-content, .obs-score-content, .obs-league-content {
+  transform: skewX(20deg);
+  white-space: nowrap;
+}
+
+.obs-team {
+  background-color: #1a1a1a;
+  color: white;
+  min-width: 180px;
+  padding: 0 30px;
+  font-size: 26px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.obs-score {
+  background: var(--obs-grad);
+  color: white;
+  min-width: 120px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+/* Ajratuvchi qizil (gradient) chiziq */
+.obs-separator {
+  height: 4px;
+  background: var(--obs-grad);
+  /* Chiziq qiya qutilar ostidan o'tishi uchun joylashuv */
+  margin-top: -1px;
+  margin-left: -5px;
+  width: calc(100% - 10px);
+}
+
+/* Pastki qator (Liga nomi) */
+.obs-bottom-row {
+  display: flex;
+  height: 35px;
+  margin-left: -10px; /* tepaga nisbatan qiyalikni davom ettirish */
+}
+
+.obs-league-name {
+  background-color: #111111;
+  color: #dddddd;
+  padding: 0 30px;
+  transform: skewX(-20deg);
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  text-transform: uppercase;
+  min-width: 300px;
+}
+
+.obs-status-text {
+  color: #ffffff;
+  font-weight: 700;
+}
