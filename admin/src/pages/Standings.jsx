@@ -360,9 +360,11 @@ export default function Standings() {
           <div className="export-container">
             
             {/* Header */}
-            <div className="export-header">
+            <div className="export-header" style={{ alignItems: 'flex-end', marginBottom: '30px' }}>
               <div className="export-logo-left" style={{flexDirection: 'row', alignItems: 'center', gap: '20px'}}>
                 <img src="/logo-for-jadval.png" alt="Havas Futbol" crossOrigin="anonymous" style={{ height: '110px', objectFit: 'contain' }} />
+                <span style={{fontSize: '40px', fontWeight: '900', color: 'rgba(255,255,255,0.7)', fontFamily: 'Outfit, sans-serif'}}>X</span>
+                <img src="/LLF-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '90px', objectFit: 'contain' }} />
                 {sponsorLogo && (
                   <>
                     <span style={{fontSize: '40px', fontWeight: '900', color: 'rgba(255,255,255,0.7)', fontFamily: 'Outfit, sans-serif'}}>X</span>
@@ -370,9 +372,9 @@ export default function Standings() {
                   </>
                 )}
               </div>
-              <div className="export-logo-right" style={{textAlign: 'right', marginTop: '10px'}}>
-                <h2 style={{margin:0, fontSize: '36px', fontWeight: '900', fontStyle: 'italic'}}>{displayRound}-TUR</h2>
-                <span style={{fontSize: '18px', fontWeight: '600', letterSpacing: '2px', opacity: 0.9}}>
+              <div className="export-logo-right" style={{textAlign: 'right', color: '#9ca3af', opacity: 0.5}}>
+                <span style={{fontSize: '18px', fontWeight: '600', letterSpacing: '1px', marginRight: '8px'}}>{displayRound}-TUR</span>
+                <span style={{fontSize: '18px', fontWeight: '500', letterSpacing: '1px'}}>
                   {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
                   {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1} MAVSUM
                 </span>
