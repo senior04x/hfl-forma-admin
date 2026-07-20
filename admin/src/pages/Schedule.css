@@ -397,7 +397,7 @@
 .schedule-export-container.theme-export-3-liga { background: linear-gradient(135deg, #4b0082, #8b008b); }
 .schedule-export-container.theme-export-Europa { background: linear-gradient(135deg, #b91c1c, #000000); }
 .schedule-export-container.theme-export-Chempionlar { background: linear-gradient(135deg, #4338ca, #1e1b4b); }
-.schedule-export-container.theme-export-7x7 { background: linear-gradient(135deg, #0ea5e9, #ffffff); color: #0f172a; }
+.schedule-export-container.theme-export-7x7 { background: #589AFB; color: white; }
 
 .sch-export-header {
   display: flex;
