@@ -425,8 +425,8 @@ const Schedule = () => {
               ))}
           </div>
 
-          <div className="sch-export-footer">
-            <div style={{ display: 'flex', gap: '30px', alignItems: 'center', marginBottom: '20px' }}>
+          <div className="sch-export-footer" style={{ marginBottom: '-10px' }}>
+            <div style={{ display: 'flex', gap: '30px', alignItems: 'center', marginBottom: '15px' }}>
               {exportLeague !== '7x7 liga' && selectedSponsors.map((s, idx) => (
                 <React.Fragment key={s.id}>
                   <img src={s.logo_url} alt="Sponsor" style={{ height: '45px', filter: 'brightness(0) invert(1)' }} crossOrigin="anonymous" />
@@ -434,7 +434,7 @@ const Schedule = () => {
                 </React.Fragment>
               ))}
             </div>
-            <div className="sch-social" style={{ color: exportLeague === '7x7 liga' ? '#09408b' : 'white', marginBottom: '10px' }}>
+            <div className="sch-social" style={{ color: exportLeague === '7x7 liga' ? '#09408b' : 'white', marginBottom: '0px' }}>
               @havas_football
             </div>
           </div>
