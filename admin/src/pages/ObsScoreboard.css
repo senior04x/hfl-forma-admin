@@ -311,3 +311,25 @@ html, body {
 .obs-icon-red {
   background: linear-gradient(135deg, #FF0000, #B22222);
 }
+
+.obs-lt-event-box {
+  color: white;
+  padding: 5px 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: skewX(-20deg);
+  border-right: 2px solid rgba(255,255,255,0.2);
+}
+
+.obs-bg-black {
+  background: #111;
+}
+
+.obs-bg-yellow {
+  background: #FFDF00;
+}
+
+.obs-bg-red {
+  background: #FF0000;
+}
