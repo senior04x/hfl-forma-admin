@@ -485,3 +485,21 @@
   line-height: 1.5;
   margin-bottom: 20px;
 }
+
+/* ================== RESPONSIVE HEADER BUTTONS ================== */
+.btn-icon-mobile {
+  margin-right: 8px;
+}
+
+@media (max-width: 650px) {
+  .btn-text-desktop {
+    display: none;
+  }
+  .btn-icon-mobile {
+    margin-right: 0;
+  }
+  .header-title {
+    font-size: 1.2rem;
+    margin: 0;
+  }
+}

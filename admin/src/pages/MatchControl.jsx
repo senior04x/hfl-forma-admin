@@ -228,16 +228,16 @@ const MatchControl = () => {
           <button className="btn-back" onClick={() => navigate('/schedule')}>
             <ArrowLeft size={20} />
           </button>
-          <h1 style={{ margin: 0 }}>O'yin Boshqaruvi</h1>
+          <h1 className="header-title">O'yin Boshqaruvi</h1>
         </div>
         
         <div className="match-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button className="obs-action-btn obs-text-btn" style={{background: '#475569'}} onClick={copyControlPanelLink} title="Panelni ulashish">
-            <Share2 size={16} style={{marginRight: '8px'}}/> Boshqaruvni ulashish
+            <Share2 size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">Boshqaruvni ulashish</span>
           </button>
           <div className="obs-divider"></div>
           <button className="obs-action-btn obs-text-btn" style={{background: '#1e40af'}} onClick={copyObsLink} title="OBS Linkini nusxalash">
-            <Monitor size={16} style={{marginRight: '8px'}}/> {match?.location === '2-maydon' ? '2-Maydon (OBS)' : '1-Maydon (OBS)'}
+            <Monitor size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">{match?.location === '2-maydon' ? '2-Maydon (OBS)' : '1-Maydon (OBS)'}</span>
           </button>
         </div>
       </div>
