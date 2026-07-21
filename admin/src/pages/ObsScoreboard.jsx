@@ -9,6 +9,7 @@ const ObsScoreboard = () => {
   const [match, setMatch] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
+  const [goalEvent, setGoalEvent] = useState(null);
 
   // Track specific streams via location
   useEffect(() => {
@@ -68,8 +69,37 @@ const ObsScoreboard = () => {
       )
       .subscribe();
 
+    // Subscribe to goal events
+    const eventsSubscription = supabase
+      .channel(`match-events-${activeMatchId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'match_events',
+          filter: `match_id=eq.${activeMatchId}`
+        },
+        async (payload) => {
+          const newEvent = payload.new;
+          if (newEvent.event_type === 'goal') {
+            let pName = 'GOOOL';
+            if (newEvent.player_id) {
+              const { data: player } = await supabase.from('applications').select('first_name, last_name').eq('id', newEvent.player_id).single();
+              if (player) pName = `${player.first_name} ${player.last_name}`;
+            }
+            setGoalEvent({ playerName: pName, teamId: newEvent.team_id });
+            setTimeout(() => {
+              setGoalEvent(null);
+            }, 8000);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(matchSubscription);
+      supabase.removeChannel(eventsSubscription);
     };
   }, [activeMatchId]);
 
@@ -119,9 +149,23 @@ const ObsScoreboard = () => {
 
   const statusText = formatStatus(match.status);
 
+  const isHidden = match.status === 'half_time' || match.status === 'finished' || match.status === 'scheduled';
+  const visibilityClass = isHidden ? 'scoreboard-hidden' : 'scoreboard-visible';
+
   return (
     <div className={`obs-container ${gradientClass}`}>
-      <div className="obs-scoreboard">
+      
+      {/* Goal Overlay */}
+      {goalEvent && (
+        <div className="obs-goal-overlay">
+          <div className="obs-goal-text">GOOOL</div>
+          <div className="obs-goal-player-card">
+            <div className="obs-goal-player-name">{goalEvent.playerName}</div>
+          </div>
+        </div>
+      )}
+
+      <div className={`obs-scoreboard ${visibilityClass}`}>
         
         <div className="obs-top-row">
           <div className="obs-team obs-home-team">
