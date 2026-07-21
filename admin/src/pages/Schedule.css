@@ -435,44 +435,51 @@
   position: relative;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-bottom: none;
-  width: 90%;
+  width: 100%;
   margin: 0 auto;
 }
 
 .sch-team {
-  flex: 1;
   display: flex;
   align-items: center;
-  gap: 20px;
-  font-size: 22px;
+  gap: 15px;
+  font-size: 20px;
   font-weight: 700;
   text-transform: uppercase;
+  flex: 1;
   min-width: 0;
+  height: auto;
 }
 
 .sch-team span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-wrap: break-word;
+  line-height: 1.2;
+  max-width: 100%;
 }
 
 .sch-team.home {
-  justify-content: center;
+  justify-content: flex-end;
   text-align: right;
 }
 
 .sch-team.away {
-  justify-content: center;
+  justify-content: flex-start;
   text-align: left;
 }
 
 .sch-team img {
   width: 70px;
   height: 70px;
+  min-width: 70px;
+  min-height: 70px;
   object-fit: cover;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.5);
   background: white;
+  flex-shrink: 0;
 }
 
 .sch-time-container {
@@ -483,6 +490,7 @@
   justify-content: center;
   margin: 0 20px;
   position: relative;
+  flex-shrink: 0;
 }
 
 .sch-time-date {
