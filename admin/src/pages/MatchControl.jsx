@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { ArrowLeft, Trash2, Monitor, Camera, Gamepad2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Monitor, Camera, Gamepad2, Share2 } from 'lucide-react';
 import './MatchControl.css';
 
 const EVENT_TYPES = {
@@ -49,6 +49,12 @@ const MatchControl = () => {
     const link = `${window.location.origin}/obs/scoreboard/${streamId}`;
     navigator.clipboard.writeText(link);
     alert(`${match?.location || '1-maydon'} uchun OBS Link nusxalandi!\n\nUshbu link ${match?.location || '1-maydon'} da o'yin boshlanishi bilan o'zgaradi:\n${link}`);
+  };
+
+  const copyControlPanelLink = () => {
+    const link = `${window.location.origin}/match/${id}`;
+    navigator.clipboard.writeText(link);
+    alert("Boshqaruv paneli havolasi nusxalandi! Boshqa adminlarga yuborishingiz mumkin.\n\n" + link);
   };
 
   useEffect(() => {
@@ -226,8 +232,12 @@ const MatchControl = () => {
         </div>
         
         <div className="match-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button className="obs-action-btn obs-text-btn" style={{background: '#475569'}} onClick={copyControlPanelLink} title="Panelni ulashish">
+            <Share2 size={16} style={{marginRight: '8px'}}/> Boshqaruvni ulashish
+          </button>
+          <div className="obs-divider"></div>
           <button className="obs-action-btn obs-text-btn" style={{background: '#1e40af'}} onClick={copyObsLink} title="OBS Linkini nusxalash">
-            <Monitor size={16} style={{marginRight: '8px'}}/> {match?.location === '2-maydon' ? '2-Maydon (OBS)' : '1-Maydon (OBS)'} Linkini Olish
+            <Monitor size={16} style={{marginRight: '8px'}}/> {match?.location === '2-maydon' ? '2-Maydon (OBS)' : '1-Maydon (OBS)'}
           </button>
         </div>
       </div>
