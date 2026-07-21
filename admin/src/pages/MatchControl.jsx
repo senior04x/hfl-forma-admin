@@ -42,18 +42,13 @@ const MatchControl = () => {
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '' });
 
-  const sendToObs = (streamId) => {
-    // 1. Send broadcast to the stream channel
-    supabase.channel(`obs-${streamId}`).send({
-      type: 'broadcast',
-      event: 'set_live_match',
-      payload: { matchId: id }
-    });
-
-    // 2. Copy link
+  const copyObsLink = () => {
+    let streamId = 'stream1'; // Default
+    if (match?.location === '2-maydon') streamId = 'stream2';
+    
     const link = `${window.location.origin}/obs/scoreboard/${streamId}`;
     navigator.clipboard.writeText(link);
-    alert(`${streamId === 'stream1' ? '1-Maydon (OBS-1)' : '2-Maydon (OBS-2)'} ga signal yuborildi va link nusxalandi!\n\n${link}`);
+    alert(`${match?.location || '1-maydon'} uchun OBS Link nusxalandi!\n\nUshbu link ${match?.location || '1-maydon'} da o'yin boshlanishi bilan o'zgaradi:\n${link}`);
   };
 
   useEffect(() => {
@@ -231,12 +226,8 @@ const MatchControl = () => {
         </div>
         
         <div className="match-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button className="obs-action-btn obs-text-btn" style={{background: '#1e40af'}} onClick={() => sendToObs('stream1')}>
-            <Monitor size={16} style={{marginRight: '8px'}}/> 1-Maydon (OBS)
-          </button>
-          <div className="obs-divider"></div>
-          <button className="obs-action-btn obs-text-btn" style={{background: '#dc2626'}} onClick={() => sendToObs('stream2')}>
-            <Monitor size={16} style={{marginRight: '8px'}}/> 2-Maydon (OBS)
+          <button className="obs-action-btn obs-text-btn" style={{background: '#1e40af'}} onClick={copyObsLink} title="OBS Linkini nusxalash">
+            <Monitor size={16} style={{marginRight: '8px'}}/> {match?.location === '2-maydon' ? '2-Maydon (OBS)' : '1-Maydon (OBS)'} Linkini Olish
           </button>
         </div>
       </div>

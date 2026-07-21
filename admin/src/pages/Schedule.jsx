@@ -349,13 +349,17 @@ const Schedule = () => {
             </div>
 
             <div className="form-group">
-              <label>Manzil / Stadion</label>
-              <input type="text" placeholder="Masalan: Paxtakor stadioni" value={location} onChange={(e) => setLocation(e.target.value)} />
+              <label>Nechanchi tur? (Majburiy emas)</label>
+              <input type="number" placeholder="Masalan: 1" value={matchRound} onChange={(e) => setMatchRound(e.target.value)} />
             </div>
 
             <div className="form-group">
-              <label>Nechanchi tur? (Majburiy emas)</label>
-              <input type="number" placeholder="Masalan: 1" value={matchRound} onChange={(e) => setMatchRound(e.target.value)} />
+              <label>Maydonni tanlang (Majburiy, OBS uchun)</label>
+              <select value={location} onChange={(e) => setLocation(e.target.value)}>
+                <option value="">Maydonni tanlang</option>
+                <option value="1-maydon">1-Maydon</option>
+                <option value="2-maydon">2-Maydon</option>
+              </select>
             </div>
 
             <div className="form-group">

@@ -10,20 +10,33 @@ const ObsScoreboard = () => {
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
 
-  // Track specific streams via Broadcast and localStorage
+  // Track specific streams via location
   useEffect(() => {
     if (id !== 'stream1' && id !== 'stream2') return;
 
-    // Load from local storage initially
-    const savedMatch = localStorage.getItem(`obs_match_${id}`);
-    if (savedMatch) setActiveMatchId(savedMatch);
+    const locationFilter = id === 'stream1' ? '1-maydon' : '2-maydon';
 
-    // Listen for broadcast from Admin Panel
-    const streamChannel = supabase.channel(`obs-${id}`)
-      .on('broadcast', { event: 'set_live_match' }, ({ payload }) => {
-        if (payload.matchId) {
-          localStorage.setItem(`obs_match_${id}`, payload.matchId);
-          setActiveMatchId(payload.matchId);
+    const findLiveMatch = async () => {
+      const { data } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('location', locationFilter)
+        .in('status', ['first_half', 'half_time', 'second_half'])
+        .order('id', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0) {
+        setActiveMatchId(data[0].id);
+      }
+    };
+
+    findLiveMatch();
+
+    const streamChannel = supabase.channel(`global-matches-${id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `location=eq.${locationFilter}` }, (payload) => {
+        const newMatch = payload.new;
+        if (['first_half', 'half_time', 'second_half'].includes(newMatch.status)) {
+          setActiveMatchId(newMatch.id);
         }
       })
       .subscribe();
