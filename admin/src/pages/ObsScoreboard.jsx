@@ -203,6 +203,7 @@ const ObsScoreboard = () => {
             </div>
           </div>
         </div>
+      </div>
 
       {/* Lower Third Goal Player Graphic */}
       {goalEvent && (
