@@ -401,7 +401,7 @@ const Schedule = () => {
                     <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ position: 'absolute', top: '50%', left: '0', width: '100%', height: 'auto', transform: 'translateY(-50%)' }} />
                   </div>
                 ) : (
-                  <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ height: '180px', objectFit: 'contain' }} />
+                  <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ height: '270px', objectFit: 'contain' }} />
                 )
               ) : (
                 <h1 style={{ flex: 'none' }}>{exportLeague}</h1>
