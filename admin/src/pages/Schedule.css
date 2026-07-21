@@ -422,119 +422,88 @@
   display: flex;
   flex-direction: column;
   gap: 25px;
-  padding: 0 40px;
 }
 
 .sch-match-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: transparent;
-  backdrop-filter: none;
-  border-radius: 0;
-  padding: 20px 0;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px 12px 60px 60px;
+  padding: 12px 25px;
   position: relative;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-bottom: none;
-  width: 100%;
+  width: 90%;
   margin: 0 auto;
-  gap: 0;
-}
-
-.sch-match-row::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 2px;
-  background: linear-gradient(to right, #fbbf24 0%, #fbbf24 35%, transparent 35%, transparent 65%, #fbbf24 65%, #fbbf24 100%);
-  z-index: 0;
-  pointer-events: none;
 }
 
 .sch-team {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 20px;
   font-size: 22px;
   font-weight: 700;
   text-transform: uppercase;
-  flex: 1;
   min-width: 0;
-  height: auto;
-  position: relative;
-  z-index: 1;
 }
 
 .sch-team span {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-  word-wrap: break-word;
-  line-height: 1.2;
-  max-width: 100%;
-  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sch-team.home {
-  justify-content: flex-start;
-  text-align: left;
-  flex-direction: row;
+  justify-content: center;
+  text-align: right;
 }
 
 .sch-team.away {
-  justify-content: flex-end;
-  text-align: right;
-  flex-direction: row-reverse;
+  justify-content: center;
+  text-align: left;
 }
 
 .sch-team img {
   width: 70px;
   height: 70px;
-  min-width: 70px;
-  min-height: 70px;
   object-fit: cover;
   border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.5);
   background: white;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 2;
 }
 
 .sch-time-container {
-  width: 180px;
+  width: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin: 0;
+  margin: 0 20px;
   position: relative;
-  flex-shrink: 0;
-  z-index: 1;
-  background: #1565c0;
-  padding: 15px 20px;
+  background: rgba(21, 101, 192, 0.8);
+  padding: 12px 20px;
   border-radius: 8px;
 }
 
 .sch-time-date {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 5px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
 }
 
 .sch-time-box {
   color: white;
-  font-size: 48px;
+  font-size: 40px;
   font-weight: 900;
   text-align: center;
   text-shadow: 0 2px 10px rgba(0,0,0,0.3);
   line-height: 1;
-  letter-spacing: 2px;
 }
 
 .sch-export-footer {
