@@ -42,11 +42,18 @@ const MatchControl = () => {
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '' });
 
-  const copyObsLink = () => {
-    // Unik bitta link: 'live' orqali kirilsa o'zi eng oxirgi faol o'yinni topadi
-    const link = `${window.location.origin}/obs/scoreboard/live`;
+  const sendToObs = (streamId) => {
+    // 1. Send broadcast to the stream channel
+    supabase.channel(`obs-${streamId}`).send({
+      type: 'broadcast',
+      event: 'set_live_match',
+      payload: { matchId: id }
+    });
+
+    // 2. Copy link
+    const link = `${window.location.origin}/obs/scoreboard/${streamId}`;
     navigator.clipboard.writeText(link);
-    alert("Unik OBS Link nusxalandi! Endi buni OBS'ga bir marta qo'shsangiz kifoya.\n" + link);
+    alert(`${streamId === 'stream1' ? '1-Maydon (OBS-1)' : '2-Maydon (OBS-2)'} ga signal yuborildi va link nusxalandi!\n\n${link}`);
   };
 
   useEffect(() => {
@@ -224,19 +231,12 @@ const MatchControl = () => {
         </div>
         
         <div className="match-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button className="obs-action-btn" onClick={copyObsLink} title="OBS Linkini nusxalash">
-            <Monitor size={18} />
-          </button>
-          <button className="obs-action-btn obs-text-btn" onClick={copyObsLink} title="OBS Linkini nusxalash">
-            Output settings
+          <button className="obs-action-btn obs-text-btn" style={{background: '#1e40af'}} onClick={() => sendToObs('stream1')}>
+            <Monitor size={16} style={{marginRight: '8px'}}/> 1-Maydon (OBS)
           </button>
           <div className="obs-divider"></div>
-          <button className="obs-action-btn">
-            <Camera size={18} />
-          </button>
-          <div className="obs-divider"></div>
-          <button className="obs-action-btn">
-            <Gamepad2 size={18} />
+          <button className="obs-action-btn obs-text-btn" style={{background: '#dc2626'}} onClick={() => sendToObs('stream2')}>
+            <Monitor size={16} style={{marginRight: '8px'}}/> 2-Maydon (OBS)
           </button>
         </div>
       </div>

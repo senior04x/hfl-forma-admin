@@ -10,44 +10,26 @@ const ObsScoreboard = () => {
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
 
-  // Auto-track live match if id === 'live'
+  // Track specific streams via Broadcast and localStorage
   useEffect(() => {
-    if (id !== 'live') return;
+    if (id !== 'stream1' && id !== 'stream2') return;
 
-    const findLiveMatch = async () => {
-      const { data } = await supabase
-        .from('matches')
-        .select('id')
-        .in('status', ['first_half', 'half_time', 'second_half'])
-        .order('id', { ascending: false })
-        .limit(1);
+    // Load from local storage initially
+    const savedMatch = localStorage.getItem(`obs_match_${id}`);
+    if (savedMatch) setActiveMatchId(savedMatch);
 
-      if (data && data.length > 0) {
-        setActiveMatchId(data[0].id);
-      } else {
-        const { data: latest } = await supabase
-          .from('matches')
-          .select('id')
-          .order('id', { ascending: false })
-          .limit(1);
-        if (latest && latest.length > 0) setActiveMatchId(latest[0].id);
-      }
-    };
-
-    findLiveMatch();
-
-    const globalSub = supabase
-      .channel('global-matches')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches' }, (payload) => {
-        const newMatch = payload.new;
-        if (['first_half', 'half_time', 'second_half'].includes(newMatch.status)) {
-          setActiveMatchId(newMatch.id);
+    // Listen for broadcast from Admin Panel
+    const streamChannel = supabase.channel(`obs-${id}`)
+      .on('broadcast', { event: 'set_live_match' }, ({ payload }) => {
+        if (payload.matchId) {
+          localStorage.setItem(`obs_match_${id}`, payload.matchId);
+          setActiveMatchId(payload.matchId);
         }
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(globalSub);
+      supabase.removeChannel(streamChannel);
     };
   }, [id]);
 
@@ -100,8 +82,8 @@ const ObsScoreboard = () => {
     }
   };
 
-  if (!match || !homeTeam || !awayTeam) {
-    return null; // Empty transparent background until loaded
+  if (!activeMatchId || !match || !homeTeam || !awayTeam) {
+    return null; // Empty transparent background until a match is pushed
   }
 
   // Determine gradient based on league
