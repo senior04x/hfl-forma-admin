@@ -444,8 +444,9 @@
 .sch-team {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 8px;
   font-size: 22px;
   font-weight: 700;
   text-transform: uppercase;
@@ -454,21 +455,40 @@
 }
 
 .sch-team span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.2;
+  width: 100%;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .sch-team.home {
+  flex-direction: row;
   justify-content: flex-start;
   text-align: left;
   padding-left: 25px;
+  gap: 20px;
+}
+
+.sch-team.home span {
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .sch-team.away {
+  flex-direction: row-reverse;
   justify-content: flex-end;
   text-align: right;
   padding-right: 25px;
+  gap: 20px;
+}
+
+.sch-team.away span {
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .sch-team img {
