@@ -427,7 +427,7 @@
 .sch-match-row {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 12px 12px 60px 60px;
@@ -437,6 +437,7 @@
   border-bottom: none;
   width: 100%;
   margin: 0 auto;
+  gap: 15px;
 }
 
 .sch-team {
@@ -461,13 +462,15 @@
 }
 
 .sch-team.home {
-  justify-content: flex-end;
-  text-align: right;
+  justify-content: flex-start;
+  text-align: left;
+  flex-direction: row;
 }
 
 .sch-team.away {
-  justify-content: flex-start;
-  text-align: left;
+  justify-content: flex-end;
+  text-align: right;
+  flex-direction: row-reverse;
 }
 
 .sch-team img {
@@ -488,7 +491,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin: 0 20px;
+  margin: 0;
   position: relative;
   flex-shrink: 0;
 }
