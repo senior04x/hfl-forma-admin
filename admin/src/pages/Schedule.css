@@ -431,12 +431,14 @@
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 12px 12px 60px 60px;
-  padding: 12px 25px;
+  padding: 12px 0;
   position: relative;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-bottom: none;
-  width: 90%;
+  width: 100%;
   margin: 0 auto;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .sch-team {
@@ -448,6 +450,7 @@
   font-weight: 700;
   text-transform: uppercase;
   min-width: 0;
+  padding: 12px 20px;
 }
 
 .sch-team span {
@@ -457,22 +460,25 @@
 }
 
 .sch-team.home {
-  justify-content: center;
-  text-align: right;
+  justify-content: flex-start;
+  text-align: left;
+  padding-left: 25px;
 }
 
 .sch-team.away {
-  justify-content: center;
-  text-align: left;
+  justify-content: flex-end;
+  text-align: right;
+  padding-right: 25px;
 }
 
 .sch-team img {
-  width: 70px;
-  height: 70px;
+  width: 85px;
+  height: 85px;
   object-fit: cover;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.5);
+  border: 3px solid rgba(255, 255, 255, 0.6);
   background: white;
+  flex-shrink: 0;
 }
 
 .sch-time-container {
@@ -486,6 +492,7 @@
   background: rgba(21, 101, 192, 0.8);
   padding: 12px 20px;
   border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .sch-time-date {
