@@ -9,6 +9,7 @@ const ObsScoreboard = () => {
   const [match, setMatch] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
+  const [matchEvents, setMatchEvents] = useState([]);
   const [goalEvent, setGoalEvent] = useState(null);
   const [isGoalExiting, setIsGoalExiting] = useState(false);
 
@@ -83,6 +84,8 @@ const ObsScoreboard = () => {
         },
         async (payload) => {
           const newEvent = payload.new;
+          setMatchEvents(prev => [...prev, newEvent]);
+          
           if (newEvent.event_type === 'goal') {
             let pName = 'GOOOL';
             let pPhoto = null;
@@ -133,6 +136,9 @@ const ObsScoreboard = () => {
         
         setHomeTeam(hTeam);
         setAwayTeam(aTeam);
+        
+        const { data: events } = await supabase.from('match_events').select('*').eq('match_id', matchId).order('minute', { ascending: true });
+        setMatchEvents(events || []);
       }
     } catch (err) {
       console.error('Error fetching OBS data:', err);
@@ -166,6 +172,16 @@ const ObsScoreboard = () => {
   const isHidden = match.status === 'half_time' || match.status === 'finished' || match.status === 'scheduled';
   const visibilityClass = isHidden ? 'transformer-exit' : 'transformer-enter';
 
+  const renderTeamEvents = (teamId) => {
+    const teamEvents = matchEvents.filter(e => e.team_id === teamId);
+    return teamEvents.map((e, index) => {
+      if (e.event_type === 'goal') return <span key={index} className="obs-event-icon obs-icon-goal">⚽</span>;
+      if (e.event_type === 'yellow_card') return <span key={index} className="obs-event-icon obs-icon-yellow"></span>;
+      if (e.event_type === 'red_card') return <span key={index} className="obs-event-icon obs-icon-red"></span>;
+      return null;
+    });
+  };
+
   return (
     <div className={`obs-container ${gradientClass}`}>
       <div className={`obs-scoreboard transformer-wrapper ${visibilityClass}`}>
@@ -175,6 +191,9 @@ const ObsScoreboard = () => {
             <div className="obs-team-content" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <img src={homeTeam.logo_url || '/images/default-team.png'} className="obs-scoreboard-logo" alt="" />
               {homeTeam.name}
+              <div className="obs-events-container">
+                {renderTeamEvents(homeTeam.id)}
+              </div>
             </div>
           </div>
           
@@ -186,6 +205,9 @@ const ObsScoreboard = () => {
           
           <div className="obs-team obs-away-team">
             <div className="obs-team-content" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="obs-events-container">
+                {renderTeamEvents(awayTeam.id)}
+              </div>
               {awayTeam.name}
               <img src={awayTeam.logo_url || '/images/default-team.png'} className="obs-scoreboard-logo" alt="" />
             </div>

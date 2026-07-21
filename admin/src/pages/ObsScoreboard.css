@@ -274,7 +274,40 @@ html, body {
 .obs-lt-team-logo {
   width: 50px;
   height: 50px;
-  object-fit: contain;
+  object-fit: cover;
   margin-left: 20px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
+
+/* ================== MATCH EVENTS ICONS ================== */
+.obs-events-container {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin: 0 5px;
+}
+
+.obs-event-icon {
+  font-size: 16px;
+  display: inline-block;
+  line-height: 1;
+}
+
+.obs-icon-yellow, .obs-icon-red {
+  width: 12px;
+  height: 16px;
+  border-radius: 2px;
+  border: 1px solid rgba(0,0,0,0.5);
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+}
+
+.obs-icon-yellow {
+  background: linear-gradient(135deg, #FFDF00, #DAA520);
+}
+
+.obs-icon-red {
+  background: linear-gradient(135deg, #FF0000, #B22222);
+}
