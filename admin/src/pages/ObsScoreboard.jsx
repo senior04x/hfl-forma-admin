@@ -22,7 +22,7 @@ const ObsScoreboard = () => {
       const { data } = await supabase
         .from('matches')
         .select('id')
-        .eq('location', locationFilter)
+        .ilike('location', `%${locationFilter}%`)
         .in('status', ['first_half', 'half_time', 'second_half'])
         .order('id', { ascending: false })
         .limit(1);
@@ -35,10 +35,12 @@ const ObsScoreboard = () => {
     findLiveMatch();
 
     const streamChannel = supabase.channel(`global-matches-${id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `location=eq.${locationFilter}` }, (payload) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches' }, (payload) => {
         const newMatch = payload.new;
-        if (['first_half', 'half_time', 'second_half'].includes(newMatch.status)) {
-          setActiveMatchId(newMatch.id);
+        if (newMatch.location && newMatch.location.includes(locationFilter)) {
+          if (['first_half', 'half_time', 'second_half'].includes(newMatch.status)) {
+            setActiveMatchId(newMatch.id);
+          }
         }
       })
       .subscribe();

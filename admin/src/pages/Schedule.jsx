@@ -38,6 +38,7 @@ const Schedule = () => {
   const [matchDate, setMatchDate] = useState('');
   const [matchTime, setMatchTime] = useState('');
   const [location, setLocation] = useState('');
+  const [stadiumName, setStadiumName] = useState('');
   const [youtubeLink, setYoutubeLink] = useState('');
   const [matchRound, setMatchRound] = useState('');
 
@@ -119,6 +120,7 @@ const Schedule = () => {
     setMatchDate('');
     setMatchTime('');
     setLocation('');
+    setStadiumName('');
     setYoutubeLink('');
     setMatchRound('');
     setIsModalOpen(true);
@@ -136,13 +138,14 @@ const Schedule = () => {
 
     setLoading(true);
     try {
+      const finalLocation = stadiumName.trim() ? `${stadiumName.trim()}, ${location}` : location;
       const { error } = await supabase.from('matches').insert([{
         league: selectedLeague,
         home_team_id: homeTeamId,
         away_team_id: awayTeamId,
         match_date: matchDate,
         match_time: matchTime,
-        location: location,
+        location: finalLocation,
         youtube_link: youtubeLink,
         round: matchRound ? parseInt(matchRound) : null
       }]);
@@ -351,6 +354,11 @@ const Schedule = () => {
             <div className="form-group">
               <label>Nechanchi tur? (Majburiy emas)</label>
               <input type="number" placeholder="Masalan: 1" value={matchRound} onChange={(e) => setMatchRound(e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>Lokatsiya / Stadion nomi (Majburiy emas)</label>
+              <input type="text" placeholder="Masalan: Sergeli" value={stadiumName} onChange={(e) => setStadiumName(e.target.value)} />
             </div>
 
             <div className="form-group">

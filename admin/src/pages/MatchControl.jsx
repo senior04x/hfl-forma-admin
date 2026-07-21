@@ -43,12 +43,12 @@ const MatchControl = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '' });
 
   const copyObsLink = () => {
-    let streamId = 'stream1'; // Default
-    if (match?.location === '2-maydon') streamId = 'stream2';
+    let streamId = 'stream1';
+    if (match?.location?.includes('2-maydon')) streamId = 'stream2';
     
-    const link = `${window.location.origin}/obs/scoreboard/${streamId}`;
-    navigator.clipboard.writeText(link);
-    alert(`${match?.location || '1-maydon'} uchun OBS Link nusxalandi!\n\nUshbu link ${match?.location || '1-maydon'} da o'yin boshlanishi bilan o'zgaradi:\n${link}`);
+    const obsLink = `${window.location.origin}/obs/scoreboard/${streamId}`;
+    navigator.clipboard.writeText(obsLink);
+    alert(`${match?.location || '1-maydon'} uchun OBS Link nusxalandi!\n\nUshbu link ${match?.location || '1-maydon'} da o'yin boshlanishi bilan o'zgaradi:\n${obsLink}`);
   };
 
   const copyControlPanelLink = () => {
@@ -237,7 +237,7 @@ const MatchControl = () => {
           </button>
           <div className="obs-divider"></div>
           <button className="obs-action-btn obs-text-btn" style={{background: '#1e40af'}} onClick={copyObsLink} title="OBS Linkini nusxalash">
-            <Monitor size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">{match?.location === '2-maydon' ? '2-Maydon (OBS)' : '1-Maydon (OBS)'}</span>
+            <Monitor size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">{match?.location?.includes('2-maydon') ? '2-Maydon (OBS)' : '1-Maydon (OBS)'}</span>
           </button>
         </div>
       </div>
