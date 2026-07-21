@@ -391,17 +391,10 @@ const Schedule = () => {
           ref={exportRef} 
           className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
         >
-          <div className="sch-export-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <img src="/logo-for-jadval.png" alt="HFL" style={{ height: '90px' }} crossOrigin="anonymous" />
-              {exportLeague === '7x7 liga' && (
-                <>
-                  <img src="/x.png" crossOrigin="anonymous" style={{ height: '25px', opacity: 0.6 }} />
-                  <img src="/LLF-logo.png" alt="LLF" style={{ height: '80px' }} crossOrigin="anonymous" />
-                </>
-              )}
-            </div>
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="sch-export-header" style={{ justifyContent: 'center', gap: '50px' }}>
+            <img src="/logo-for-jadval.png" alt="HFL" style={{ height: '130px' }} crossOrigin="anonymous" />
+            
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               {LEAGUE_LOGOS[exportLeague] ? (
                 exportLeague === '7x7 liga' ? (
                   <div style={{ width: '320px', height: '150px', overflow: 'hidden', position: 'relative' }}>
@@ -414,7 +407,8 @@ const Schedule = () => {
                 <h1 style={{ flex: 'none' }}>{exportLeague}</h1>
               )}
             </div>
-            <img src="/Joma-logo.png" alt="Joma" style={{ height: '80px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none' }} crossOrigin="anonymous" />
+
+            <img src="/Joma-logo.png" alt="Joma" style={{ height: '130px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none' }} crossOrigin="anonymous" />
           </div>
 
           <div className="sch-export-body">
