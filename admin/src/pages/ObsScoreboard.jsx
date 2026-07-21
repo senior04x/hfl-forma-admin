@@ -154,17 +154,6 @@ const ObsScoreboard = () => {
 
   return (
     <div className={`obs-container ${gradientClass}`}>
-      
-      {/* Goal Overlay */}
-      {goalEvent && (
-        <div className="obs-goal-overlay">
-          <div className="obs-goal-text">GOOOL</div>
-          <div className="obs-goal-player-card">
-            <div className="obs-goal-player-name">{goalEvent.playerName}</div>
-          </div>
-        </div>
-      )}
-
       <div className={`obs-scoreboard ${visibilityClass}`}>
         
         <div className="obs-top-row">
@@ -172,9 +161,19 @@ const ObsScoreboard = () => {
             <div className="obs-team-content">{homeTeam.name}</div>
           </div>
           
-          <div className="obs-score">
+          <div className="obs-score" style={{ minWidth: goalEvent ? '160px' : '120px', transition: 'all 0.3s ease' }}>
             <div className="obs-score-content">
-              {match.home_score} - {match.away_score}
+              {goalEvent ? (
+                <div className="goool-container">
+                  {"GOOOL".split('').map((letter, i) => (
+                    <span key={i} className="goool-letter" style={{ animationDelay: `${i * 0.15}s` }}>
+                      {letter}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <>{match.home_score} - {match.away_score}</>
+              )}
             </div>
           </div>
           
@@ -193,6 +192,15 @@ const ObsScoreboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Goal Player Dropdown Row */}
+        {goalEvent && (
+          <div className="obs-goal-scorer-row">
+            <div className="obs-goal-scorer-card">
+              <span className="obs-goal-scorer-name">⚽ {goalEvent.playerName}</span>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

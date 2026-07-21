@@ -137,67 +137,53 @@ html, body {
   transform: translateX(0);
 }
 
-/* ================== GOL ANIMATSIYASI ================== */
-.obs-goal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
+/* ================== GOL ANIMATSIYASI (INLINE) ================== */
+.goool-container {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
+  gap: 2px;
 }
 
-.obs-goal-text {
-  font-size: 120px;
-  font-weight: 900;
-  font-style: italic;
-  color: white;
-  text-transform: uppercase;
-  text-shadow: 4px 4px 0px #000, 8px 8px 0px rgba(0,0,0,0.5);
-  animation: goalFlyIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, goalPulse 2s infinite 0.8s;
-  background: var(--obs-grad);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  /* Add stroke for visibility */
-  -webkit-text-stroke: 3px white;
-}
-
-.obs-goal-player-card {
-  margin-top: 30px;
-  background: var(--obs-grad);
-  padding: 15px 60px;
-  transform: skewX(-20deg);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  animation: playerSlideIn 1s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+.goool-letter {
   opacity: 0;
+  display: inline-block;
+  animation: letterPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-.obs-goal-player-name {
+@keyframes letterPopIn {
+  0% { opacity: 0; transform: scale(0.5) translateY(15px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* O'yinchi ismi doska ostidan tushishi */
+.obs-goal-scorer-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 5px;
+  animation: dropDownScorer 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  /* Chapga qiyalikni ushlab qolish uchun */
+  padding-right: 20px; 
+}
+
+.obs-goal-scorer-card {
+  background: var(--obs-grad);
+  padding: 6px 25px;
+  transform: skewX(-20deg);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+}
+
+.obs-goal-scorer-name {
+  display: block;
   transform: skewX(20deg);
-  font-size: 48px;
-  font-weight: 800;
   color: white;
+  font-weight: 800;
+  font-size: 20px;
   text-transform: uppercase;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+  white-space: nowrap;
 }
 
-@keyframes goalFlyIn {
-  0% { transform: translateY(-200px) scale(0.5); opacity: 0; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-@keyframes goalPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-@keyframes playerSlideIn {
-  0% { transform: translateX(-300px) skewX(-20deg); opacity: 0; }
-  100% { transform: translateX(0) skewX(-20deg); opacity: 1; }
+@keyframes dropDownScorer {
+  0% { opacity: 0; transform: translateY(-30px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
