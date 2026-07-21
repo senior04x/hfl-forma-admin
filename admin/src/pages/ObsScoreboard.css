@@ -152,17 +152,17 @@ html, body {
 }
 
 .transformer-enter {
-  animation: unfoldIn 1.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  animation: unfoldIn 2.0s cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
 .transformer-enter::before {
-  animation: sweepLineIn 1.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  animation: sweepLineIn 2.0s cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
 
 .transformer-exit {
-  animation: unfoldOut 1.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  animation: unfoldOut 2.0s cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
 .transformer-exit::before {
-  animation: sweepLineOut 1.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  animation: sweepLineOut 2.0s cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
 
 @keyframes unfoldIn {
