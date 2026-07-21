@@ -10,6 +10,7 @@ const ObsScoreboard = () => {
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
   const [goalEvent, setGoalEvent] = useState(null);
+  const [isGoalExiting, setIsGoalExiting] = useState(false);
 
   // Track specific streams via location
   useEffect(() => {
@@ -93,9 +94,17 @@ const ObsScoreboard = () => {
               }
             }
             const { data: tData } = await supabase.from('teams').select('name, logo_url').eq('id', newEvent.team_id).single();
+            
             setGoalEvent({ playerName: pName, playerPhoto: pPhoto, teamName: tData?.name, teamLogo: tData?.logo_url });
+            setIsGoalExiting(false);
+            
+            setTimeout(() => {
+              setIsGoalExiting(true);
+            }, 7000);
+
             setTimeout(() => {
               setGoalEvent(null);
+              setIsGoalExiting(false);
             }, 8000);
           }
         }
@@ -155,11 +164,11 @@ const ObsScoreboard = () => {
   const statusText = formatStatus(match.status);
 
   const isHidden = match.status === 'half_time' || match.status === 'finished' || match.status === 'scheduled';
-  const visibilityClass = isHidden ? 'scoreboard-hidden' : 'scoreboard-visible';
+  const visibilityClass = isHidden ? 'transformer-exit' : 'transformer-enter';
 
   return (
     <div className={`obs-container ${gradientClass}`}>
-      <div className={`obs-scoreboard ${visibilityClass}`}>
+      <div className={`obs-scoreboard transformer-wrapper ${visibilityClass}`}>
         
         <div className="obs-top-row">
           <div className="obs-team obs-home-team">
@@ -197,7 +206,7 @@ const ObsScoreboard = () => {
 
       {/* Lower Third Goal Player Graphic */}
       {goalEvent && (
-        <div className="obs-lower-third-container">
+        <div className={`obs-lower-third-container transformer-wrapper ${isGoalExiting ? 'transformer-exit' : 'transformer-enter'}`}>
           <div className="obs-lt-top-bar">
              <div className="obs-lt-content">{goalEvent.teamName?.toUpperCase()}</div>
           </div>
