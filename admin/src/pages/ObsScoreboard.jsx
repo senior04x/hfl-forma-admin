@@ -217,9 +217,21 @@ const ObsScoreboard = () => {
           <div className="obs-lt-top-bar">
              <div className="obs-lt-content" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                {activeEvent.teamName?.toUpperCase()}
-               {activeEvent.eventType === 'goal' && <span className="obs-event-icon obs-icon-goal">⚽</span>}
-               {activeEvent.eventType === 'yellow_card' && <span className="obs-event-icon obs-icon-yellow"></span>}
-               {activeEvent.eventType === 'red_card' && <span className="obs-event-icon obs-icon-red"></span>}
+               {activeEvent.eventType === 'goal' && (
+                 <svg width="20" height="20" viewBox="0 0 24 24" fill="white" style={{ marginLeft: '10px' }}>
+                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.75 3.31L13 7.82l-2 0-1.75-2.51c.9-.22 1.83-.22 2.75 0zM17.43 8.35l-3.38 1.34 0 3.93 2.8 2.1c-.88 1.4-2.18 2.52-3.7 3.2l-1.15-3.32-2 0-1.15 3.32c-1.52-.68-2.82-1.8-3.7-3.2l2.8-2.1 0-3.93-3.38-1.34c.48-1.29 1.25-2.43 2.22-3.35l2.4 1.7 1-.95 1 .95 2.4-1.7c.97.92 1.74 2.06 2.22 3.35z" />
+                 </svg>
+               )}
+               {activeEvent.eventType === 'yellow_card' && (
+                 <svg width="14" height="18" viewBox="0 0 14 18" fill="#FFDF00" stroke="#000" strokeWidth="1" style={{ marginLeft: '10px' }}>
+                   <rect x="1" y="1" width="12" height="16" rx="2" />
+                 </svg>
+               )}
+               {activeEvent.eventType === 'red_card' && (
+                 <svg width="14" height="18" viewBox="0 0 14 18" fill="#FF0000" stroke="#000" strokeWidth="1" style={{ marginLeft: '10px' }}>
+                   <rect x="1" y="1" width="12" height="16" rx="2" />
+                 </svg>
+               )}
              </div>
           </div>
           <div className="obs-lt-bottom-bar">
