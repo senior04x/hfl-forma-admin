@@ -5,7 +5,7 @@ import './ObsScoreboard.css';
 
 const ObsScoreboard = () => {
   const { id } = useParams();
-  const [activeMatchId, setActiveMatchId] = useState(id !== 'live' ? id : null);
+  const [activeMatchId, setActiveMatchId] = useState(null);
   const [match, setMatch] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
