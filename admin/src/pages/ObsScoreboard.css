@@ -63,6 +63,14 @@ html, body {
   justify-content: center;
 }
 
+.obs-scoreboard-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: white;
+}
+
 /* Yozuvlarni to'g'irlab qo'yish (unskew) */
 .obs-team-content, .obs-score-content, .obs-league-content {
   transform: skewX(20deg);
@@ -154,36 +162,96 @@ html, body {
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* O'yinchi ismi doska ostidan tushishi */
-.obs-goal-scorer-row {
+/* ================== LOWER THIRD PLAYER GRAPHIC ================== */
+.obs-lower-third-container {
+  position: fixed;
+  bottom: 80px;
+  left: 80px;
   display: flex;
-  justify-content: center;
-  margin-top: 5px;
-  animation: dropDownScorer 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
-  /* Chapga qiyalikni ushlab qolish uchun */
-  padding-right: 20px; 
+  flex-direction: column;
+  animation: slideInBottom 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  z-index: 1000;
 }
 
-.obs-goal-scorer-card {
+.obs-lt-top-bar {
   background: var(--obs-grad);
-  padding: 6px 25px;
-  transform: skewX(-20deg);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-}
-
-.obs-goal-scorer-name {
-  display: block;
-  transform: skewX(20deg);
   color: white;
+  padding: 5px 30px;
+  font-size: 18px;
   font-weight: 800;
-  font-size: 20px;
   text-transform: uppercase;
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
-  white-space: nowrap;
+  transform: skewX(-20deg);
+  width: fit-content;
+  margin-left: 20px;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
 }
 
-@keyframes dropDownScorer {
-  0% { opacity: 0; transform: translateY(-30px); }
-  100% { opacity: 1; transform: translateY(0); }
+.obs-lt-bottom-bar {
+  background: #1a1a1a;
+  color: white;
+  padding: 10px 40px;
+  transform: skewX(-20deg);
+  margin-top: -2px;
+  border-left: 5px solid white;
+  box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+}
+
+.obs-lt-content {
+  transform: skewX(20deg);
+}
+
+.obs-lt-player-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.obs-lt-player-photo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid white;
+}
+
+.obs-lt-player-photo-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #333;
+  border: 2px solid white;
+}
+
+.obs-lt-name-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.1;
+  min-width: 200px;
+}
+
+.obs-lt-fname {
+  font-size: 20px;
+  font-weight: 400;
+  color: #ddd;
+}
+.obs-lt-lname {
+  font-size: 32px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.obs-lt-team-logo {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  margin-left: 20px;
+}
+
+@keyframes slideInBottom {
+  0% { transform: translateY(150px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
 }
 
