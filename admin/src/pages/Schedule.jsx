@@ -391,7 +391,7 @@ const Schedule = () => {
           ref={exportRef} 
           className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
         >
-          <div className="sch-export-header" style={{ justifyContent: 'center', gap: '50px' }}>
+          <div className="sch-export-header" style={{ justifyContent: 'center', gap: '80px' }}>
             <img src="/logo-for-jadval.png" alt="HFL" style={{ height: '130px' }} crossOrigin="anonymous" />
             
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
