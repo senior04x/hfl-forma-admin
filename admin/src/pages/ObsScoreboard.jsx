@@ -169,19 +169,9 @@ const ObsScoreboard = () => {
             </div>
           </div>
           
-          <div className="obs-score" style={{ minWidth: goalEvent ? '160px' : '120px', transition: 'all 0.3s ease' }}>
+          <div className="obs-score">
             <div className="obs-score-content">
-              {goalEvent ? (
-                <div className="goool-container">
-                  {"GOOOL".split('').map((letter, i) => (
-                    <span key={i} className="goool-letter" style={{ animationDelay: `${i * 0.15}s` }}>
-                      {letter}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <>{match.home_score} - {match.away_score}</>
-              )}
+              {match.home_score} - {match.away_score}
             </div>
           </div>
           
