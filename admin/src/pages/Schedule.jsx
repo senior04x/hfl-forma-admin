@@ -430,7 +430,7 @@ const Schedule = () => {
                   />
 
                   {/* 2. Home Team Name */}
-                  <div style={{ textAlign: 'left', fontSize: '20px', fontWeight: '800', textTransform: 'uppercase', color: '#ffffff', wordBreak: 'break-word', whiteSpace: 'pre-wrap', lineHeight: '1.2', paddingLeft: '15px' }}>
+                  <div style={{ textAlign: 'center', fontSize: '20px', fontWeight: '800', textTransform: 'uppercase', color: '#ffffff', wordBreak: 'break-word', whiteSpace: 'pre-wrap', lineHeight: '1.2', padding: '0 10px' }}>
                     {match.home_team?.name}
                   </div>
                   
@@ -445,7 +445,7 @@ const Schedule = () => {
                   </div>
 
                   {/* 4. Away Team Name */}
-                  <div style={{ textAlign: 'right', fontSize: '20px', fontWeight: '800', textTransform: 'uppercase', color: '#ffffff', wordBreak: 'break-word', whiteSpace: 'pre-wrap', lineHeight: '1.2', paddingRight: '15px' }}>
+                  <div style={{ textAlign: 'center', fontSize: '20px', fontWeight: '800', textTransform: 'uppercase', color: '#ffffff', wordBreak: 'break-word', whiteSpace: 'pre-wrap', lineHeight: '1.2', padding: '0 10px' }}>
                     {match.away_team?.name}
                   </div>
 
