@@ -391,23 +391,16 @@ const Schedule = () => {
           ref={exportRef} 
           className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
         >
-          <div className="sch-export-header">
+                    <div className="sch-export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '0 10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <img src="/hfl-logo-for-jadval.png" alt="HFL" style={{ height: '90px', objectFit: 'contain' }} crossOrigin="anonymous" />
               {exportLeague === '7x7 liga' && (
                 <>
                   <img src="/x.png" crossOrigin="anonymous" style={{ height: '25px', objectFit: 'contain', opacity: 0.6 }} />
                   <img src="/llf-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
-                  <img src="/x.png" crossOrigin="anonymous" style={{ height: '25px', objectFit: 'contain', opacity: 0.6 }} />
                   <img src="/7x7-liga.png" alt="7x7" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
                 </>
               )}
-            </div>
-            
-            <div style={{ flex: 1, textAlign: 'center', padding: '0 20px' }}>
-              <h1 style={{ fontSize: '42px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '2px', margin: 0, textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
-                {exportLeague === '7x7 liga' ? 'PROBOTAS 7x7 LEAGUE' : exportLeague}
-              </h1>
             </div>
 
             <img src="/joma.png" alt="Joma" style={{ height: '80px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none', objectFit: 'contain' }} crossOrigin="anonymous" />
