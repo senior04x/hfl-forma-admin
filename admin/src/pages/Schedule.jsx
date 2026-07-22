@@ -392,7 +392,7 @@ const Schedule = () => {
           className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
         >
           <div className="sch-export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0px', padding: '0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
               <img src="/hfl-logo-for-jadval.png" alt="HFL" style={{ height: '75px', objectFit: 'contain' }} crossOrigin="anonymous" />
               {exportLeague === '7x7 liga' && (
                 <>
