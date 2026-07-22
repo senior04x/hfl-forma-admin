@@ -386,37 +386,31 @@ const Schedule = () => {
       )}
 
       {/* HIDDEN EXPORT TEMPLATE */}
-      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+      <div style={{ position: 'fixed', left: '-9999px', top: 0, opacity: 1, pointerEvents: 'none', zIndex: -100 }}>
         <div 
           ref={exportRef} 
           className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
         >
-          <div className="sch-export-header" style={{ justifyContent: 'space-between', alignItems: 'flex-end', padding: '0 20px', marginBottom: '30px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <img src="/hfl-logo-for-jadval.png" alt="HFL" style={{ height: '130px', objectFit: 'contain' }} crossOrigin="anonymous" />
+          <div className="sch-export-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <img src="/hfl-logo-for-jadval.png" alt="HFL" style={{ height: '90px', objectFit: 'contain' }} crossOrigin="anonymous" />
               {exportLeague === '7x7 liga' && (
                 <>
-                  <img src="/x.png" crossOrigin="anonymous" style={{ height: '35px', objectFit: 'contain', opacity: 0.6 }} />
-                  <img src="/llf-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '110px', objectFit: 'contain' }} />
-                  <img src="/x.png" crossOrigin="anonymous" style={{ height: '35px', objectFit: 'contain', opacity: 0.6 }} />
-                  <img src="/7x7-liga.png" alt="7x7" crossOrigin="anonymous" style={{ height: '110px', objectFit: 'contain' }} />
+                  <img src="/x.png" crossOrigin="anonymous" style={{ height: '25px', objectFit: 'contain', opacity: 0.6 }} />
+                  <img src="/llf-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
+                  <img src="/x.png" crossOrigin="anonymous" style={{ height: '25px', objectFit: 'contain', opacity: 0.6 }} />
+                  <img src="/7x7-liga.png" alt="7x7" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
                 </>
               )}
             </div>
             
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              {LEAGUE_LOGOS[exportLeague] ? (
-                exportLeague === '7x7 liga' ? (
-                  <div style={{ width: '1px' }}></div>
-                ) : (
-                  <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ height: '270px', objectFit: 'contain' }} />
-                )
-              ) : (
-                <h1 style={{ flex: 'none', fontSize: '50px', textTransform: 'uppercase' }}>{exportLeague}</h1>
-              )}
+            <div style={{ flex: 1, textAlign: 'center', padding: '0 20px' }}>
+              <h1 style={{ fontSize: '42px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '2px', margin: 0, textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
+                {exportLeague === '7x7 liga' ? 'PROBOTAS 7x7 LEAGUE' : exportLeague}
+              </h1>
             </div>
 
-            <img src="/joma.png" alt="Joma" style={{ height: '130px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none', objectFit: 'contain' }} crossOrigin="anonymous" />
+            <img src="/joma.png" alt="Joma" style={{ height: '80px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none', objectFit: 'contain' }} crossOrigin="anonymous" />
           </div>
 
           <div className="sch-export-body">
@@ -424,30 +418,49 @@ const Schedule = () => {
               .filter(m => m.league === exportLeague && m.round == exportRound)
               .map(match => (
                 <div key={match.id} className="sch-match-row">
-                  <div className="sch-team home">
-                    <img src={match.home_team?.logo_url} alt="Home" crossOrigin="anonymous" />
-                    <span>{match.home_team?.name}</span>
+                  {/* 1. Home Logo */}
+                  <img 
+                    src={match.home_team?.logo_url} 
+                    alt="" 
+                    crossOrigin="anonymous" 
+                    className="sch-team-logo"
+                    onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }}
+                  />
+
+                  {/* 2. Home Team Name */}
+                  <div style={{ textAlign: 'left', fontSize: '20px', fontWeight: '800', textTransform: 'uppercase', color: '#ffffff', wordBreak: 'break-word', whiteSpace: 'pre-wrap', lineHeight: '1.2', paddingLeft: '15px' }}>
+                    {match.home_team?.name}
                   </div>
                   
+                  {/* 3. Time Container */}
                   <div className="sch-time-container">
                     <div className="sch-time-date">
-                      {match.match_date.split('-').reverse().join('.')}
+                      {match.match_date ? match.match_date.split('-').reverse().join('.') : ''}
                     </div>
                     <div className="sch-time-box">
                       {match.match_time ? match.match_time.substring(0, 5) : '00:00'}
                     </div>
                   </div>
 
-                  <div className="sch-team away">
-                    <span>{match.away_team?.name}</span>
-                    <img src={match.away_team?.logo_url} alt="Away" crossOrigin="anonymous" />
+                  {/* 4. Away Team Name */}
+                  <div style={{ textAlign: 'right', fontSize: '20px', fontWeight: '800', textTransform: 'uppercase', color: '#ffffff', wordBreak: 'break-word', whiteSpace: 'pre-wrap', lineHeight: '1.2', paddingRight: '15px' }}>
+                    {match.away_team?.name}
                   </div>
+
+                  {/* 5. Away Logo */}
+                  <img 
+                    src={match.away_team?.logo_url} 
+                    alt="" 
+                    crossOrigin="anonymous" 
+                    className="sch-team-logo"
+                    onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }}
+                  />
                 </div>
               ))}
           </div>
 
-          <div className="sch-export-footer" style={{ marginBottom: '-10px' }}>
-            <div style={{ display: 'flex', gap: '30px', alignItems: 'center', marginBottom: '15px' }}>
+          <div className="sch-export-footer">
+            <div style={{ display: 'flex', gap: '30px', alignItems: 'center', marginBottom: '10px' }}>
               {exportLeague !== '7x7 liga' && selectedSponsors.map((s, idx) => (
                 <React.Fragment key={s.id}>
                   <img src={s.logo_url} alt="Sponsor" style={{ height: '45px', filter: 'brightness(0) invert(1)' }} crossOrigin="anonymous" />
@@ -455,13 +468,12 @@ const Schedule = () => {
                 </React.Fragment>
               ))}
             </div>
-            <div className="sch-social" style={{ color: exportLeague === '7x7 liga' ? '#09408b' : 'white', marginBottom: '0px' }}>
+            <div className="sch-social" style={{ color: exportLeague === '7x7 liga' ? '#ffffff' : 'white', marginBottom: '0px' }}>
               @havas_football
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 };
