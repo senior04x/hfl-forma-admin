@@ -379,6 +379,104 @@
                 width: 18px;
             }
         }
+
+        /* 2x2 Quick Navigation Cards Grid */
+        .quick-nav-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin: 25px auto 45px auto;
+            max-width: 650px;
+            padding: 0 15px;
+        }
+
+        .nav-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 18px;
+            background: rgba(18, 20, 29, 0.65);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            color: #E2E8F0;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .nav-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 230, 0, 0.5);
+            box-shadow: 0 12px 30px rgba(255, 230, 0, 0.2);
+            color: white;
+        }
+
+        .nav-card.card-primary {
+            background: linear-gradient(135deg, rgba(247, 183, 49, 0.88) 0%, rgba(220, 140, 15, 0.95) 100%);
+            color: #0A0D14;
+            border: 1px solid rgba(255, 230, 0, 0.7);
+            box-shadow: 0 10px 30px rgba(247, 183, 49, 0.35);
+        }
+
+        .nav-card.card-primary:hover {
+            box-shadow: 0 14px 35px rgba(247, 183, 49, 0.55);
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        .nav-card-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .nav-card.card-primary .nav-card-icon {
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-card-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .nav-card-text {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            line-height: 1.2;
+            letter-spacing: 0.3px;
+        }
+
+        @media (max-width: 480px) {
+            .quick-nav-grid {
+                gap: 10px;
+                padding: 0 10px;
+                margin-top: 15px;
+            }
+            .nav-card {
+                padding: 14px 12px;
+                gap: 10px;
+                border-radius: 14px;
+            }
+            .nav-card-icon {
+                width: 32px;
+                height: 32px;
+                border-radius: 10px;
+            }
+            .nav-card-icon svg {
+                width: 17px;
+                height: 17px;
+            }
+            .nav-card-text {
+                font-size: 13.5px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -546,16 +644,23 @@
             </div>
         </div>
 
-        <!-- Quick Action Buttons -->
-        <div class="hero-btns" style="margin-top: 30px; margin-bottom: 30px;">
-            <a href="apply.html" class="btn-large btn-primary">
-                <i data-lucide="user-plus"></i> Ro'yxatdan o'tish
+        <!-- Quick Navigation 2x2 Cards Grid (4 Cards in 2 Rows) -->
+        <div class="quick-nav-grid">
+            <a href="apply.html" class="nav-card card-primary">
+                <div class="nav-card-icon"><i data-lucide="user-plus"></i></div>
+                <div class="nav-card-text">Ro'yxatdan o'tish</div>
             </a>
-            <a href="teams.html" class="btn-large btn-secondary">
-                <i data-lucide="shield"></i> Jamoalarni ko'rish
+            <a href="teams.html" class="nav-card">
+                <div class="nav-card-icon"><i data-lucide="shield"></i></div>
+                <div class="nav-card-text">Jamoalar</div>
             </a>
-            <a href="matches.html" class="btn-large btn-secondary">
-                <i data-lucide="calendar"></i> O'yinlar jadvali
+            <a href="matches.html" class="nav-card">
+                <div class="nav-card-icon"><i data-lucide="calendar"></i></div>
+                <div class="nav-card-text">O'yinlar</div>
+            </a>
+            <a href="standings.html" class="nav-card">
+                <div class="nav-card-icon"><i data-lucide="trophy"></i></div>
+                <div class="nav-card-text">Turnir jadvali</div>
             </a>
         </div>
     </div>
