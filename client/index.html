@@ -524,7 +524,10 @@
         .player-team-logo {
             width: 22px;
             height: 22px;
-            object-fit: contain;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .player-stats-row {
@@ -1431,8 +1434,10 @@
                                         <span>${tName}</span>
                                     </div>
                                     <div class="player-stats-row">
-                                        <span class="stat-badge goals-badge">⚽ ${topPlayer.goals} GOL</span>
-                                        ${topPlayer.assists > 0 ? `<span class="stat-badge assists-badge">👟 ${topPlayer.assists} UZATMA</span>` : ''}
+                                        <span class="stat-badge goals-badge">
+                                            <i data-lucide="target" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i> ${topPlayer.goals} ta gol
+                                        </span>
+                                        ${topPlayer.assists > 0 ? `<span class="stat-badge assists-badge"><i data-lucide="footprints" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i> ${topPlayer.assists} ta uzatma</span>` : ''}
                                     </div>
                                 </div>
                                 <div class="slide-player-cutout-container">
@@ -1444,8 +1449,10 @@
                             `;
 
                             const headerBox = slide.querySelector('.slide-badge-header');
-                            if (headerBox && !headerBox.querySelector('.top-scorer-crown-badge')) {
-                                headerBox.innerHTML += `<span class="top-scorer-crown-badge"><i data-lucide="crown" style="width: 14px; height: 14px;"></i> TO'PURAR</span>`;
+                            if (headerBox) {
+                                const oldBadge = headerBox.querySelector('.top-scorer-crown-badge');
+                                if (oldBadge) oldBadge.remove();
+                                headerBox.innerHTML += `<span class="top-scorer-crown-badge">1-tur</span>`;
                             }
                         }
                     }
