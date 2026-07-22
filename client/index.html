@@ -63,6 +63,13 @@
             padding: 0 15px;
         }
 
+        .top-scorers-slider-section {
+            margin: 30px auto 40px auto;
+            max-width: 100%;
+            padding: 0;
+            overflow: hidden;
+        }
+
         .section-title {
             font-family: 'Outfit', sans-serif;
             font-size: 24px;
@@ -72,41 +79,49 @@
             align-items: center;
             gap: 10px;
             margin-bottom: 20px;
+            padding: 0 20px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .slider-wrapper {
             position: relative;
-            border-radius: 24px;
             overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            aspect-ratio: 1.85 / 1;
             width: 100%;
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
+            padding: 10px 0 25px 0;
         }
 
         .slider-track {
             display: flex;
             transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            gap: 16px;
             width: 100%;
-            height: 100%;
         }
 
         .top-scorer-slide {
-            min-width: 100%;
-            height: 100%;
-            padding: 25px 35px 35px 35px;
+            flex: 0 0 82%;
+            min-width: 82%;
+            aspect-ratio: 1.85 / 1;
             box-sizing: border-box;
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
+            padding: 22px 30px;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            opacity: 0.55;
+            transform: scale(0.93);
+        }
+
+        .top-scorer-slide.active-slide {
+            opacity: 1;
+            transform: scale(1);
         }
 
         /* League Themes with glassmorphism translucent gradient backdrops matching league branding */
@@ -301,15 +316,22 @@
 
         @media (max-width: 768px) {
             .top-scorers-slider-section {
-                margin: 15px auto 25px auto;
-                padding: 0 10px;
+                margin: 10px auto 20px auto;
+                padding: 0;
+                overflow: hidden;
             }
             .slider-wrapper {
-                aspect-ratio: 1.85 / 1;
-                border-radius: 16px;
+                padding: 5px 0 18px 0;
+            }
+            .slider-track {
+                gap: 10px;
             }
             .top-scorer-slide {
-                padding: 12px 15px 25px 15px;
+                flex: 0 0 84%;
+                min-width: 84%;
+                aspect-ratio: 1.85 / 1;
+                border-radius: 16px;
+                padding: 10px 14px 22px 14px;
             }
             .slide-badge-header {
                 margin-bottom: 5px;
@@ -650,12 +672,24 @@
             const totalSlides = dots.length;
             let slideInterval;
 
+            const slides = document.querySelectorAll('.top-scorer-slide');
+
             const goToSlide = (index) => {
                 currentIndex = (index + totalSlides) % totalSlides;
-                track.style.transform = `translateX(-${currentIndex * 100}%)`;
+
+                const isMobile = window.innerWidth <= 768;
+                const slideWidthPercent = isMobile ? 84 : 82;
+                const gapPx = isMobile ? 10 : 16;
+                const centerOffsetPercent = (100 - slideWidthPercent) / 2;
+
+                track.style.transform = `translateX(calc(${centerOffsetPercent}% - ${currentIndex} * (${slideWidthPercent}% + ${gapPx}px)))`;
                 
                 dots.forEach((dot, idx) => {
                     dot.classList.toggle('active', idx === currentIndex);
+                });
+
+                slides.forEach((slide, idx) => {
+                    slide.classList.toggle('active-slide', idx === currentIndex);
                 });
             };
 
