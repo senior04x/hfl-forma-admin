@@ -1314,13 +1314,33 @@
             if (typeof db === 'undefined') return;
 
             try {
-                // Fetch Match Events directly (goals and assists)
+                // 1. Fetch all goal/assist events
                 const { data: events, error: eErr } = await db
                     .from('match_events')
-                    .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
+                    .select('id, event_type, player_id, team_id')
                     .in('event_type', ['goal', 'assist']);
 
                 if (eErr || !events || events.length === 0) return;
+
+                // 2. Fetch all players/applications
+                const { data: players } = await db
+                    .from('applications')
+                    .select('id, first_name, last_name, photo_url, team_id');
+
+                const playersMap = {};
+                if (players && players.length > 0) {
+                    players.forEach(p => { playersMap[p.id] = p; });
+                }
+
+                // 3. Fetch all teams
+                const { data: teams } = await db
+                    .from('teams')
+                    .select('id, name, logo_url, league');
+
+                const teamsMap = {};
+                if (teams && teams.length > 0) {
+                    teams.forEach(t => { teamsMap[t.id] = t; });
+                }
 
                 function getLeagueKey(leagueStr) {
                     if (!leagueStr) return '';
@@ -1332,12 +1352,15 @@
                     return l;
                 }
 
-                const leagueTopScorers = {};
                 const playerStatsByLeague = {};
 
                 events.forEach(e => {
-                    if (!e.player || !e.player_id || !e.team || !e.team.league) return;
-                    const leagueKey = getLeagueKey(e.team.league);
+                    if (!e.player_id) return;
+                    const player = playersMap[e.player_id];
+                    const team = teamsMap[e.team_id || (player ? player.team_id : null)];
+                    
+                    const leagueStr = team ? team.league : '';
+                    const leagueKey = getLeagueKey(leagueStr);
                     if (!leagueKey) return;
 
                     if (!playerStatsByLeague[leagueKey]) {
@@ -1348,11 +1371,11 @@
                     if (!leagueMap[e.player_id]) {
                         leagueMap[e.player_id] = {
                             id: e.player_id,
-                            firstName: e.player.first_name || '',
-                            lastName: e.player.last_name || '',
-                            photoUrl: e.player.photo_url || '',
-                            teamName: e.team?.name || '',
-                            teamLogo: e.team?.logo_url || '',
+                            firstName: player ? (player.first_name || '') : 'Futbolchi',
+                            lastName: player ? (player.last_name || '') : '',
+                            photoUrl: player ? (player.photo_url || '') : '',
+                            teamName: team ? (team.name || '') : '',
+                            teamLogo: team ? (team.logo_url || '') : '',
                             goals: 0,
                             assists: 0
                         };
@@ -1362,6 +1385,7 @@
                     if (e.event_type === 'assist') leagueMap[e.player_id].assists += 1;
                 });
 
+                const leagueTopScorers = {};
                 Object.keys(playerStatsByLeague).forEach(lKey => {
                     const topScorers = Object.values(playerStatsByLeague[lKey])
                         .filter(p => p.goals > 0)
@@ -1387,7 +1411,7 @@
                         const contentBox = slide.querySelector('.slide-content');
                         if (contentBox) {
                             const pName = `${topPlayer.firstName} ${topPlayer.lastName}`.trim();
-                            const pPhoto = topPlayer.photoUrl || 'images/logo.png';
+                            const pPhoto = topPlayer.photoUrl || 'images/app-icon-rounded.png';
                             const tLogo = topPlayer.teamLogo || 'images/logo.png';
                             const tName = topPlayer.teamName || '';
 
@@ -1417,9 +1441,9 @@
                     }
                 });
 
-                lucide.createIcons();
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             } catch (err) {
-                console.log('Real top scorers slider fetch:', err);
+                console.error('Real top scorers slider fetch:', err);
             }
         }
 
