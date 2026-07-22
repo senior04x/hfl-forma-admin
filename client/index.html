@@ -594,6 +594,13 @@
             text-shadow: 0 2px 10px rgba(0,0,0,0.6);
         }
 
+        .player-team-stat-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
         .player-team-info {
             display: flex;
             align-items: center;
@@ -602,7 +609,7 @@
             font-family: 'Outfit', sans-serif;
             font-weight: 600;
             font-size: 14px;
-            margin-bottom: 12px;
+            margin-bottom: 0;
         }
 
         .player-team-logo {
@@ -686,10 +693,13 @@
                 font-size: 16px;
                 margin-bottom: 3px;
             }
+            .player-team-stat-wrapper {
+                gap: 6px;
+            }
             .player-team-info {
                 font-size: 12px;
-                margin-bottom: 8px;
-                gap: 5px;
+                margin-bottom: 0 !important;
+                gap: 4px;
             }
             .player-team-logo {
                 width: 18px;
@@ -700,9 +710,9 @@
                 padding: 3px 8px;
             }
             .player-framed-card {
-                width: 75px;
-                height: 90px;
-                border-radius: 14px;
+                width: 88px;
+                height: 105px;
+                border-radius: 15px;
                 border-width: 1.5px;
             }
         }
@@ -1497,15 +1507,17 @@
                             contentBox.innerHTML = `
                                 <div class="slide-info">
                                     <h3 class="player-real-name">${pName}</h3>
-                                    <div class="player-team-info">
-                                        <img src="${tLogo}" alt="${tName}" class="player-team-logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/22x22?text=T'">
-                                        <span>${tName}</span>
-                                    </div>
-                                    <div class="player-stats-row">
-                                        <span class="stat-badge goals-badge">
-                                            <i data-lucide="target" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i> ${topPlayer.goals} ta gol
-                                        </span>
-                                        ${topPlayer.assists > 0 ? `<span class="stat-badge assists-badge"><i data-lucide="footprints" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i> ${topPlayer.assists} ta uzatma</span>` : ''}
+                                    <div class="player-team-stat-wrapper">
+                                        <div class="player-team-info">
+                                            <img src="${tLogo}" alt="${tName}" class="player-team-logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/22x22?text=T'">
+                                            <span>${tName}</span>
+                                        </div>
+                                        <div class="player-stats-row">
+                                            <span class="stat-badge goals-badge">
+                                                <i data-lucide="target" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i> ${topPlayer.goals} ta gol
+                                            </span>
+                                            ${topPlayer.assists > 0 ? `<span class="stat-badge assists-badge"><i data-lucide="footprints" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i> ${topPlayer.assists} ta uzatma</span>` : ''}
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="slide-player-cutout-container">
