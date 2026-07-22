@@ -1314,15 +1314,7 @@
             if (typeof db === 'undefined') return;
 
             try {
-                // Fetch Finished Matches
-                const { data: matches, error: mErr } = await db
-                    .from('matches')
-                    .select('*')
-                    .eq('status', 'finished');
-
-                if (mErr || !matches || matches.length === 0) return;
-
-                // Fetch Match Events
+                // Fetch Match Events directly (goals and assists)
                 const { data: events, error: eErr } = await db
                     .from('match_events')
                     .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
@@ -1330,40 +1322,57 @@
 
                 if (eErr || !events || events.length === 0) return;
 
+                function getLeagueKey(leagueStr) {
+                    if (!leagueStr) return '';
+                    const l = String(leagueStr).toLowerCase().trim();
+                    if (l.includes('super')) return 'Super liga';
+                    if (l.includes('pro')) return 'Pro liga';
+                    if (l.includes('3')) return '3-liga';
+                    if (l.includes('7x7') || l.includes('7')) return '7x7 liga';
+                    return l;
+                }
+
                 const leagueTopScorers = {};
-                const leagues = ['Super liga', 'Pro liga', '3-liga', '7x7 liga'];
+                const playerStatsByLeague = {};
 
-                leagues.forEach(leagueName => {
-                    const leagueEvents = events.filter(e => e.team && e.team.league && e.team.league.toLowerCase().trim() === leagueName.toLowerCase().trim());
+                events.forEach(e => {
+                    if (!e.player || !e.player_id || !e.team || !e.team.league) return;
+                    const leagueKey = getLeagueKey(e.team.league);
+                    if (!leagueKey) return;
 
-                    const playerStats = {};
-                    leagueEvents.forEach(e => {
-                        if (!e.player || !e.player_id) return;
-                        if (!playerStats[e.player_id]) {
-                            playerStats[e.player_id] = {
-                                id: e.player_id,
-                                firstName: e.player.first_name || '',
-                                lastName: e.player.last_name || '',
-                                photoUrl: e.player.photo_url || '',
-                                teamName: e.team?.name || '',
-                                teamLogo: e.team?.logo_url || '',
-                                goals: 0,
-                                assists: 0
-                            };
-                        }
-                        if (e.event_type === 'goal') playerStats[e.player_id].goals += 1;
-                        if (e.event_type === 'assist') playerStats[e.player_id].assists += 1;
-                    });
+                    if (!playerStatsByLeague[leagueKey]) {
+                        playerStatsByLeague[leagueKey] = {};
+                    }
 
-                    const topScorers = Object.values(playerStats)
+                    const leagueMap = playerStatsByLeague[leagueKey];
+                    if (!leagueMap[e.player_id]) {
+                        leagueMap[e.player_id] = {
+                            id: e.player_id,
+                            firstName: e.player.first_name || '',
+                            lastName: e.player.last_name || '',
+                            photoUrl: e.player.photo_url || '',
+                            teamName: e.team?.name || '',
+                            teamLogo: e.team?.logo_url || '',
+                            goals: 0,
+                            assists: 0
+                        };
+                    }
+
+                    if (e.event_type === 'goal') leagueMap[e.player_id].goals += 1;
+                    if (e.event_type === 'assist') leagueMap[e.player_id].assists += 1;
+                });
+
+                Object.keys(playerStatsByLeague).forEach(lKey => {
+                    const topScorers = Object.values(playerStatsByLeague[lKey])
                         .filter(p => p.goals > 0)
                         .sort((a, b) => b.goals - a.goals);
 
                     if (topScorers.length > 0) {
-                        leagueTopScorers[leagueName] = topScorers[0];
+                        leagueTopScorers[lKey] = topScorers[0];
                     }
                 });
 
+                // Update Slider Slides if top scorers exist
                 const slides = document.querySelectorAll('.top-scorer-slide');
                 slides.forEach(slide => {
                     const themeClass = Array.from(slide.classList).find(c => c.startsWith('theme-'));
