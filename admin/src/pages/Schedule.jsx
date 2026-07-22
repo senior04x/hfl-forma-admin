@@ -402,12 +402,12 @@ const Schedule = () => {
               )}
             </div>
 
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '240px' }}>
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '20px' }}>
               {exportLeague === '7x7 liga' ? (
-                <img src="/7x7-liga.png" alt="7x7 Liga" style={{ height: '240px', maxWidth: '400px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                <img src="/7x7-liga.png" alt="7x7 Liga" style={{ height: '360px', maxWidth: '600px', objectFit: 'contain' }} crossOrigin="anonymous" />
               ) : (
                 LEAGUE_LOGOS[exportLeague] && (
-                  <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} style={{ height: '220px', maxWidth: '450px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                  <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} style={{ height: '280px', maxWidth: '550px', objectFit: 'contain' }} crossOrigin="anonymous" />
                 )
               )}
             </div>
