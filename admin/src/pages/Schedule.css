@@ -460,12 +460,9 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  background: linear-gradient(180deg, #1e88e5 0%, #1565c0 100%);
-  padding: 6px 15px 8px 15px;
-  border-radius: 8px;
-  clip-path: polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%);
+  background: transparent;
+  padding: 4px 10px;
   flex-shrink: 0;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 .sch-time-date {
