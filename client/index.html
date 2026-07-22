@@ -482,6 +482,136 @@
             }
         }
 
+        /* Real Top Scorer Player Slide Styles */
+        .top-scorer-crown-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: linear-gradient(135deg, #FFE600 0%, #F7B731 100%);
+            color: #000;
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 12px;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 12px rgba(255, 230, 0, 0.4);
+            margin-left: auto;
+        }
+
+        .player-real-name {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+            margin: 0 0 6px 0;
+            line-height: 1.1;
+            text-transform: uppercase;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+        }
+
+        .player-team-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255, 255, 255, 0.85);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .player-team-logo {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+        }
+
+        .player-stats-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .stat-badge {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 13px;
+            padding: 5px 12px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .stat-badge.goals-badge {
+            background: linear-gradient(135deg, rgba(255, 230, 0, 0.9) 0%, rgba(247, 183, 49, 0.9) 100%);
+            color: #0A0D14;
+            border: none;
+        }
+
+        .slide-player-cutout-container {
+            position: relative;
+            width: 130px;
+            height: 160px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+
+        .player-cutout-glow {
+            position: absolute;
+            bottom: 0;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,230,0,0.5) 0%, rgba(255,255,255,0) 70%);
+            z-index: 1;
+        }
+
+        .player-cutout-img {
+            position: relative;
+            z-index: 2;
+            max-height: 150px;
+            max-width: 120px;
+            object-fit: contain;
+            filter: drop-shadow(0 12px 20px rgba(0,0,0,0.7));
+            transition: transform 0.3s ease;
+        }
+
+        .top-scorer-slide:hover .player-cutout-img {
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .player-real-name {
+                font-size: 16px;
+                margin-bottom: 3px;
+            }
+            .player-team-info {
+                font-size: 12px;
+                margin-bottom: 8px;
+                gap: 5px;
+            }
+            .player-team-logo {
+                width: 18px;
+                height: 18px;
+            }
+            .stat-badge {
+                font-size: 11px;
+                padding: 3px 8px;
+            }
+            .slide-player-cutout-container {
+                width: 80px;
+                height: 100px;
+            }
+            .player-cutout-img {
+                max-height: 95px;
+                max-width: 75px;
+            }
+        }
+
         /* Recent Results Section */
         .recent-results-section {
             max-width: 650px;
@@ -1136,6 +1266,155 @@
                 console.log('Homepage recent results fetch:', err);
             }
         });
+
+        // Automatic canvas background remover for player photos
+        function processPlayerCutout(imgElement) {
+            if (!imgElement || !imgElement.complete) return;
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = imgElement.naturalWidth || imgElement.width;
+                canvas.height = imgElement.naturalHeight || imgElement.height;
+                ctx.drawImage(imgElement, 0, 0);
+
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imgData.data;
+
+                const bgR = data[0];
+                const bgG = data[1];
+                const bgB = data[2];
+
+                const threshold = 35;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    const diff = Math.sqrt(
+                        Math.pow(r - bgR, 2) +
+                        Math.pow(g - bgG, 2) +
+                        Math.pow(b - bgB, 2)
+                    );
+
+                    if (diff < threshold || (r > 240 && g > 240 && b > 240) || (r < 15 && g < 15 && b < 15 && i < data.length * 0.1)) {
+                        data[i + 3] = 0; // Transparent
+                    }
+                }
+
+                ctx.putImageData(imgData, 0, 0);
+                imgElement.src = canvas.toDataURL('image/png');
+            } catch (e) {
+                // Cross-Origin or CORS fallback
+            }
+        }
+
+        // Fetch Real Top Scorers for Slider dynamically from Supabase
+        async function loadRealTopScorersForSlider() {
+            if (typeof db === 'undefined') return;
+
+            try {
+                // Fetch Finished Matches
+                const { data: matches, error: mErr } = await db
+                    .from('matches')
+                    .select('*')
+                    .eq('status', 'finished');
+
+                if (mErr || !matches || matches.length === 0) return;
+
+                // Fetch Match Events
+                const { data: events, error: eErr } = await db
+                    .from('match_events')
+                    .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
+                    .in('event_type', ['goal', 'assist']);
+
+                if (eErr || !events || events.length === 0) return;
+
+                const leagueTopScorers = {};
+                const leagues = ['Super liga', 'Pro liga', '3-liga', '7x7 liga'];
+
+                leagues.forEach(leagueName => {
+                    const leagueEvents = events.filter(e => e.team && e.team.league && e.team.league.toLowerCase().trim() === leagueName.toLowerCase().trim());
+
+                    const playerStats = {};
+                    leagueEvents.forEach(e => {
+                        if (!e.player || !e.player_id) return;
+                        if (!playerStats[e.player_id]) {
+                            playerStats[e.player_id] = {
+                                id: e.player_id,
+                                firstName: e.player.first_name || '',
+                                lastName: e.player.last_name || '',
+                                photoUrl: e.player.photo_url || '',
+                                teamName: e.team?.name || '',
+                                teamLogo: e.team?.logo_url || '',
+                                goals: 0,
+                                assists: 0
+                            };
+                        }
+                        if (e.event_type === 'goal') playerStats[e.player_id].goals += 1;
+                        if (e.event_type === 'assist') playerStats[e.player_id].assists += 1;
+                    });
+
+                    const topScorers = Object.values(playerStats)
+                        .filter(p => p.goals > 0)
+                        .sort((a, b) => b.goals - a.goals);
+
+                    if (topScorers.length > 0) {
+                        leagueTopScorers[leagueName] = topScorers[0];
+                    }
+                });
+
+                const slides = document.querySelectorAll('.top-scorer-slide');
+                slides.forEach(slide => {
+                    const themeClass = Array.from(slide.classList).find(c => c.startsWith('theme-'));
+                    let leagueName = '';
+                    if (themeClass === 'theme-super') leagueName = 'Super liga';
+                    if (themeClass === 'theme-pro') leagueName = 'Pro liga';
+                    if (themeClass === 'theme-3liga') leagueName = '3-liga';
+                    if (themeClass === 'theme-7x7') leagueName = '7x7 liga';
+
+                    const topPlayer = leagueTopScorers[leagueName];
+                    if (topPlayer) {
+                        const contentBox = slide.querySelector('.slide-content');
+                        if (contentBox) {
+                            const pName = `${topPlayer.firstName} ${topPlayer.lastName}`.trim();
+                            const pPhoto = topPlayer.photoUrl || 'images/logo.png';
+                            const tLogo = topPlayer.teamLogo || 'images/logo.png';
+                            const tName = topPlayer.teamName || '';
+
+                            contentBox.innerHTML = `
+                                <div class="slide-info">
+                                    <h3 class="player-real-name">${pName}</h3>
+                                    <div class="player-team-info">
+                                        <img src="${tLogo}" alt="${tName}" class="player-team-logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/22x22?text=T'">
+                                        <span>${tName}</span>
+                                    </div>
+                                    <div class="player-stats-row">
+                                        <span class="stat-badge goals-badge">⚽ ${topPlayer.goals} GOL</span>
+                                        ${topPlayer.assists > 0 ? `<span class="stat-badge assists-badge">👟 ${topPlayer.assists} UZATMA</span>` : ''}
+                                    </div>
+                                </div>
+                                <div class="slide-player-cutout-container">
+                                    <div class="player-cutout-glow"></div>
+                                    <img src="${pPhoto}" alt="${pName}" class="player-cutout-img" crossorigin="anonymous" onload="processPlayerCutout(this)" onerror="this.onerror=null; this.src='images/app-icon-rounded.png'">
+                                </div>
+                            `;
+
+                            const headerBox = slide.querySelector('.slide-badge-header');
+                            if (headerBox && !headerBox.querySelector('.top-scorer-crown-badge')) {
+                                headerBox.innerHTML += `<span class="top-scorer-crown-badge"><i data-lucide="crown" style="width: 14px; height: 14px;"></i> TO'PURAR</span>`;
+                            }
+                        }
+                    }
+                });
+
+                lucide.createIcons();
+            } catch (err) {
+                console.log('Real top scorers slider fetch:', err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadRealTopScorersForSlider);
     </script>
     <script src="js/layout.js"></script>
     <script src="js/welcome.js"></script>
