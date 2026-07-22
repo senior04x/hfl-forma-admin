@@ -43,6 +43,10 @@
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/db.js"></script>
 
     <!-- Google Model Viewer for 3D Models -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
@@ -477,6 +481,143 @@
                 font-size: 13.5px;
             }
         }
+
+        /* Recent Results Section */
+        .recent-results-section {
+            max-width: 650px;
+            margin: 0 auto 50px auto;
+            padding: 0 15px;
+        }
+
+        .recent-results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .view-all-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #00BAEF;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .view-all-link:hover {
+            color: #FFE600;
+            transform: translateX(3px);
+        }
+
+        .recent-results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .result-card {
+            background: rgba(18, 20, 29, 0.65);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .result-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0, 186, 239, 0.4);
+        }
+
+        .result-card-badge {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #94A3B8;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 8px;
+        }
+
+        .result-league-name {
+            color: #FFE600;
+            letter-spacing: 0.5px;
+        }
+
+        .result-card-body {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .result-team-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .result-team-box.away {
+            justify-content: flex-end;
+            text-align: right;
+        }
+
+        .result-team-logo {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .result-team-name {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .result-score-box {
+            background: linear-gradient(135deg, rgba(247, 183, 49, 0.9) 0%, rgba(220, 140, 15, 0.9) 100%);
+            color: #0A0D14;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 16px;
+            padding: 6px 14px;
+            border-radius: 12px;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(247, 183, 49, 0.3);
+            flex-shrink: 0;
+        }
+
+        .no-results-card {
+            background: rgba(18, 20, 29, 0.5);
+            backdrop-filter: blur(15px);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            padding: 30px 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: #94A3B8;
+            font-size: 14px;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -662,6 +803,25 @@
                 <div class="nav-card-icon"><i data-lucide="trophy"></i></div>
                 <div class="nav-card-text">Turnir jadvali</div>
             </a>
+        </div>
+
+        <!-- Recent Match Results Section -->
+        <div class="recent-results-section">
+            <div class="recent-results-header">
+                <h2 class="section-title" style="padding: 0; margin: 0; font-size: 20px;">
+                    <i data-lucide="activity" style="color: #00BAEF;"></i> So'nggi o'yin natijalari
+                </h2>
+                <a href="matches.html" class="view-all-link">
+                    Barchasi <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+                </a>
+            </div>
+
+            <div id="homepageRecentResults" class="recent-results-list">
+                <div class="no-results-card">
+                    <i data-lucide="calendar" style="width: 36px; height: 36px; color: #94a3b8;"></i>
+                    <p style="margin: 0;">Hozircha o'yin natijalari mavjud emas. Yangi turlar o'yinlaridan so'ng ushbu joyda natijalar aks etadi!</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -913,6 +1073,68 @@
             window.addEventListener('resize', () => {
                 updateSlidePosition(false);
             });
+        });
+
+        // Fetch and display latest finished matches on homepage
+        document.addEventListener('DOMContentLoaded', async () => {
+            const resultsContainer = document.getElementById('homepageRecentResults');
+            if (!resultsContainer || typeof db === 'undefined') return;
+
+            try {
+                // Fetch finished matches
+                const { data: matches, error: matchesErr } = await db
+                    .from('matches')
+                    .select('*')
+                    .eq('status', 'finished')
+                    .order('match_date', { ascending: false })
+                    .limit(5);
+
+                if (matchesErr || !matches || matches.length === 0) return;
+
+                // Fetch Teams
+                const { data: teams, error: teamsErr } = await db
+                    .from('teams')
+                    .select('id, name, logo_url');
+
+                if (teamsErr || !teams) return;
+
+                const teamsMap = {};
+                teams.forEach(t => { teamsMap[t.id] = t; });
+
+                let html = '';
+                matches.forEach(m => {
+                    const homeTeam = teamsMap[m.home_team_id] || { name: 'Jamoa A', logo_url: '' };
+                    const awayTeam = teamsMap[m.away_team_id] || { name: 'Jamoa B', logo_url: '' };
+
+                    const leagueText = m.league || 'Liga';
+                    const roundText = m.round ? `${m.round}-tur` : '';
+
+                    html += `
+                        <div class="result-card">
+                            <div class="result-card-badge">
+                                <span class="result-league-name">${leagueText}</span>
+                                <span>${roundText}</span>
+                            </div>
+                            <div class="result-card-body">
+                                <div class="result-team-box">
+                                    <img src="${homeTeam.logo_url}" alt="" class="result-team-logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/32x32?text=${homeTeam.name.charAt(0)}'">
+                                    <span class="result-team-name">${homeTeam.name}</span>
+                                </div>
+                                <div class="result-score-box">${m.home_score} - ${m.away_score}</div>
+                                <div class="result-team-box away">
+                                    <span class="result-team-name">${awayTeam.name}</span>
+                                    <img src="${awayTeam.logo_url}" alt="" class="result-team-logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/32x32?text=${awayTeam.name.charAt(0)}'">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                resultsContainer.innerHTML = html;
+                lucide.createIcons();
+            } catch (err) {
+                console.log('Homepage recent results fetch:', err);
+            }
         });
     </script>
     <script src="js/layout.js"></script>
