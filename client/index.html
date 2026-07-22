@@ -659,7 +659,7 @@
             });
         });
 
-        // Top Scorers Slider Auto-play Logic
+        // Top Scorers Slider Infinite Seamless Loop Logic
         document.addEventListener('DOMContentLoaded', () => {
             const track = document.getElementById('sliderTrack');
             const dots = document.querySelectorAll('.slider-dots .dot');
@@ -668,36 +668,87 @@
 
             if (!track || dots.length === 0) return;
 
-            let currentIndex = 0;
-            const totalSlides = dots.length;
-            let slideInterval;
+            const originalSlides = Array.from(track.querySelectorAll('.top-scorer-slide'));
+            const realTotal = originalSlides.length;
+            if (realTotal === 0) return;
 
-            const slides = document.querySelectorAll('.top-scorer-slide');
+            // Clone slides for seamless infinite loop:
+            // Append first slide to end, prepend last slide to start
+            const firstClone = originalSlides[0].cloneNode(true);
+            const lastClone = originalSlides[realTotal - 1].cloneNode(true);
 
-            const goToSlide = (index) => {
-                currentIndex = (index + totalSlides) % totalSlides;
+            firstClone.classList.add('clone-slide');
+            lastClone.classList.add('clone-slide');
+
+            track.appendChild(firstClone);
+            track.insertBefore(lastClone, originalSlides[0]);
+
+            const allSlides = Array.from(track.querySelectorAll('.top-scorer-slide'));
+            let currentVirtualIndex = 1; // Start at first REAL slide (index 1 in virtual array)
+            let isTransitioning = false;
+
+            const updateSlidePosition = (animate = true) => {
+                if (animate) {
+                    track.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+                } else {
+                    track.style.transition = 'none';
+                }
 
                 const isMobile = window.innerWidth <= 768;
                 const slideWidthPercent = isMobile ? 84 : 82;
                 const gapPx = isMobile ? 10 : 16;
                 const centerOffsetPercent = (100 - slideWidthPercent) / 2;
 
-                track.style.transform = `translateX(calc(${centerOffsetPercent}% - ${currentIndex} * (${slideWidthPercent}% + ${gapPx}px)))`;
-                
+                track.style.transform = `translateX(calc(${centerOffsetPercent}% - ${currentVirtualIndex} * (${slideWidthPercent}% + ${gapPx}px)))`;
+
+                // Real active index (0 to realTotal - 1)
+                let realIndex = (currentVirtualIndex - 1 + realTotal) % realTotal;
+
                 dots.forEach((dot, idx) => {
-                    dot.classList.toggle('active', idx === currentIndex);
+                    dot.classList.toggle('active', idx === realIndex);
                 });
 
-                slides.forEach((slide, idx) => {
-                    slide.classList.toggle('active-slide', idx === currentIndex);
+                allSlides.forEach((slide, idx) => {
+                    slide.classList.toggle('active-slide', idx === currentVirtualIndex);
                 });
             };
 
+            // Set initial position without animation
+            updateSlidePosition(false);
+
+            const handleNext = () => {
+                if (isTransitioning) return;
+                isTransitioning = true;
+                currentVirtualIndex++;
+                updateSlidePosition(true);
+            };
+
+            const handlePrev = () => {
+                if (isTransitioning) return;
+                isTransitioning = true;
+                currentVirtualIndex--;
+                updateSlidePosition(true);
+            };
+
+            track.addEventListener('transitionend', () => {
+                isTransitioning = false;
+
+                // If moved past the last real slide (to firstClone)
+                if (currentVirtualIndex >= realTotal + 1) {
+                    currentVirtualIndex = 1;
+                    updateSlidePosition(false);
+                }
+                // If moved before the first real slide (to lastClone)
+                if (currentVirtualIndex <= 0) {
+                    currentVirtualIndex = realTotal;
+                    updateSlidePosition(false);
+                }
+            });
+
+            let slideInterval;
             const startAutoSlide = () => {
                 stopAutoSlide();
-                slideInterval = setInterval(() => {
-                    goToSlide(currentIndex + 1);
-                }, 4500);
+                slideInterval = setInterval(handleNext, 4500);
             };
 
             const stopAutoSlide = () => {
@@ -706,33 +757,34 @@
 
             if (prevBtn) {
                 prevBtn.addEventListener('click', () => {
-                    goToSlide(currentIndex - 1);
+                    handlePrev();
                     startAutoSlide();
                 });
             }
 
             if (nextBtn) {
                 nextBtn.addEventListener('click', () => {
-                    goToSlide(currentIndex + 1);
+                    handleNext();
                     startAutoSlide();
                 });
             }
 
             dots.forEach((dot) => {
                 dot.addEventListener('click', (e) => {
+                    if (isTransitioning) return;
                     const idx = parseInt(e.target.dataset.index);
-                    goToSlide(idx);
+                    currentVirtualIndex = idx + 1;
+                    updateSlidePosition(true);
                     startAutoSlide();
                 });
             });
 
-            // Pause on hover & Touch Swipe Support
+            // Touch Swipe Events
             const sliderContainer = document.getElementById('topScorersSlider');
             if (sliderContainer) {
                 sliderContainer.addEventListener('mouseenter', stopAutoSlide);
                 sliderContainer.addEventListener('mouseleave', startAutoSlide);
 
-                // Touch Swipe Events
                 let touchStartX = 0;
                 let touchEndX = 0;
 
@@ -745,9 +797,9 @@
                     const diffX = touchStartX - touchEndX;
                     if (Math.abs(diffX) > 35) {
                         if (diffX > 0) {
-                            goToSlide(currentIndex + 1); // Swipe Left
+                            handleNext();
                         } else {
-                            goToSlide(currentIndex - 1); // Swipe Right
+                            handlePrev();
                         }
                         startAutoSlide();
                     }
@@ -755,6 +807,10 @@
             }
 
             startAutoSlide();
+
+            window.addEventListener('resize', () => {
+                updateSlidePosition(false);
+            });
         });
     </script>
     <script src="js/layout.js"></script>
