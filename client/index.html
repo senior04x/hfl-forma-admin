@@ -345,8 +345,7 @@
                 font-size: 26px;
             }
             .slider-btn {
-                width: 30px;
-                height: 30px;
+                display: none !important;
             }
             .prev-btn { left: 6px; }
             .next-btn { right: 6px; }
@@ -693,11 +692,32 @@
                 });
             });
 
-            // Pause on hover
+            // Pause on hover & Touch Swipe Support
             const sliderContainer = document.getElementById('topScorersSlider');
             if (sliderContainer) {
                 sliderContainer.addEventListener('mouseenter', stopAutoSlide);
                 sliderContainer.addEventListener('mouseleave', startAutoSlide);
+
+                // Touch Swipe Events
+                let touchStartX = 0;
+                let touchEndX = 0;
+
+                sliderContainer.addEventListener('touchstart', (e) => {
+                    touchStartX = e.changedTouches[0].screenX;
+                }, { passive: true });
+
+                sliderContainer.addEventListener('touchend', (e) => {
+                    touchEndX = e.changedTouches[0].screenX;
+                    const diffX = touchStartX - touchEndX;
+                    if (Math.abs(diffX) > 35) {
+                        if (diffX > 0) {
+                            goToSlide(currentIndex + 1); // Swipe Left
+                        } else {
+                            goToSlide(currentIndex - 1); // Swipe Right
+                        }
+                        startAutoSlide();
+                    }
+                }, { passive: true });
             }
 
             startAutoSlide();
