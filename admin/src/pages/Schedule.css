@@ -425,80 +425,28 @@
 }
 
 .sch-match-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 70px 200px 70px 1fr;
   align-items: center;
-  justify-content: center;
+  gap: 20px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 12px 12px 60px 60px;
-  padding: 12px 0;
+  padding: 12px 25px;
   position: relative;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-bottom: none;
-  width: 80%;
+  width: 90%;
   margin: 0 auto;
-  padding-left: 0;
-  padding-right: 0;
 }
 
-.sch-team {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  font-size: 22px;
-  font-weight: 700;
-  text-transform: uppercase;
-  min-width: 0;
-  padding: 12px 20px;
-}
-
-.sch-team span {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  line-height: 1.2;
-  width: 100%;
-  word-break: break-word;
-  white-space: pre-wrap;
-}
-
-.sch-team.home {
-  flex-direction: row;
-  justify-content: flex-start;
-  text-align: left;
-  padding-left: 25px;
-  gap: 20px;
-}
-
-.sch-team.home span {
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.sch-team.away {
-  flex-direction: row-reverse;
-  justify-content: flex-end;
-  text-align: right;
-  padding-right: 25px;
-  gap: 20px;
-}
-
-.sch-team.away span {
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.sch-team img {
-  width: 85px;
-  height: 85px;
+.sch-team-logo {
+  width: 70px;
+  height: 70px;
   object-fit: cover;
   border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.5);
   background: white;
-  flex-shrink: 0;
 }
 
 .sch-time-container {

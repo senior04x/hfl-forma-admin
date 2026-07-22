@@ -391,24 +391,32 @@ const Schedule = () => {
           ref={exportRef} 
           className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
         >
-          <div className="sch-export-header" style={{ justifyContent: 'center', gap: '80px' }}>
-            <img src="/logo-for-jadval.png" alt="HFL" style={{ height: '130px' }} crossOrigin="anonymous" />
+          <div className="sch-export-header" style={{ justifyContent: 'space-between', alignItems: 'flex-end', padding: '0 20px', marginBottom: '30px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <img src="/hfl-logo-for-jadval.png" alt="HFL" style={{ height: '130px', objectFit: 'contain' }} crossOrigin="anonymous" />
+              {exportLeague === '7x7 liga' && (
+                <>
+                  <img src="/x.png" crossOrigin="anonymous" style={{ height: '35px', objectFit: 'contain', opacity: 0.6 }} />
+                  <img src="/llf-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '110px', objectFit: 'contain' }} />
+                  <img src="/x.png" crossOrigin="anonymous" style={{ height: '35px', objectFit: 'contain', opacity: 0.6 }} />
+                  <img src="/7x7-liga.png" alt="7x7" crossOrigin="anonymous" style={{ height: '110px', objectFit: 'contain' }} />
+                </>
+              )}
+            </div>
             
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               {LEAGUE_LOGOS[exportLeague] ? (
                 exportLeague === '7x7 liga' ? (
-                  <div style={{ width: '320px', height: '150px', overflow: 'hidden', position: 'relative' }}>
-                    <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ position: 'absolute', top: '50%', left: '0', width: '100%', height: 'auto', transform: 'translateY(-50%)' }} />
-                  </div>
+                  <div style={{ width: '1px' }}></div>
                 ) : (
                   <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ height: '270px', objectFit: 'contain' }} />
                 )
               ) : (
-                <h1 style={{ flex: 'none' }}>{exportLeague}</h1>
+                <h1 style={{ flex: 'none', fontSize: '50px', textTransform: 'uppercase' }}>{exportLeague}</h1>
               )}
             </div>
 
-            <img src="/Joma-logo.png" alt="Joma" style={{ height: '130px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none' }} crossOrigin="anonymous" />
+            <img src="/joma.png" alt="Joma" style={{ height: '130px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none', objectFit: 'contain' }} crossOrigin="anonymous" />
           </div>
 
           <div className="sch-export-body">
