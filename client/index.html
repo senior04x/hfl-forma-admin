@@ -1511,9 +1511,36 @@
             }
         }
 
+        // Helper to show default fallback on all slides (replaces skeleton)
+        function showDefaultSliderFallback() {
+            const slides = document.querySelectorAll('.top-scorer-slide');
+            const leagueNames = { 'theme-super': 'Super liga', 'theme-pro': 'Pro liga', 'theme-3liga': '3-liga', 'theme-7x7': '7x7 liga' };
+            slides.forEach(slide => {
+                const themeClass = Array.from(slide.classList).find(c => c.startsWith('theme-'));
+                const leagueName = leagueNames[themeClass] || '';
+                const contentBox = slide.querySelector('.slide-content');
+                if (contentBox) {
+                    contentBox.innerHTML = `
+                        <div class="slide-info">
+                            <h3 class="question-title">${leagueName} 1-tur to'purari kim bo'lishi mumkin?</h3>
+                        </div>
+                        <div class="slide-silhouette-container">
+                            <div class="silhouette-glow"></div>
+                            <div class="silhouette-box">
+                                <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
+                                    <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
+                                </svg>
+                                <div class="question-mark-overlay">?</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        }
+
         // Fetch Real Top Scorers for Slider dynamically from Supabase
         async function loadRealTopScorersForSlider() {
-            if (typeof db === 'undefined') return;
+            if (typeof db === 'undefined') { showDefaultSliderFallback(); return; }
 
             try {
                 // 1. Fetch all goal/assist events
@@ -1522,7 +1549,7 @@
                     .select('id, event_type, player_id, team_id')
                     .in('event_type', ['goal', 'assist']);
 
-                if (eErr || !events || events.length === 0) return;
+                if (eErr || !events || events.length === 0) { showDefaultSliderFallback(); return; }
 
                 // 2. Fetch all players/applications
                 const { data: players } = await db
@@ -1669,6 +1696,7 @@
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             } catch (err) {
                 console.error('Real top scorers slider fetch:', err);
+                showDefaultSliderFallback();
             }
         }
 
