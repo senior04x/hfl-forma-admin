@@ -4,6 +4,15 @@ import { Download, Save } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Standings.css';
 
+const LEAGUE_LOGOS = {
+  'Super liga': '/super-liga.PNG',
+  'Pro liga': '/Pro-liga.PNG',
+  '3-liga': '/3-liga.PNG',
+  'Europa ligasi': '/europen-liga.PNG',
+  'Chempionlar ligasi': '/chemp-liga.PNG',
+  '7x7 liga': '/7x7-liga.png'
+};
+
 export default function Standings() {
   const [teams, setTeams] = useState([]);
   const [matches, setMatches] = useState([]);
@@ -362,19 +371,29 @@ export default function Standings() {
           <div className="export-container">
             
             {/* Header */}
-            <div className="export-header" style={{ alignItems: 'flex-end', marginBottom: '10px' }}>
-              <div className="export-logo-left" style={{flexDirection: 'row', alignItems: 'center', gap: '15px'}}>
-                <img src="/logo-for-jadval.png" alt="Havas Futbol" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain' }} />
+            <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div className="export-logo-left" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3px' }}>
+                <img src="/logo-for-jadval.png" alt="Havas Futbol" crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain' }} />
                 {selectedLeague === '7x7 liga' && (
                   <>
-                    <img src="/x.png" crossOrigin="anonymous" style={{ height: '20px', objectFit: 'contain', opacity: 0.6 }} />
-                    <img src="/llf-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
+                    <img src="/x.png" crossOrigin="anonymous" style={{ height: '18px', objectFit: 'contain', opacity: 0.7 }} />
+                    <img src="/llf-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
                   </>
                 )}
-                {/* Homiylar endi faqat pastda footer qismida ko'rinadi */}
               </div>
-              <div className="export-logo-right" style={{textAlign: 'right'}}>
-                <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
+
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                {selectedLeague === '7x7 liga' ? (
+                  <img src="/7x7-liga.png" alt="7x7 Liga" style={{ height: '110px', maxWidth: '380px', objectFit: 'contain', marginRight: '75px', marginTop: '10px' }} crossOrigin="anonymous" />
+                ) : (
+                  LEAGUE_LOGOS[selectedLeague] && (
+                    <img src={LEAGUE_LOGOS[selectedLeague]} alt={selectedLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                  )
+                )}
+              </div>
+
+              <div className="export-logo-right" style={{ textAlign: 'right' }}>
+                <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
               </div>
             </div>
 
