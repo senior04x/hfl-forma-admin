@@ -300,8 +300,8 @@
 }
 
 .export-result-row {
-  display: grid;
-  grid-template-columns: 1fr 30px 60px 30px 1fr;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   padding: 10px 15px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -312,7 +312,10 @@
   margin-bottom: 8px;
 }
 .export-result-row:last-child { border-bottom: none; }
-.export-result-score { font-size: 20px; font-weight: 900; text-align: center; }
+.export-result-team { display: flex; align-items: center; gap: 10px; flex: 1; }
+.export-result-team.away { flex-direction: row-reverse; }
+.export-result-team img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+.export-result-score { font-size: 20px; padding: 0 15px; font-weight: 900; }
 
 .export-stats-row {
   display: flex;

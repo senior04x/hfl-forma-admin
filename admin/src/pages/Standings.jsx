@@ -364,18 +364,17 @@ export default function Standings() {
             {/* Header */}
             <div className="export-header" style={{ alignItems: 'flex-end', marginBottom: '10px' }}>
               <div className="export-logo-left" style={{flexDirection: 'row', alignItems: 'center', gap: '15px'}}>
-                <img src="/hfl-logo-for-jadval.png" alt="Havas Futbol" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain' }} />
+                <img src="/logo-for-jadval.png" alt="Havas Futbol" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain' }} />
                 {selectedLeague === '7x7 liga' && (
                   <>
                     <img src="/x.png" crossOrigin="anonymous" style={{ height: '20px', objectFit: 'contain', opacity: 0.6 }} />
-                    <img src="/llf-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
-                    <img src="/x.png" crossOrigin="anonymous" style={{ height: '20px', objectFit: 'contain', opacity: 0.6 }} />
-                    <img src="/7x7-liga.png" alt="7x7" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
+                    <img src="/LLF-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
                   </>
                 )}
+                {/* Homiylar endi faqat pastda footer qismida ko'rinadi */}
               </div>
               <div className="export-logo-right" style={{textAlign: 'right'}}>
-                <img src="/joma.png" alt="Joma" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
+                <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
               </div>
             </div>
 
