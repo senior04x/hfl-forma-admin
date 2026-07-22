@@ -55,14 +55,277 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/main.css">
     
-    
+    <style>
+        /* Top Scorers Banner Slider Styles */
+        .top-scorers-slider-section {
+            margin: 40px auto 60px auto;
+            max-width: 1100px;
+            padding: 0 15px;
+        }
+
+        .section-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .slider-wrapper {
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            border: 1px solid var(--glass-border);
+        }
+
+        .slider-track {
+            display: flex;
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            width: 100%;
+        }
+
+        .top-scorer-slide {
+            min-width: 100%;
+            padding: 35px 40px;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 320px;
+        }
+
+        /* League Themes with gradient backdrops matching league branding */
+        .top-scorer-slide.theme-super {
+            background: linear-gradient(135deg, #7A0A04 0%, #BB1308 50%, #F7842B 100%);
+        }
+        .top-scorer-slide.theme-pro {
+            background: linear-gradient(135deg, #002766 0%, #003E9D 50%, #00BAEF 100%);
+        }
+        .top-scorer-slide.theme-3liga {
+            background: linear-gradient(135deg, #5C0077 0%, #A200D2 50%, #EB00F4 100%);
+        }
+        .top-scorer-slide.theme-7x7 {
+            background: linear-gradient(135deg, #01224C 0%, #013C82 50%, #589AFB 100%);
+        }
+
+        .slide-badge-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            z-index: 2;
+        }
+        .slide-league-logo {
+            height: 45px;
+            max-width: 160px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+        }
+        .league-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 18px;
+            letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.9);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+
+        .slide-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            z-index: 2;
+        }
+
+        .slide-info {
+            flex: 1;
+            max-width: 600px;
+        }
+        .question-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #FFE600;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+        .question-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            color: white;
+            margin: 0 0 10px 0;
+            line-height: 1.25;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .question-subtitle {
+            font-size: 14px;
+            color: rgba(255,255,255,0.85);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .slide-silhouette-container {
+            position: relative;
+            width: 140px;
+            height: 170px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .silhouette-glow {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,230,0,0.6) 0%, rgba(255,255,255,0) 70%);
+            animation: pulse-glow 2.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { transform: scale(0.95); opacity: 0.5; }
+            50% { transform: scale(1.15); opacity: 0.9; }
+        }
+
+        .silhouette-box {
+            position: relative;
+            width: 110px;
+            height: 150px;
+            background: rgba(10, 10, 20, 0.4);
+            backdrop-filter: blur(15px);
+            border: 2px dashed rgba(255, 230, 0, 0.6);
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        .silhouette-svg {
+            width: 80px;
+            height: 80px;
+            color: rgba(255,255,255,0.25);
+        }
+
+        .question-mark-overlay {
+            position: absolute;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 50px;
+            color: #FFE600;
+            text-shadow: 0 0 15px rgba(255, 230, 0, 0.8), 0 4px 8px rgba(0,0,0,0.8);
+            animation: float-qmark 2s infinite ease-in-out;
+        }
+
+        @keyframes float-qmark {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Slider Nav Buttons */
+        .slider-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s;
+        }
+        .slider-btn:hover {
+            background: rgba(240, 208, 96, 0.8);
+            color: black;
+            box-shadow: 0 0 15px rgba(240, 208, 96, 0.6);
+        }
+        .prev-btn { left: 15px; }
+        .next-btn { right: 15px; }
+
+        /* Slider Dots */
+        .slider-dots {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .dot.active {
+            width: 28px;
+            border-radius: 10px;
+            background: #FFE600;
+            box-shadow: 0 0 10px rgba(255,230,0,0.8);
+        }
+
+        @media (max-width: 768px) {
+            .top-scorer-slide {
+                padding: 25px 20px 45px 20px;
+                min-height: 280px;
+            }
+            .question-title {
+                font-size: 20px;
+            }
+            .question-subtitle {
+                font-size: 12px;
+            }
+            .slide-silhouette-container {
+                width: 100px;
+                height: 130px;
+            }
+            .silhouette-box {
+                width: 85px;
+                height: 120px;
+            }
+            .question-mark-overlay {
+                font-size: 38px;
+            }
+            .prev-btn, .next-btn {
+                width: 36px;
+                height: 36px;
+            }
+        }
+    </style>
 </head>
 <body>
     
     <!-- Welcome Screen -->
     <div id="welcome-screen">
         <div class="welcome-content">
-            
             <div class="welcome-text">HAVAS LIGA</div>
         </div>
     </div>
@@ -129,6 +392,136 @@
                 </a>
             </div>
         </div>
+
+        <!-- Top Scorers Banner Slider Section -->
+        <div class="top-scorers-slider-section">
+            <h2 class="section-title">
+                <i data-lucide="trophy" style="color: var(--gold-primary);"></i> Ligalar To'purarlari
+            </h2>
+
+            <div class="slider-wrapper" id="topScorersSlider">
+                <!-- Slider Slides Track -->
+                <div class="slider-track" id="sliderTrack">
+                    
+                    <!-- Slide 1: Super Liga -->
+                    <div class="top-scorer-slide theme-super">
+                        <div class="slide-badge-header">
+                            <img src="images/super-liga.PNG" alt="Super Liga" class="slide-league-logo" onerror="this.src='/super-liga.PNG'">
+                            <span class="league-title">SUPER LIGA</span>
+                        </div>
+                        <div class="slide-content">
+                            <div class="slide-info">
+                                <div class="question-badge">
+                                    <i data-lucide="help-circle"></i> KIM BO'LISHI MUMKIN?
+                                </div>
+                                <h3 class="question-title">Super liga 1-tur to'purari kim bo'lishi mumkin?</h3>
+                                <p class="question-subtitle">Birinchi tur o'yinlaridan so'ng eng ko'p gol urgan futbolchi ushbu sahifada avtomatik aks etadi!</p>
+                            </div>
+                            <div class="slide-silhouette-container">
+                                <div class="silhouette-glow"></div>
+                                <div class="silhouette-box">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
+                                        <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
+                                    </svg>
+                                    <div class="question-mark-overlay">?</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 2: Pro Liga -->
+                    <div class="top-scorer-slide theme-pro">
+                        <div class="slide-badge-header">
+                            <img src="images/Pro-liga.PNG" alt="Pro Liga" class="slide-league-logo" onerror="this.src='/Pro-liga.PNG'">
+                            <span class="league-title">PRO LIGA</span>
+                        </div>
+                        <div class="slide-content">
+                            <div class="slide-info">
+                                <div class="question-badge">
+                                    <i data-lucide="help-circle"></i> KIM BO'LISHI MUMKIN?
+                                </div>
+                                <h3 class="question-title">Pro liga 1-tur to'purari kim bo'lishi mumkin?</h3>
+                                <p class="question-subtitle">Birinchi tur o'yinlaridan so'ng eng ko'p gol urgan futbolchi ushbu sahifada avtomatik aks etadi!</p>
+                            </div>
+                            <div class="slide-silhouette-container">
+                                <div class="silhouette-glow"></div>
+                                <div class="silhouette-box">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
+                                        <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
+                                    </svg>
+                                    <div class="question-mark-overlay">?</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 3: 3-Liga -->
+                    <div class="top-scorer-slide theme-3liga">
+                        <div class="slide-badge-header">
+                            <img src="images/3-liga.PNG" alt="3-Liga" class="slide-league-logo" onerror="this.src='/3-liga.PNG'">
+                            <span class="league-title">3-LIGA</span>
+                        </div>
+                        <div class="slide-content">
+                            <div class="slide-info">
+                                <div class="question-badge">
+                                    <i data-lucide="help-circle"></i> KIM BO'LISHI MUMKIN?
+                                </div>
+                                <h3 class="question-title">3-liga 1-tur to'purari kim bo'lishi mumkin?</h3>
+                                <p class="question-subtitle">Birinchi tur o'yinlaridan so'ng eng ko'p gol urgan futbolchi ushbu sahifada avtomatik aks etadi!</p>
+                            </div>
+                            <div class="slide-silhouette-container">
+                                <div class="silhouette-glow"></div>
+                                <div class="silhouette-box">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
+                                        <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
+                                    </svg>
+                                    <div class="question-mark-overlay">?</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 4: 7x7 Liga -->
+                    <div class="top-scorer-slide theme-7x7">
+                        <div class="slide-badge-header">
+                            <img src="images/7x7-liga.PNG" alt="7x7 Liga" class="slide-league-logo" onerror="this.src='/7x7-liga.PNG'">
+                            <span class="league-title">7X7 LIGA</span>
+                        </div>
+                        <div class="slide-content">
+                            <div class="slide-info">
+                                <div class="question-badge">
+                                    <i data-lucide="help-circle"></i> KIM BO'LISHI MUMKIN?
+                                </div>
+                                <h3 class="question-title">7x7 liga 1-tur to'purari kim bo'lishi mumkin?</h3>
+                                <p class="question-subtitle">Birinchi tur o'yinlaridan so'ng eng ko'p gol urgan futbolchi ushbu sahifada avtomatik aks etadi!</p>
+                            </div>
+                            <div class="slide-silhouette-container">
+                                <div class="silhouette-glow"></div>
+                                <div class="silhouette-box">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
+                                        <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
+                                    </svg>
+                                    <div class="question-mark-overlay">?</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Slider Controls -->
+                <button class="slider-btn prev-btn" id="prevSlideBtn"><i data-lucide="chevron-left"></i></button>
+                <button class="slider-btn next-btn" id="nextSlideBtn"><i data-lucide="chevron-right"></i></button>
+
+                <!-- Slider Dots -->
+                <div class="slider-dots" id="sliderDots">
+                    <span class="dot active" data-index="0"></span>
+                    <span class="dot" data-index="1"></span>
+                    <span class="dot" data-index="2"></span>
+                    <span class="dot" data-index="3"></span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Footer -->
@@ -174,6 +567,7 @@
             </div>
         </div>
     </footer>
+
     <!-- Scripts -->
     <script>
         lucide.createIcons();
@@ -224,6 +618,71 @@
                     });
                 }
             });
+        });
+
+        // Top Scorers Slider Auto-play Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const track = document.getElementById('sliderTrack');
+            const dots = document.querySelectorAll('.slider-dots .dot');
+            const prevBtn = document.getElementById('prevSlideBtn');
+            const nextBtn = document.getElementById('nextSlideBtn');
+
+            if (!track || dots.length === 0) return;
+
+            let currentIndex = 0;
+            const totalSlides = dots.length;
+            let slideInterval;
+
+            const goToSlide = (index) => {
+                currentIndex = (index + totalSlides) % totalSlides;
+                track.style.transform = `translateX(-${currentIndex * 100}%)`;
+                
+                dots.forEach((dot, idx) => {
+                    dot.classList.toggle('active', idx === currentIndex);
+                });
+            };
+
+            const startAutoSlide = () => {
+                stopAutoSlide();
+                slideInterval = setInterval(() => {
+                    goToSlide(currentIndex + 1);
+                }, 4500);
+            };
+
+            const stopAutoSlide = () => {
+                if (slideInterval) clearInterval(slideInterval);
+            };
+
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => {
+                    goToSlide(currentIndex - 1);
+                    startAutoSlide();
+                });
+            }
+
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    goToSlide(currentIndex + 1);
+                    startAutoSlide();
+                });
+            }
+
+            dots.forEach((dot) => {
+                dot.addEventListener('click', (e) => {
+                    const idx = parseInt(e.target.dataset.index);
+                    goToSlide(idx);
+                    startAutoSlide();
+                });
+            });
+
+            // Pause on hover
+            const sliderContainer = document.getElementById('topScorersSlider');
+            if (sliderContainer) {
+                sliderContainer.addEventListener('mouseenter', stopAutoSlide);
+                sliderContainer.addEventListener('mouseleave', startAutoSlide);
+            }
+
+            startAutoSlide();
         });
     </script>
     <script src="js/layout.js"></script>
