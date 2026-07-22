@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { Calendar, Plus, MapPin, Clock, Video, Trash2 } from 'lucide-react';
+import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import './Schedule.css';
 
 const LEAGUES = [
@@ -12,6 +13,15 @@ const LEAGUES = [
   'Chempionlar ligasi',
   '7x7 liga'
 ];
+
+const LEAGUE_LOGOS = {
+  'Super liga': '/super-liga.PNG',
+  'Pro liga': '/Pro-liga.PNG',
+  '3-liga': '/3-liga.PNG',
+  'Europa ligasi': '/europen-liga.PNG',
+  'Chempionlar ligasi': '/chemp-liga.PNG',
+  '7x7 liga': '/7x7-liga.PNG'
+};
 
 const Schedule = () => {
   const navigate = useNavigate();
@@ -28,13 +38,61 @@ const Schedule = () => {
   const [matchDate, setMatchDate] = useState('');
   const [matchTime, setMatchTime] = useState('');
   const [location, setLocation] = useState('');
+  const [stadiumName, setStadiumName] = useState('');
   const [youtubeLink, setYoutubeLink] = useState('');
   const [matchRound, setMatchRound] = useState('');
+
+  // Export states
+  const [exportLeague, setExportLeague] = useState(LEAGUES[0]);
+  const [exportRound, setExportRound] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [selectedSponsors, setSelectedSponsors] = useState([]);
+  const exportRef = useRef(null);
 
   useEffect(() => {
     fetchTeams();
     fetchMatches();
+    try {
+      const saved = localStorage.getItem('hfl_selectedSponsors');
+      if (saved) setSelectedSponsors(JSON.parse(saved));
+    } catch (e) {}
   }, []);
+
+  useEffect(() => {
+    const leagueMatches = matches.filter(m => m.league === exportLeague && m.round);
+    if (leagueMatches.length > 0) {
+      const maxR = Math.max(...leagueMatches.map(m => m.round));
+      setExportRound(maxR.toString());
+    } else {
+      setExportRound('');
+    }
+  }, [matches, exportLeague]);
+
+  const handleExport = async () => {
+    if (!exportRef.current || isExporting) return;
+    if (!exportLeague || !exportRound) {
+      alert("Iltimos eksport qilish uchun liga va turni tanlang.");
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(exportRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `jadval_${exportLeague}_${exportRound}_tur.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error(err);
+      alert("Xatolik yuz berdi");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const fetchTeams = async () => {
     const { data } = await supabase.from('teams').select('id, name, logo_url, league').eq('status', 'approved');
@@ -62,6 +120,7 @@ const Schedule = () => {
     setMatchDate('');
     setMatchTime('');
     setLocation('');
+    setStadiumName('');
     setYoutubeLink('');
     setMatchRound('');
     setIsModalOpen(true);
@@ -79,13 +138,14 @@ const Schedule = () => {
 
     setLoading(true);
     try {
+      const finalLocation = stadiumName.trim() ? `${stadiumName.trim()}, ${location}` : location;
       const { error } = await supabase.from('matches').insert([{
         league: selectedLeague,
         home_team_id: homeTeamId,
         away_team_id: awayTeamId,
         match_date: matchDate,
         match_time: matchTime,
-        location: location,
+        location: finalLocation,
         youtube_link: youtubeLink,
         round: matchRound ? parseInt(matchRound) : null
       }]);
@@ -142,8 +202,37 @@ const Schedule = () => {
         >Tugagan</button>
       </div>
 
+      <div className="admin-controls" style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+        <div className="filter-group" style={{ width: '100%' }}>
+          <label>Liga tanlang (Ekranda ko'rish va Eksport uchun)</label>
+          <select value={exportLeague} onChange={(e) => setExportLeague(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+            {LEAGUES.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </div>
+        <div className="filter-group" style={{ width: '100%' }}>
+          <label>Tur (Eksport va ekranda ko'rish uchun)</label>
+          <select value={exportRound} onChange={(e) => setExportRound(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+            <option value="">Barchasi</option>
+            {Array.from(new Set(matches.filter(m => m.league === exportLeague && m.round).map(m => m.round)))
+              .sort((a, b) => b - a)
+              .map(r => <option key={r} value={r}>{r}-tur</option>)}
+          </select>
+        </div>
+        <div className="filter-group" style={{ width: '100%', display: 'flex' }}>
+          <button 
+            className="btn-export" 
+            onClick={handleExport} 
+            disabled={isExporting}
+            style={{ display: 'flex', width: '100%', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '12px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
+          >
+            <Download size={18} /> {isExporting ? 'Yuklanmoqda...' : 'Rasmni yuklab olish'}
+          </button>
+        </div>
+      </div>
+
       <div className="matches-grid">
         {matches
+          .filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound))
           .filter(m => {
             if (filterStatus === 'all') return true;
             if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
@@ -263,13 +352,22 @@ const Schedule = () => {
             </div>
 
             <div className="form-group">
-              <label>Manzil / Stadion</label>
-              <input type="text" placeholder="Masalan: Paxtakor stadioni" value={location} onChange={(e) => setLocation(e.target.value)} />
+              <label>Nechanchi tur? (Majburiy emas)</label>
+              <input type="number" placeholder="Masalan: 1" value={matchRound} onChange={(e) => setMatchRound(e.target.value)} />
             </div>
 
             <div className="form-group">
-              <label>Nechanchi tur? (Majburiy emas)</label>
-              <input type="number" placeholder="Masalan: 1" value={matchRound} onChange={(e) => setMatchRound(e.target.value)} />
+              <label>Lokatsiya / Stadion nomi (Majburiy emas)</label>
+              <input type="text" placeholder="Masalan: Sergeli" value={stadiumName} onChange={(e) => setStadiumName(e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>Maydonni tanlang (Majburiy, OBS uchun)</label>
+              <select value={location} onChange={(e) => setLocation(e.target.value)}>
+                <option value="">Maydonni tanlang</option>
+                <option value="1-maydon">1-Maydon</option>
+                <option value="2-maydon">2-Maydon</option>
+              </select>
             </div>
 
             <div className="form-group">
@@ -286,6 +384,76 @@ const Schedule = () => {
           </div>
         </div>
       )}
+
+      {/* HIDDEN EXPORT TEMPLATE */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+        <div 
+          ref={exportRef} 
+          className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
+        >
+          <div className="sch-export-header" style={{ justifyContent: 'center', gap: '80px' }}>
+            <img src="/logo-for-jadval.png" alt="HFL" style={{ height: '130px' }} crossOrigin="anonymous" />
+            
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              {LEAGUE_LOGOS[exportLeague] ? (
+                exportLeague === '7x7 liga' ? (
+                  <div style={{ width: '320px', height: '150px', overflow: 'hidden', position: 'relative' }}>
+                    <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ position: 'absolute', top: '50%', left: '0', width: '100%', height: 'auto', transform: 'translateY(-50%)' }} />
+                  </div>
+                ) : (
+                  <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} crossOrigin="anonymous" style={{ height: '270px', objectFit: 'contain' }} />
+                )
+              ) : (
+                <h1 style={{ flex: 'none' }}>{exportLeague}</h1>
+              )}
+            </div>
+
+            <img src="/Joma-logo.png" alt="Joma" style={{ height: '130px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none' }} crossOrigin="anonymous" />
+          </div>
+
+          <div className="sch-export-body">
+            {matches
+              .filter(m => m.league === exportLeague && m.round == exportRound)
+              .map(match => (
+                <div key={match.id} className="sch-match-row">
+                  <div className="sch-team home">
+                    <img src={match.home_team?.logo_url} alt="Home" crossOrigin="anonymous" />
+                    <span>{match.home_team?.name}</span>
+                  </div>
+                  
+                  <div className="sch-time-container">
+                    <div className="sch-time-date">
+                      {match.match_date.split('-').reverse().join('.')}
+                    </div>
+                    <div className="sch-time-box">
+                      {match.match_time ? match.match_time.substring(0, 5) : '00:00'}
+                    </div>
+                  </div>
+
+                  <div className="sch-team away">
+                    <span>{match.away_team?.name}</span>
+                    <img src={match.away_team?.logo_url} alt="Away" crossOrigin="anonymous" />
+                  </div>
+                </div>
+              ))}
+          </div>
+
+          <div className="sch-export-footer" style={{ marginBottom: '-10px' }}>
+            <div style={{ display: 'flex', gap: '30px', alignItems: 'center', marginBottom: '15px' }}>
+              {exportLeague !== '7x7 liga' && selectedSponsors.map((s, idx) => (
+                <React.Fragment key={s.id}>
+                  <img src={s.logo_url} alt="Sponsor" style={{ height: '45px', filter: 'brightness(0) invert(1)' }} crossOrigin="anonymous" />
+                  {idx < selectedSponsors.length - 1 && <div style={{ height: '30px', width: '1px', background: '#fff', opacity: 0.5 }}></div>}
+                </React.Fragment>
+              ))}
+            </div>
+            <div className="sch-social" style={{ color: exportLeague === '7x7 liga' ? '#09408b' : 'white', marginBottom: '0px' }}>
+              @havas_football
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 };

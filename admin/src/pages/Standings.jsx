@@ -22,7 +22,19 @@ export default function Standings() {
   const [penalties, setPenalties] = useState({});
   const [savingPenalty, setSavingPenalty] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [sponsorLogo, setSponsorLogo] = useState(null);
+  const [selectedSponsors, setSelectedSponsors] = useState(() => {
+    try {
+      const saved = localStorage.getItem('hfl_selectedSponsors');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('hfl_selectedSponsors', JSON.stringify(selectedSponsors));
+  }, [selectedSponsors]);
+  const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
 
   const exportRef = useRef(null);
 
@@ -246,16 +258,7 @@ export default function Standings() {
     }
   };
 
-  const handleSponsorLogoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setSponsorLogo(event.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  // Replaced handleSponsorLogoUpload with modal logic
 
   // Get dynamic rounds
   let maxRound = 0;
@@ -304,10 +307,7 @@ export default function Standings() {
             {roundOptions.map(r => <option key={r} value={r}>{r}-tur</option>)}
           </select>
         </div>
-        <div className="filter-group">
-          <label>Homiy Logosi</label>
-          <input type="file" accept="image/*" onChange={handleSponsorLogoUpload} style={{padding: '5px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px'}} />
-        </div>
+        {/* Homiylarni boshqarish alohida sahifaga o'tkazildi */}
       </div>
 
       <div className="admin-table-container">
@@ -371,12 +371,7 @@ export default function Standings() {
                     <img src="/LLF-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
                   </>
                 )}
-                {sponsorLogo && (
-                  <>
-                    <img src="/x.png" crossOrigin="anonymous" style={{ height: '20px', objectFit: 'contain', opacity: 0.6 }} />
-                    <img src={sponsorLogo} alt="Sponsor" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain' }} />
-                  </>
-                )}
+                {/* Homiylar endi faqat pastda footer qismida ko'rinadi */}
               </div>
               <div className="export-logo-right" style={{textAlign: 'right'}}>
                 <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
@@ -470,12 +465,36 @@ export default function Standings() {
               </div>
             </div>
 
+            {selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '30px',
+                marginTop: '15px'
+              }}>
+                {selectedSponsors.map((s, idx) => (
+                  <React.Fragment key={s.id}>
+                    <img 
+                      src={s.logo_url} 
+                      alt={s.name} 
+                      crossOrigin="anonymous" 
+                      style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} 
+                    />
+                    {idx < selectedSponsors.length - 1 && (
+                      <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+
             <div style={{
               textAlign: 'center', 
               color: selectedLeague === '7x7 liga' ? '#09408b' : '#ffffff', 
               opacity: selectedLeague === '7x7 liga' ? 0.9 : 0.6, 
               fontSize: '12px', 
-              marginTop: '15px',
+              marginTop: selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 ? '25px' : '15px',
               marginBottom: '20px',
               textTransform: 'uppercase',
               letterSpacing: '2px',
@@ -488,6 +507,7 @@ export default function Standings() {
           </div>
         </div>
       </div>
+      
     </div>
   );
 }

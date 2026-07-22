@@ -4,7 +4,9 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Schedule from './pages/Schedule';
 import Standings from './pages/Standings';
+import Sponsors from './pages/Sponsors';
 import MatchControl from './pages/MatchControl';
+import ObsScoreboard from './pages/ObsScoreboard';
 import Layout from './components/Layout';
 import ImageViewer from './components/ImageViewer';
 
@@ -27,8 +29,10 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/standings" element={<Standings />} />
+          <Route path="/sponsors" element={<Sponsors />} />
         </Route>
         <Route path="/match/:id" element={<MatchControl />} />
+        <Route path="/obs/scoreboard/:id" element={<ObsScoreboard />} />
       </Routes>
       
       {viewerUrl && (

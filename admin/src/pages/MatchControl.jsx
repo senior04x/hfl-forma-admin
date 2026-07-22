@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Monitor, Camera, Gamepad2, Share2 } from 'lucide-react';
 import './MatchControl.css';
 
 const EVENT_TYPES = {
@@ -41,6 +41,21 @@ const MatchControl = () => {
 
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '' });
+
+  const copyObsLink = () => {
+    let streamId = 'stream1';
+    if (match?.location?.includes('2-maydon')) streamId = 'stream2';
+    
+    const obsLink = `${window.location.origin}/obs/scoreboard/${streamId}`;
+    navigator.clipboard.writeText(obsLink);
+    alert(`${match?.location || '1-maydon'} uchun OBS Link nusxalandi!\n\nUshbu link ${match?.location || '1-maydon'} da o'yin boshlanishi bilan o'zgaradi:\n${obsLink}`);
+  };
+
+  const copyControlPanelLink = () => {
+    const link = `${window.location.origin}/match/${id}`;
+    navigator.clipboard.writeText(link);
+    alert("Boshqaruv paneli havolasi nusxalandi! Boshqa adminlarga yuborishingiz mumkin.\n\n" + link);
+  };
 
   useEffect(() => {
     fetchMatchData();
@@ -209,10 +224,22 @@ const MatchControl = () => {
     <div className="match-control">
       {/* Header */}
       <div className="match-control-header">
-        <button className="btn-back" onClick={() => navigate('/schedule')}>
-          <ArrowLeft size={20} />
-        </button>
-        <h1>O'yin Boshqaruvi</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <button className="btn-back" onClick={() => navigate('/schedule')}>
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="header-title">O'yin Boshqaruvi</h1>
+        </div>
+        
+        <div className="match-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button className="obs-action-btn obs-text-btn" style={{background: '#475569'}} onClick={copyControlPanelLink} title="Panelni ulashish">
+            <Share2 size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">Boshqaruvni ulashish</span>
+          </button>
+          <div className="obs-divider"></div>
+          <button className="obs-action-btn obs-text-btn" style={{background: '#1e40af'}} onClick={copyObsLink} title="OBS Linkini nusxalash">
+            <Monitor size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">{match?.location?.includes('2-maydon') ? '2-Maydon (OBS)' : '1-Maydon (OBS)'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Scoreboard */}

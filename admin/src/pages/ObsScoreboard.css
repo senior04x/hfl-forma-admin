@@ -1,0 +1,335 @@
+/* 
+  Shaffof fon qilinadi, chunki bu oyna OBS ustidan tushadi. 
+  Agar test qilish kerak bo'lsa, OBS o'zida shaffof bo'ladi.
+*/
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: transparent !important;
+}
+
+#root {
+  background-color: transparent !important;
+}
+
+/* Yagona konteyner */
+.obs-container {
+  padding: 20px;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Gradient mavzulari (user so'roviga asosan tepasi->pasti) */
+.theme-3liga {
+  --obs-grad: linear-gradient(to bottom, #A200D2, #EB00F4);
+}
+.theme-pro {
+  --obs-grad: linear-gradient(to bottom, #003E9D, #00BAEF);
+}
+.theme-super {
+  --obs-grad: linear-gradient(to bottom, #BB1308, #F7842B);
+}
+.theme-europa {
+  --obs-grad: linear-gradient(to bottom, #ff7e00, #ffb200);
+}
+.theme-chemp {
+  --obs-grad: linear-gradient(to bottom, #001f5b, #004ab5);
+}
+.theme-7x7 {
+  --obs-grad: linear-gradient(to bottom, #013C82, #589AFB);
+}
+.theme-default {
+  --obs-grad: linear-gradient(to bottom, #475569, #94a3b8);
+}
+
+/* Asosiy blok */
+.obs-scoreboard {
+  display: inline-flex;
+  flex-direction: column;
+  /* Chap va o'ng chetlarini tekislash uchun */
+  padding-left: 15px; 
+}
+
+/* Yuqori qator (Jamoalar va Hisob) */
+.obs-top-row {
+  display: flex;
+  height: 50px;
+}
+
+/* Qiya qutichalar */
+.obs-team, .obs-score {
+  transform: skewX(-20deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.obs-scoreboard-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: white;
+}
+
+/* Yozuvlarni to'g'irlab qo'yish (unskew) */
+.obs-team-content, .obs-score-content, .obs-league-content {
+  transform: skewX(20deg);
+  white-space: nowrap;
+}
+
+.obs-team {
+  background-color: #1a1a1a;
+  color: white;
+  min-width: 180px;
+  padding: 0 30px;
+  font-size: 26px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.obs-score {
+  background: var(--obs-grad);
+  color: white;
+  min-width: 120px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+/* Ajratuvchi qizil (gradient) chiziq */
+.obs-separator {
+  height: 4px;
+  background: var(--obs-grad);
+  /* Chiziq qiya qutilar ostidan o'tishi uchun joylashuv */
+  margin-top: -1px;
+  margin-left: -5px;
+  width: calc(100% - 10px);
+}
+
+/* Pastki qator (Liga nomi) */
+.obs-bottom-row {
+  display: flex;
+  height: 35px;
+  margin-left: -10px; /* tepaga nisbatan qiyalikni davom ettirish */
+}
+
+.obs-league-name {
+  background-color: #111111;
+  color: #dddddd;
+  padding: 0 30px;
+  transform: skewX(-20deg);
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  text-transform: uppercase;
+  min-width: 300px;
+}
+
+.obs-status-text {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* ================== ANIMATSIYALAR ================== */
+
+.transformer-wrapper {
+  position: relative;
+}
+
+/* Yuguruvchi oq chiziq (lazer effekti) */
+.transformer-wrapper::before {
+  content: "";
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  width: 4px;
+  background: white;
+  box-shadow: 0 0 15px white, 0 0 5px white;
+  z-index: 999;
+  transform: skewX(-20deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.transformer-enter {
+  animation: unfoldIn 2.0s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+.transformer-enter::before {
+  animation: sweepLineIn 2.0s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+.transformer-exit {
+  animation: unfoldOut 2.0s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+.transformer-exit::before {
+  animation: sweepLineOut 2.0s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes unfoldIn {
+  0% { clip-path: polygon(-5% -20%, -5% -20%, -25% 120%, -25% 120%); opacity: 0; }
+  10% { opacity: 1; }
+  100% { clip-path: polygon(-5% -20%, 120% -20%, 120% 120%, -25% 120%); opacity: 1; }
+}
+
+@keyframes sweepLineIn {
+  0% { left: -5%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: 105%; opacity: 0; }
+}
+
+@keyframes unfoldOut {
+  0% { clip-path: polygon(-5% -20%, 120% -20%, 120% 120%, -25% 120%); opacity: 1; }
+  90% { opacity: 1; }
+  100% { clip-path: polygon(-5% -20%, -5% -20%, -25% 120%, -25% 120%); opacity: 0; }
+}
+
+@keyframes sweepLineOut {
+  0% { left: 105%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: -5%; opacity: 0; }
+}
+
+/* ================== LOWER THIRD PLAYER GRAPHIC ================== */
+.obs-lower-third-container {
+  position: fixed;
+  bottom: 80px;
+  left: 80px;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+}
+
+.obs-lt-top-bar {
+  background: var(--obs-grad);
+  color: white;
+  padding: 5px 30px;
+  font-size: 18px;
+  font-weight: 800;
+  text-transform: uppercase;
+  transform: skewX(-20deg);
+  width: fit-content;
+  margin-left: 20px;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+}
+
+.obs-lt-bottom-bar {
+  background: #1a1a1a;
+  color: white;
+  padding: 10px 40px;
+  transform: skewX(-20deg);
+  margin-top: -2px;
+  border-left: 5px solid white;
+  box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+}
+
+.obs-lt-content {
+  transform: skewX(20deg);
+}
+
+.obs-lt-player-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.obs-lt-player-photo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid white;
+}
+
+.obs-lt-player-photo-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #333;
+  border: 2px solid white;
+}
+
+.obs-lt-name-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.1;
+  min-width: 200px;
+}
+
+.obs-lt-fname {
+  font-size: 20px;
+  font-weight: 400;
+  color: #ddd;
+}
+.obs-lt-lname {
+  font-size: 32px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.obs-lt-team-logo {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  margin-left: 20px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+
+/* ================== MATCH EVENTS ICONS ================== */
+.obs-events-container {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin: 0 5px;
+}
+
+.obs-event-icon {
+  font-size: 16px;
+  display: inline-block;
+  line-height: 1;
+}
+
+.obs-icon-yellow, .obs-icon-red {
+  width: 12px;
+  height: 16px;
+  border-radius: 2px;
+  border: 1px solid rgba(0,0,0,0.5);
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+}
+
+.obs-icon-yellow {
+  background: linear-gradient(135deg, #FFDF00, #DAA520);
+}
+
+.obs-icon-red {
+  background: linear-gradient(135deg, #FF0000, #B22222);
+}
+
+.obs-lt-event-box {
+  color: white;
+  padding: 5px 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: skewX(-20deg);
+  border-right: 2px solid rgba(255,255,255,0.2);
+}
+
+.obs-bg-black {
+  background: #111;
+}
+
+.obs-bg-yellow {
+  background: #FFDF00;
+}
+
+.obs-bg-red {
+  background: #FF0000;
+}
