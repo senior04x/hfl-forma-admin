@@ -142,18 +142,34 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const populateDropdowns = () => {
-        // 1. Populate Rounds dropdown
+        // 1. Populate Rounds dropdown (without "Barcha turlar", default to latest round)
         const roundsSet = new Set();
         allMatches.forEach(m => { if (m.round) roundsSet.add(m.round); });
         const rounds = Array.from(roundsSet).sort((a, b) => Number(a) - Number(b));
 
         const roundOptionsContainer = document.getElementById('roundSelectOptions');
-        if (roundOptionsContainer) {
-            let roundsHtml = '<div class="custom-option active" data-value="all">Barcha turlar</div>';
-            rounds.forEach(r => {
-                roundsHtml += `<div class="custom-option" data-value="${r}">${r}-tur</div>`;
-            });
-            roundOptionsContainer.innerHTML = roundsHtml;
+        const roundTextSpan = document.getElementById('roundSelectText');
+
+        if (rounds.length > 0) {
+            const latestRound = rounds[rounds.length - 1]; // latest round
+            currentRound = String(latestRound);
+
+            if (roundTextSpan) {
+                roundTextSpan.textContent = `${latestRound}-tur`;
+            }
+
+            if (roundOptionsContainer) {
+                let roundsHtml = '';
+                rounds.forEach(r => {
+                    const isActive = String(r) === String(latestRound) ? 'active' : '';
+                    roundsHtml += `<div class="custom-option ${isActive}" data-value="${r}">${r}-tur</div>`;
+                });
+                roundOptionsContainer.innerHTML = roundsHtml;
+            }
+        } else {
+            if (roundOptionsContainer) {
+                roundOptionsContainer.innerHTML = '<div class="custom-option active" data-value="1">1-tur</div>';
+            }
         }
 
         // 2. Populate Leagues dropdown
