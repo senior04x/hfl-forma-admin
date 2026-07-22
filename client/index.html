@@ -161,10 +161,94 @@
 
         .slide-content {
             display: flex;
+            flex-direction: row-reverse;
             justify-content: space-between;
             align-items: center;
             gap: 20px;
             z-index: 2;
+        }
+
+        .slide-info {
+            flex: 1;
+            max-width: 600px;
+            text-align: left;
+        }
+
+        /* Skeleton Loading Shimmer Effect */
+        .skeleton-pulse {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 25%, rgba(255, 255, 255, 0.22) 37%, rgba(255, 255, 255, 0.08) 63%);
+            background-size: 400% 100%;
+            animation: skeleton-shimmer 1.4s ease infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes skeleton-shimmer {
+            0% { background-position: 100% 50%; }
+            100% { background-position: 0 50%; }
+        }
+
+        .skeleton-text-name {
+            width: 70%;
+            height: 24px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+        }
+
+        .skeleton-text-team {
+            width: 50%;
+            height: 16px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+        }
+
+        .skeleton-text-badge {
+            width: 85px;
+            height: 26px;
+            border-radius: 10px;
+        }
+
+        .player-framed-card.skeleton-card {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        @media (max-width: 768px) {
+            .slide-content {
+                gap: 12px;
+            }
+            .player-real-name {
+                font-size: 16px;
+                margin-bottom: 3px;
+            }
+            .player-team-info {
+                font-size: 12px;
+                margin-bottom: 8px;
+                gap: 5px;
+            }
+            .player-team-logo {
+                width: 18px;
+                height: 18px;
+            }
+            .stat-badge {
+                font-size: 11px;
+                padding: 3px 8px;
+            }
+            .player-framed-card {
+                width: 88px;
+                height: 105px;
+                border-radius: 15px;
+                border-width: 1.5px;
+            }
+            .skeleton-text-name {
+                height: 18px;
+            }
+            .skeleton-text-team {
+                height: 14px;
+            }
+            .skeleton-text-badge {
+                width: 70px;
+                height: 22px;
+            }
         }
 
         .slide-info {
@@ -833,16 +917,12 @@
                         </div>
                         <div class="slide-content">
                             <div class="slide-info">
-                                <h3 class="question-title">Super liga 1-tur to'purari kim bo'lishi mumkin?</h3>
+                                <div class="skeleton-pulse skeleton-text-name"></div>
+                                <div class="skeleton-pulse skeleton-text-team"></div>
+                                <div class="skeleton-pulse skeleton-text-badge"></div>
                             </div>
-                            <div class="slide-silhouette-container">
-                                <div class="silhouette-glow"></div>
-                                <div class="silhouette-box">
-                                    <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
-                                        <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
-                                    </svg>
-                                    <div class="question-mark-overlay">?</div>
-                                </div>
+                            <div class="slide-player-cutout-container">
+                                <div class="player-framed-card skeleton-card skeleton-pulse"></div>
                             </div>
                         </div>
                     </div>
@@ -854,16 +934,12 @@
                         </div>
                         <div class="slide-content">
                             <div class="slide-info">
-                                <h3 class="question-title">Pro liga 1-tur to'purari kim bo'lishi mumkin?</h3>
+                                <div class="skeleton-pulse skeleton-text-name"></div>
+                                <div class="skeleton-pulse skeleton-text-team"></div>
+                                <div class="skeleton-pulse skeleton-text-badge"></div>
                             </div>
-                            <div class="slide-silhouette-container">
-                                <div class="silhouette-glow"></div>
-                                <div class="silhouette-box">
-                                    <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
-                                        <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
-                                    </svg>
-                                    <div class="question-mark-overlay">?</div>
-                                </div>
+                            <div class="slide-player-cutout-container">
+                                <div class="player-framed-card skeleton-card skeleton-pulse"></div>
                             </div>
                         </div>
                     </div>
@@ -875,16 +951,12 @@
                         </div>
                         <div class="slide-content">
                             <div class="slide-info">
-                                <h3 class="question-title">3-liga 1-tur to'purari kim bo'lishi mumkin?</h3>
+                                <div class="skeleton-pulse skeleton-text-name"></div>
+                                <div class="skeleton-pulse skeleton-text-team"></div>
+                                <div class="skeleton-pulse skeleton-text-badge"></div>
                             </div>
-                            <div class="slide-silhouette-container">
-                                <div class="silhouette-glow"></div>
-                                <div class="silhouette-box">
-                                    <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
-                                        <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
-                                    </svg>
-                                    <div class="question-mark-overlay">?</div>
-                                </div>
+                            <div class="slide-player-cutout-container">
+                                <div class="player-framed-card skeleton-card skeleton-pulse"></div>
                             </div>
                         </div>
                     </div>
@@ -896,16 +968,12 @@
                         </div>
                         <div class="slide-content">
                             <div class="slide-info">
-                                <h3 class="question-title">7x7 liga 1-tur to'purari kim bo'lishi mumkin?</h3>
+                                <div class="skeleton-pulse skeleton-text-name"></div>
+                                <div class="skeleton-pulse skeleton-text-team"></div>
+                                <div class="skeleton-pulse skeleton-text-badge"></div>
                             </div>
-                            <div class="slide-silhouette-container">
-                                <div class="silhouette-glow"></div>
-                                <div class="silhouette-box">
-                                    <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
-                                        <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
-                                    </svg>
-                                    <div class="question-mark-overlay">?</div>
-                                </div>
+                            <div class="slide-player-cutout-container">
+                                <div class="player-framed-card skeleton-card skeleton-pulse"></div>
                             </div>
                         </div>
                     </div>
@@ -1418,9 +1486,9 @@
                     if (themeClass === 'theme-7x7') leagueName = '7x7 liga';
 
                     const topPlayer = leagueTopScorers[leagueName];
-                    if (topPlayer) {
-                        const contentBox = slide.querySelector('.slide-content');
-                        if (contentBox) {
+                    const contentBox = slide.querySelector('.slide-content');
+                    if (contentBox) {
+                        if (topPlayer) {
                             const pName = `${topPlayer.firstName} ${topPlayer.lastName}`.trim();
                             const pPhoto = topPlayer.photoUrl || 'images/app-icon-rounded.png';
                             const tLogo = topPlayer.teamLogo || 'images/logo.png';
@@ -1454,6 +1522,21 @@
                                 if (oldBadge) oldBadge.remove();
                                 headerBox.innerHTML += `<span class="top-scorer-crown-badge">1-tur</span>`;
                             }
+                        } else {
+                            contentBox.innerHTML = `
+                                <div class="slide-info">
+                                    <h3 class="question-title">${leagueName} 1-tur to'purari kim bo'lishi mumkin?</h3>
+                                </div>
+                                <div class="slide-silhouette-container">
+                                    <div class="silhouette-glow"></div>
+                                    <div class="silhouette-box">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
+                                            <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
+                                        </svg>
+                                        <div class="question-mark-overlay">?</div>
+                                    </div>
+                                </div>
+                            `;
                         }
                     }
                 });
