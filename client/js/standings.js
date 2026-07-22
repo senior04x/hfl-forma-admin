@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Fetch Match Events (goals and assists)
         const { data: eventsData, error: eventsError } = await db
             .from('match_events')
-            .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name), team:team_id(name, logo_url, league)')
+            .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
             .in('event_type', ['goal', 'assist']);
 
         if (eventsError) throw eventsError;
@@ -219,6 +219,7 @@ function renderStandingsByLeague(selectedLeague, selectedRound = 'all') {
             playerStats[e.player_id] = {
                 id: e.player_id,
                 name: `${e.player.first_name} ${e.player.last_name}`,
+                playerPhoto: e.player?.photo_url || '',
                 teamName: e.team?.name || '',
                 teamLogo: e.team?.logo_url || '',
                 goals: 0,
@@ -347,7 +348,7 @@ function renderUI(standings, recentMatches, topScorers, topAssists, allTeams, cu
                 <tr>
                     <td>
                         <div class="stats-player">
-                            <img src="${p.teamLogo}" alt="" class="team-logo-small" style="width:25px; height:25px;" onerror="this.onerror=null; this.src='https://via.placeholder.com/25x25?text=?'">
+                            <img src="${p.playerPhoto || p.teamLogo}" alt="" class="team-logo-small" style="width:25px; height:25px; border-radius:50%; object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/25x25?text=?'">
                             <span class="stats-player-name">${p.name}</span>
                         </div>
                     </td>
@@ -375,7 +376,7 @@ function renderUI(standings, recentMatches, topScorers, topAssists, allTeams, cu
                 <tr>
                     <td>
                         <div class="stats-player">
-                            <img src="${p.teamLogo}" alt="" class="team-logo-small" style="width:25px; height:25px;" onerror="this.onerror=null; this.src='https://via.placeholder.com/25x25?text=?'">
+                            <img src="${p.playerPhoto || p.teamLogo}" alt="" class="team-logo-small" style="width:25px; height:25px; border-radius:50%; object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/25x25?text=?'">
                             <span class="stats-player-name">${p.name}</span>
                         </div>
                     </td>
