@@ -404,27 +404,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 0 10px;
-}
-
-.sch-export-header h1 {
-  font-size: 42px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  margin: 0;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-  text-align: center;
-  flex: 1;
+  margin-bottom: 15px;
+  padding: 0;
 }
 
 .sch-export-body {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   flex: 1;
-  justify-content: center;
+  justify-content: flex-start;
+  margin-top: 15px;
 }
 
 .sch-match-row {
