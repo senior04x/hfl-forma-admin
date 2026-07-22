@@ -368,7 +368,7 @@ export default function Standings() {
                 {selectedLeague === '7x7 liga' && (
                   <>
                     <img src="/x.png" crossOrigin="anonymous" style={{ height: '20px', objectFit: 'contain', opacity: 0.6 }} />
-                    <img src="/LLF-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
+                    <img src="/llf-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />
                   </>
                 )}
                 {/* Homiylar endi faqat pastda footer qismida ko'rinadi */}
