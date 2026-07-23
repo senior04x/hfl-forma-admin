@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { Download, Save } from 'lucide-react';
+import { Download, Save, ShieldAlert } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Standings.css';
 
@@ -27,10 +27,14 @@ export default function Standings() {
   const [recentMatches, setRecentMatches] = useState([]);
   const [topScorers, setTopScorers] = useState([]);
   const [topAssists, setTopAssists] = useState([]);
+  const [topYellowCards, setTopYellowCards] = useState([]);
+  const [topRedCards, setTopRedCards] = useState([]);
   
   const [penalties, setPenalties] = useState({});
   const [savingPenalty, setSavingPenalty] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingCards, setIsExportingCards] = useState(false);
+  
   const [selectedSponsors, setSelectedSponsors] = useState(() => {
     try {
       const saved = localStorage.getItem('hfl_selectedSponsors');
@@ -43,9 +47,9 @@ export default function Standings() {
   useEffect(() => {
     localStorage.setItem('hfl_selectedSponsors', JSON.stringify(selectedSponsors));
   }, [selectedSponsors]);
-  const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
 
   const exportRef = useRef(null);
+  const cardsExportRef = useRef(null);
 
   useEffect(() => {
     fetchData();
@@ -55,7 +59,6 @@ export default function Standings() {
     setLoading(true);
     try {
       // Fetch Teams
-      // We also try to select penalty_points, if it exists
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name, logo_url, league, penalty_points')
@@ -89,18 +92,17 @@ export default function Standings() {
         setSelectedRound(maxR.toString());
       }
 
-      // Fetch Events
+      // Fetch Events (goals, assists, yellow cards, red cards)
       const { data: eventsData, error: eventsError } = await supabase
         .from('match_events')
         .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
-        .in('event_type', ['goal', 'assist']);
+        .in('event_type', ['goal', 'assist', 'yellow_card', 'red_card']);
 
       if (eventsError) throw eventsError;
       setEvents(eventsData || []);
 
     } catch (err) {
       console.error("Error fetching standings data:", err);
-      // We don't block the UI entirely, let it show empty tables
     } finally {
       setLoading(false);
     }
@@ -124,7 +126,7 @@ export default function Standings() {
     // Filter events
     const filteredEvents = events.filter(e => filteredTeamIds.has(e.team_id));
 
-    // 1. Table
+    // 1. Standings Table
     const tableMap = {};
     filteredTeams.forEach(t => {
       tableMap[t.id] = {
@@ -136,7 +138,7 @@ export default function Standings() {
         gf: 0,
         ga: 0,
         gd: 0,
-        points: penalties[t.id] || 0 // start with penalty/bonus points
+        points: penalties[t.id] || 0
       };
     });
 
@@ -187,9 +189,9 @@ export default function Standings() {
     });
 
     setStandings(computedStandings);
-    setRecentMatches(filteredMatches.slice(0, 5));
+    setRecentMatches(filteredMatches.slice(0, 6));
 
-    // 2. Top Scorers & Assists
+    // 2. Top Scorers, Assists & Cards
     const playerStats = {};
     filteredEvents.forEach(e => {
       if (!e.player || !e.player_id) return;
@@ -200,11 +202,15 @@ export default function Standings() {
           teamLogo: e.team?.logo_url || '',
           playerPhoto: e.player?.photo_url || '',
           goals: 0,
-          assists: 0
+          assists: 0,
+          yellowCards: 0,
+          redCards: 0
         };
       }
       if (e.event_type === 'goal') playerStats[e.player_id].goals += 1;
       if (e.event_type === 'assist') playerStats[e.player_id].assists += 1;
+      if (e.event_type === 'yellow_card') playerStats[e.player_id].yellowCards += 1;
+      if (e.event_type === 'red_card') playerStats[e.player_id].redCards += 1;
     });
 
     const scorers = Object.values(playerStats)
@@ -217,8 +223,20 @@ export default function Standings() {
       .sort((a, b) => b.assists - a.assists)
       .slice(0, 5);
 
+    const yellowCardsList = Object.values(playerStats)
+      .filter(p => p.yellowCards > 0)
+      .sort((a, b) => b.yellowCards - a.yellowCards)
+      .slice(0, 8);
+
+    const redCardsList = Object.values(playerStats)
+      .filter(p => p.redCards > 0)
+      .sort((a, b) => b.redCards - a.redCards)
+      .slice(0, 8);
+
     setTopScorers(scorers);
     setTopAssists(assists);
+    setTopYellowCards(yellowCardsList);
+    setTopRedCards(redCardsList);
   };
 
   const handleSavePenalty = async (teamId) => {
@@ -230,13 +248,8 @@ export default function Standings() {
         .update({ penalty_points: pval })
         .eq('id', teamId);
       
-      if (error) {
-        // If column doesn't exist, they will get an error here.
-        alert("Xatolik! penalty_points ustuni bazada yo'q bo'lishi mumkin. SQL: ALTER TABLE teams ADD COLUMN penalty_points int4 DEFAULT 0;");
-        throw error;
-      }
+      if (error) throw error;
       alert('Muvaffaqiyatli saqlandi!');
-      // Update local teams state as well so re-filter works accurately
       setTeams(prev => prev.map(t => t.id === teamId ? { ...t, penalty_points: pval } : t));
     } catch (error) {
       console.error(error);
@@ -249,7 +262,6 @@ export default function Standings() {
     if (!exportRef.current || isExporting) return;
     setIsExporting(true);
     try {
-      // Ensure specific layout scaling before capture
       const canvas = await html2canvas(exportRef.current, {
         scale: 2,
         useCORS: true,
@@ -259,7 +271,9 @@ export default function Standings() {
       const link = document.createElement('a');
       link.download = `turnir_jadvali_${selectedLeague}_${selectedRound}.png`;
       link.href = dataUrl;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch (err) {
       console.error("Export error:", err);
       alert("Rasmni yuklab olishda xatolik yuz berdi.");
@@ -268,7 +282,29 @@ export default function Standings() {
     }
   };
 
-  // Replaced handleSponsorLogoUpload with modal logic
+  const handleExportCards = async () => {
+    if (!cardsExportRef.current || isExportingCards) return;
+    setIsExportingCards(true);
+    try {
+      const canvas = await html2canvas(cardsExportRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `kartochkalar_${selectedLeague}_${selectedRound}.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Export cards error:", err);
+      alert("Kartochkalar rasmini yuklab olishda xatolik yuz berdi.");
+    } finally {
+      setIsExportingCards(false);
+    }
+  };
 
   // Get dynamic rounds
   let maxRound = 0;
@@ -280,7 +316,7 @@ export default function Standings() {
 
   const displayRound = selectedRound || '1';
 
-  // Background mapping for export
+  // Background theme mapping for export
   let exportThemeClass = 'theme-export-Super';
   if (selectedLeague.includes('Pro')) exportThemeClass = 'theme-export-Pro';
   else if (selectedLeague.includes('3-liga') || selectedLeague.includes('3 liga')) exportThemeClass = 'theme-export-3-liga';
@@ -294,9 +330,14 @@ export default function Standings() {
     <div className="standings-page">
       <div className="standings-header">
         <h1>Turnir Jadvali va Export</h1>
-        <button className="btn-download" onClick={handleExport} disabled={isExporting}>
-          <Download size={18} /> {isExporting ? 'Yuklanmoqda...' : 'Rasmni yuklab olish'}
-        </button>
+        <div className="standings-header-actions" style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn-download" onClick={handleExport} disabled={isExporting}>
+            <Download size={18} /> {isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish'}
+          </button>
+          <button className="btn-download cards-btn" onClick={handleExportCards} disabled={isExportingCards}>
+            <ShieldAlert size={18} /> {isExportingCards ? 'Yuklanmoqda...' : 'Kartochkalarni yuklab olish'}
+          </button>
+        </div>
       </div>
 
       <div className="filters-row">
@@ -317,7 +358,6 @@ export default function Standings() {
             {roundOptions.map(r => <option key={r} value={r}>{r}-tur</option>)}
           </select>
         </div>
-        {/* Homiylarni boshqarish alohida sahifaga o'tkazildi */}
       </div>
 
       <div className="admin-table-container">
@@ -366,14 +406,14 @@ export default function Standings() {
         </table>
       </div>
 
-      {/* EXPORT TEMPLATE (Hidden from normal view but available for canvas) */}
+      {/* 1. STANDINGS TABLE EXPORT TEMPLATE */}
       <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
         <div className={`export-wrapper ${exportThemeClass}`} ref={exportRef}>
           <div className="export-container">
             
             {/* Header */}
             <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <div className="export-logo-left" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3px' }}>
+              <div className="export-logo-left" style={{ width: selectedLeague === '7x7 liga' ? 'auto' : '220px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3px' }}>
                 <img src="/logo-for-jadval.png" alt="Havas Futbol" crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain' }} />
                 {selectedLeague === '7x7 liga' && (
                   <>
@@ -393,7 +433,7 @@ export default function Standings() {
                 )}
               </div>
 
-              <div className="export-logo-right" style={{ textAlign: 'right' }}>
+              <div className="export-logo-right" style={{ width: selectedLeague === '7x7 liga' ? 'auto' : '220px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
                 <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
               </div>
             </div>
@@ -401,7 +441,7 @@ export default function Standings() {
             {/* Body */}
             <div className="export-body">
               
-              {/* Left Col: Table */}
+              {/* Left Col: Standings Table */}
               <div className="export-table-container">
                 <div className="export-table-header">
                   <div className="export-col-hash">#</div>
@@ -504,21 +544,10 @@ export default function Standings() {
             </div>
 
             {selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '30px',
-                marginTop: '15px'
-              }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '15px' }}>
                 {selectedSponsors.map((s, idx) => (
                   <React.Fragment key={s.id}>
-                    <img 
-                      src={s.logo_url} 
-                      alt={s.name} 
-                      crossOrigin="anonymous" 
-                      style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} 
-                    />
+                    <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
                     {idx < selectedSponsors.length - 1 && (
                       <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
                     )}
@@ -529,8 +558,8 @@ export default function Standings() {
 
             <div style={{
               textAlign: 'center', 
-              color: selectedLeague === '7x7 liga' ? '#09408b' : '#ffffff', 
-              opacity: selectedLeague === '7x7 liga' ? 0.9 : 0.6, 
+              color: '#ffffff', 
+              opacity: 0.7, 
               fontSize: '12px', 
               marginTop: selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 ? '25px' : '15px',
               marginBottom: '20px',
@@ -540,6 +569,146 @@ export default function Standings() {
             }}>
               {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
               {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM {displayRound}-TUR
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* 2. CARDS EXPORT TEMPLATE (YELLOW & RED CARDS GLASSMORPHISM DESIGN) */}
+      <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
+        <div className={`export-wrapper ${exportThemeClass}`} ref={cardsExportRef}>
+          <div className="export-container">
+            
+            {/* Header */}
+            <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div className="export-logo-left" style={{ width: selectedLeague === '7x7 liga' ? 'auto' : '220px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3px' }}>
+                <img src="/logo-for-jadval.png" alt="Havas Futbol" crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain' }} />
+                {selectedLeague === '7x7 liga' && (
+                  <>
+                    <img src="/x.png" crossOrigin="anonymous" style={{ height: '18px', objectFit: 'contain', opacity: 0.7 }} />
+                    <img src="/llf-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
+                  </>
+                )}
+              </div>
+
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                {selectedLeague === '7x7 liga' ? (
+                  <img src="/7x7-liga.png" alt="7x7 Liga" style={{ height: '110px', maxWidth: '380px', objectFit: 'contain', marginRight: '75px', marginTop: '10px' }} crossOrigin="anonymous" />
+                ) : (
+                  LEAGUE_LOGOS[selectedLeague] && (
+                    <img src={LEAGUE_LOGOS[selectedLeague]} alt={selectedLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                  )
+                )}
+              </div>
+
+              <div className="export-logo-right" style={{ width: selectedLeague === '7x7 liga' ? 'auto' : '220px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
+                <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
+              </div>
+            </div>
+
+            {/* Title Banner */}
+            <div className="cards-export-title-banner">
+              <span>🟨 🟥 SARIQ VA QIZIL KARTOCHKALAR</span>
+            </div>
+
+            {/* Glassmorphism Yellow & Red Card Tables */}
+            <div className="export-body" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              
+              {/* Yellow Cards Table */}
+              <div className="export-card cards-glass-card">
+                <div className="export-card-title yellow-title">
+                  🟨 SARIQ KARTOCHKALAR <span style={{ float: 'right', fontSize: '14px' }}>SONI</span>
+                </div>
+                <div>
+                  {topYellowCards.length === 0 ? (
+                    <div className="cards-empty">Sariq kartochka olganlar yo'q</div>
+                  ) : (
+                    topYellowCards.map(p => (
+                      <div className="export-stats-row card-player-row" key={p.id}>
+                        <img 
+                          src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
+                          className="stat-img" 
+                          alt="" 
+                          crossOrigin="anonymous" 
+                          onError={(e) => { e.target.onerror = null; e.target.src = p.teamLogo || ''; }} 
+                        />
+                        <div style={{ flex: 1, textTransform: 'uppercase' }}>
+                          <div style={{ fontWeight: '800', fontSize: '15px' }}>{p.name}</div>
+                        </div>
+                        {p.teamLogo && (
+                          <img src={p.teamLogo} alt="" style={{ width: '22px', height: '22px', borderRadius: '50%', marginRight: '10px' }} crossOrigin="anonymous" />
+                        )}
+                        <div className="card-badge yellow-badge">
+                          🟨 {p.yellowCards}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Red Cards Table */}
+              <div className="export-card cards-glass-card">
+                <div className="export-card-title red-title">
+                  🟥 QIZIL KARTOCHKALAR <span style={{ float: 'right', fontSize: '14px' }}>SONI</span>
+                </div>
+                <div>
+                  {topRedCards.length === 0 ? (
+                    <div className="cards-empty">Qizil kartochka olganlar yo'q</div>
+                  ) : (
+                    topRedCards.map(p => (
+                      <div className="export-stats-row card-player-row" key={p.id}>
+                        <img 
+                          src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
+                          className="stat-img" 
+                          alt="" 
+                          crossOrigin="anonymous" 
+                          onError={(e) => { e.target.onerror = null; e.target.src = p.teamLogo || ''; }} 
+                        />
+                        <div style={{ flex: 1, textTransform: 'uppercase' }}>
+                          <div style={{ fontWeight: '800', fontSize: '15px' }}>{p.name}</div>
+                        </div>
+                        {p.teamLogo && (
+                          <img src={p.teamLogo} alt="" style={{ width: '22px', height: '22px', borderRadius: '50%', marginRight: '10px' }} crossOrigin="anonymous" />
+                        )}
+                        <div className="card-badge red-badge">
+                          🟥 {p.redCards}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '15px' }}>
+                {selectedSponsors.map((s, idx) => (
+                  <React.Fragment key={s.id}>
+                    <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                    {idx < selectedSponsors.length - 1 && (
+                      <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+
+            <div style={{
+              textAlign: 'center', 
+              color: '#ffffff', 
+              opacity: 0.7, 
+              fontSize: '12px', 
+              marginTop: '15px',
+              marginBottom: '20px',
+              textTransform: 'uppercase',
+              letterSpacing: '2px',
+              fontWeight: '500'
+            }}>
+              {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
+              {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM INTIZOM JADVALI
             </div>
 
           </div>

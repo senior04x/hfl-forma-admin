@@ -1,63 +1,36 @@
 .standings-page {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 24px;
+  background-color: #0f172a;
+  min-height: 100vh;
+  color: #fff;
 }
 
 .standings-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .standings-header h1 {
   font-size: 24px;
-  color: #1e293b;
-}
-
-.filters-row {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  background: white;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.filter-group label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #64748b;
-}
-
-.filter-group select {
-  padding: 8px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  min-width: 150px;
+  font-weight: 700;
+  margin: 0;
 }
 
 .btn-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background: #3b82f6;
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 10px 18px;
+  border-radius: 10px;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-  transition: background 0.2s;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .btn-download:hover {
@@ -65,78 +38,132 @@
 }
 
 .btn-download:disabled {
-  background: #94a3b8;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* Admin Table Styles */
-.admin-table-container {
-  background: white;
+.cards-btn {
+  background: linear-gradient(135deg, #eab308 0%, #ef4444 100%) !important;
+  color: white !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+}
+
+.cards-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.filters-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  background: #1e293b;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-group label {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.filter-group select {
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  padding: 8px 14px;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  font-size: 14px;
+  outline: none;
+}
+
+.admin-table-container {
+  background: #1e293b;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
 }
 
 .admin-table {
   width: 100%;
   border-collapse: collapse;
+  text-align: left;
 }
 
 .admin-table th {
-  background: #f8fafc;
-  padding: 12px 15px;
-  text-align: left;
-  font-weight: 600;
-  color: #475569;
-  border-bottom: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .admin-table td {
-  padding: 12px 15px;
-  border-bottom: 1px solid #e2e8f0;
-  color: #1e293b;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 14px;
+  color: #f1f5f9;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
 }
 
 .team-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  font-weight: 600;
 }
 
 .team-info img {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 .penalty-input {
   width: 60px;
-  padding: 5px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  text-align: center;
+  padding: 6px 10px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-right: 8px;
 }
 
 .btn-save-penalty {
-  background: #10b981;
+  background: rgba(255, 255, 255, 0.1);
   color: white;
   border: none;
-  padding: 5px 10px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 12px;
-  margin-left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.btn-save-penalty:disabled {
-  background: #94a3b8;
+.btn-save-penalty:hover {
+  background: #3b82f6;
 }
 
-/* -------------------------------------------
-   EXPORT TEMPLATE (hidden from normal view)
---------------------------------------------- */
+/* ============================================================ */
+/* EXPORT CANVAS TEMPLATE STYLES */
+/* ============================================================ */
 .export-wrapper {
   position: absolute;
   top: -9999px;
@@ -148,6 +175,20 @@
   overflow: hidden;
 }
 
+/* Subtle Football Panel Geometry Pattern Overlay Across All League Backgrounds */
+.export-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M30 0 L60 17.32 L60 51.96 L30 69.28 L0 51.96 L0 17.32 Z' fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='1.5'/%3E%3Cpath d='M30 20 L45 28.66 L45 45.98 L30 54.64 L15 45.98 L15 28.66 Z' fill='none' stroke='rgba(255,255,255,0.04)' stroke-width='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .export-container {
   width: 100%;
   height: 100%;
@@ -156,6 +197,7 @@
   color: white;
   position: relative;
   box-sizing: border-box;
+  z-index: 1;
 }
 
 /* Dynamic Background Themes */
@@ -174,8 +216,11 @@
 .theme-export-Chempion {
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #334155 100%);
 }
+
+/* Darker Navy Gradient for 7x7 Liga (No harsh bright white) */
 .theme-export-7x7 {
-  background: linear-gradient(180deg, #09408b 0%, #1e3a8a 60%, #ffffff 100%);
+  background: linear-gradient(180deg, #062354 0%, #0d3b80 50%, #162b4c 100%);
+  color: white;
 }
 
 .export-header {
@@ -219,7 +264,7 @@
 .export-body {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  padding: 20px 50px 40px 50px;
+  padding: 20px 50px 30px 50px;
   flex: 1;
   gap: 20px;
 }
@@ -330,6 +375,75 @@
   width: 26px; height: 26px; border-radius: 50%; margin-right: 10px; object-fit: cover;
 }
 
+/* ============================================================ */
+/* CARDS EXPORT TEMPLATE GLASSMORPHISM STYLES */
+/* ============================================================ */
+.cards-export-title-banner {
+  text-align: center;
+  margin: 5px 50px 10px 50px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.cards-glass-card {
+  background: rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.export-card-title.yellow-title {
+  background: rgba(234, 179, 8, 0.25);
+  color: #fef08a;
+  border-bottom: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+.export-card-title.red-title {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border-bottom: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.card-player-row {
+  padding: 10px 14px;
+}
+
+.card-badge {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.card-badge.yellow-badge {
+  background: rgba(234, 179, 8, 0.3);
+  color: #fef08a;
+  border: 1px solid rgba(234, 179, 8, 0.5);
+}
+
+.card-badge.red-badge {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.cards-empty {
+  padding: 30px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
 /* Footer Tag */
 .export-footer-tag {
   position: absolute;
@@ -350,6 +464,10 @@
   }
   .standings-header h1 {
     font-size: 20px;
+  }
+  .standings-header-actions {
+    width: 100%;
+    flex-direction: column;
   }
   .btn-download {
     width: 100%;
