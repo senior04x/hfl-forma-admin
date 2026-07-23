@@ -92,7 +92,7 @@ export default function Standings() {
       // Fetch Events
       const { data: eventsData, error: eventsError } = await supabase
         .from('match_events')
-        .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name), team:team_id(name, logo_url, league)')
+        .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name, photo_url, avatar_url, image_url), team:team_id(name, logo_url, league)')
         .in('event_type', ['goal', 'assist']);
 
       if (eventsError) throw eventsError;
@@ -198,6 +198,7 @@ export default function Standings() {
           id: e.player_id,
           name: `${e.player.first_name} ${e.player.last_name}`,
           teamLogo: e.team?.logo_url || '',
+          playerPhoto: e.player?.photo_url || e.player?.avatar_url || e.player?.image_url || '',
           goals: 0,
           assists: 0
         };
@@ -457,7 +458,16 @@ export default function Standings() {
                   <div>
                     {topScorers.slice(0, 3).map(p => (
                       <div className="export-stats-row" key={p.id}>
-                        <img src={p.teamLogo} className="stat-img" alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                        <img 
+                          src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
+                          className="stat-img" 
+                          alt="" 
+                          crossOrigin="anonymous" 
+                          onError={(e) => { 
+                            e.target.onerror = null; 
+                            e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
+                          }} 
+                        />
                         <div style={{flex: 1, textTransform: 'uppercase'}}>{p.name}</div>
                         <div style={{width: '30px', textAlign: 'center'}}>{matches.length > 0 ? matches[0].round : 1}</div>
                         <div style={{width: '30px', textAlign: 'center', fontWeight: '900'}}>{p.goals}</div>
@@ -472,7 +482,16 @@ export default function Standings() {
                   <div>
                     {topAssists.slice(0, 3).map(p => (
                       <div className="export-stats-row" key={p.id}>
-                        <img src={p.teamLogo} className="stat-img" alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                        <img 
+                          src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
+                          className="stat-img" 
+                          alt="" 
+                          crossOrigin="anonymous" 
+                          onError={(e) => { 
+                            e.target.onerror = null; 
+                            e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
+                          }} 
+                        />
                         <div style={{flex: 1, textTransform: 'uppercase'}}>{p.name}</div>
                         <div style={{width: '30px', textAlign: 'center'}}>{matches.length > 0 ? matches[0].round : 1}</div>
                         <div style={{width: '30px', textAlign: 'center', fontWeight: '900'}}>{p.assists}</div>
