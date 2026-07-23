@@ -45,12 +45,13 @@ const MatchControl = () => {
   const [awayPenalties, setAwayPenalties] = useState(0);
   const [showPenaltySection, setShowPenaltySection] = useState(false);
 
-  // Event modal state
+  // Event modal state & saving loading state
   const [showEventModal, setShowEventModal] = useState(false);
   const [eventType, setEventType] = useState('goal');
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
   const [eventMinute, setEventMinute] = useState('');
+  const [savingEvent, setSavingEvent] = useState(false);
 
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '' });
@@ -288,39 +289,47 @@ const MatchControl = () => {
     setSelectedTeamId(teamId || (match?.home_team_id || ''));
     setSelectedPlayerId(playerId || '');
     setEventMinute(getCurrentMinute().toString());
+    setSavingEvent(false);
     setShowEventModal(true);
   };
 
   const handleSaveEvent = async () => {
-    if (!selectedTeamId || !selectedPlayerId || !eventMinute) return;
+    if (!selectedTeamId || !selectedPlayerId || !eventMinute || savingEvent) return;
 
-    const minuteVal = parseInt(eventMinute) || getCurrentMinute();
+    setSavingEvent(true);
+    try {
+      const minuteVal = parseInt(eventMinute) || getCurrentMinute();
 
-    const { error } = await supabase.from('match_events').insert([{
-      match_id: id,
-      team_id: selectedTeamId,
-      player_id: selectedPlayerId,
-      event_type: eventType,
-      minute: minuteVal
-    }]);
+      const { error } = await supabase.from('match_events').insert([{
+        match_id: id,
+        team_id: selectedTeamId,
+        player_id: selectedPlayerId,
+        event_type: eventType,
+        minute: minuteVal
+      }]);
 
-    if (!error) {
-      // If it's a goal, automatically increment the score
-      if (eventType === 'goal') {
-        const isHome = selectedTeamId === match.home_team_id;
-        const newHomeScore = (match.home_score || 0) + (isHome ? 1 : 0);
-        const newAwayScore = (match.away_score || 0) + (isHome ? 0 : 1);
-        
-        await supabase.from('matches').update({
-          home_score: newHomeScore,
-          away_score: newAwayScore
-        }).eq('id', id);
+      if (!error) {
+        // If it's a goal, automatically increment the score
+        if (eventType === 'goal') {
+          const isHome = selectedTeamId === match.home_team_id;
+          const newHomeScore = (match.home_score || 0) + (isHome ? 1 : 0);
+          const newAwayScore = (match.away_score || 0) + (isHome ? 0 : 1);
+          
+          await supabase.from('matches').update({
+            home_score: newHomeScore,
+            away_score: newAwayScore
+          }).eq('id', id);
 
-        setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
+          setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
+        }
+
+        await fetchEvents();
+        setShowEventModal(false);
       }
-
-      await fetchEvents();
-      setShowEventModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingEvent(false);
     }
   };
 
@@ -648,13 +657,13 @@ const MatchControl = () => {
 
       {/* Event Modal */}
       {showEventModal && (
-        <div className="event-modal-overlay" onClick={() => setShowEventModal(false)}>
+        <div className="event-modal-overlay" onClick={() => !savingEvent && setShowEventModal(false)}>
           <div className="event-modal" onClick={e => e.stopPropagation()}>
             <h3>{EVENT_TYPES[eventType]?.icon} {EVENT_TYPES[eventType]?.label} qo'shish</h3>
             
             <div className="form-group">
               <label>Jamoa</label>
-              <select value={selectedTeamId} onChange={e => { setSelectedTeamId(e.target.value); setSelectedPlayerId(''); }}>
+              <select value={selectedTeamId} onChange={e => { setSelectedTeamId(e.target.value); setSelectedPlayerId(''); }} disabled={savingEvent}>
                 <option value="">Jamoani tanlang</option>
                 <option value={match.home_team_id}>{homeTeam?.name} (Mezbon)</option>
                 <option value={match.away_team_id}>{awayTeam?.name} (Mehmon)</option>
@@ -663,7 +672,7 @@ const MatchControl = () => {
 
             <div className="form-group">
               <label>O'yinchi (Raqami bo'yicha tartiblangan)</label>
-              <select value={selectedPlayerId} onChange={e => setSelectedPlayerId(e.target.value)} disabled={!selectedTeamId}>
+              <select value={selectedPlayerId} onChange={e => setSelectedPlayerId(e.target.value)} disabled={!selectedTeamId || savingEvent}>
                 <option value="">O'yinchini tanlang</option>
                 {getPlayersForTeam().map(p => (
                   <option key={p.id} value={p.id}>
@@ -682,17 +691,24 @@ const MatchControl = () => {
                 placeholder="Daqiqani kiriting"
                 value={eventMinute}
                 onChange={e => setEventMinute(e.target.value)}
+                disabled={savingEvent}
               />
             </div>
 
             <div className="event-modal-actions">
-              <button className="btn-modal-cancel" onClick={() => setShowEventModal(false)}>Bekor</button>
+              <button className="btn-modal-cancel" onClick={() => setShowEventModal(false)} disabled={savingEvent}>Bekor</button>
               <button
                 className="btn-modal-save"
                 onClick={handleSaveEvent}
-                disabled={!selectedTeamId || !selectedPlayerId || !eventMinute}
+                disabled={savingEvent || !selectedTeamId || !selectedPlayerId || !eventMinute}
               >
-                Saqlash
+                {savingEvent ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className="btn-spinner">⏳</span> Saqlanmoqda...
+                  </span>
+                ) : (
+                  'Saqlash'
+                )}
               </button>
             </div>
           </div>

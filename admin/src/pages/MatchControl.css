@@ -855,3 +855,14 @@
     margin: 0;
   }
 }
+
+/* Button Loading Spinner */
+.btn-spinner {
+  display: inline-block;
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
