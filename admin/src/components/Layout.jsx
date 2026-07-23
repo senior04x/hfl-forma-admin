@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Calendar, Users, Menu, X } from 'lucide-react';
+import { LogOut, LayoutDashboard, Calendar, Users, Menu, X, ArrowLeftRight } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import './Layout.css';
 
@@ -41,6 +41,7 @@ const Layout = () => {
 
   const menuItems = [
     { path: '/dashboard', label: 'Zayavkalar', icon: <Users size={20} /> },
+    { path: '/transfers', label: 'Transferlar', icon: <ArrowLeftRight size={20} /> },
     { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> },
     { path: '/standings', label: 'Turnir jadvali', icon: <LayoutDashboard size={20} /> },
     { path: '/sponsors', label: 'Homiylar', icon: <Calendar size={20} /> } // Re-using an icon or we can import Image
