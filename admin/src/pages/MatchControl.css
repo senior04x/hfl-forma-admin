@@ -905,3 +905,130 @@
     margin: 0;
   }
 }
+
+/* Mobile Screens < 480px */
+@media (max-width: 480px) {
+  .match-control {
+    padding: 8px;
+  }
+
+  .scoreboard {
+    padding: 14px 8px;
+    border-radius: 14px;
+  }
+
+  .scoreboard-teams {
+    gap: 6px;
+  }
+
+  .scoreboard-team {
+    gap: 4px;
+  }
+
+  .scoreboard-team-logo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .scoreboard-team-name {
+    font-size: 11px;
+    max-width: 75px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .score-number {
+    font-size: 32px;
+  }
+
+  .score-separator {
+    font-size: 24px;
+  }
+
+  .score-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+  }
+
+  .live-timer-badge {
+    padding: 4px 8px;
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .timer-display {
+    font-size: 12px;
+  }
+
+  .team-switcher-header {
+    padding: 6px 6px;
+    gap: 6px;
+  }
+
+  .team-switch-arrow {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  .team-tab-btn {
+    padding: 6px 8px;
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .team-tab-btn img {
+    width: 18px;
+    height: 18px;
+  }
+
+  .single-roster-card {
+    padding: 12px 8px;
+    border-radius: 14px;
+  }
+
+  .roster-item {
+    padding: 8px 6px;
+    gap: 6px;
+  }
+
+  .player-number-badge {
+    min-width: 28px;
+    height: 28px;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+
+  .player-full-name {
+    font-size: 12px;
+  }
+
+  .player-pos {
+    font-size: 10px;
+  }
+
+  .player-quick-actions {
+    gap: 3px;
+  }
+
+  .player-quick-actions button {
+    padding: 2px 5px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .quick-btn-label {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .team-tab-btn span {
+    max-width: 60px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

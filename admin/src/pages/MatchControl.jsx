@@ -608,8 +608,8 @@ const MatchControl = () => {
                   
                   {/* Quick Action Buttons for Player */}
                   <div className="player-quick-actions">
-                    <button onClick={() => openEventModal('goal', currentRosterTeamId, player.id)} title="Gol ⚽">⚽ Gol</button>
-                    <button onClick={() => openEventModal('assist', currentRosterTeamId, player.id)} title="Assist 👟">👟 Assist</button>
+                    <button onClick={() => openEventModal('goal', currentRosterTeamId, player.id)} title="Gol ⚽">⚽ <span className="quick-btn-label">Gol</span></button>
+                    <button onClick={() => openEventModal('assist', currentRosterTeamId, player.id)} title="Assist 👟">👟 <span className="quick-btn-label">Assist</span></button>
                     <button onClick={() => openEventModal('yellow_card', currentRosterTeamId, player.id)} title="Sariq kartochka 🟨">🟨</button>
                     <button onClick={() => openEventModal('red_card', currentRosterTeamId, player.id)} title="Qizil kartochka 🟥">🟥</button>
                   </div>
