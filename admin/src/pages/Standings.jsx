@@ -409,6 +409,7 @@ export default function Standings() {
       {/* 1. STANDINGS TABLE EXPORT TEMPLATE */}
       <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
         <div className={`export-wrapper ${exportThemeClass}`} ref={exportRef}>
+          <div className="export-pattern-overlay" />
           <div className="export-container">
             
             {/* Header */}
@@ -578,6 +579,7 @@ export default function Standings() {
       {/* 2. CARDS EXPORT TEMPLATE (YELLOW & RED CARDS GLASSMORPHISM DESIGN) */}
       <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
         <div className={`export-wrapper ${exportThemeClass}`} ref={cardsExportRef}>
+          <div className="export-pattern-overlay" />
           <div className="export-container">
             
             {/* Header */}
