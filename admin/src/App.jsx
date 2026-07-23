@@ -6,6 +6,7 @@ import Schedule from './pages/Schedule';
 import Standings from './pages/Standings';
 import Sponsors from './pages/Sponsors';
 import MatchControl from './pages/MatchControl';
+import Transfers from './pages/Transfers';
 import ObsScoreboard from './pages/ObsScoreboard';
 import Layout from './components/Layout';
 import ImageViewer from './components/ImageViewer';
@@ -27,6 +28,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/transfers" element={<Transfers />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/standings" element={<Standings />} />
           <Route path="/sponsors" element={<Sponsors />} />
