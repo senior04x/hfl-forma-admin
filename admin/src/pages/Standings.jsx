@@ -92,7 +92,7 @@ export default function Standings() {
       // Fetch Events
       const { data: eventsData, error: eventsError } = await supabase
         .from('match_events')
-        .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name, photo_url, avatar_url, image_url), team:team_id(name, logo_url, league)')
+        .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
         .in('event_type', ['goal', 'assist']);
 
       if (eventsError) throw eventsError;
@@ -198,7 +198,7 @@ export default function Standings() {
           id: e.player_id,
           name: `${e.player.first_name} ${e.player.last_name}`,
           teamLogo: e.team?.logo_url || '',
-          playerPhoto: e.player?.photo_url || e.player?.avatar_url || e.player?.image_url || '',
+          playerPhoto: e.player?.photo_url || '',
           goals: 0,
           assists: 0
         };
