@@ -182,7 +182,16 @@ const PlayersTable = ({ onStatusChange }) => {
               }
             >
               <div className="list-cell avatar-cell">
-                <img src={app.photo_url} alt="Avatar" className="player-avatar" onClick={() => window.openImageViewer(app.photo_url)} />
+                <img 
+                  src={app.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop'} 
+                  alt="Avatar" 
+                  className="player-avatar" 
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop';
+                  }}
+                  onClick={() => app.photo_url && window.openImageViewer && window.openImageViewer(app.photo_url)} 
+                />
               </div>
               <div className="list-cell info-cell">
                 <div 

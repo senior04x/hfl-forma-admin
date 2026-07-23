@@ -114,7 +114,16 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
         {currentMode === 'view' ? (
           <div className="modal-view">
             <div className="modal-header-profile">
-              <img src={player.photo_url} alt="Profile" className="modal-avatar" onClick={() => window.openImageViewer(player.photo_url)} />
+              <img 
+                src={player.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop'} 
+                alt="Profile" 
+                className="modal-avatar" 
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop';
+                }}
+                onClick={() => player.photo_url && window.openImageViewer && window.openImageViewer(player.photo_url)} 
+              />
               <h2>{player.first_name} {player.last_name} {player.father_name}</h2>
               <p>{player.phone || 'Telefon kiritilmagan'}</p>
               {teams.length > 0 && player.team_id ? (() => {
