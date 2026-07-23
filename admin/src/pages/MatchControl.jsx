@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { 
   ArrowLeft, Trash2, Monitor, Share2, Play, Pause, RotateCcw, 
-  Clock
+  Clock, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import './MatchControl.css';
 
@@ -34,6 +34,9 @@ const MatchControl = () => {
   const [awayPlayers, setAwayPlayers] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Active Team Roster Switcher ('home' or 'away')
+  const [activeRosterTeam, setActiveRosterTeam] = useState('home');
 
   // Live Timer State
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -367,6 +370,10 @@ const MatchControl = () => {
   const sortedHomePlayers = sortPlayersByNumber(homePlayers);
   const sortedAwayPlayers = sortPlayersByNumber(awayPlayers);
 
+  const currentRosterPlayers = activeRosterTeam === 'home' ? sortedHomePlayers : sortedAwayPlayers;
+  const currentRosterTeam = activeRosterTeam === 'home' ? homeTeam : awayTeam;
+  const currentRosterTeamId = activeRosterTeam === 'home' ? match?.home_team_id : match?.away_team_id;
+
   const getPlayersForTeam = () => {
     if (selectedTeamId === match?.home_team_id) return sortedHomePlayers;
     if (selectedTeamId === match?.away_team_id) return sortedAwayPlayers;
@@ -536,73 +543,62 @@ const MatchControl = () => {
         </div>
       )}
 
-      {/* Event Buttons Shortcut */}
-      <div className="event-buttons">
-        {Object.entries(EVENT_TYPES).map(([key, val]) => (
-          <button
-            key={key}
-            className="event-btn"
-            style={{ borderBottom: `3px solid ${val.color}` }}
-            onClick={() => openEventModal(key)}
+      {/* Single Team Roster Section with Arrow & Tab Switcher (< >) */}
+      <div className="single-roster-container">
+        {/* Team Switcher Bar */}
+        <div className="team-switcher-header">
+          <button 
+            className="team-switch-arrow"
+            onClick={() => setActiveRosterTeam(prev => prev === 'home' ? 'away' : 'home')}
+            title="Oldingi jamoaga o'tish"
           >
-            <span className="event-btn-icon">{val.icon}</span>
-            <span className="event-btn-label">{val.label}</span>
+            <ChevronLeft size={28} />
           </button>
-        ))}
-      </div>
 
-      {/* Side-by-Side Team Roster Grid (Sorted Numerically by Jersey #) */}
-      <div className="rosters-container">
-        {/* Home Team Roster */}
-        <div className="roster-card home-roster">
-          <div className="roster-header">
-            <img src={homeTeam?.logo_url || '/images/default-team.png'} alt="" />
-            <h3>{homeTeam?.name} (Mezbon)</h3>
-            <span className="roster-count">{sortedHomePlayers.length} ta o'yinchi</span>
+          <div className="team-switch-info">
+            <div className="team-tabs">
+              <button 
+                className={`team-tab-btn ${activeRosterTeam === 'home' ? 'active' : ''}`}
+                onClick={() => setActiveRosterTeam('home')}
+              >
+                <img src={homeTeam?.logo_url || '/images/default-team.png'} alt="" />
+                <span>{homeTeam?.name} (Mezbon)</span>
+              </button>
+
+              <button 
+                className={`team-tab-btn ${activeRosterTeam === 'away' ? 'active' : ''}`}
+                onClick={() => setActiveRosterTeam('away')}
+              >
+                <img src={awayTeam?.logo_url || '/images/default-team.png'} alt="" />
+                <span>{awayTeam?.name} (Mehmon)</span>
+              </button>
+            </div>
           </div>
 
-          <div className="roster-list">
-            {sortedHomePlayers.length === 0 ? (
-              <div className="roster-empty">Tarkib kiritilmagan</div>
-            ) : (
-              sortedHomePlayers.map(player => (
-                <div key={player.id} className="roster-item">
-                  <div className="player-number-badge">
-                    #{player.player_number || '-'}
-                  </div>
-                  <div className="player-name-info">
-                    <span className="player-full-name">{player.first_name} {player.last_name}</span>
-                    <span className="player-pos">{player.position || 'O\'yinchi'}</span>
-                  </div>
-                  
-                  {/* Quick Action Buttons for Player */}
-                  <div className="player-quick-actions">
-                    <button onClick={() => openEventModal('goal', match.home_team_id, player.id)} title="Gol ⚽">⚽</button>
-                    <button onClick={() => openEventModal('assist', match.home_team_id, player.id)} title="Assist 👟">👟</button>
-                    <button onClick={() => openEventModal('yellow_card', match.home_team_id, player.id)} title="Sariq kartochka 🟨">🟨</button>
-                    <button onClick={() => openEventModal('red_card', match.home_team_id, player.id)} title="Qizil kartochka 🟥">🟥</button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <button 
+            className="team-switch-arrow"
+            onClick={() => setActiveRosterTeam(prev => prev === 'home' ? 'away' : 'home')}
+            title="Keyingi jamoaga o'tish"
+          >
+            <ChevronRight size={28} />
+          </button>
         </div>
 
-        {/* Away Team Roster */}
-        <div className="roster-card away-roster">
+        {/* Selected Team Roster List */}
+        <div className="roster-card single-roster-card">
           <div className="roster-header">
-            <img src={awayTeam?.logo_url || '/images/default-team.png'} alt="" />
-            <h3>{awayTeam?.name} (Mehmon)</h3>
-            <span className="roster-count">{sortedAwayPlayers.length} ta o'yinchi</span>
+            <img src={currentRosterTeam?.logo_url || '/images/default-team.png'} alt="" />
+            <h3>{currentRosterTeam?.name} ({activeRosterTeam === 'home' ? 'Mezbon' : 'Mehmon'})</h3>
+            <span className="roster-count">{currentRosterPlayers.length} ta o'yinchi</span>
           </div>
 
           <div className="roster-list">
-            {sortedAwayPlayers.length === 0 ? (
+            {currentRosterPlayers.length === 0 ? (
               <div className="roster-empty">Tarkib kiritilmagan</div>
             ) : (
-              sortedAwayPlayers.map(player => (
+              currentRosterPlayers.map(player => (
                 <div key={player.id} className="roster-item">
-                  <div className="player-number-badge away">
+                  <div className={`player-number-badge ${activeRosterTeam === 'away' ? 'away' : ''}`}>
                     #{player.player_number || '-'}
                   </div>
                   <div className="player-name-info">
@@ -612,10 +608,10 @@ const MatchControl = () => {
                   
                   {/* Quick Action Buttons for Player */}
                   <div className="player-quick-actions">
-                    <button onClick={() => openEventModal('goal', match.away_team_id, player.id)} title="Gol ⚽">⚽</button>
-                    <button onClick={() => openEventModal('assist', match.away_team_id, player.id)} title="Assist 👟">👟</button>
-                    <button onClick={() => openEventModal('yellow_card', match.away_team_id, player.id)} title="Sariq kartochka 🟨">🟨</button>
-                    <button onClick={() => openEventModal('red_card', match.away_team_id, player.id)} title="Qizil kartochka 🟥">🟥</button>
+                    <button onClick={() => openEventModal('goal', currentRosterTeamId, player.id)} title="Gol ⚽">⚽ Gol</button>
+                    <button onClick={() => openEventModal('assist', currentRosterTeamId, player.id)} title="Assist 👟">👟 Assist</button>
+                    <button onClick={() => openEventModal('yellow_card', currentRosterTeamId, player.id)} title="Sariq kartochka 🟨">🟨</button>
+                    <button onClick={() => openEventModal('red_card', currentRosterTeamId, player.id)} title="Qizil kartochka 🟥">🟥</button>
                   </div>
                 </div>
               ))
