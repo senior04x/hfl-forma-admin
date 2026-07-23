@@ -175,21 +175,23 @@
   overflow: hidden;
 }
 
-/* Subtle Geometric Football Pattern Overlay Across All League Backgrounds */
-.export-pattern-overlay {
+/* Subtle Floating Football Icon Watermarks Across Background */
+.export-football-watermarks {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08) 2px, transparent 2.5px),
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-  background-size: 32px 32px, 32px 32px, 32px 32px;
-  background-position: 0 0, 0 0, 0 0;
   pointer-events: none;
   z-index: 0;
+  overflow: hidden;
+}
+
+.export-football-watermarks span {
+  position: absolute;
+  color: #ffffff;
+  opacity: 0.10;
+  user-select: none;
 }
 
 .export-container {

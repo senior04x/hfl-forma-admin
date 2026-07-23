@@ -13,6 +13,24 @@ const LEAGUE_LOGOS = {
   '7x7 liga': '/7x7-liga.png'
 };
 
+const FootballWatermarks = () => (
+  <div className="export-football-watermarks">
+    <span style={{ top: '3%', left: '4%', transform: 'rotate(-15deg)', fontSize: '38px' }}>⚽</span>
+    <span style={{ top: '5%', right: '5%', transform: 'rotate(20deg)', fontSize: '42px' }}>🏆</span>
+    <span style={{ top: '16%', left: '48%', transform: 'rotate(-10deg)', fontSize: '34px' }}>⚽</span>
+    <span style={{ top: '28%', left: '2%', transform: 'rotate(15deg)', fontSize: '36px' }}>👟</span>
+    <span style={{ top: '32%', right: '3%', transform: 'rotate(-25deg)', fontSize: '38px' }}>🛡️</span>
+    <span style={{ top: '48%', left: '49%', transform: 'rotate(18deg)', fontSize: '40px' }}>⚽</span>
+    <span style={{ top: '52%', left: '3%', transform: 'rotate(30deg)', fontSize: '34px' }}>⏱️</span>
+    <span style={{ top: '55%', right: '2%', transform: 'rotate(-15deg)', fontSize: '36px' }}>⚽</span>
+    <span style={{ top: '72%', left: '2%', transform: 'rotate(-20deg)', fontSize: '38px' }}>👟</span>
+    <span style={{ top: '75%', right: '3%', transform: 'rotate(25deg)', fontSize: '42px' }}>🏆</span>
+    <span style={{ top: '88%', left: '48%', transform: 'rotate(12deg)', fontSize: '36px' }}>⚽</span>
+    <span style={{ top: '92%', left: '4%', transform: 'rotate(10deg)', fontSize: '34px' }}>🛡️</span>
+    <span style={{ top: '92%', right: '4%', transform: 'rotate(-15deg)', fontSize: '36px' }}>⚽</span>
+  </div>
+);
+
 export default function Standings() {
   const [teams, setTeams] = useState([]);
   const [matches, setMatches] = useState([]);
@@ -409,7 +427,7 @@ export default function Standings() {
       {/* 1. STANDINGS TABLE EXPORT TEMPLATE */}
       <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
         <div className={`export-wrapper ${exportThemeClass}`} ref={exportRef}>
-          <div className="export-pattern-overlay" />
+          <FootballWatermarks />
           <div className="export-container">
             
             {/* Header */}
@@ -579,7 +597,7 @@ export default function Standings() {
       {/* 2. CARDS EXPORT TEMPLATE (YELLOW & RED CARDS GLASSMORPHISM DESIGN) */}
       <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
         <div className={`export-wrapper ${exportThemeClass}`} ref={cardsExportRef}>
-          <div className="export-pattern-overlay" />
+          <FootballWatermarks />
           <div className="export-container">
             
             {/* Header */}
