@@ -428,9 +428,9 @@ export default function Standings() {
               <div className="export-right-col">
                 
                 {/* Results */}
-                <div className="export-card" style={{flex: 1}}>
+                <div className="export-card">
                   <div className="export-card-title">{displayRound}-TUR NATIJALARI</div>
-                  <div style={{padding: '10px 15px'}}>
+                  <div style={{padding: '6px 10px'}}>
                     {recentMatches.slice(0, 6).map(m => {
                       const hTeam = teams.find(t => t.id === m.home_team_id);
                       const aTeam = teams.find(t => t.id === m.away_team_id);

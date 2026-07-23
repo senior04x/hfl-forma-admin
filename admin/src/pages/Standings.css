@@ -267,7 +267,7 @@
 .export-right-col {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
 }
 
 .export-card {
@@ -282,8 +282,8 @@
 
 .export-card-title {
   text-align: center;
-  padding: 15px;
-  font-size: 18px;
+  padding: 10px 14px;
+  font-size: 15px;
   font-weight: 800;
   color: white;
   text-transform: uppercase;
@@ -292,10 +292,10 @@
 }
 
 .export-results-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   text-transform: uppercase;
 }
 
@@ -303,31 +303,31 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 15px;
+  padding: 6px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-weight: 700;
-  font-size: 16px;
+  font-size: 13px;
   background: transparent;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  border-radius: 6px;
+  margin-bottom: 4px;
 }
-.export-result-row:last-child { border-bottom: none; }
-.export-result-team { display: flex; align-items: center; gap: 10px; flex: 1; }
+.export-result-row:last-child { border-bottom: none; margin-bottom: 0; }
+.export-result-team { display: flex; align-items: center; gap: 8px; flex: 1; }
 .export-result-team.away { flex-direction: row-reverse; }
-.export-result-team img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
-.export-result-score { font-size: 20px; padding: 0 15px; font-weight: 900; }
+.export-result-team img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.export-result-score { font-size: 16px; padding: 0 10px; font-weight: 900; }
 
 .export-stats-row {
   display: flex;
   align-items: center;
-  padding: 12px 15px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
 }
 .export-stats-row:last-child { border-bottom: none; }
 .export-stats-row .stat-img {
-  width: 30px; height: 30px; border-radius: 50%; margin-right: 15px; object-fit: cover;
+  width: 26px; height: 26px; border-radius: 50%; margin-right: 10px; object-fit: cover;
 }
 
 /* Footer Tag */
