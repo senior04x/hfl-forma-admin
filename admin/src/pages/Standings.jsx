@@ -13,21 +13,64 @@ const LEAGUE_LOGOS = {
   '7x7 liga': '/7x7-liga.png'
 };
 
+const SoccerBallIcon = ({ size = 80, style = {} }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="m12 7 2.5 1.5v3L12 13l-2.5-1.5v-3z" fill="currentColor" fillOpacity="0.3" />
+    <path d="M12 2v5M14.5 8.5 19 6M14.5 11.5 18 15M12 13v5M9.5 11.5 6 15M9.5 8.5 5 6" />
+  </svg>
+);
+
+const TrophyIcon = ({ size = 90, style = {} }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+    <path d="M4 22h16" />
+    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" fill="currentColor" fillOpacity="0.2" />
+  </svg>
+);
+
+const FootballBootIcon = ({ size = 85, style = {} }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+    <path d="M2 17h20v2H2z" fill="currentColor" fillOpacity="0.4" />
+    <path d="M4 17l2-8 5 2 4-5 5 4v7H4z" fill="currentColor" fillOpacity="0.2" />
+    <circle cx="6" cy="19" r="1" fill="currentColor" />
+    <circle cx="10" cy="19" r="1" fill="currentColor" />
+    <circle cx="14" cy="19" r="1" fill="currentColor" />
+    <circle cx="18" cy="19" r="1" fill="currentColor" />
+  </svg>
+);
+
+const ShieldBadgeIcon = ({ size = 85, style = {} }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="currentColor" fillOpacity="0.2" />
+    <path d="M12 8v8M8 12h8" />
+  </svg>
+);
+
+const StopwatchIcon = ({ size = 80, style = {} }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+    <circle cx="12" cy="13" r="8" fill="currentColor" fillOpacity="0.2" />
+    <path d="M12 9v4l3 3M10 2h4M12 2v3" />
+  </svg>
+);
+
 const FootballWatermarks = () => (
   <div className="export-football-watermarks">
-    <span style={{ top: '3%', left: '4%', transform: 'rotate(-15deg)', fontSize: '38px' }}>⚽</span>
-    <span style={{ top: '5%', right: '5%', transform: 'rotate(20deg)', fontSize: '42px' }}>🏆</span>
-    <span style={{ top: '16%', left: '48%', transform: 'rotate(-10deg)', fontSize: '34px' }}>⚽</span>
-    <span style={{ top: '28%', left: '2%', transform: 'rotate(15deg)', fontSize: '36px' }}>👟</span>
-    <span style={{ top: '32%', right: '3%', transform: 'rotate(-25deg)', fontSize: '38px' }}>🛡️</span>
-    <span style={{ top: '48%', left: '49%', transform: 'rotate(18deg)', fontSize: '40px' }}>⚽</span>
-    <span style={{ top: '52%', left: '3%', transform: 'rotate(30deg)', fontSize: '34px' }}>⏱️</span>
-    <span style={{ top: '55%', right: '2%', transform: 'rotate(-15deg)', fontSize: '36px' }}>⚽</span>
-    <span style={{ top: '72%', left: '2%', transform: 'rotate(-20deg)', fontSize: '38px' }}>👟</span>
-    <span style={{ top: '75%', right: '3%', transform: 'rotate(25deg)', fontSize: '42px' }}>🏆</span>
-    <span style={{ top: '88%', left: '48%', transform: 'rotate(12deg)', fontSize: '36px' }}>⚽</span>
-    <span style={{ top: '92%', left: '4%', transform: 'rotate(10deg)', fontSize: '34px' }}>🛡️</span>
-    <span style={{ top: '92%', right: '4%', transform: 'rotate(-15deg)', fontSize: '36px' }}>⚽</span>
+    <SoccerBallIcon size={105} style={{ position: 'absolute', top: '2%', left: '3%', transform: 'rotate(-25deg)' }} />
+    <TrophyIcon size={115} style={{ position: 'absolute', top: '3%', right: '4%', transform: 'rotate(18deg)' }} />
+    <SoccerBallIcon size={90} style={{ position: 'absolute', top: '17%', left: '46%', transform: 'rotate(-12deg)' }} />
+    <FootballBootIcon size={100} style={{ position: 'absolute', top: '28%', left: '2%', transform: 'rotate(32deg)' }} />
+    <ShieldBadgeIcon size={105} style={{ position: 'absolute', top: '34%', right: '3%', transform: 'rotate(-40deg)' }} />
+    <SoccerBallIcon size={110} style={{ position: 'absolute', top: '48%', left: '47%', transform: 'rotate(15deg)' }} />
+    <StopwatchIcon size={85} style={{ position: 'absolute', top: '56%', left: '3%', transform: 'rotate(-18deg)' }} />
+    <SoccerBallIcon size={95} style={{ position: 'absolute', top: '60%', right: '4%', transform: 'rotate(22deg)' }} />
+    <FootballBootIcon size={110} style={{ position: 'absolute', top: '75%', left: '2%', transform: 'rotate(-30deg)' }} />
+    <TrophyIcon size={105} style={{ position: 'absolute', top: '78%', right: '3%', transform: 'rotate(35deg)' }} />
+    <SoccerBallIcon size={90} style={{ position: 'absolute', top: '90%', left: '46%', transform: 'rotate(-10deg)' }} />
+    <ShieldBadgeIcon size={100} style={{ position: 'absolute', top: '91%', left: '3%', transform: 'rotate(12deg)' }} />
+    <SoccerBallIcon size={95} style={{ position: 'absolute', top: '91%', right: '3%', transform: 'rotate(-20deg)' }} />
   </div>
 );
 
