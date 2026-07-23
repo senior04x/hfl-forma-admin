@@ -1,0 +1,14 @@
+# Antigravity AI Project Rules & Token Optimization Guidelines
+
+# 1. Context Efficiency & Focus
+- Always prioritize the latest user request in the current turn.
+- Perform targeted file reads (`view_file` with precise line ranges or targeted `grep_search`) rather than reading entire large files into context.
+- Use `replace_file_content` for precise line replacements instead of rewriting whole files.
+
+# 2. Silent & Efficient Operations
+- Inspect build logs, test logs, and git outputs silently and present only high-level concise summaries to the user.
+- Keep responses concise, clean, and structured in Uzbek.
+
+# 3. Code Precision
+- Do not mutate unrelated logic or clear existing docstrings/comments.
+- Always run build/typecheck commands after modifying code to verify correctness immediately.
