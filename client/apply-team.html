@@ -1,9 +1,27 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" translate="no">
 <head>
+    <meta name="google" content="notranslate">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>HFL - Jamoaviy ro'yxatdan o'tish</title>
+    <meta name="description" content="Havas Futbol Ligasida ishtirok etish uchun o'z jamoangizni ro'yxatdan o'tkazing. O'yinchilarni qo'shing va turnirga tayyorlaning.">
+    <meta name="keywords" content="jamoa qo'shish, ro'yxatdan o'tish, havas liga zayavka, komanda yaratish">
+    <meta property="og:title" content="Havas Futbol Ligasi - Jamoaviy ro'yxatdan o'tish">
+    <meta property="og:description" content="O'z jamoangiz bilan Havas Futbol Ligasiga qatnashing. Hozir ro'yxatdan o'ting!">
+    <meta property="og:image" content="https://havasliga.uz/images/logo.png">
+    <meta property="og:url" content="https://havasliga.uz/apply-team.html">
+    <meta property="og:type" content="website">
+    
+    <!-- Favicon & PWA -->
+    <link rel="icon" type="image/png" href="images/app-icon-rounded.png">
+    <link rel="apple-touch-icon" href="images/app-icon-rounded.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="HFL">
+    <meta name="theme-color" content="#ffffff">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/main.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
@@ -181,8 +199,7 @@
                     <option value="Super liga">Super liga</option>
                     <option value="Pro liga">Pro liga</option>
                     <option value="3-liga">3-liga</option>
-                    <option value="Europa ligasi">Europa ligasi</option>
-                    <option value="Chempionlar ligasi">Chempionlar ligasi</option>
+                    <option value="7x7 liga">7x7 liga</option>
                 </select>
             </div>
 
@@ -197,6 +214,7 @@
                     <span class="phone-prefix">+998</span>
                     <input type="tel" id="captainPhone" class="form-control" placeholder="90 123 45 67" maxlength="12" required>
                 </div>
+                <div id="validationStatus" style="margin-top: 15px; font-size: 14px; min-height: 24px;"></div>
             </div>
 
             <div class="form-group">
@@ -213,7 +231,7 @@
         </div>
 
         <!-- PLAYERS SECTION -->
-        <div class="section-card">
+        <div class="section-card" id="playersSection" style="display: none; transition: opacity 0.3s ease; opacity: 0;">
             <h2 class="section-title">
                 <i data-lucide="users"></i> O'yinchilar 
                 <span id="playerCount" style="background: var(--primary); padding: 2px 10px; border-radius: 12px; font-size: 14px; margin-left: auto;">0 ta</span>
@@ -228,7 +246,7 @@
             </button>
         </div>
 
-        <button type="button" class="submit-btn" id="submitTeamBtn">
+        <button type="button" class="submit-btn" id="submitTeamBtn" style="display: none; transition: opacity 0.3s ease; opacity: 0;">
             <span class="btn-text">Jamoani yuborish</span>
             <div class="loader hidden"></div>
         </button>
@@ -346,7 +364,10 @@
 
     <!-- Success Modal -->
     <div id="successModal" class="modal hidden">
-        <div class="modal-content">
+        <div class="modal-content" style="position: relative;">
+            <button type="button" onclick="window.location.href = 'apply.html'" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: rgba(255,255,255,0.7); cursor: pointer; padding: 5px; transition: color 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">
+                <i data-lucide="x" size="24"></i>
+            </button>
             <div class="success-icon">
                 <i data-lucide="party-popper" size="64"></i>
             </div>

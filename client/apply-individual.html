@@ -1,9 +1,27 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" translate="no">
 <head>
+    <meta name="google" content="notranslate">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Havas Futbol Ligasi - Zayavka Qoldirish</title>
+    <meta name="description" content="Havas Futbol Ligasida yakkaxon o'yinchi sifatida qatnashish uchun zayavka qoldiring va jamoa toping.">
+    <meta name="keywords" content="yakkaxon o'yinchi, zayavka qoldirish, jamoa topish, havas liga, futbolchi ro'yxati">
+    <meta property="og:title" content="Havas Futbol Ligasi - Zayavka Qoldirish">
+    <meta property="og:description" content="Yakkaxon o'yinchi sifatida zayavka qoldiring va Havas Futbol Ligasida ishtirok eting.">
+    <meta property="og:image" content="https://havasliga.uz/images/logo.png">
+    <meta property="og:url" content="https://havasliga.uz/apply-individual.html">
+    <meta property="og:type" content="website">
+    
+    <!-- Favicon & PWA -->
+    <link rel="icon" type="image/png" href="images/app-icon-rounded.png">
+    <link rel="apple-touch-icon" href="images/app-icon-rounded.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="HFL">
+    <meta name="theme-color" content="#ffffff">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -66,8 +84,7 @@
                         <option value="Super liga">Super liga</option>
                         <option value="Pro liga">Pro liga</option>
                         <option value="3-liga">3-liga</option>
-                        <option value="Europa ligasi">Europa ligasi</option>
-                        <option value="Chempionlar ligasi">Chempionlar ligasi</option>
+                        <option value="7x7 liga">7x7 liga</option>
                     </select>
                 </div>
             </div>
@@ -216,7 +233,10 @@
 
         <!-- Success Modal -->
         <div id="successModal" class="modal hidden">
-            <div class="modal-content">
+            <div class="modal-content" style="position: relative;">
+                <button type="button" onclick="window.location.href = 'apply.html'" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: rgba(255,255,255,0.7); cursor: pointer; padding: 5px; transition: color 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">
+                    <i data-lucide="x" size="24"></i>
+                </button>
                 <div class="success-icon">
                     <i data-lucide="party-popper" size="64"></i>
                 </div>

@@ -61,11 +61,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             .single();
 
         if (matchErr) throw matchErr;
+        function getAbbr(name) {
+            if (!name) return 'UNK';
+            const clean = name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            if (clean.length <= 3) return clean;
+            return clean[0] + clean[Math.floor(clean.length / 2)] + clean[clean.length - 1];
+        }
+
         if (headerScoreArea) {
             headerScoreArea.innerHTML = `
+                <span class="header-team-abbr" style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-main); letter-spacing: 1px;">${getAbbr(match.home_team?.name)}</span>
                 <img src="${match.home_team?.logo_url || 'images/logo.png'}" class="header-team-logo" alt="Home">
                 <span class="header-score">${match.home_score || 0} - ${match.away_score || 0}</span>
                 <img src="${match.away_team?.logo_url || 'images/logo.png'}" class="header-team-logo" alt="Away">
+                <span class="header-team-abbr" style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-main); letter-spacing: 1px;">${getAbbr(match.away_team?.name)}</span>
             `;
         }
         
