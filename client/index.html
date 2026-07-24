@@ -89,6 +89,97 @@
                 </a>
             </div>
         </div>
+
+        <!-- SO'NGGI O'YIN NATIJALARI SECTION -->
+        <div class="recent-results-section">
+            <div class="results-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="activity" style="color: var(--gold-primary); width: 22px; height: 22px;"></i>
+                    <h2>SO'NGGI O'YIN NATIJALARI</h2>
+                </div>
+                <a href="matches.html">
+                    Barchasi <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+                </a>
+            </div>
+
+            <div id="recentMatchesList" style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Card 1 -->
+                <div class="home-match-card">
+                    <div class="home-match-card-header">
+                        <span class="league-title">7x7 liga</span>
+                        <span class="round-title">1-tur</span>
+                    </div>
+                    <div class="home-match-teams-row">
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="FC SAIFEINU" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">FC SAIFEINU</span>
+                        </div>
+                        <div class="home-score-pill">1 - 1</div>
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="FC CHEKHOV" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">FC CHEKHOV</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="home-match-card">
+                    <div class="home-match-card-header">
+                        <span class="league-title">7x7 liga</span>
+                        <span class="round-title">1-tur</span>
+                    </div>
+                    <div class="home-match-teams-row">
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="extrait parfume" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">extrait parfume</span>
+                        </div>
+                        <div class="home-score-pill">1 - 14</div>
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="Hayot bank" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">Hayot bank</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="home-match-card">
+                    <div class="home-match-card-header">
+                        <span class="league-title">7x7 liga</span>
+                        <span class="round-title">1-tur</span>
+                    </div>
+                    <div class="home-match-teams-row">
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="CHORSU" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">CHORSU</span>
+                        </div>
+                        <div class="home-score-pill">6 - 2</div>
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="Healthy way FC" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">Healthy way FC</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="home-match-card">
+                    <div class="home-match-card-header">
+                        <span class="league-title">7x7 liga</span>
+                        <span class="round-title">1-tur</span>
+                    </div>
+                    <div class="home-match-teams-row">
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="T-Spartak" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">T-Spartak</span>
+                        </div>
+                        <div class="home-score-pill">2 - 4</div>
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="FC QURUVCHI" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">FC QURUVCHI</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Footer -->
@@ -181,5 +272,63 @@
         });
     </script>
     <script src="js/layout.js"></script>
+
+    <!-- Supabase JS & Dynamic Recent Matches -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script>
+        async function fetchRecentMatchesHome() {
+            if (typeof db === 'undefined') return;
+            try {
+                const { data, error } = await db
+                    .from('matches')
+                    .select(`
+                        *,
+                        home_team:home_team_id (name, logo_url),
+                        away_team:away_team_id (name, logo_url)
+                    `)
+                    .order('match_date', { ascending: false })
+                    .limit(5);
+
+                if (error || !data || data.length === 0) return;
+
+                const list = document.getElementById('recentMatchesList');
+                if (!list) return;
+
+                list.innerHTML = data.map(m => {
+                    const homeName = m.home_team?.name || 'Uy jamoasi';
+                    const awayName = m.away_team?.name || 'Mehmon jamoa';
+                    const homeLogo = m.home_team?.logo_url || 'images/logo.png';
+                    const awayLogo = m.away_team?.logo_url || 'images/logo.png';
+                    const score = (m.status === 'finished' || m.home_score !== null) ? `${m.home_score || 0} - ${m.away_score || 0}` : 'VS';
+                    const roundText = m.round ? `${m.round}-tur` : '1-tur';
+                    const leagueText = m.league || '7x7 liga';
+
+                    return `
+                        <div class="home-match-card" onclick="location.href='match-details.html?id=${m.id}'" style="cursor: pointer;">
+                            <div class="home-match-card-header">
+                                <span class="league-title">${leagueText}</span>
+                                <span class="round-title">${roundText}</span>
+                            </div>
+                            <div class="home-match-teams-row">
+                                <div class="home-team-col">
+                                    <img src="${homeLogo}" alt="${homeName}" class="home-team-logo" onerror="this.src='images/logo.png'">
+                                    <span class="home-team-name">${homeName}</span>
+                                </div>
+                                <div class="home-score-pill">${score}</div>
+                                <div class="home-team-col">
+                                    <img src="${awayLogo}" alt="${awayName}" class="home-team-logo" onerror="this.src='images/logo.png'">
+                                    <span class="home-team-name">${awayName}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error('Home matches fetch error:', e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', fetchRecentMatchesHome);
+    </script>
 </body>
 </html>
