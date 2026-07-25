@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Calendar, Users, Menu, X, ArrowLeftRight } from 'lucide-react';
+import { LogOut, LayoutDashboard, Calendar, Users, Menu, X, ArrowLeftRight, Building2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import './Layout.css';
 
@@ -44,7 +44,8 @@ const Layout = () => {
     { path: '/transfers', label: 'Transferlar', icon: <ArrowLeftRight size={20} /> },
     { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> },
     { path: '/standings', label: 'Turnir jadvali', icon: <LayoutDashboard size={20} /> },
-    { path: '/sponsors', label: 'Homiylar', icon: <Calendar size={20} /> } // Re-using an icon or we can import Image
+    { path: '/sponsors', label: 'Homiylar', icon: <Calendar size={20} /> }, // Re-using an icon or we can import Image
+    { path: '/organizations', label: 'Tashkilotlar', icon: <Building2 size={20} /> }
   ];
 
   if (!session) return <div>Loading...</div>;
