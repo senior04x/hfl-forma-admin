@@ -1,95 +1,67 @@
-import React, { useEffect, useRef } from 'react';
-import Cropper from 'cropperjs';
+import React, { useState, useCallback } from 'react';
+import Cropper from 'react-easy-crop';
 import { Crop, Check, X, ZoomIn, ZoomOut } from 'lucide-react';
 import './ImageCropperModal.css';
 
-const ImageCropperModal = ({ 
-  isOpen = true, 
-  onClose, 
+// Rasmni canvas orqali qirqish
+async function getCroppedImg(imageSrc, pixelCrop) {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  canvas.width = 500;
+  canvas.height = 500;
+  const ctx = canvas.getContext('2d');
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0, 0, 500, 500
+  );
+
+  return canvas.toDataURL('image/jpeg', 0.85);
+}
+
+function createImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+const ImageCropperModal = ({
+  isOpen = true,
+  onClose,
   onCancel,
-  onSave, 
+  onSave,
   onCropComplete,
   imageSrc: propImageSrc,
   initialImageSrc,
-  title = "Rasmni 1:1 Formatda Qirqish" 
+  title = "Rasmni 1:1 Formatda Qirqish"
 }) => {
-  const imageRef = useRef(null);
-  const cropperRef = useRef(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   const handleClose = onClose || onCancel || (() => {});
   const handleSave = onSave || onCropComplete || (() => {});
   const src = propImageSrc || initialImageSrc;
 
-  useEffect(() => {
-    if (!isOpen || !src || !imageRef.current) return;
+  const onCropCompleteHandler = useCallback((_, croppedPixels) => {
+    setCroppedAreaPixels(croppedPixels);
+  }, []);
 
-    // Destroy previous instance
-    if (cropperRef.current) {
-      cropperRef.current.destroy();
-      cropperRef.current = null;
-    }
-
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      if (!imageRef.current) return;
-      
-      cropperRef.current = new Cropper(imageRef.current, {
-        aspectRatio: 1,
-        viewMode: 1,
-        autoCropArea: 1,
-        dragMode: 'move',
-        cropBoxMovable: false,
-        cropBoxResizable: false,
-        toggleDragModeOnDblclick: false,
-        guides: true,
-        center: true,
-        highlight: false,
-        background: true,
-        movable: true,
-        zoomable: true,
-        zoomOnWheel: true,
-        zoomOnTouch: true,
-        scalable: false,
-        rotatable: false,
-        responsive: true,
-        minContainerWidth: 250,
-        minContainerHeight: 250,
-      });
-    }, 100);
-
-    return () => {
-      clearTimeout(timer);
-      if (cropperRef.current) {
-        cropperRef.current.destroy();
-        cropperRef.current = null;
-      }
-    };
-  }, [src, isOpen]);
-
-  const handleCropAndSave = () => {
-    if (!cropperRef.current) return;
+  const handleCropAndSave = async () => {
+    if (!croppedAreaPixels || !src) return;
     try {
-      const canvas = cropperRef.current.getCroppedCanvas({
-        width: 500,
-        height: 500,
-      });
-      if (!canvas) return;
-      const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      const croppedDataUrl = await getCroppedImg(src, croppedAreaPixels);
       handleSave(croppedDataUrl);
     } catch (e) {
       console.error('Crop error:', e);
-    }
-  };
-
-  const handleZoomIn = () => {
-    if (cropperRef.current) {
-      try { cropperRef.current.zoom(0.1); } catch(e) {}
-    }
-  };
-
-  const handleZoomOut = () => {
-    if (cropperRef.current) {
-      try { cropperRef.current.zoom(-0.1); } catch(e) {}
     }
   };
 
@@ -110,19 +82,37 @@ const ImageCropperModal = ({
 
         <div className="cropper-body">
           <div className="cropper-image-container">
-            <img 
-              ref={imageRef} 
-              src={src} 
-              alt="Crop source"
-              style={{ display: 'block', maxWidth: '100%' }}
+            <Cropper
+              image={src}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropCompleteHandler}
+              cropShape="rect"
+              showGrid={true}
+              style={{
+                containerStyle: { width: '100%', height: '100%', borderRadius: '10px' },
+                cropAreaStyle: { border: '2.5px solid #00aaff' },
+              }}
             />
           </div>
 
           <div className="cropper-actions-row">
-            <button type="button" onClick={handleZoomOut} className="cropper-action-btn">
+            <button type="button" onClick={() => setZoom(z => Math.max(1, z - 0.2))} className="cropper-action-btn">
               <ZoomOut size={16} /> Kichiklashtirish
             </button>
-            <button type="button" onClick={handleZoomIn} className="cropper-action-btn">
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.05}
+              value={zoom}
+              onChange={e => setZoom(Number(e.target.value))}
+              className="cropper-zoom-slider"
+            />
+            <button type="button" onClick={() => setZoom(z => Math.min(3, z + 0.2))} className="cropper-action-btn">
               <ZoomIn size={16} /> Kattalashtirish
             </button>
           </div>
