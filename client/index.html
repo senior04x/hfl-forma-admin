@@ -1,9 +1,40 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" translate="no">
 <head>
+    <meta name="google" content="notranslate">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Havas Futbol Ligasi - Bosh Sahifa</title>
+    <title>Havas Futbol Ligasi - O'zbekistonning eng katta havaskorlar ligasi</title>
+    <meta name="description" content="Havas Futbol Ligasi - O'zbekistondagi havaskor va yarim-professional jamoalar uchun eng yirik futbol ligasi. O'yinlar jadvali, natijalar, to'purarlar va jamoalar ro'yxati havasliga.uz saytida.">
+    <meta name="keywords" content="futbol, havaskorlar ligasi, havas liga, o'zbekiston futbol, toshkent futbol, havasliga, havas futbol ligasi, 7x7 liga, futbol musobaqa">
+    
+    <!-- Open Graph for Social Media -->
+    <meta property="og:title" content="Havas Futbol Ligasi - O'zbekistonning eng katta havaskorlar ligasi">
+    <meta property="og:description" content="Havas Futbol Ligasi qatnashuvchilariga aylaning! Eng zo'r jamoalar, chiroyli gollar va hayajonli o'yinlar.">
+    <meta property="og:image" content="https://havasliga.uz/images/logo.png">
+    <meta property="og:url" content="https://havasliga.uz/">
+    <meta property="og:type" content="website">
+    
+    <!-- Favicon & PWA -->
+    <link rel="icon" type="image/png" href="images/app-icon-rounded.png">
+    <link rel="apple-touch-icon" href="images/app-icon-rounded.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="HFL">
+    <meta name="theme-color" content="#ffffff">
+    
+    <!-- Schema.org Markup for Google Logo -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SportsOrganization",
+      "name": "Havas Futbol Ligasi",
+      "url": "https://havasliga.uz",
+      "logo": "https://havasliga.uz/images/logo.png"
+    }
+    </script>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,6 +43,10 @@
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
 
     <!-- Google Model Viewer for 3D Models -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
@@ -20,12 +55,940 @@
     <link rel="preload" href="assets/models/soccer_ball.glb" as="fetch" crossorigin="anonymous">
 
     <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/welcome.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/main.css">
     
-    <title>Havas Futbol Ligasi - O'zbekistonning eng katta havaskorlar ligasi</title>
+    <style>
+        /* Top Scorers Banner Slider Styles */
+        .top-scorers-slider-section {
+            margin: 20px -15px 35px -15px;
+            width: calc(100% + 30px);
+            max-width: calc(100% + 30px);
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .section-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 0 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .slider-wrapper {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            padding: 10px 0 25px 0;
+        }
+
+        .slider-track {
+            display: flex;
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            gap: 16px;
+            width: 100%;
+        }
+
+        .top-scorer-slide {
+            flex: 0 0 86%;
+            min-width: 86%;
+            aspect-ratio: 2.1 / 1;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            padding: 28px 40px;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            opacity: 0.55;
+            transform: scale(0.93);
+        }
+
+        .top-scorer-slide.active-slide {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* League Themes with glassmorphism translucent gradient backdrops matching league branding */
+        .top-scorer-slide.theme-super {
+            background: linear-gradient(135deg, rgba(122, 10, 4, 0.45) 0%, rgba(187, 19, 8, 0.45) 50%, rgba(247, 132, 43, 0.35) 100%);
+        }
+        .top-scorer-slide.theme-pro {
+            background: linear-gradient(135deg, rgba(0, 39, 102, 0.45) 0%, rgba(0, 62, 157, 0.45) 50%, rgba(0, 186, 239, 0.35) 100%);
+        }
+        .top-scorer-slide.theme-3liga {
+            background: linear-gradient(135deg, rgba(92, 0, 119, 0.45) 0%, rgba(162, 0, 210, 0.45) 50%, rgba(235, 0, 244, 0.35) 100%);
+        }
+        .top-scorer-slide.theme-7x7 {
+            background: linear-gradient(135deg, rgba(1, 34, 76, 0.45) 0%, rgba(1, 60, 130, 0.45) 50%, rgba(88, 154, 251, 0.35) 100%);
+        }
+
+        .slide-badge-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            z-index: 2;
+        }
+        .slide-league-logo {
+            height: 52px;
+            max-width: 200px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+        }
+        .league-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 18px;
+            letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.9);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+
+        .slide-content {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: space-between;
+            align-items: center;
+            gap: 30px;
+            z-index: 2;
+            flex: 1;
+            margin: auto 0;
+        }
+
+        .slide-info {
+            flex: 1;
+            max-width: 600px;
+            text-align: left;
+        }
+
+        /* Real Top Scorer Player Slide Styles */
+        .top-scorer-crown-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: linear-gradient(135deg, #FFE600 0%, #F7B731 100%);
+            color: #000;
+            font-family: 'Outfit', sans-serif;
+            font-size: 13px;
+            font-weight: 800;
+            padding: 6px 14px;
+            border-radius: 14px;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 12px rgba(255, 230, 0, 0.4);
+            margin-left: auto;
+        }
+
+        .player-real-name {
+            font-family: 'Outfit', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+            color: white;
+            margin: 0 0 10px 0;
+            line-height: 1.1;
+            text-transform: uppercase;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+            letter-spacing: 0.5px;
+        }
+
+        .player-team-stat-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .player-team-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255, 255, 255, 0.95);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 0;
+        }
+
+        .player-team-logo {
+            width: 28px;
+            height: 28px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .player-stats-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .stat-badge {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 14px;
+            padding: 6px 14px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .stat-badge.goals-badge {
+            background: linear-gradient(135deg, rgba(255, 230, 0, 0.95) 0%, rgba(247, 183, 49, 0.95) 100%);
+            color: #0A0D14;
+            border: none;
+            box-shadow: 0 4px 15px rgba(255, 230, 0, 0.3);
+        }
+
+        .slide-player-cutout-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .player-frame-glow {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 24px;
+            background: radial-gradient(circle, rgba(255, 230, 0, 0.35) 0%, rgba(0, 0, 0, 0) 70%);
+            z-index: 1;
+            filter: blur(10px);
+        }
+
+        .player-framed-card {
+            position: relative;
+            z-index: 2;
+            width: 155px;
+            height: 185px;
+            border-radius: 22px;
+            border: 3px solid rgba(255, 230, 0, 0.85);
+            background: rgba(15, 18, 25, 0.8);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), inset 0 0 18px rgba(255, 230, 0, 0.2);
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+        }
+
+        /* Skeleton Loading Shimmer Effect */
+        .skeleton-pulse {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 25%, rgba(255, 255, 255, 0.22) 37%, rgba(255, 255, 255, 0.08) 63%);
+            background-size: 400% 100%;
+            animation: skeleton-shimmer 1.4s ease infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes skeleton-shimmer {
+            0% { background-position: 100% 50%; }
+            100% { background-position: 0 50%; }
+        }
+
+        .skeleton-text-name {
+            width: 70%;
+            height: 24px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+        }
+
+        .skeleton-text-team {
+            width: 50%;
+            height: 16px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+        }
+
+        .skeleton-text-badge {
+            width: 85px;
+            height: 26px;
+            border-radius: 10px;
+        }
+
+        .player-framed-card.skeleton-card {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        @media (max-width: 768px) {
+            .slide-content {
+                gap: 12px;
+            }
+            .player-real-name {
+                font-size: 16px;
+                margin-bottom: 3px;
+            }
+            .player-team-info {
+                font-size: 12px;
+                margin-bottom: 8px;
+                gap: 5px;
+            }
+            .player-team-logo {
+                width: 18px;
+                height: 18px;
+            }
+            .stat-badge {
+                font-size: 11px;
+                padding: 3px 8px;
+            }
+            .player-framed-card {
+                width: 88px;
+                height: 105px;
+                border-radius: 15px;
+                border-width: 1.5px;
+            }
+            .skeleton-text-name {
+                height: 18px;
+            }
+            .skeleton-text-team {
+                height: 14px;
+            }
+            .skeleton-text-badge {
+                width: 70px;
+                height: 22px;
+            }
+        }
+
+        .slide-info {
+            flex: 1;
+            max-width: 600px;
+        }
+        .question-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #FFE600;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+        .question-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            color: white;
+            margin: 0 0 10px 0;
+            line-height: 1.25;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .question-subtitle {
+            font-size: 14px;
+            color: rgba(255,255,255,0.85);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .slide-silhouette-container {
+            position: relative;
+            width: 140px;
+            height: 170px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .silhouette-glow {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,230,0,0.6) 0%, rgba(255,255,255,0) 70%);
+            animation: pulse-glow 2.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { transform: scale(0.95); opacity: 0.5; }
+            50% { transform: scale(1.15); opacity: 0.9; }
+        }
+
+        .silhouette-box {
+            position: relative;
+            width: 110px;
+            height: 150px;
+            background: rgba(10, 10, 20, 0.4);
+            backdrop-filter: blur(15px);
+            border: 2px dashed rgba(255, 230, 0, 0.6);
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        .silhouette-svg {
+            width: 80px;
+            height: 80px;
+            color: rgba(255,255,255,0.25);
+        }
+
+        .question-mark-overlay {
+            position: absolute;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 50px;
+            color: #FFE600;
+            text-shadow: 0 0 15px rgba(255, 230, 0, 0.8), 0 4px 8px rgba(0,0,0,0.8);
+            animation: float-qmark 2s infinite ease-in-out;
+        }
+
+        @keyframes float-qmark {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Slider Nav Buttons */
+        .slider-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s;
+        }
+        .slider-btn:hover {
+            background: rgba(240, 208, 96, 0.8);
+            color: black;
+            box-shadow: 0 0 15px rgba(240, 208, 96, 0.6);
+        }
+        .prev-btn { left: 15px; }
+        .next-btn { right: 15px; }
+
+        /* Slider Dots */
+        .slider-dots {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .dot.active {
+            width: 28px;
+            border-radius: 10px;
+            background: #FFE600;
+            box-shadow: 0 0 10px rgba(255,230,0,0.8);
+        }
+
+        @media (max-width: 768px) {
+            .top-scorers-slider-section {
+                margin: 10px -15px 20px -15px;
+                width: calc(100% + 30px);
+                max-width: calc(100% + 30px);
+                padding: 0;
+                overflow: hidden;
+            }
+            .slider-wrapper {
+                padding: 5px 0 18px 0;
+            }
+            .slider-track {
+                gap: 10px;
+            }
+            .top-scorer-slide {
+                flex: 0 0 84%;
+                min-width: 84%;
+                aspect-ratio: 1.85 / 1;
+                border-radius: 16px;
+                padding: 10px 14px 14px 14px;
+            }
+            .slide-badge-header {
+                margin-bottom: 0;
+                gap: 8px;
+            }
+            .slide-league-logo {
+                height: 28px;
+                max-width: 110px;
+            }
+            .question-title {
+                font-size: 14px;
+                line-height: 1.25;
+                margin: 0;
+            }
+            .slide-silhouette-container {
+                width: 65px;
+                height: 90px;
+            }
+            .silhouette-glow {
+                width: 65px;
+                height: 65px;
+            }
+            .silhouette-box {
+                width: 58px;
+                height: 80px;
+                border-radius: 12px;
+            }
+            .silhouette-svg {
+                width: 40px;
+                height: 40px;
+            }
+            .question-mark-overlay {
+                font-size: 26px;
+            }
+            .slider-btn {
+                display: none !important;
+            }
+            .prev-btn { left: 6px; }
+            .next-btn { right: 6px; }
+            .slider-dots {
+                bottom: 6px;
+            }
+            .dot {
+                width: 6px;
+                height: 6px;
+            }
+            .dot.active {
+                width: 18px;
+            }
+        }
+
+        /* 2x2 Quick Navigation Cards Grid */
+        .quick-nav-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin: 25px auto 45px auto;
+            max-width: 650px;
+            padding: 0 15px;
+        }
+
+        .nav-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 18px;
+            background: rgba(18, 20, 29, 0.65);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            color: #E2E8F0;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .nav-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 230, 0, 0.5);
+            box-shadow: 0 12px 30px rgba(255, 230, 0, 0.2);
+            color: white;
+        }
+
+        .nav-card.card-primary {
+            background: linear-gradient(135deg, rgba(247, 183, 49, 0.88) 0%, rgba(220, 140, 15, 0.95) 100%);
+            color: #0A0D14;
+            border: 1px solid rgba(255, 230, 0, 0.7);
+            box-shadow: 0 10px 30px rgba(247, 183, 49, 0.35);
+        }
+
+        .nav-card.card-primary:hover {
+            box-shadow: 0 14px 35px rgba(247, 183, 49, 0.55);
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        .nav-card-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .nav-card.card-primary .nav-card-icon {
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-card-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .nav-card-text {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            line-height: 1.2;
+            letter-spacing: 0.3px;
+        }
+
+        @media (max-width: 480px) {
+            .quick-nav-grid {
+                gap: 10px;
+                padding: 0 10px;
+                margin-top: 15px;
+            }
+            .nav-card {
+                padding: 14px 12px;
+                gap: 10px;
+                border-radius: 14px;
+            }
+            .nav-card-icon {
+                width: 32px;
+                height: 32px;
+                border-radius: 10px;
+            }
+            .nav-card-icon svg {
+                width: 17px;
+                height: 17px;
+            }
+            .nav-card-text {
+                font-size: 13.5px;
+            }
+        }
+
+        /* Real Top Scorer Player Slide Styles */
+        .top-scorer-crown-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: linear-gradient(135deg, #FFE600 0%, #F7B731 100%);
+            color: #000;
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 12px;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 12px rgba(255, 230, 0, 0.4);
+            margin-left: auto;
+        }
+
+        .player-real-name {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+            margin: 0 0 6px 0;
+            line-height: 1.1;
+            text-transform: uppercase;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+        }
+
+        .player-team-stat-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .player-team-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255, 255, 255, 0.85);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 0;
+        }
+
+        .player-team-logo {
+            width: 22px;
+            height: 22px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .player-stats-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .stat-badge {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 13px;
+            padding: 5px 12px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .stat-badge.goals-badge {
+            background: linear-gradient(135deg, rgba(255, 230, 0, 0.9) 0%, rgba(247, 183, 49, 0.9) 100%);
+            color: #0A0D14;
+            border: none;
+        }
+
+        .slide-player-cutout-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .player-frame-glow {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+            background: radial-gradient(circle, rgba(255, 230, 0, 0.35) 0%, rgba(0, 0, 0, 0) 70%);
+            z-index: 1;
+            filter: blur(8px);
+        }
+
+        .player-framed-card {
+            position: relative;
+            z-index: 2;
+            width: 110px;
+            height: 130px;
+            border-radius: 18px;
+            border: 2px solid rgba(255, 230, 0, 0.75);
+            background: rgba(15, 18, 25, 0.8);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 230, 0, 0.15);
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+        }
+
+        .player-framed-card:hover {
+            transform: scale(1.05);
+            border-color: #FFE600;
+        }
+
+        .player-frame-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .player-real-name {
+                font-size: 16px;
+                margin-bottom: 3px;
+            }
+            .player-team-stat-wrapper {
+                gap: 6px;
+            }
+            .player-team-info {
+                font-size: 12px;
+                margin-bottom: 0 !important;
+                gap: 4px;
+            }
+            .player-team-logo {
+                width: 18px;
+                height: 18px;
+            }
+            .stat-badge {
+                font-size: 11px;
+                padding: 3px 8px;
+            }
+            .player-framed-card {
+                width: 88px;
+                height: 105px;
+                border-radius: 15px;
+                border-width: 1.5px;
+            }
+        }
+
+        /* Recent Results Section */
+        .recent-results-section {
+            max-width: 650px;
+            margin: 0 auto 50px auto;
+            padding: 0 15px;
+        }
+
+        .recent-results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .view-all-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #FFE600;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .view-all-link:hover {
+            color: #F7B731;
+            transform: translateX(3px);
+        }
+
+        .recent-results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .result-card {
+            background: rgba(18, 20, 29, 0.65);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .result-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 230, 0, 0.4);
+        }
+
+        .result-card-badge {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #94A3B8;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 8px;
+        }
+
+        .result-league-name {
+            color: #FFE600;
+            letter-spacing: 0.5px;
+        }
+
+        .result-card-body {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .result-team-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .result-team-box.away {
+            justify-content: center;
+            text-align: center;
+        }
+
+        .result-team-logo {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 3px;
+        }
+
+        .result-team-name {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            color: white;
+            text-align: center;
+            text-transform: uppercase;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+            line-height: 1.2;
+            max-width: 100%;
+        }
+
+        .result-score-box {
+            background: linear-gradient(135deg, rgba(247, 183, 49, 0.9) 0%, rgba(220, 140, 15, 0.9) 100%);
+            color: #0A0D14;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 16px;
+            padding: 6px 14px;
+            border-radius: 12px;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(247, 183, 49, 0.3);
+            flex-shrink: 0;
+        }
+
+        .no-results-card {
+            background: rgba(18, 20, 29, 0.5);
+            backdrop-filter: blur(15px);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            padding: 30px 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: #94A3B8;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
 </head>
 <body>
+    
+    <!-- Welcome Screen -->
+    <div id="welcome-screen">
+        <div class="welcome-content">
+            <div class="welcome-text">HAVAS LIGA</div>
+        </div>
+    </div>
     
     <!-- Floating particles background -->
     <div class="particles" id="particles"></div>
@@ -72,111 +1035,136 @@
         </div>
     </div>
 
-    <div class="site-container" style="z-index: 1; position: relative;">
-        <div class="hero">
-            <h1>Havas Futbol Ligasi</h1>
-            <p>O'zbekistonning eng katta va qiziqarli havaskorlar futbol ligasi. O'z jamoangiz bilan chempionlik sari qadam tashlang yoki yakkaxon sifatida o'zingizga yangi jamoa toping!</p>
-            
-            <div class="hero-btns">
-                <a href="apply.html" class="btn-large btn-primary">
-                    <i data-lucide="user-plus"></i> Ro'yxatdan o'tish
-                </a>
-                <a href="teams.html" class="btn-large btn-secondary">
-                    <i data-lucide="shield"></i> Jamoalarni ko'rish
-                </a>
-                <a href="matches.html" class="btn-large btn-secondary">
-                    <i data-lucide="calendar"></i> O'yinlar jadvali
-                </a>
+    <div class="site-container" style="z-index: 1; position: relative; padding-top: 10px;">
+        <!-- Top Scorers Banner Slider Section (Positioned at Very Top) -->
+        <div class="top-scorers-slider-section" style="margin-top: 10px;">
+            <h2 class="section-title">
+                <i data-lucide="trophy" style="color: var(--gold-primary);"></i> Ligalar To'purarlari
+            </h2>
+
+            <div class="slider-wrapper" id="topScorersSlider">
+                <!-- Slider Slides Track -->
+                <div class="slider-track" id="sliderTrack">
+                    
+                    <!-- Slide 1: Super Liga -->
+                    <div class="top-scorer-slide theme-super">
+                        <div class="slide-badge-header">
+                            <img src="images/super-liga.PNG" alt="Super Liga" class="slide-league-logo" onerror="this.onerror=null; this.src='super-liga.PNG';">
+                        </div>
+                        <div class="slide-content">
+                            <div class="slide-info">
+                                <div class="skeleton-pulse skeleton-text-name"></div>
+                                <div class="skeleton-pulse skeleton-text-team"></div>
+                                <div class="skeleton-pulse skeleton-text-badge"></div>
+                            </div>
+                            <div class="slide-player-cutout-container">
+                                <div class="player-framed-card skeleton-card skeleton-pulse"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 2: Pro Liga -->
+                    <div class="top-scorer-slide theme-pro">
+                        <div class="slide-badge-header">
+                            <img src="images/Pro-liga.PNG" alt="Pro Liga" class="slide-league-logo" onerror="this.onerror=null; this.src='Pro-liga.PNG';">
+                        </div>
+                        <div class="slide-content">
+                            <div class="slide-info">
+                                <div class="skeleton-pulse skeleton-text-name"></div>
+                                <div class="skeleton-pulse skeleton-text-team"></div>
+                                <div class="skeleton-pulse skeleton-text-badge"></div>
+                            </div>
+                            <div class="slide-player-cutout-container">
+                                <div class="player-framed-card skeleton-card skeleton-pulse"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 3: 3-Liga -->
+                    <div class="top-scorer-slide theme-3liga">
+                        <div class="slide-badge-header">
+                            <img src="images/3-liga.PNG" alt="3-Liga" class="slide-league-logo" onerror="this.onerror=null; this.src='3-liga.PNG';">
+                        </div>
+                        <div class="slide-content">
+                            <div class="slide-info">
+                                <div class="skeleton-pulse skeleton-text-name"></div>
+                                <div class="skeleton-pulse skeleton-text-team"></div>
+                                <div class="skeleton-pulse skeleton-text-badge"></div>
+                            </div>
+                            <div class="slide-player-cutout-container">
+                                <div class="player-framed-card skeleton-card skeleton-pulse"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 4: 7x7 Liga -->
+                    <div class="top-scorer-slide theme-7x7">
+                        <div class="slide-badge-header">
+                            <img src="images/7x7-liga.png" alt="7x7 Liga" class="slide-league-logo" onerror="this.onerror=null; this.src='7x7-liga.png';">
+                        </div>
+                        <div class="slide-content">
+                            <div class="slide-info">
+                                <div class="skeleton-pulse skeleton-text-name"></div>
+                                <div class="skeleton-pulse skeleton-text-team"></div>
+                                <div class="skeleton-pulse skeleton-text-badge"></div>
+                            </div>
+                            <div class="slide-player-cutout-container">
+                                <div class="player-framed-card skeleton-card skeleton-pulse"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Slider Controls -->
+                <button class="slider-btn prev-btn" id="prevSlideBtn"><i data-lucide="chevron-left"></i></button>
+                <button class="slider-btn next-btn" id="nextSlideBtn"><i data-lucide="chevron-right"></i></button>
+
+                <!-- Slider Dots -->
+                <div class="slider-dots" id="sliderDots">
+                    <span class="dot active" data-index="0"></span>
+                    <span class="dot" data-index="1"></span>
+                    <span class="dot" data-index="2"></span>
+                    <span class="dot" data-index="3"></span>
+                </div>
             </div>
         </div>
 
-        <!-- SO'NGGI O'YIN NATIJALARI SECTION -->
+        <!-- Quick Navigation 2x2 Cards Grid (4 Cards in 2 Rows) -->
+        <div class="quick-nav-grid">
+            <a href="apply.html" class="nav-card card-primary">
+                <div class="nav-card-icon"><i data-lucide="user-plus"></i></div>
+                <div class="nav-card-text">Ro'yxatdan o'tish</div>
+            </a>
+            <a href="teams.html" class="nav-card">
+                <div class="nav-card-icon"><i data-lucide="shield"></i></div>
+                <div class="nav-card-text">Jamoalar</div>
+            </a>
+            <a href="matches.html" class="nav-card">
+                <div class="nav-card-icon"><i data-lucide="calendar"></i></div>
+                <div class="nav-card-text">O'yinlar</div>
+            </a>
+            <a href="standings.html" class="nav-card">
+                <div class="nav-card-icon"><i data-lucide="trophy"></i></div>
+                <div class="nav-card-text">Turnir jadvali</div>
+            </a>
+        </div>
+
+        <!-- Recent Match Results Section -->
         <div class="recent-results-section">
-            <div class="results-header">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i data-lucide="activity" style="color: var(--gold-primary); width: 22px; height: 22px;"></i>
-                    <h2>SO'NGGI O'YIN NATIJALARI</h2>
-                </div>
-                <a href="matches.html">
+            <div class="recent-results-header">
+                <h2 class="section-title" style="padding: 0; margin: 0; font-size: 20px;">
+                    <i data-lucide="activity" style="color: var(--gold-primary);"></i> So'nggi o'yin natijalari
+                </h2>
+                <a href="matches.html" class="view-all-link">
                     Barchasi <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
                 </a>
             </div>
 
-            <div id="recentMatchesList" style="display: flex; flex-direction: column; gap: 16px;">
-                <!-- Card 1 -->
-                <div class="home-match-card">
-                    <div class="home-match-card-header">
-                        <span class="league-title">7x7 liga</span>
-                        <span class="round-title">1-tur</span>
-                    </div>
-                    <div class="home-match-teams-row">
-                        <div class="home-team-col">
-                            <img src="images/logo.png" alt="FC SAIFEINU" class="home-team-logo" onerror="this.src='images/logo.png'">
-                            <span class="home-team-name">FC SAIFEINU</span>
-                        </div>
-                        <div class="home-score-pill">1 - 1</div>
-                        <div class="home-team-col">
-                            <img src="images/logo.png" alt="FC CHEKHOV" class="home-team-logo" onerror="this.src='images/logo.png'">
-                            <span class="home-team-name">FC CHEKHOV</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 2 -->
-                <div class="home-match-card">
-                    <div class="home-match-card-header">
-                        <span class="league-title">7x7 liga</span>
-                        <span class="round-title">1-tur</span>
-                    </div>
-                    <div class="home-match-teams-row">
-                        <div class="home-team-col">
-                            <img src="images/logo.png" alt="extrait parfume" class="home-team-logo" onerror="this.src='images/logo.png'">
-                            <span class="home-team-name">extrait parfume</span>
-                        </div>
-                        <div class="home-score-pill">1 - 14</div>
-                        <div class="home-team-col">
-                            <img src="images/logo.png" alt="Hayot bank" class="home-team-logo" onerror="this.src='images/logo.png'">
-                            <span class="home-team-name">Hayot bank</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 3 -->
-                <div class="home-match-card">
-                    <div class="home-match-card-header">
-                        <span class="league-title">7x7 liga</span>
-                        <span class="round-title">1-tur</span>
-                    </div>
-                    <div class="home-match-teams-row">
-                        <div class="home-team-col">
-                            <img src="images/logo.png" alt="CHORSU" class="home-team-logo" onerror="this.src='images/logo.png'">
-                            <span class="home-team-name">CHORSU</span>
-                        </div>
-                        <div class="home-score-pill">6 - 2</div>
-                        <div class="home-team-col">
-                            <img src="images/logo.png" alt="Healthy way FC" class="home-team-logo" onerror="this.src='images/logo.png'">
-                            <span class="home-team-name">Healthy way FC</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 4 -->
-                <div class="home-match-card">
-                    <div class="home-match-card-header">
-                        <span class="league-title">7x7 liga</span>
-                        <span class="round-title">1-tur</span>
-                    </div>
-                    <div class="home-match-teams-row">
-                        <div class="home-team-col">
-                            <img src="images/logo.png" alt="T-Spartak" class="home-team-logo" onerror="this.src='images/logo.png'">
-                            <span class="home-team-name">T-Spartak</span>
-                        </div>
-                        <div class="home-score-pill">2 - 4</div>
-                        <div class="home-team-col">
-                            <img src="images/logo.png" alt="FC QURUVCHI" class="home-team-logo" onerror="this.src='images/logo.png'">
-                            <span class="home-team-name">FC QURUVCHI</span>
-                        </div>
-                    </div>
+            <div id="homepageRecentResults" class="recent-results-list">
+                <div class="no-results-card">
+                    <i data-lucide="calendar" style="width: 36px; height: 36px; color: #94a3b8;"></i>
+                    <p style="margin: 0;">Hozircha o'yin natijalari mavjud emas. Yangi turlar o'yinlaridan so'ng ushbu joyda natijalar aks etadi!</p>
                 </div>
             </div>
         </div>
@@ -225,22 +1213,29 @@
             </div>
         </div>
     </footer>
+
     <!-- Scripts -->
     <script>
         lucide.createIcons();
         
         // 3D Models Entrance Animation
         document.addEventListener('DOMContentLoaded', () => {
-            // Wait 1 second for everything to settle before sliding in
-            setTimeout(() => {
+            const showModels = () => {
                 const w1 = document.querySelector('.model-wrap-1');
                 const w2 = document.querySelector('.model-wrap-2');
                 const w3 = document.querySelector('.model-wrap-3');
-                
                 if(w1) w1.classList.remove('slide-out');
                 if(w2) w2.classList.remove('slide-out');
                 if(w3) w3.classList.remove('slide-out');
-            }, 1000);
+            };
+
+            // Always wait for the welcome screen to finish animating
+            window.addEventListener('welcomeScreenFinished', () => {
+                setTimeout(showModels, 200); // Small delay after fade out starts
+            }, { once: true });
+            
+            // Fallback just in case
+            setTimeout(showModels, 4500);
         });
 
         // 3D Models Exit Animation
@@ -270,65 +1265,459 @@
                 }
             });
         });
-    </script>
-    <script src="js/layout.js"></script>
 
-    <!-- Supabase JS & Dynamic Recent Matches -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase.js"></script>
-    <script>
-        async function fetchRecentMatchesHome() {
-            if (typeof db === 'undefined') return;
+        // Top Scorers Slider Infinite Seamless Loop Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const track = document.getElementById('sliderTrack');
+            const dots = document.querySelectorAll('.slider-dots .dot');
+            const prevBtn = document.getElementById('prevSlideBtn');
+            const nextBtn = document.getElementById('nextSlideBtn');
+
+            if (!track || dots.length === 0) return;
+
+            const originalSlides = Array.from(track.querySelectorAll('.top-scorer-slide'));
+            const realTotal = originalSlides.length;
+            if (realTotal === 0) return;
+
+            // Clone slides for seamless infinite loop:
+            // Append first slide to end, prepend last slide to start
+            const firstClone = originalSlides[0].cloneNode(true);
+            const lastClone = originalSlides[realTotal - 1].cloneNode(true);
+
+            firstClone.classList.add('clone-slide');
+            lastClone.classList.add('clone-slide');
+
+            track.appendChild(firstClone);
+            track.insertBefore(lastClone, originalSlides[0]);
+
+            const allSlides = Array.from(track.querySelectorAll('.top-scorer-slide'));
+            let currentVirtualIndex = 1; // Start at first REAL slide (index 1 in virtual array)
+            let isTransitioning = false;
+
+            const updateSlidePosition = (animate = true) => {
+                if (animate) {
+                    track.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+                } else {
+                    track.style.transition = 'none';
+                }
+
+                const isMobile = window.innerWidth <= 768;
+                const slideWidthPercent = isMobile ? 84 : 86;
+                const gapPx = isMobile ? 10 : 16;
+                const centerOffsetPercent = (100 - slideWidthPercent) / 2;
+
+                track.style.transform = `translateX(calc(${centerOffsetPercent}% - ${currentVirtualIndex} * (${slideWidthPercent}% + ${gapPx}px)))`;
+
+                // Real active index (0 to realTotal - 1)
+                let realIndex = (currentVirtualIndex - 1 + realTotal) % realTotal;
+
+                dots.forEach((dot, idx) => {
+                    dot.classList.toggle('active', idx === realIndex);
+                });
+
+                allSlides.forEach((slide, idx) => {
+                    slide.classList.toggle('active-slide', idx === currentVirtualIndex);
+                });
+            };
+
+            // Set initial position without animation
+            updateSlidePosition(false);
+
+            const handleNext = () => {
+                if (isTransitioning) return;
+                isTransitioning = true;
+                currentVirtualIndex++;
+                updateSlidePosition(true);
+            };
+
+            const handlePrev = () => {
+                if (isTransitioning) return;
+                isTransitioning = true;
+                currentVirtualIndex--;
+                updateSlidePosition(true);
+            };
+
+            track.addEventListener('transitionend', () => {
+                isTransitioning = false;
+
+                // If moved past the last real slide (to firstClone)
+                if (currentVirtualIndex >= realTotal + 1) {
+                    currentVirtualIndex = 1;
+                    updateSlidePosition(false);
+                }
+                // If moved before the first real slide (to lastClone)
+                if (currentVirtualIndex <= 0) {
+                    currentVirtualIndex = realTotal;
+                    updateSlidePosition(false);
+                }
+            });
+
+            let slideInterval;
+            const startAutoSlide = () => {
+                stopAutoSlide();
+                slideInterval = setInterval(handleNext, 4500);
+            };
+
+            const stopAutoSlide = () => {
+                if (slideInterval) clearInterval(slideInterval);
+            };
+
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => {
+                    handlePrev();
+                    startAutoSlide();
+                });
+            }
+
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    handleNext();
+                    startAutoSlide();
+                });
+            }
+
+            dots.forEach((dot) => {
+                dot.addEventListener('click', (e) => {
+                    if (isTransitioning) return;
+                    const idx = parseInt(e.target.dataset.index);
+                    currentVirtualIndex = idx + 1;
+                    updateSlidePosition(true);
+                    startAutoSlide();
+                });
+            });
+
+            // Touch Swipe Events
+            const sliderContainer = document.getElementById('topScorersSlider');
+            if (sliderContainer) {
+                sliderContainer.addEventListener('mouseenter', stopAutoSlide);
+                sliderContainer.addEventListener('mouseleave', startAutoSlide);
+
+                let touchStartX = 0;
+                let touchEndX = 0;
+
+                sliderContainer.addEventListener('touchstart', (e) => {
+                    touchStartX = e.changedTouches[0].screenX;
+                }, { passive: true });
+
+                sliderContainer.addEventListener('touchend', (e) => {
+                    touchEndX = e.changedTouches[0].screenX;
+                    const diffX = touchStartX - touchEndX;
+                    if (Math.abs(diffX) > 35) {
+                        if (diffX > 0) {
+                            handleNext();
+                        } else {
+                            handlePrev();
+                        }
+                        startAutoSlide();
+                    }
+                }, { passive: true });
+            }
+
+            startAutoSlide();
+
+            window.addEventListener('resize', () => {
+                updateSlidePosition(false);
+            });
+        });
+
+        // Fetch and display latest finished matches on homepage
+        document.addEventListener('DOMContentLoaded', async () => {
+            const resultsContainer = document.getElementById('homepageRecentResults');
+            if (!resultsContainer || typeof db === 'undefined') return;
+
             try {
-                const { data, error } = await db
+                // Fetch finished matches
+                const { data: matches, error: matchesErr } = await db
                     .from('matches')
-                    .select(`
-                        *,
-                        home_team:home_team_id (name, logo_url),
-                        away_team:away_team_id (name, logo_url)
-                    `)
+                    .select('*')
+                    .eq('status', 'finished')
                     .order('match_date', { ascending: false })
                     .limit(5);
 
-                if (error || !data || data.length === 0) return;
+                if (matchesErr || !matches || matches.length === 0) return;
 
-                const list = document.getElementById('recentMatchesList');
-                if (!list) return;
+                // Fetch Teams
+                const { data: teams, error: teamsErr } = await db
+                    .from('teams')
+                    .select('id, name, logo_url');
 
-                list.innerHTML = data.map(m => {
-                    const homeName = m.home_team?.name || 'Uy jamoasi';
-                    const awayName = m.away_team?.name || 'Mehmon jamoa';
-                    const homeLogo = m.home_team?.logo_url || 'images/logo.png';
-                    const awayLogo = m.away_team?.logo_url || 'images/logo.png';
-                    const score = (m.status === 'finished' || m.home_score !== null) ? `${m.home_score || 0} - ${m.away_score || 0}` : 'VS';
-                    const roundText = m.round ? `${m.round}-tur` : '1-tur';
-                    const leagueText = m.league || '7x7 liga';
+                if (teamsErr || !teams) return;
 
-                    return `
-                        <div class="home-match-card" onclick="location.href='match-details.html?id=${m.id}'" style="cursor: pointer;">
-                            <div class="home-match-card-header">
-                                <span class="league-title">${leagueText}</span>
-                                <span class="round-title">${roundText}</span>
+                const teamsMap = {};
+                teams.forEach(t => { teamsMap[t.id] = t; });
+
+                let html = '';
+                matches.forEach(m => {
+                    const homeTeam = teamsMap[m.home_team_id] || { name: 'Jamoa A', logo_url: '' };
+                    const awayTeam = teamsMap[m.away_team_id] || { name: 'Jamoa B', logo_url: '' };
+
+                    const leagueText = m.league || 'Liga';
+                    const roundText = m.round ? `${m.round}-tur` : '';
+
+                    html += `
+                        <div class="result-card">
+                            <div class="result-card-badge">
+                                <span class="result-league-name">${leagueText}</span>
+                                <span>${roundText}</span>
                             </div>
-                            <div class="home-match-teams-row">
-                                <div class="home-team-col">
-                                    <img src="${homeLogo}" alt="${homeName}" class="home-team-logo" onerror="this.src='images/logo.png'">
-                                    <span class="home-team-name">${homeName}</span>
+                            <div class="result-card-body">
+                                <div class="result-team-box">
+                                    <img src="${homeTeam.logo_url}" alt="${homeTeam.name}" class="result-team-logo" onerror="this.onerror=null; this.src='images/logo.png'">
+                                    <span class="result-team-name">${homeTeam.name}</span>
                                 </div>
-                                <div class="home-score-pill">${score}</div>
-                                <div class="home-team-col">
-                                    <img src="${awayLogo}" alt="${awayName}" class="home-team-logo" onerror="this.src='images/logo.png'">
-                                    <span class="home-team-name">${awayName}</span>
+                                <div class="result-score-box">${m.home_score} - ${m.away_score}</div>
+                                <div class="result-team-box away">
+                                    <img src="${awayTeam.logo_url}" alt="${awayTeam.name}" class="result-team-logo" onerror="this.onerror=null; this.src='images/logo.png'">
+                                    <span class="result-team-name">${awayTeam.name}</span>
                                 </div>
                             </div>
                         </div>
                     `;
-                }).join('');
+                });
+
+                resultsContainer.innerHTML = html;
+                lucide.createIcons();
+            } catch (err) {
+                console.log('Homepage recent results fetch:', err);
+            }
+        });
+
+        // Automatic canvas background remover for player photos
+        function processPlayerCutout(imgElement) {
+            if (!imgElement || !imgElement.complete) return;
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = imgElement.naturalWidth || imgElement.width;
+                canvas.height = imgElement.naturalHeight || imgElement.height;
+                ctx.drawImage(imgElement, 0, 0);
+
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imgData.data;
+
+                const bgR = data[0];
+                const bgG = data[1];
+                const bgB = data[2];
+
+                const threshold = 35;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    const diff = Math.sqrt(
+                        Math.pow(r - bgR, 2) +
+                        Math.pow(g - bgG, 2) +
+                        Math.pow(b - bgB, 2)
+                    );
+
+                    if (diff < threshold || (r > 240 && g > 240 && b > 240) || (r < 15 && g < 15 && b < 15 && i < data.length * 0.1)) {
+                        data[i + 3] = 0; // Transparent
+                    }
+                }
+
+                ctx.putImageData(imgData, 0, 0);
+                imgElement.src = canvas.toDataURL('image/png');
             } catch (e) {
-                console.error('Home matches fetch error:', e);
+                // Cross-Origin or CORS fallback
             }
         }
-        document.addEventListener('DOMContentLoaded', fetchRecentMatchesHome);
+
+        // Helper to show default fallback on all slides (replaces skeleton)
+        function showDefaultSliderFallback() {
+            const slides = document.querySelectorAll('.top-scorer-slide');
+            const leagueNames = { 'theme-super': 'Super liga', 'theme-pro': 'Pro liga', 'theme-3liga': '3-liga', 'theme-7x7': '7x7 liga' };
+            slides.forEach(slide => {
+                const themeClass = Array.from(slide.classList).find(c => c.startsWith('theme-'));
+                const leagueName = leagueNames[themeClass] || '';
+                const contentBox = slide.querySelector('.slide-content');
+                if (contentBox) {
+                    contentBox.innerHTML = `
+                        <div class="slide-info">
+                            <h3 class="question-title">${leagueName} 1-tur to'purari kim bo'lishi mumkin?</h3>
+                        </div>
+                        <div class="slide-silhouette-container">
+                            <div class="silhouette-glow"></div>
+                            <div class="silhouette-box">
+                                <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
+                                    <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
+                                </svg>
+                                <div class="question-mark-overlay">?</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        // Fetch Real Top Scorers for Slider dynamically from Supabase
+        async function loadRealTopScorersForSlider() {
+            if (typeof db === 'undefined') { showDefaultSliderFallback(); return; }
+
+            try {
+                // 1. Fetch all goal/assist events
+                const { data: events, error: eErr } = await db
+                    .from('match_events')
+                    .select('id, event_type, player_id, team_id')
+                    .in('event_type', ['goal', 'assist']);
+
+                if (eErr || !events || events.length === 0) { showDefaultSliderFallback(); return; }
+
+                // 2. Fetch all players/applications
+                const { data: players } = await db
+                    .from('applications')
+                    .select('id, first_name, last_name, photo_url, team_id');
+
+                const playersMap = {};
+                if (players && players.length > 0) {
+                    players.forEach(p => { playersMap[p.id] = p; });
+                }
+
+                // 3. Fetch all teams
+                const { data: teams } = await db
+                    .from('teams')
+                    .select('id, name, logo_url, league');
+
+                const teamsMap = {};
+                if (teams && teams.length > 0) {
+                    teams.forEach(t => { teamsMap[t.id] = t; });
+                }
+
+                function getLeagueKey(leagueStr) {
+                    if (!leagueStr) return '';
+                    const l = String(leagueStr).toLowerCase().trim();
+                    if (l.includes('super')) return 'Super liga';
+                    if (l.includes('pro')) return 'Pro liga';
+                    if (l.includes('3')) return '3-liga';
+                    if (l.includes('7x7') || l.includes('7')) return '7x7 liga';
+                    return l;
+                }
+
+                const playerStatsByLeague = {};
+
+                events.forEach(e => {
+                    if (!e.player_id) return;
+                    const player = playersMap[e.player_id];
+                    const team = teamsMap[e.team_id || (player ? player.team_id : null)];
+                    
+                    const leagueStr = team ? team.league : '';
+                    const leagueKey = getLeagueKey(leagueStr);
+                    if (!leagueKey) return;
+
+                    if (!playerStatsByLeague[leagueKey]) {
+                        playerStatsByLeague[leagueKey] = {};
+                    }
+
+                    const leagueMap = playerStatsByLeague[leagueKey];
+                    if (!leagueMap[e.player_id]) {
+                        leagueMap[e.player_id] = {
+                            id: e.player_id,
+                            firstName: player ? (player.first_name || '') : 'Futbolchi',
+                            lastName: player ? (player.last_name || '') : '',
+                            photoUrl: player ? (player.photo_url || '') : '',
+                            teamName: team ? (team.name || '') : '',
+                            teamLogo: team ? (team.logo_url || '') : '',
+                            goals: 0,
+                            assists: 0
+                        };
+                    }
+
+                    if (e.event_type === 'goal') leagueMap[e.player_id].goals += 1;
+                    if (e.event_type === 'assist') leagueMap[e.player_id].assists += 1;
+                });
+
+                const leagueTopScorers = {};
+                Object.keys(playerStatsByLeague).forEach(lKey => {
+                    const topScorers = Object.values(playerStatsByLeague[lKey])
+                        .filter(p => p.goals > 0)
+                        .sort((a, b) => b.goals - a.goals);
+
+                    if (topScorers.length > 0) {
+                        leagueTopScorers[lKey] = topScorers[0];
+                    }
+                });
+
+                // Update Slider Slides if top scorers exist
+                const slides = document.querySelectorAll('.top-scorer-slide');
+                slides.forEach(slide => {
+                    const themeClass = Array.from(slide.classList).find(c => c.startsWith('theme-'));
+                    let leagueName = '';
+                    if (themeClass === 'theme-super') leagueName = 'Super liga';
+                    if (themeClass === 'theme-pro') leagueName = 'Pro liga';
+                    if (themeClass === 'theme-3liga') leagueName = '3-liga';
+                    if (themeClass === 'theme-7x7') leagueName = '7x7 liga';
+
+                    const topPlayer = leagueTopScorers[leagueName];
+                    const contentBox = slide.querySelector('.slide-content');
+                    if (contentBox) {
+                        if (topPlayer) {
+                            const pName = `${topPlayer.firstName} ${topPlayer.lastName}`.trim();
+                            const pPhoto = topPlayer.photoUrl || 'images/app-icon-rounded.png';
+                            const tLogo = topPlayer.teamLogo || 'images/logo.png';
+                            const tName = topPlayer.teamName || '';
+
+                            contentBox.innerHTML = `
+                                <div class="slide-info">
+                                    <h3 class="player-real-name">${pName}</h3>
+                                    <div class="player-team-stat-wrapper">
+                                        <div class="player-team-info">
+                                            <img src="${tLogo}" alt="${tName}" class="player-team-logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/22x22?text=T'">
+                                            <span>${tName}</span>
+                                        </div>
+                                        <div class="player-stats-row">
+                                            <span class="stat-badge goals-badge">
+                                                <i data-lucide="target" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i> ${topPlayer.goals} ta gol
+                                            </span>
+                                            ${topPlayer.assists > 0 ? `<span class="stat-badge assists-badge"><i data-lucide="footprints" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i> ${topPlayer.assists} ta uzatma</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slide-player-cutout-container">
+                                    <div class="player-frame-glow"></div>
+                                    <div class="player-framed-card">
+                                        <img src="${pPhoto}" alt="${pName}" class="player-frame-img" onerror="this.onerror=null; this.src='images/app-icon-rounded.png'">
+                                    </div>
+                                </div>
+                            `;
+
+                            const headerBox = slide.querySelector('.slide-badge-header');
+                            if (headerBox) {
+                                const oldBadge = headerBox.querySelector('.top-scorer-crown-badge');
+                                if (oldBadge) oldBadge.remove();
+                                headerBox.innerHTML += `<span class="top-scorer-crown-badge">1-tur</span>`;
+                            }
+                        } else {
+                            contentBox.innerHTML = `
+                                <div class="slide-info">
+                                    <h3 class="question-title">${leagueName} 1-tur to'purari kim bo'lishi mumkin?</h3>
+                                </div>
+                                <div class="slide-silhouette-container">
+                                    <div class="silhouette-glow"></div>
+                                    <div class="silhouette-box">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" class="silhouette-svg">
+                                            <path d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a7 7 0 0 0-7 7v1h14v-1a7 7 0 0 0-7-7z"/>
+                                        </svg>
+                                        <div class="question-mark-overlay">?</div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } catch (err) {
+                console.error('Real top scorers slider fetch:', err);
+                showDefaultSliderFallback();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadRealTopScorersForSlider);
     </script>
+    <script src="js/layout.js"></script>
+    <script src="js/welcome.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/3d-scene.js"></script>
 </body>
 </html>
