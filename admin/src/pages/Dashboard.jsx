@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { useOrg } from '../context/OrgContext';
 import PlayersTable from '../components/PlayersTable';
 import TeamsTable from '../components/TeamsTable';
 import './Dashboard.css';
@@ -7,23 +8,24 @@ import './Dashboard.css';
 const Dashboard = () => {
   const [currentTab, setCurrentTab] = useState('players');
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0 });
+  const { orgId } = useOrg();
 
   useEffect(() => {
     fetchStats();
-  }, [currentTab]);
+  }, [currentTab, orgId]);
 
   const fetchStats = async () => {
     try {
       if (currentTab === 'players') {
-        const { count: total, error: e1 } = await supabase.from('applications').select('*', { count: 'exact', head: true });
-        const { count: pending, error: e2 } = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-        const { count: approved, error: e3 } = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'approved');
+        const { count: total, error: e1 } = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('organization_id', orgId);
+        const { count: pending, error: e2 } = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'pending');
+        const { count: approved, error: e3 } = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'approved');
         
         if (!e1 && !e2 && !e3) setStats({ total: total || 0, pending: pending || 0, approved: approved || 0 });
       } else {
-        const { count: total, error: e1 } = await supabase.from('teams').select('*', { count: 'exact', head: true });
-        const { count: pending, error: e2 } = await supabase.from('teams').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-        const { count: approved, error: e3 } = await supabase.from('teams').select('*', { count: 'exact', head: true }).in('status', ['approved', 'partially_approved']);
+        const { count: total, error: e1 } = await supabase.from('teams').select('*', { count: 'exact', head: true }).eq('organization_id', orgId);
+        const { count: pending, error: e2 } = await supabase.from('teams').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'pending');
+        const { count: approved, error: e3 } = await supabase.from('teams').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).in('status', ['approved', 'partially_approved']);
         
         if (!e1 && !e2 && !e3) setStats({ total: total || 0, pending: pending || 0, approved: approved || 0 });
       }

@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Calendar, Users, Menu, X, ArrowLeftRight, Building2 } from 'lucide-react';
+import { LogOut, LayoutDashboard, Calendar, Users, Menu, X, ArrowLeftRight, Building2, ChevronDown } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { useOrg } from '../context/OrgContext';
 import './Layout.css';
 
 const Layout = () => {
   const [session, setSession] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showOrgDropdown, setShowOrgDropdown] = useState(false);
+  const [allOrgs, setAllOrgs] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentOrg, isSuperAdmin, switchOrg } = useOrg();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,9 +33,17 @@ const Layout = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  useEffect(() => {
+    if (isSuperAdmin) {
+      supabase.from('organizations').select('*').order('id').then(({ data }) => {
+        if (data) setAllOrgs(data);
+      });
+    }
+  }, [isSuperAdmin]);
+
   const handleLogoutClick = () => {
     setShowLogoutModal(true);
-    setMobileMenuOpen(false); // close sidebar on mobile if open
+    setMobileMenuOpen(false);
   };
 
   const confirmLogout = async () => {
@@ -44,8 +56,8 @@ const Layout = () => {
     { path: '/transfers', label: 'Transferlar', icon: <ArrowLeftRight size={20} /> },
     { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> },
     { path: '/standings', label: 'Turnir jadvali', icon: <LayoutDashboard size={20} /> },
-    { path: '/sponsors', label: 'Homiylar', icon: <Calendar size={20} /> }, // Re-using an icon or we can import Image
-    { path: '/organizations', label: 'Tashkilotlar', icon: <Building2 size={20} /> }
+    { path: '/sponsors', label: 'Homiylar', icon: <Calendar size={20} /> },
+    ...(isSuperAdmin ? [{ path: '/organizations', label: 'Tashkilotlar', icon: <Building2 size={20} /> }] : [])
   ];
 
   if (!session) return <div>Loading...</div>;
@@ -73,6 +85,38 @@ const Layout = () => {
         <div className="sidebar-header hide-mobile">
           <img src="/images/logo.png" alt="HFL Logo" className="sidebar-logo" />
         </div>
+
+        {/* Organization Switcher */}
+        {currentOrg && (
+          <div className="org-switcher-container">
+            <button
+              className="org-switcher-btn"
+              onClick={() => isSuperAdmin && setShowOrgDropdown(!showOrgDropdown)}
+              style={{ cursor: isSuperAdmin ? 'pointer' : 'default' }}
+            >
+              <Building2 size={14} />
+              <span className="org-switcher-name">{currentOrg.name}</span>
+              {isSuperAdmin && <ChevronDown size={14} className={`org-chevron ${showOrgDropdown ? 'open' : ''}`} />}
+            </button>
+            {showOrgDropdown && isSuperAdmin && (
+              <div className="org-dropdown">
+                {allOrgs.map(org => (
+                  <button
+                    key={org.id}
+                    className={`org-dropdown-item ${org.id === currentOrg.id ? 'active' : ''}`}
+                    onClick={() => {
+                      switchOrg(org.id, org.name);
+                      setShowOrgDropdown(false);
+                    }}
+                  >
+                    <Building2 size={14} />
+                    <span>{org.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         
         <nav className="sidebar-nav">
           <ul>
