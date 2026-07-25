@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { useOrg } from '../context/OrgContext';
 import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Schedule.css';
@@ -30,6 +31,7 @@ const Schedule = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all'); // all, scheduled, live, finished
+  const { orgId } = useOrg();
 
   // Form states
   const [selectedLeague, setSelectedLeague] = useState('');
@@ -56,7 +58,7 @@ const Schedule = () => {
       const saved = localStorage.getItem('hfl_selectedSponsors');
       if (saved) setSelectedSponsors(JSON.parse(saved));
     } catch (e) {}
-  }, []);
+  }, [orgId]);
 
   useEffect(() => {
     const leagueMatches = matches.filter(m => m.league === exportLeague && m.round);
@@ -95,7 +97,7 @@ const Schedule = () => {
   };
 
   const fetchTeams = async () => {
-    const { data } = await supabase.from('teams').select('id, name, logo_url, league').eq('status', 'approved');
+    const { data } = await supabase.from('teams').select('id, name, logo_url, league').eq('status', 'approved').eq('organization_id', orgId);
     if (data) setTeams(data);
   };
 
@@ -107,6 +109,7 @@ const Schedule = () => {
         home_team:home_team_id (id, name, logo_url),
         away_team:away_team_id (id, name, logo_url)
       `)
+      .eq('organization_id', orgId)
       .order('match_date', { ascending: true })
       .order('match_time', { ascending: true });
     
@@ -147,7 +150,8 @@ const Schedule = () => {
         match_time: matchTime,
         location: finalLocation,
         youtube_link: youtubeLink,
-        round: matchRound ? parseInt(matchRound) : null
+        round: matchRound ? parseInt(matchRound) : null,
+        organization_id: orgId
       }]);
 
       if (error) throw error;

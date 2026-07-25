@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
-import { Building2, Plus, Pencil, Trash2, X, Check, Globe } from 'lucide-react';
+import { supabase, supabaseAdmin } from '../supabaseClient';
+import { Building2, Plus, Pencil, Trash2, X, Check, Globe, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import './Organizations.css';
 
 const Organizations = () => {
@@ -8,8 +8,10 @@ const Organizations = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingOrg, setEditingOrg] = useState(null);
-  const [formData, setFormData] = useState({ name: '', slug: '', logo_url: '' });
+  const [formData, setFormData] = useState({ name: '', slug: '', logo_url: '', admin_email: '', admin_password: '' });
   const [stats, setStats] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     fetchOrganizations();
@@ -45,7 +47,8 @@ const Organizations = () => {
 
   const openCreateModal = () => {
     setEditingOrg(null);
-    setFormData({ name: '', slug: '', logo_url: '' });
+    setFormData({ name: '', slug: '', logo_url: '', admin_email: '', admin_password: '' });
+    setShowPassword(false);
     setShowModal(true);
   };
 
@@ -74,27 +77,69 @@ const Organizations = () => {
 
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.slug.trim()) return;
+    setSaving(true);
 
-    if (editingOrg) {
-      const { error } = await supabase
-        .from('organizations')
-        .update({ name: formData.name, slug: formData.slug, logo_url: formData.logo_url || null })
-        .eq('id', editingOrg.id);
-      if (error) {
-        alert('Xato: ' + error.message);
-        return;
+    try {
+      if (editingOrg) {
+        // Tahrirlash rejimi — faqat tashkilot ma'lumotlarini yangilash
+        const { error } = await supabase
+          .from('organizations')
+          .update({ name: formData.name, slug: formData.slug, logo_url: formData.logo_url || null })
+          .eq('id', editingOrg.id);
+        if (error) { alert('Xato: ' + error.message); return; }
+      } else {
+        // Yangi tashkilot yaratish + Admin akkaunt
+        if (!formData.admin_email.trim() || !formData.admin_password.trim()) {
+          alert('Admin email va parolni kiriting!');
+          return;
+        }
+        if (formData.admin_password.length < 6) {
+          alert('Parol kamida 6 ta belgidan iborat bo\'lishi kerak!');
+          return;
+        }
+
+        // 1. Tashkilotni bazaga kiritish
+        const { data: newOrg, error: orgError } = await supabase
+          .from('organizations')
+          .insert({ name: formData.name, slug: formData.slug, logo_url: formData.logo_url || null })
+          .select()
+          .single();
+        if (orgError) { alert('Tashkilot yaratishda xato: ' + orgError.message); return; }
+
+        // 2. Supabase Auth Admin API orqali admin foydalanuvchi yaratish (auto-confirm email, current session is preserved)
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email: formData.admin_email.trim(),
+          password: formData.admin_password,
+          email_confirm: true,
+          user_metadata: { role: 'org_admin', organization_id: newOrg.id }
+        });
+        if (authError) { 
+          // Revert created org if auth user creation fails
+          await supabase.from('organizations').delete().eq('id', newOrg.id);
+          alert('Admin akkaunt yaratishda xato: ' + authError.message); 
+          return; 
+        }
+
+        // 3. admin_users jadvaliga yozish
+        if (authData.user) {
+          const { error: adminUserErr } = await supabase.from('admin_users').insert({
+            id: authData.user.id,
+            email: formData.admin_email.trim(),
+            role: 'org_admin',
+            organization_id: newOrg.id,
+          });
+          if (adminUserErr) {
+            console.error('admin_users insert error:', adminUserErr);
+          }
+        }
       }
-    } else {
-      const { error } = await supabase
-        .from('organizations')
-        .insert({ name: formData.name, slug: formData.slug, logo_url: formData.logo_url || null });
-      if (error) {
-        alert('Xato: ' + error.message);
-        return;
-      }
+      setShowModal(false);
+      fetchOrganizations();
+    } catch (err) {
+      alert('Kutilmagan xato: ' + err.message);
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
-    fetchOrganizations();
   };
 
   const handleDelete = async (org) => {
@@ -231,13 +276,48 @@ const Organizations = () => {
                   placeholder="https://example.com/logo.png"
                 />
               </div>
+
+              {!editingOrg && (
+                <>
+                  <div className="org-form-divider">
+                    <span>Admin hisob ma'lumotlari</span>
+                  </div>
+                  <div className="org-form-group">
+                    <label><Mail size={12} style={{marginRight: 4, verticalAlign: 'middle'}} />Admin Email</label>
+                    <input
+                      type="email"
+                      value={formData.admin_email}
+                      onChange={e => setFormData(prev => ({ ...prev, admin_email: e.target.value }))}
+                      placeholder="admin@tashkilot.uz"
+                    />
+                  </div>
+                  <div className="org-form-group">
+                    <label><Lock size={12} style={{marginRight: 4, verticalAlign: 'middle'}} />Admin Parol</label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.admin_password}
+                        onChange={e => setFormData(prev => ({ ...prev, admin_password: e.target.value }))}
+                        placeholder="Kamida 6 belgi"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="org-modal-footer">
               <button className="org-btn-cancel" onClick={() => setShowModal(false)}>Bekor qilish</button>
-              <button className="org-btn-save" onClick={handleSave}>
+              <button className="org-btn-save" onClick={handleSave} disabled={saving}>
                 <Check size={16} />
-                <span>{editingOrg ? 'Saqlash' : 'Yaratish'}</span>
+                <span>{saving ? 'Saqlanmoqda...' : (editingOrg ? 'Saqlash' : 'Yaratish')}</span>
               </button>
             </div>
           </div>

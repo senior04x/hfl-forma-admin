@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { useOrg } from '../context/OrgContext';
 import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter, Check, X, Trash2, Trophy } from 'lucide-react';
 import SwipeRow from './SwipeRow';
 import PlayerModal from './PlayerModal';
@@ -12,6 +13,7 @@ const PlayersTable = ({ onStatusChange }) => {
   const [modalMode, setModalMode] = useState('view');
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { orgId } = useOrg();
   
   // Pagination & Filtering
   const [page, setPage] = useState(1);
@@ -23,21 +25,21 @@ const PlayersTable = ({ onStatusChange }) => {
 
   useEffect(() => {
     fetchTeams();
-  }, []);
+  }, [orgId]);
 
   useEffect(() => {
     fetchPlayers(true);
-  }, [page, filter, leagueFilter, search, teams]); // Re-fetch when these change
+  }, [page, filter, leagueFilter, search, teams, orgId]); // Re-fetch when these change
 
   const fetchTeams = async () => {
-    const { data } = await supabase.from('teams').select('id, name, league');
+    const { data } = await supabase.from('teams').select('id, name, league').eq('organization_id', orgId);
     if (data) setTeams(data);
   };
 
   const fetchPlayers = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      let query = supabase.from('applications').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('applications').select('*').eq('organization_id', orgId).order('created_at', { ascending: false });
 
       const { data, error } = await query;
       if (error) throw error;

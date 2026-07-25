@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Calendar, Users, Menu, X, ArrowLeftRight, Building2, ChevronDown } from 'lucide-react';
+import { LogOut, LayoutDashboard, Calendar, Users, Menu, X, ArrowLeftRight, Building2, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import './Layout.css';
@@ -57,7 +57,8 @@ const Layout = () => {
     { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> },
     { path: '/standings', label: 'Turnir jadvali', icon: <LayoutDashboard size={20} /> },
     { path: '/sponsors', label: 'Homiylar', icon: <Calendar size={20} /> },
-    ...(isSuperAdmin ? [{ path: '/organizations', label: 'Tashkilotlar', icon: <Building2 size={20} /> }] : [])
+    ...(isSuperAdmin ? [{ path: '/organizations', label: 'Tashkilotlar', icon: <Building2 size={20} /> }] : []),
+    { path: '/settings', label: 'Sozlamalar', icon: <SettingsIcon size={20} /> }
   ];
 
   if (!session) return <div>Loading...</div>;

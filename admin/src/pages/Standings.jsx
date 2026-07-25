@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
+import { useOrg } from '../context/OrgContext';
 import { Download, Save, ShieldAlert } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Standings.css';
@@ -18,6 +19,7 @@ export default function Standings() {
   const [matches, setMatches] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { orgId } = useOrg();
   
   const [selectedLeague, setSelectedLeague] = useState('Super liga');
   const [selectedRound, setSelectedRound] = useState('');
@@ -38,10 +40,9 @@ export default function Standings() {
   const [selectedSponsors, setSelectedSponsors] = useState(() => {
     try {
       const saved = localStorage.getItem('hfl_selectedSponsors');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
   });
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function Standings() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [orgId]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -62,7 +63,8 @@ export default function Standings() {
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name, logo_url, league, penalty_points')
-        .in('status', ['approved', 'partially_approved']);
+        .in('status', ['approved', 'partially_approved'])
+        .eq('organization_id', orgId);
       
       if (teamsError) throw teamsError;
       setTeams(teamsData || []);
@@ -79,6 +81,7 @@ export default function Standings() {
         .from('matches')
         .select('*')
         .eq('status', 'finished')
+        .eq('organization_id', orgId)
         .order('match_date', { ascending: false });
 
       if (matchesError) throw matchesError;

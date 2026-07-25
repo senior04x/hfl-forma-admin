@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { useOrg } from '../context/OrgContext';
 import { ArrowLeftRight, Check, X } from 'lucide-react';
 import './Transfers.css';
 
@@ -7,16 +8,18 @@ const Transfers = () => {
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('pending'); // pending, all, approved, rejected
+  const { orgId } = useOrg();
 
   useEffect(() => {
     fetchTransfers();
-  }, []);
+  }, [orgId]);
 
   const fetchTransfers = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('transfers')
       .select('*')
+      .eq('organization_id', orgId)
       .order('created_at', { ascending: false });
 
     if (error) {
