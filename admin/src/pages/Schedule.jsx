@@ -2,20 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
+import { getActiveOrgLeagues } from '../utils/leagueUtils';
 import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Schedule.css';
 
-const LEAGUES = [
-  'Super liga',
-  'Pro liga',
-  '3-liga',
-  'Europa ligasi',
-  'Chempionlar ligasi',
-  '7x7 liga'
-];
-
-const LEAGUE_LOGOS = {
+const DEFAULT_LEAGUE_LOGOS = {
   'Super liga': '/super-liga.PNG',
   'Pro liga': '/Pro-liga.PNG',
   '3-liga': '/3-liga.PNG',
@@ -28,10 +20,11 @@ const Schedule = () => {
   const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [activeLeagues, setActiveLeagues] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all'); // all, scheduled, live, finished
-  const { orgId } = useOrg();
+  const { currentOrg, orgId } = useOrg();
 
   // Form states
   const [selectedLeague, setSelectedLeague] = useState('');
@@ -45,20 +38,29 @@ const Schedule = () => {
   const [matchRound, setMatchRound] = useState('');
 
   // Export states
-  const [exportLeague, setExportLeague] = useState(LEAGUES[0]);
+  const [exportLeague, setExportLeague] = useState('');
   const [exportRound, setExportRound] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [selectedSponsors, setSelectedSponsors] = useState([]);
   const exportRef = useRef(null);
 
   useEffect(() => {
-    fetchTeams();
-    fetchMatches();
+    loadLeaguesAndData();
     try {
       const saved = localStorage.getItem('hfl_selectedSponsors');
       if (saved) setSelectedSponsors(JSON.parse(saved));
     } catch (e) {}
   }, [orgId]);
+
+  const loadLeaguesAndData = async () => {
+    const fetchedLeagues = await getActiveOrgLeagues(orgId);
+    setActiveLeagues(fetchedLeagues);
+    if (fetchedLeagues.length > 0) {
+      setExportLeague(fetchedLeagues[0].name);
+    }
+    fetchTeams();
+    fetchMatches();
+  };
 
   useEffect(() => {
     const leagueMatches = matches.filter(m => m.league === exportLeague && m.round);
@@ -318,7 +320,13 @@ const Schedule = () => {
                 setAwayTeamId('');
               }}>
                 <option value="">Ligani tanlang</option>
-                {LEAGUES.map(l => <option key={l} value={l}>{l}</option>)}
+              <select value={selectedLeague} onChange={(e) => {
+                setSelectedLeague(e.target.value);
+                setHomeTeamId('');
+                setAwayTeamId('');
+              }}>
+                <option value="">Ligani tanlang</option>
+                {activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
               </select>
             </div>
 
@@ -391,33 +399,40 @@ const Schedule = () => {
 
       {/* HIDDEN EXPORT TEMPLATE */}
       <div style={{ position: 'fixed', left: '-9999px', top: 0, opacity: 1, pointerEvents: 'none', zIndex: -100 }}>
-        <div 
-          ref={exportRef} 
-          className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
-        >
-          <div className="sch-export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0px', padding: '0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <img src="/hfl-logo-for-jadval.png" alt="HFL" style={{ height: '100px', objectFit: 'contain' }} crossOrigin="anonymous" />
-              {exportLeague === '7x7 liga' && (
-                <>
-                  <img src="/x.png" crossOrigin="anonymous" style={{ height: '18px', objectFit: 'contain', opacity: 0.7 }} />
-                  <img src="/llf-logo.png" alt="LLF" style={{ height: '80px', objectFit: 'contain' }} crossOrigin="anonymous" />
-                </>
-              )}
-            </div>
+        {(() => {
+          const currentExpLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+          const isCollab = currentExpLeagueObj?.isCollab;
 
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              {exportLeague === '7x7 liga' ? (
-                <img src="/7x7-liga.png" alt="7x7 Liga" style={{ height: '110px', maxWidth: '380px', objectFit: 'contain', marginRight: '75px', marginTop: '10px' }} crossOrigin="anonymous" />
-              ) : (
-                LEAGUE_LOGOS[exportLeague] && (
-                  <img src={LEAGUE_LOGOS[exportLeague]} alt={exportLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
-                )
-              )}
-            </div>
+          return (
+            <div 
+              ref={exportRef} 
+              className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
+            >
+              <div className="sch-export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0px', padding: '0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isCollab ? (
+                    <>
+                      <img src={currentExpLeagueObj.org1?.logo_url || '/hfl-logo-for-jadval.png'} alt="Org 1" style={{ height: '90px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                      <img src="/x.png" crossOrigin="anonymous" style={{ height: '18px', objectFit: 'contain', opacity: 0.7 }} />
+                      <img src={currentExpLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" style={{ height: '75px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                    </>
+                  ) : (
+                    <img src={currentOrg?.logo_url || '/hfl-logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} style={{ height: '100px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                  )}
+                </div>
 
-            <img src="/joma.png" alt="Joma" style={{ height: '80px', filter: exportLeague !== '7x7 liga' ? 'brightness(0) invert(1)' : 'none', objectFit: 'contain' }} crossOrigin="anonymous" />
-          </div>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  {currentExpLeagueObj?.logo_url ? (
+                    <img src={currentExpLeagueObj.logo_url} alt={exportLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                  ) : DEFAULT_LEAGUE_LOGOS[exportLeague] ? (
+                    <img src={DEFAULT_LEAGUE_LOGOS[exportLeague]} alt={exportLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                  ) : (
+                    <h2 style={{ color: '#fff', fontSize: '32px', fontWeight: '900', textTransform: 'uppercase' }}>{exportLeague}</h2>
+                  )}
+                </div>
+
+                <img src="/joma.png" alt="Joma" style={{ height: '80px', filter: 'brightness(0) invert(1)', objectFit: 'contain' }} crossOrigin="anonymous" />
+              </div>
 
           <div className="sch-export-body">
             {matches
@@ -479,6 +494,8 @@ const Schedule = () => {
             </div>
           </div>
         </div>
+        );
+      })()}
       </div>
     </div>
   );
