@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert, Building2 } from 'lucide-react';
+import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert, Building2, Pencil, Trash2, Save } from 'lucide-react';
 import './Settings.css';
 
 const Settings = () => {
@@ -49,6 +49,9 @@ const Settings = () => {
   const [isJunior, setIsJunior] = useState(false);
   const [creatingLeague, setCreatingLeague] = useState(false);
 
+  // League Edit/Delete state
+  const [editingLeague, setEditingLeague] = useState(null);
+
   // Collab modal / action state
   const [selectedLeagueForCollab, setSelectedLeagueForCollab] = useState(null);
   const [targetOrgId, setTargetOrgId] = useState('');
@@ -56,26 +59,30 @@ const Settings = () => {
   const [incomingCollabs, setIncomingCollabs] = useState([]);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setUserEmail(user.email || '');
-        setNewEmail(user.email || '');
-      }
-    });
+    fetchUserData();
     fetchLeaguesAndOrgs();
   }, [orgId]);
 
+  const fetchUserData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUserEmail(user.email || '');
+      setNewEmail(user.email || '');
+    }
+  };
+
   const fetchLeaguesAndOrgs = async () => {
     try {
-      // 1. Fetch own leagues
+      // 1. Fetch own created leagues
       const { data: ownLeagues } = await supabase
         .from('leagues')
         .select('*')
         .eq('organization_id', orgId)
-        .order('id');
+        .order('id', { ascending: true });
+
       setLeagues(ownLeagues || []);
 
-      // 2. Fetch other organizations (for collab target selection)
+      // 2. Fetch other organizations (for collab target selector)
       const { data: orgs } = await supabase
         .from('organizations')
         .select('id, name, slug, logo_url')
@@ -99,31 +106,93 @@ const Settings = () => {
     }
   };
 
-  const handleCreateLeague = async (e) => {
+  const startEditLeague = (league) => {
+    setEditingLeague(league);
+    setLeagueName(league.name);
+    setLeagueLogo(league.logo_url || '');
+    setIsJunior(!!league.is_junior);
+    setMessage({ type: '', text: '' });
+  };
+
+  const cancelEditLeague = () => {
+    setEditingLeague(null);
+    setLeagueName('');
+    setLeagueLogo('');
+    setIsJunior(false);
+  };
+
+  const handleSaveLeague = async (e) => {
     e.preventDefault();
     if (!leagueName.trim()) return;
     setCreatingLeague(true);
     setMessage({ type: '', text: '' });
 
     try {
-      const { error } = await supabase.from('leagues').insert({
-        name: leagueName.trim(),
-        logo_url: leagueLogo.trim() || null,
-        organization_id: orgId,
-        is_junior: isJunior,
-      });
+      if (editingLeague) {
+        // Tahrirlash rejimi
+        const oldName = editingLeague.name;
+        const newName = leagueName.trim();
 
-      if (error) throw error;
+        const { error } = await supabase
+          .from('leagues')
+          .update({
+            name: newName,
+            logo_url: leagueLogo.trim() || null,
+            is_junior: isJunior
+          })
+          .eq('id', editingLeague.id);
 
-      setMessage({ type: 'success', text: `"${leagueName}" ligasi muvaffaqiyatli yaratildi!` });
-      setLeagueName('');
-      setLeagueLogo('');
-      setIsJunior(false);
+        if (error) throw error;
+
+        // Liga nomi o'zgargan bo'lsa, bog'liq jadval ma'lumotlarini ham yangilaymiz
+        if (oldName !== newName) {
+          await supabase.from('teams').update({ league: newName }).eq('league', oldName).eq('organization_id', orgId);
+          await supabase.from('matches').update({ league: newName }).eq('league', oldName).eq('organization_id', orgId);
+          await supabase.from('applications').update({ league: newName }).eq('league', oldName).eq('organization_id', orgId);
+        }
+
+        setMessage({ type: 'success', text: 'Liga ma\'lumotlari muvaffaqiyatli yangilandi!' });
+        cancelEditLeague();
+      } else {
+        // Yangi liga yaratish rejimi
+        const { error } = await supabase.from('leagues').insert({
+          name: leagueName.trim(),
+          logo_url: leagueLogo.trim() || null,
+          organization_id: orgId,
+          is_junior: isJunior,
+        });
+
+        if (error) throw error;
+
+        setMessage({ type: 'success', text: `"${leagueName}" ligasi muvaffaqiyatli yaratildi!` });
+        setLeagueName('');
+        setLeagueLogo('');
+        setIsJunior(false);
+      }
       fetchLeaguesAndOrgs();
     } catch (err) {
-      setMessage({ type: 'error', text: 'Liga yaratishda xato: ' + err.message });
+      setMessage({ type: 'error', text: 'Liga saqlashda xato: ' + err.message });
     } finally {
       setCreatingLeague(false);
+    }
+  };
+
+  const handleDeleteLeague = async (league) => {
+    if (!window.confirm(`"${league.name}" ligasini o'chirmoqchimisiz? Ushbu ligaga tegishli collab sherikchiliklari ham o'chib ketadi.`)) {
+      return;
+    }
+    setMessage({ type: '', text: '' });
+    try {
+      // 1. Delete associated collab records
+      await supabase.from('league_collabs').delete().eq('league_id', league.id);
+      // 2. Delete league itself
+      const { error } = await supabase.from('leagues').delete().eq('id', league.id);
+      if (error) throw error;
+
+      setMessage({ type: 'success', text: `"${league.name}" ligasi o'chirildi.` });
+      fetchLeaguesAndOrgs();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'O\'chirishda xato: ' + err.message });
     }
   };
 
@@ -280,10 +349,10 @@ const Settings = () => {
             <h2>Tashkilot Ligalari Boshqaruvi</h2>
           </div>
 
-          <form onSubmit={handleCreateLeague} className="create-league-form">
+          <form onSubmit={handleSaveLeague} className="create-league-form">
             <div className="form-row">
               <div className="settings-form-group flex-2">
-                <label>Yangi Liga Nomi</label>
+                <label>{editingLeague ? 'Liga Nominı Tahrirlash' : 'Yangi Liga Nomi'}</label>
                 <input
                   type="text"
                   placeholder="Masalan: Farg'ona Super Liga"
@@ -311,9 +380,17 @@ const Settings = () => {
                   <span>Junior (U-14)</span>
                 </label>
               </div>
-              <button type="submit" className="settings-btn settings-btn-primary add-league-btn" disabled={creatingLeague}>
-                <Plus size={16} /> {creatingLeague ? 'Qo\'shilmoqda...' : 'Liga qo\'shish'}
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                <button type="submit" className="settings-btn settings-btn-primary add-league-btn" disabled={creatingLeague}>
+                  {editingLeague ? <Save size={16} /> : <Plus size={16} />}
+                  <span>{creatingLeague ? 'Saqlanmoqda...' : (editingLeague ? 'Saqlash' : 'Liga qo\'shish')}</span>
+                </button>
+                {editingLeague && (
+                  <button type="button" className="settings-btn" onClick={cancelEditLeague}>
+                    Bekor qilish
+                  </button>
+                )}
+              </div>
             </div>
           </form>
 
@@ -325,7 +402,7 @@ const Settings = () => {
             ) : (
               <div className="leagues-grid">
                 {leagues.map(l => (
-                  <div key={l.id} className="league-card">
+                  <div key={l.id} className={`league-card ${editingLeague?.id === l.id ? 'editing' : ''}`}>
                     <div className="league-card-header">
                       <div className="league-icon">
                         {l.logo_url ? <img src={l.logo_url} alt={l.name} /> : <Trophy size={20} />}
@@ -341,7 +418,21 @@ const Settings = () => {
                         onClick={() => setSelectedLeagueForCollab(l)}
                         title="Boshqa tashkilotga sheriklik taklifi yuborish"
                       >
-                        <Send size={14} /> Sherikchilik (Collab)
+                        <Send size={13} /> Collab
+                      </button>
+                      <button
+                        className="btn-league-action btn-league-edit"
+                        onClick={() => startEditLeague(l)}
+                        title="Liga ma'lumotlarini tahrirlash"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        className="btn-league-action btn-league-delete"
+                        onClick={() => handleDeleteLeague(l)}
+                        title="Liganı o'chirish"
+                      >
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
