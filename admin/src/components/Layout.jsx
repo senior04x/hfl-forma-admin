@@ -114,7 +114,7 @@ const Layout = () => {
                     key={org.id}
                     className={`org-dropdown-item ${org.id === currentOrg.id ? 'active' : ''}`}
                     onClick={() => {
-                      switchOrg(org.id, org.name);
+                      switchOrg(org);
                       setShowOrgDropdown(false);
                     }}
                   >

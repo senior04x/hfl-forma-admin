@@ -43,36 +43,53 @@ export const OrgProvider = ({ children }) => {
 
       if (adminData) {
         setAdminRole(adminData.role);
+        const orgObj = adminData.organizations || {};
+        const targetOrgId = adminData.organization_id || 1;
+
         if (adminData.role === 'super_admin') {
-          // Super admin — barcha tashkilotlarni ko'radi, default Havas (ID=1)
-          setCurrentOrg({ id: adminData.organization_id || 1, name: adminData.organizations?.name || 'Havas Futbol Ligasi' });
+          // Super admin — fetch target org details
+          const { data: targetOrg } = await supabase.from('organizations').select('*').eq('id', targetOrgId).single();
+          setCurrentOrg(targetOrg || { id: 1, name: 'Havas Futbol Ligasi', logo_url: null });
         } else {
-          // Oddiy admin — faqat o'z tashkilotini ko'radi
-          setCurrentOrg({ id: adminData.organization_id, name: adminData.organizations?.name || 'Tashkilot' });
+          // Org admin
+          setCurrentOrg({
+            id: orgObj.id || targetOrgId,
+            name: orgObj.name || 'Tashkilot',
+            logo_url: orgObj.logo_url || null
+          });
         }
       } else {
-        // admin_users da yo'q — eski admin hisoblanadi, Havas (ID=1) ga biriktirish
+        // Fallback for primary admin
+        const { data: defaultOrg } = await supabase.from('organizations').select('*').eq('id', 1).single();
         setAdminRole('super_admin');
-        setCurrentOrg({ id: 1, name: 'Havas Futbol Ligasi' });
+        setCurrentOrg(defaultOrg || { id: 1, name: 'Havas Futbol Ligasi', logo_url: null });
       }
     } catch (err) {
       console.error('OrgContext load error:', err);
       setAdminRole('super_admin');
-      setCurrentOrg({ id: 1, name: 'Havas Futbol Ligasi' });
+      setCurrentOrg({ id: 1, name: 'Havas Futbol Ligasi', logo_url: null });
     } finally {
       setLoading(false);
     }
   };
 
-  const switchOrg = (orgId, orgName) => {
-    setCurrentOrg({ id: orgId, name: orgName });
+  const switchOrg = (orgOrId, name, logo_url) => {
+    if (typeof orgOrId === 'object' && orgOrId !== null) {
+      setCurrentOrg(orgOrId);
+    } else {
+      setCurrentOrg({ id: orgOrId, name, logo_url });
+    }
+  };
+
+  const updateCurrentOrg = (updatedFields) => {
+    setCurrentOrg(prev => (prev ? { ...prev, ...updatedFields } : prev));
   };
 
   const isSuperAdmin = adminRole === 'super_admin';
   const orgId = currentOrg?.id || 1;
 
   return (
-    <OrgContext.Provider value={{ currentOrg, orgId, adminRole, isSuperAdmin, loading, switchOrg }}>
+    <OrgContext.Provider value={{ currentOrg, orgId, adminRole, isSuperAdmin, loading, switchOrg, updateCurrentOrg }}>
       {children}
     </OrgContext.Provider>
   );

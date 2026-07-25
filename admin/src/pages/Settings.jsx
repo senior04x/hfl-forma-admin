@@ -1,17 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert } from 'lucide-react';
+import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert, Building2 } from 'lucide-react';
 import './Settings.css';
 
 const Settings = () => {
-  const { currentOrg, orgId, adminRole } = useOrg();
+  const { currentOrg, orgId, adminRole, updateCurrentOrg } = useOrg();
   const [userEmail, setUserEmail] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [orgLogo, setOrgLogo] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  useEffect(() => {
+    if (currentOrg) {
+      setOrgLogo(currentOrg.logo_url || '');
+    }
+  }, [currentOrg]);
+
+  const handleUpdateOrgLogo = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({ logo_url: orgLogo.trim() || null })
+        .eq('id', orgId);
+
+      if (error) throw error;
+
+      updateCurrentOrg({ logo_url: orgLogo.trim() || null });
+      setMessage({ type: 'success', text: 'Tashkilot logotipi muvaffaqiyatli saqlandi!' });
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Xatolik: ' + err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Leagues state
   const [leagues, setLeagues] = useState([]);
@@ -321,6 +349,38 @@ const Settings = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Organization Logo Card */}
+        <div className="settings-card">
+          <div className="settings-card-header">
+            <Building2 size={20} />
+            <h2>Tashkilot Logotipi</h2>
+          </div>
+          <form onSubmit={handleUpdateOrgLogo}>
+            <div className="settings-org-logo-preview">
+              {orgLogo ? (
+                <img src={orgLogo} alt={currentOrg?.name} />
+              ) : (
+                <div className="no-logo-placeholder">
+                  <Building2 size={32} />
+                  <span>Logo yo'q</span>
+                </div>
+              )}
+            </div>
+            <div className="settings-form-group">
+              <label>Logo URL (Rasm Havolasi)</label>
+              <input
+                type="text"
+                placeholder="https://example.com/logo.png"
+                value={orgLogo}
+                onChange={e => setOrgLogo(e.target.value)}
+              />
+            </div>
+            <button type="submit" className="settings-btn settings-btn-primary" disabled={loading}>
+              Logotipni saqlash
+            </button>
+          </form>
         </div>
 
         {/* Profile Info Card */}
