@@ -352,28 +352,6 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
                           <option key={l.id || l.name} value={l.name}>{l.name}</option>
                         ))}
                     </select>
-
-                    {!showCustomLeagueField ? (
-                      <button 
-                        type="button" 
-                        className="btn-add-custom-league"
-                        onClick={() => setShowCustomLeagueField(true)}
-                      >
-                        <Plus size={16} /> Yangi liga kiritish
-                      </button>
-                    ) : (
-                      <div className="custom-league-input-group">
-                        <input 
-                          type="text" 
-                          placeholder="Yangi liga nomi..." 
-                          value={customLeagueInput} 
-                          onChange={(e) => setCustomLeagueInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomLeague(); } }}
-                        />
-                        <button type="button" onClick={handleAddCustomLeague} className="btn-confirm-add"><Check size={16} /></button>
-                        <button type="button" onClick={() => setShowCustomLeagueField(false)} className="btn-cancel-add"><X size={16} /></button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
