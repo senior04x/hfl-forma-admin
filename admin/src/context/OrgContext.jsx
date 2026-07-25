@@ -39,7 +39,7 @@ export const OrgProvider = ({ children }) => {
         .from('admin_users')
         .select('*, organizations(*)')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (adminData) {
         setAdminRole(adminData.role);

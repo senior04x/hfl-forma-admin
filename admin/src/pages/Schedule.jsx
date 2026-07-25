@@ -212,7 +212,7 @@ const Schedule = () => {
         <div className="filter-group" style={{ width: '100%' }}>
           <label>Liga tanlang (Ekranda ko'rish va Eksport uchun)</label>
           <select value={exportLeague} onChange={(e) => setExportLeague(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-            {LEAGUES.map(l => <option key={l} value={l}>{l}</option>)}
+            {activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
           </select>
         </div>
         <div className="filter-group" style={{ width: '100%' }}>
