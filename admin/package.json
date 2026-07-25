@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",
-    "cropperjs": "^2.1.1",
+    "cropperjs": "^1.6.2",
     "html2canvas": "^1.4.1",
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",

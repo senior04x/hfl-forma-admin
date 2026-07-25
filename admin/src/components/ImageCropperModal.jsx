@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import Cropper from 'cropperjs';
+import 'cropperjs/dist/cropper.css';
 import { Crop, Check, X, ZoomIn, ZoomOut } from 'lucide-react';
 import './ImageCropperModal.css';
 
