@@ -608,31 +608,40 @@ export default function Standings() {
           <div className="export-container">
             
             {/* Header */}
-            <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <div className="export-logo-left" style={{ width: selectedLeague === '7x7 liga' ? 'auto' : '220px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3px' }}>
-                <img src="/logo-for-jadval.png" alt="Havas Futbol" crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain' }} />
-                {selectedLeague === '7x7 liga' && (
-                  <>
-                    <img src="/x.png" crossOrigin="anonymous" style={{ height: '18px', objectFit: 'contain', opacity: 0.7 }} />
-                    <img src="/llf-logo.png" alt="LLF" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
-                  </>
-                )}
-              </div>
+            {(() => {
+              const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+              const isCollab = currentLeagueObj?.isCollab;
 
-              <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                {selectedLeague === '7x7 liga' ? (
-                  <img src="/7x7-liga.png" alt="7x7 Liga" style={{ height: '110px', maxWidth: '380px', objectFit: 'contain', marginRight: '75px', marginTop: '10px' }} crossOrigin="anonymous" />
-                ) : (
-                  LEAGUE_LOGOS[selectedLeague] && (
-                    <img src={LEAGUE_LOGOS[selectedLeague]} alt={selectedLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
-                  )
-                )}
-              </div>
+              return (
+                <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <div className="export-logo-left" style={{ width: 'auto', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                    {isCollab ? (
+                      <>
+                        <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '90px', objectFit: 'contain' }} />
+                        <img src="/x.png" crossOrigin="anonymous" style={{ height: '18px', objectFit: 'contain', opacity: 0.7 }} />
+                        <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain' }} />
+                      </>
+                    ) : (
+                      <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain' }} />
+                    )}
+                  </div>
 
-              <div className="export-logo-right" style={{ width: selectedLeague === '7x7 liga' ? 'auto' : '220px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
-                <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
-              </div>
-            </div>
+                  <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    {currentLeagueObj?.logo_url ? (
+                      <img src={currentLeagueObj.logo_url} alt={selectedLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                    ) : DEFAULT_LEAGUE_LOGOS[selectedLeague] ? (
+                      <img src={DEFAULT_LEAGUE_LOGOS[selectedLeague]} alt={selectedLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                    ) : (
+                      <h2 style={{ color: '#fff', fontSize: '32px', fontWeight: '900', textTransform: 'uppercase' }}>{selectedLeague}</h2>
+                    )}
+                  </div>
+
+                  <div className="export-logo-right" style={{ width: '220px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
+                    <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Title Banner */}
             <div className="cards-export-title-banner">
