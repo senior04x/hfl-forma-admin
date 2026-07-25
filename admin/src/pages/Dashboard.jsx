@@ -4,11 +4,12 @@ import { useOrg } from '../context/OrgContext';
 import PlayersTable from '../components/PlayersTable';
 import TeamsTable from '../components/TeamsTable';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
+import { Users, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const [currentTab, setCurrentTab] = useState('players');
-  const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0 });
+  const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [activeLeagues, setActiveLeagues] = useState([]);
   const { orgId } = useOrg();
 
@@ -24,28 +25,27 @@ const Dashboard = () => {
 
   const fetchStats = async (leaguesList = activeLeagues) => {
     try {
-      if (currentTab === 'players') {
-        let q1 = supabase.from('applications').select('*', { count: 'exact', head: true });
-        let q2 = supabase.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-        let q3 = supabase.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'approved');
+      const table = currentTab === 'players' ? 'applications' : 'teams';
+      let query = supabase.from(table).select('status');
+      query = applyOrgAndCollabFilter(query, orgId, leaguesList);
 
-        q1 = applyOrgAndCollabFilter(q1, orgId, leaguesList);
-        q2 = applyOrgAndCollabFilter(q2, orgId, leaguesList);
-        q3 = applyOrgAndCollabFilter(q3, orgId, leaguesList);
+      const { data, error } = await query;
+      if (error) throw error;
 
-        const [r1, r2, r3] = await Promise.all([q1, q2, q3]);
-        setStats({ total: r1.count || 0, pending: r2.count || 0, approved: r3.count || 0 });
-      } else {
-        let q1 = supabase.from('teams').select('*', { count: 'exact', head: true });
-        let q2 = supabase.from('teams').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-        let q3 = supabase.from('teams').select('*', { count: 'exact', head: true }).in('status', ['approved', 'partially_approved']);
+      if (data) {
+        let total = data.length;
+        let pending = 0;
+        let approved = 0;
+        let rejected = 0;
 
-        q1 = applyOrgAndCollabFilter(q1, orgId, leaguesList);
-        q2 = applyOrgAndCollabFilter(q2, orgId, leaguesList);
-        q3 = applyOrgAndCollabFilter(q3, orgId, leaguesList);
+        data.forEach(item => {
+          const s = item.status;
+          if (s === 'pending') pending++;
+          else if (s === 'approved' || s === 'partially_approved') approved++;
+          else if (s === 'rejected') rejected++;
+        });
 
-        const [r1, r2, r3] = await Promise.all([q1, q2, q3]);
-        setStats({ total: r1.count || 0, pending: r2.count || 0, approved: r3.count || 0 });
+        setStats({ total, pending, approved, rejected });
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -60,21 +60,28 @@ const Dashboard = () => {
             <h3>Jami</h3>
             <p>{stats.total}</p>
           </div>
-          <div className="stat-icon"><i data-lucide="users"></i></div>
+          <div className="stat-icon"><Users size={24} /></div>
         </div>
         <div className="stat-card pending">
           <div className="stat-info">
             <h3>Kutilmoqda</h3>
             <p>{stats.pending}</p>
           </div>
-          <div className="stat-icon"><i data-lucide="clock"></i></div>
+          <div className="stat-icon"><Clock size={24} /></div>
         </div>
         <div className="stat-card approved">
           <div className="stat-info">
             <h3>Tasdiqlandi</h3>
             <p>{stats.approved}</p>
           </div>
-          <div className="stat-icon"><i data-lucide="check-circle"></i></div>
+          <div className="stat-icon"><CheckCircle2 size={24} /></div>
+        </div>
+        <div className="stat-card rejected">
+          <div className="stat-info">
+            <h3>Rad etildi</h3>
+            <p>{stats.rejected}</p>
+          </div>
+          <div className="stat-icon"><XCircle size={24} /></div>
         </div>
       </div>
 

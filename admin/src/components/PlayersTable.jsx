@@ -220,8 +220,7 @@ const PlayersTable = ({ onStatusChange }) => {
           icon={Trophy}
           options={[
             { value: 'all', label: 'Barcha ligalar' },
-            ...activeLeagues.map(l => ({ value: l.name, label: l.name })),
-            { value: 'yakkaxon', label: 'Yakkaxon' }
+            ...activeLeagues.map(l => ({ value: l.name, label: l.name }))
           ]}
         />
       </div>
