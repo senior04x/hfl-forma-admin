@@ -47,36 +47,38 @@ const ImageCropperModal = ({
       highlight: false,
       toggleDragModeOnDblclick: false,
       minContainerWidth: 280,
-      minContainerHeight: 280
+      minContainerHeight: 280,
+      ready() {
+        cropperInstanceRef.current = this.cropper;
+      }
     });
 
-    cropperInstanceRef.current = cropper;
+    // Keep raw reference for cleanup
+    const rawRef = cropper;
 
     return () => {
-      if (cropperInstanceRef.current) {
-        cropperInstanceRef.current.destroy();
-        cropperInstanceRef.current = null;
-      }
+      cropperInstanceRef.current = null;
+      if (rawRef) rawRef.destroy();
     };
   }, [src, isOpen]);
 
   const handleCropAndSave = () => {
-    if (!cropperInstanceRef.current) return;
-    const canvas = cropperInstanceRef.current.getCroppedCanvas({
-      width: 500,
-      height: 500
-    });
+    const c = cropperInstanceRef.current;
+    if (!c || typeof c.getCroppedCanvas !== 'function') return;
+    const canvas = c.getCroppedCanvas({ width: 500, height: 500 });
     if (!canvas) return;
     const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
     handleSave(croppedDataUrl);
   };
 
   const handleZoomIn = () => {
-    if (cropperInstanceRef.current) cropperInstanceRef.current.zoom(0.1);
+    const c = cropperInstanceRef.current;
+    if (c && typeof c.zoom === 'function') c.zoom(0.1);
   };
 
   const handleZoomOut = () => {
-    if (cropperInstanceRef.current) cropperInstanceRef.current.zoom(-0.1);
+    const c = cropperInstanceRef.current;
+    if (c && typeof c.zoom === 'function') c.zoom(-0.1);
   };
 
   if (!isOpen || !src) return null;
