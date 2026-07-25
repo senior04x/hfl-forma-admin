@@ -63,13 +63,25 @@ export default function Standings() {
     loadLeaguesAndData();
   }, [orgId]);
 
+  const getLeagueBgForOrg = (targetOrgId, leagueName) => {
+    try {
+      const saved = localStorage.getItem(`hfl_export_bg_${targetOrgId}_${leagueName}`);
+      if (saved) return saved;
+    } catch (e) {}
+    return null;
+  };
+
   const loadLeaguesAndData = async () => {
     const fetched = await getActiveOrgLeagues(orgId);
-    setActiveLeagues(fetched);
-    if (fetched.length > 0) {
-      setSelectedLeague(fetched[0].name);
+    const withOrgBgs = fetched.map(l => ({
+      ...l,
+      export_bg_url: getLeagueBgForOrg(orgId, l.name) || l.export_bg_url
+    }));
+    setActiveLeagues(withOrgBgs);
+    if (withOrgBgs.length > 0) {
+      setSelectedLeague(withOrgBgs[0].name);
     }
-    fetchData(fetched);
+    fetchData(withOrgBgs);
   };
 
   const fetchData = async (leaguesList = activeLeagues) => {
@@ -344,18 +356,23 @@ export default function Standings() {
     if (!currentLeagueObj) return;
 
     try {
-      const { error } = await supabase
-        .from('leagues')
-        .update({ export_bg_url: croppedDataUrl })
-        .eq('id', currentLeagueObj.id);
+      // 1. Save individually per organization & league in local storage
+      const storageKey = `hfl_export_bg_${orgId}_${selectedLeague}`;
+      try {
+        localStorage.setItem(storageKey, croppedDataUrl);
+      } catch (e) {}
 
-      if (error) {
-        console.error("Save export_bg_url error:", error);
-        alert('Supabase bazangizda `export_bg_url` ustuni hali yo\'q.\n\nIltimos, Supabase SQL Editor-da quyidagi kodni Run qiling:\n\nALTER TABLE public.leagues ADD COLUMN IF NOT EXISTS export_bg_url TEXT;');
-        return;
+      // 2. If org owns the league, sync to Supabase table
+      if (currentLeagueObj.organization_id === orgId) {
+        await supabase
+          .from('leagues')
+          .update({ export_bg_url: croppedDataUrl })
+          .eq('id', currentLeagueObj.id)
+          .catch(() => {});
       }
 
-      setActiveLeagues(prev => prev.map(l => l.id === currentLeagueObj.id ? { ...l, export_bg_url: croppedDataUrl } : l));
+      // 3. Update local state for current org view
+      setActiveLeagues(prev => prev.map(l => l.name === selectedLeague ? { ...l, export_bg_url: croppedDataUrl } : l));
       setIsCropperOpen(false);
 
       if (pendingExportType) {
@@ -363,7 +380,7 @@ export default function Standings() {
         setPendingExportType(null);
       }
     } catch (err) {
-      alert('Fon rasmini saqlashda xatolik: ' + err.message);
+      console.error('Error saving background:', err);
     }
   };
 
