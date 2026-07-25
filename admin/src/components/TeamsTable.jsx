@@ -163,7 +163,18 @@ const TeamsTable = ({ onStatusChange }) => {
 
       <div className="list-container">
         {loading ? (
-          <div className="loading-state">Yuklanmoqda...</div>
+          <div className="skeleton-container">
+            {[1, 2, 3, 4, 5].map(n => (
+              <div className="skeleton-row" key={n}>
+                <div className="skeleton-avatar"></div>
+                <div className="skeleton-text-group">
+                  <div className="skeleton-text-title"></div>
+                  <div className="skeleton-text-sub"></div>
+                </div>
+                <div className="skeleton-badge"></div>
+              </div>
+            ))}
+          </div>
         ) : teams.length === 0 ? (
           <div className="empty-state">Hech qanday ma'lumot topilmadi</div>
         ) : (

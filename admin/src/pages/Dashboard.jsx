@@ -10,6 +10,7 @@ import './Dashboard.css';
 const Dashboard = () => {
   const [currentTab, setCurrentTab] = useState('players');
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
   const [activeLeagues, setActiveLeagues] = useState([]);
   const { orgId } = useOrg();
 
@@ -24,6 +25,7 @@ const Dashboard = () => {
   };
 
   const fetchStats = async (leaguesList = activeLeagues) => {
+    setStatsLoading(true);
     try {
       const activeLeagueNames = (leaguesList || []).map(l => l.name);
 
@@ -83,6 +85,8 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -92,28 +96,28 @@ const Dashboard = () => {
         <div className="stat-card total">
           <div className="stat-info">
             <h3>Jami</h3>
-            <p>{stats.total}</p>
+            {statsLoading ? <div className="skeleton-number"></div> : <p>{stats.total}</p>}
           </div>
           <div className="stat-icon"><Users size={24} /></div>
         </div>
         <div className="stat-card pending">
           <div className="stat-info">
             <h3>Kutilmoqda</h3>
-            <p>{stats.pending}</p>
+            {statsLoading ? <div className="skeleton-number"></div> : <p>{stats.pending}</p>}
           </div>
           <div className="stat-icon"><Clock size={24} /></div>
         </div>
         <div className="stat-card approved">
           <div className="stat-info">
             <h3>Tasdiqlandi</h3>
-            <p>{stats.approved}</p>
+            {statsLoading ? <div className="skeleton-number"></div> : <p>{stats.approved}</p>}
           </div>
           <div className="stat-icon"><CheckCircle2 size={24} /></div>
         </div>
         <div className="stat-card rejected">
           <div className="stat-info">
             <h3>Rad etildi</h3>
-            <p>{stats.rejected}</p>
+            {statsLoading ? <div className="skeleton-number"></div> : <p>{stats.rejected}</p>}
           </div>
           <div className="stat-icon"><XCircle size={24} /></div>
         </div>
