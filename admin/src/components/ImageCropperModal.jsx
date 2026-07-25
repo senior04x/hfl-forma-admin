@@ -14,7 +14,7 @@ const ImageCropperModal = ({
   title = "Rasmni 1:1 Formatda Qirqish" 
 }) => {
   const imageRef = useRef(null);
-  const cropperInstanceRef = useRef(null);
+  const cropperRef = useRef(null);
 
   const handleClose = onClose || onCancel || (() => {});
   const handleSave = onSave || onCropComplete || (() => {});
@@ -23,61 +23,74 @@ const ImageCropperModal = ({
   useEffect(() => {
     if (!isOpen || !src || !imageRef.current) return;
 
-    if (cropperInstanceRef.current) {
-      cropperInstanceRef.current.destroy();
-      cropperInstanceRef.current = null;
+    // Destroy previous instance
+    if (cropperRef.current) {
+      cropperRef.current.destroy();
+      cropperRef.current = null;
     }
 
-    const cropper = new Cropper(imageRef.current, {
-      aspectRatio: 1,
-      viewMode: 2,
-      autoCropArea: 1,
-      movable: true,
-      zoomable: true,
-      scalable: false,
-      rotatable: false,
-      background: false,
-      dragMode: 'move',
-      cropBoxMovable: false,
-      cropBoxResizable: false,
-      responsive: true,
-      guides: true,
-      center: true,
-      highlight: false,
-      toggleDragModeOnDblclick: false,
-      minContainerWidth: 280,
-      minContainerHeight: 280,
-      ready() {
-        cropperInstanceRef.current = this.cropper;
-      }
-    });
-
-    // Keep raw reference for cleanup
-    const rawRef = cropper;
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      if (!imageRef.current) return;
+      
+      cropperRef.current = new Cropper(imageRef.current, {
+        aspectRatio: 1,
+        viewMode: 1,
+        autoCropArea: 1,
+        dragMode: 'move',
+        cropBoxMovable: false,
+        cropBoxResizable: false,
+        toggleDragModeOnDblclick: false,
+        guides: true,
+        center: true,
+        highlight: false,
+        background: true,
+        movable: true,
+        zoomable: true,
+        zoomOnWheel: true,
+        zoomOnTouch: true,
+        scalable: false,
+        rotatable: false,
+        responsive: true,
+        minContainerWidth: 250,
+        minContainerHeight: 250,
+      });
+    }, 100);
 
     return () => {
-      cropperInstanceRef.current = null;
-      if (rawRef) rawRef.destroy();
+      clearTimeout(timer);
+      if (cropperRef.current) {
+        cropperRef.current.destroy();
+        cropperRef.current = null;
+      }
     };
   }, [src, isOpen]);
 
   const handleCropAndSave = () => {
-    const c = cropperInstanceRef.current;
-    if (!c || typeof c.getCroppedCanvas !== 'function') return;
-    const canvas = c.getCroppedCanvas({ width: 500, height: 500 });
-    if (!canvas) return;
-    const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-    handleSave(croppedDataUrl);
+    if (!cropperRef.current) return;
+    try {
+      const canvas = cropperRef.current.getCroppedCanvas({
+        width: 500,
+        height: 500,
+      });
+      if (!canvas) return;
+      const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      handleSave(croppedDataUrl);
+    } catch (e) {
+      console.error('Crop error:', e);
+    }
   };
 
   const handleZoomIn = () => {
-    const c = cropperInstanceRef.current;
-    if (c && typeof c.zoom === 'function') c.zoom(0.1);
+    if (cropperRef.current) {
+      try { cropperRef.current.zoom(0.1); } catch(e) {}
+    }
   };
 
   const handleZoomOut = () => {
-    const c = cropperInstanceRef.current;
-    if (c && typeof c.zoom === 'function') c.zoom(-0.1);
+    if (cropperRef.current) {
+      try { cropperRef.current.zoom(-0.1); } catch(e) {}
+    }
   };
 
   if (!isOpen || !src) return null;
@@ -90,26 +103,35 @@ const ImageCropperModal = ({
             <Crop size={20} />
             <h2>{title}</h2>
           </div>
-          <button type="button" className="cropper-close-btn" onClick={handleClose}><X size={18} /></button>
+          <button type="button" className="cropper-close-btn" onClick={handleClose}>
+            <X size={18} />
+          </button>
         </div>
 
         <div className="cropper-body">
-          <div className="cropper-img-wrapper" style={{ maxHeight: '400px', width: '100%', background: '#000', overflow: 'hidden', borderRadius: '12px' }}>
-            <img ref={imageRef} src={src} alt="Source for crop" style={{ maxWidth: '100%', display: 'block' }} />
+          <div className="cropper-image-container">
+            <img 
+              ref={imageRef} 
+              src={src} 
+              alt="Crop source"
+              style={{ display: 'block', maxWidth: '100%' }}
+            />
           </div>
 
-          <div className="cropper-zoom-controls" style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '14px' }}>
-            <button type="button" onClick={handleZoomOut} className="cropper-zoom-btn" title="Kichiklashtirish" style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div className="cropper-actions-row">
+            <button type="button" onClick={handleZoomOut} className="cropper-action-btn">
               <ZoomOut size={16} /> Kichiklashtirish
             </button>
-            <button type="button" onClick={handleZoomIn} className="cropper-zoom-btn" title="Kattalashtirish" style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button type="button" onClick={handleZoomIn} className="cropper-action-btn">
               <ZoomIn size={16} /> Kattalashtirish
             </button>
           </div>
         </div>
 
         <div className="cropper-footer">
-          <button type="button" className="cropper-cancel-btn" onClick={handleClose}>Bekor qilish</button>
+          <button type="button" className="cropper-cancel-btn" onClick={handleClose}>
+            Bekor qilish
+          </button>
           <button type="button" className="cropper-save-btn" onClick={handleCropAndSave}>
             <Check size={18} /> Qirqish va Saqlash
           </button>
