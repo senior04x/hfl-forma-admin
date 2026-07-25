@@ -26,6 +26,33 @@ export default function Standings() {
   const [selectedLeague, setSelectedLeague] = useState('');
   const [selectedRound, setSelectedRound] = useState('');
 
+  const [standings, setStandings] = useState([]);
+  const [recentMatches, setRecentMatches] = useState([]);
+  const [topScorers, setTopScorers] = useState([]);
+  const [topAssists, setTopAssists] = useState([]);
+  const [topYellowCards, setTopYellowCards] = useState([]);
+  const [topRedCards, setTopRedCards] = useState([]);
+  
+  const [penalties, setPenalties] = useState({});
+  const [savingPenalty, setSavingPenalty] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingCards, setIsExportingCards] = useState(false);
+  
+  const [selectedSponsors, setSelectedSponsors] = useState(() => {
+    try {
+      const saved = localStorage.getItem('hfl_selectedSponsors');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('hfl_selectedSponsors', JSON.stringify(selectedSponsors));
+  }, [selectedSponsors]);
+
+  const exportRef = useRef(null);
+  const cardsExportRef = useRef(null);
+
   useEffect(() => {
     loadLeaguesAndData();
   }, [orgId]);
