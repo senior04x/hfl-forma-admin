@@ -3,6 +3,8 @@
 .organizations-page {
   padding: 30px;
   max-width: 1200px;
+  background: #0a0d12;
+  min-height: 100vh;
   margin: 0 auto;
 }
 
@@ -65,8 +67,8 @@
 
 /* Card */
 .org-card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: #141922;
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 16px;
   padding: 24px;
   position: relative;
@@ -80,8 +82,8 @@
 }
 
 .org-card-primary {
-  border-color: rgba(0, 255, 102, 0.25);
-  background: rgba(0, 255, 102, 0.04);
+  border-color: rgba(0, 255, 102, 0.35);
+  background: #111a14;
 }
 
 .org-card-header {
