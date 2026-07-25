@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { X, Trash2, Save, Eye, Crop } from 'lucide-react';
 import ImageCropperModal from './ImageCropperModal';
@@ -11,6 +11,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState([]);
   const [selectedLeague, setSelectedLeague] = useState('');
+  const fileInputRef = useRef(null);
 
   // Cropper and Delete confirm states
   const [cropperRawImage, setCropperRawImage] = useState(null);
@@ -47,13 +48,14 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   });
 
   const handleFileSelect = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       setCropperRawImage(reader.result);
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleCroppedSave = async (croppedBase64) => {
@@ -188,10 +190,16 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
                   alt="Avatar" 
                   className="crop-preview-avatar"
                 />
-                <label className="btn-crop-upload">
+                <button type="button" className="btn-crop-upload" onClick={() => fileInputRef.current?.click()}>
                   <Crop size={16} /> {uploadingImage ? 'Yuklanmoqda...' : "1:1 Rasm Almashtirish"}
-                  <input type="file" accept="image/*" onChange={handleFileSelect} hidden />
-                </label>
+                </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  accept="image/*" 
+                  onChange={handleFileSelect} 
+                  style={{ display: 'none' }} 
+                />
               </div>
 
               <div className="edit-form-grid">
@@ -274,9 +282,11 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
       {/* 1:1 Image Cropper Modal */}
       {cropperRawImage && (
         <ImageCropperModal
+          isOpen={!!cropperRawImage}
           imageSrc={cropperRawImage}
-          onCropComplete={handleCroppedSave}
-          onCancel={() => setCropperRawImage(null)}
+          onSave={handleCroppedSave}
+          onClose={() => setCropperRawImage(null)}
+          title="O'yinchi Rasmini 1:1 Formatda Qirqish"
         />
       )}
 

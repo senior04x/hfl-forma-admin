@@ -2,7 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Crop, ZoomIn, ZoomOut, Check, X, Upload } from 'lucide-react';
 import './ImageCropperModal.css';
 
-const ImageCropperModal = ({ isOpen, onClose, onSave, title = "Fon Rasmini 1:1 Formatda Qirqish" }) => {
+const ImageCropperModal = ({ 
+  isOpen = true, 
+  onClose, 
+  onCancel,
+  onSave, 
+  onCropComplete,
+  imageSrc: propImageSrc,
+  initialImageSrc,
+  title = "Rasmni 1:1 Formatda Qirqish" 
+}) => {
   const [imageSrc, setImageSrc] = useState(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -11,13 +20,28 @@ const ImageCropperModal = ({ isOpen, onClose, onSave, title = "Fon Rasmini 1:1 F
   const canvasRef = useRef(null);
   const imageRef = useRef(null);
 
+  const handleClose = onClose || onCancel || (() => {});
+  const handleSave = onSave || onCropComplete || (() => {});
+
+  const activeSrc = propImageSrc || initialImageSrc;
+
   useEffect(() => {
-    if (!isOpen) {
+    if (activeSrc) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        imageRef.current = img;
+        setImageSrc(activeSrc);
+        setScale(1);
+        setOffset({ x: 0, y: 0 });
+      };
+      img.src = activeSrc;
+    } else if (!isOpen) {
       setImageSrc(null);
       setScale(1);
       setOffset({ x: 0, y: 0 });
     }
-  }, [isOpen]);
+  }, [activeSrc, isOpen]);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -35,6 +59,7 @@ const ImageCropperModal = ({ isOpen, onClose, onSave, title = "Fon Rasmini 1:1 F
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleUrlInput = (url) => {
@@ -113,20 +138,20 @@ const ImageCropperModal = ({ isOpen, onClose, onSave, title = "Fon Rasmini 1:1 F
     ctx.drawImage(canvas, 0, 0, 500, 500);
 
     const croppedDataUrl = outputCanvas.toDataURL('image/jpeg', 0.82);
-    onSave(croppedDataUrl);
+    handleSave(croppedDataUrl);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="cropper-modal-overlay" onClick={onClose}>
+    <div className="cropper-modal-overlay" onClick={handleClose}>
       <div className="cropper-modal" onClick={e => e.stopPropagation()}>
         <div className="cropper-header">
           <div className="cropper-title">
             <Crop size={20} />
             <h2>{title}</h2>
           </div>
-          <button className="cropper-close-btn" onClick={onClose}><X size={18} /></button>
+          <button className="cropper-close-btn" onClick={handleClose}><X size={18} /></button>
         </div>
 
         <div className="cropper-body">

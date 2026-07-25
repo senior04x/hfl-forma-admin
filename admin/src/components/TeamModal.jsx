@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues } from '../utils/leagueUtils';
@@ -15,6 +15,7 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
   const [status, setStatus] = useState(team.status);
   const [loading, setLoading] = useState(false);
   const [availableLeagues, setAvailableLeagues] = useState([]);
+  const fileInputRef = useRef(null);
 
   // Multi-league selection state
   const parseLeagues = (str) => {
@@ -98,13 +99,14 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
   };
 
   const handleFileSelect = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       setCropperRawImage(reader.result);
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleCroppedSave = async (croppedBase64) => {
@@ -308,10 +310,16 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
                   alt="Preview" 
                   className="crop-preview-avatar team" 
                 />
-                <label className="btn-crop-upload">
+                <button type="button" className="btn-crop-upload" onClick={() => fileInputRef.current?.click()}>
                   <Crop size={16} /> {uploadingImage ? 'Yuklanmoqda...' : "1:1 Logotip Almashtirish"}
-                  <input type="file" accept="image/*" onChange={handleFileSelect} hidden />
-                </label>
+                </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  accept="image/*" 
+                  onChange={handleFileSelect} 
+                  style={{ display: 'none' }} 
+                />
               </div>
 
               <div className="edit-form-grid">
@@ -390,9 +398,11 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
       {/* 1:1 Image Cropper Modal */}
       {cropperRawImage && (
         <ImageCropperModal
+          isOpen={!!cropperRawImage}
           imageSrc={cropperRawImage}
-          onCropComplete={handleCroppedSave}
-          onCancel={() => setCropperRawImage(null)}
+          onSave={handleCroppedSave}
+          onClose={() => setCropperRawImage(null)}
+          title="Jamoa Logotipini 1:1 Formatda Qirqish"
         />
       )}
 
