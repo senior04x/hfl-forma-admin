@@ -181,13 +181,15 @@ const TeamsTable = ({ onStatusChange }) => {
                   {team.captain_phone}
                 </div>
               </div>
-              <div className="list-cell status-cell">
-                {renderStatus(team.status)}
-              </div>
-              
-              <div className="list-cell desktop-actions hide-mobile">
-                <button className="btn-icon" title="Ko'rish" onClick={() => { setSelectedTeam(team); setModalMode('view'); }}><Eye size={18} /></button>
-                <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => { setSelectedTeam(team); setModalMode('edit'); }}><Edit size={18} /></button>
+              <div className="action-status-wrapper">
+                <div className="list-cell status-cell">
+                  {renderStatus(team.status)}
+                </div>
+                
+                <div className="list-cell desktop-actions hide-mobile">
+                  <button className="btn-icon" title="Ko'rish" onClick={() => { setSelectedTeam(team); setModalMode('view'); }}><Eye size={17} /></button>
+                  <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => { setSelectedTeam(team); setModalMode('edit'); }}><Edit size={17} /></button>
+                </div>
               </div>
             </SwipeRow>
           ))

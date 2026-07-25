@@ -267,14 +267,16 @@ const PlayersTable = ({ onStatusChange }) => {
                   {app.passport_series}{app.passport_number} вЂў {app.phone}
                 </div>
               </div>
-              <div className="list-cell status-cell">
-                {renderStatus(app)}
-              </div>
-              
-              {/* Desktop Actions - Only visible on large screens */}
-              <div className="list-cell desktop-actions hide-mobile">
-                <button className="btn-icon text-red" title="O'chirish" onClick={() => deletePlayer(app.id)}><Trash2 size={18} /></button>
-                <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => { setSelectedPlayer(app); setModalMode('edit'); }}><Edit size={18} /></button>
+              <div className="action-status-wrapper">
+                <div className="list-cell status-cell">
+                  {renderStatus(app)}
+                </div>
+                
+                {/* Desktop Actions - Only visible on large screens */}
+                <div className="list-cell desktop-actions hide-mobile">
+                  <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => { setSelectedPlayer(app); setModalMode('edit'); }}><Edit size={17} /></button>
+                  <button className="btn-icon text-red" title="O'chirish" onClick={() => deletePlayer(app.id)}><Trash2 size={17} /></button>
+                </div>
               </div>
             </SwipeRow>
           ))
