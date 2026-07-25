@@ -1,0 +1,135 @@
+/* CustomSelect Styling */
+.custom-select-container {
+  position: relative;
+  min-width: 180px;
+  flex: 1;
+}
+
+.custom-select-trigger {
+  width: 100%;
+  height: 44px;
+  background: rgba(20, 25, 34, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.custom-select-trigger:hover {
+  border-color: rgba(0, 255, 102, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.custom-select-trigger.open {
+  border-color: #00ff66;
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.2);
+  background: rgba(20, 25, 34, 1);
+}
+
+.select-trigger-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.select-icon {
+  color: #00ff66;
+  flex-shrink: 0;
+}
+
+.select-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.select-chevron {
+  color: rgba(255, 255, 255, 0.5);
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+
+.select-chevron.open {
+  transform: rotate(180deg);
+  color: #00ff66;
+}
+
+/* Dropdown Menu */
+.custom-select-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #141922;
+  border: 1px solid rgba(0, 255, 102, 0.3);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  border-radius: 12px;
+  padding: 6px;
+  z-index: 1000;
+  max-height: 240px;
+  overflow-y: auto;
+  animation: selectFadeIn 0.2s ease;
+}
+
+@keyframes selectFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.custom-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.custom-select-option:hover {
+  background: rgba(0, 255, 102, 0.12);
+  color: #00ff66;
+}
+
+.custom-select-option.selected {
+  background: rgba(0, 255, 102, 0.2);
+  color: #00ff66;
+  font-weight: 700;
+}
+
+.option-check {
+  color: #00ff66;
+}
+
+/* Custom Scrollbar for Dropdown */
+.custom-select-dropdown::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-select-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-select-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}

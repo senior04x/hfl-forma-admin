@@ -5,6 +5,7 @@ import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUti
 import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter, Trophy } from 'lucide-react';
 import SwipeRow from './SwipeRow';
 import TeamModal from './TeamModal';
+import CustomSelect from './CustomSelect';
 import { searchAndRankItems } from '../utils/fuzzySearch';
 // Reusing same CSS as PlayersTable
 import './PlayersTable.css';
@@ -131,27 +132,27 @@ const TeamsTable = ({ onStatusChange }) => {
             onChange={handleSearch}
           />
         </div>
-        <div className="filter-box">
-          <Filter size={18} className="filter-icon" />
-          <select value={filter} onChange={handleFilterChange} title="Holat bo'yicha filter">
-            <option value="all">Barcha holatlar</option>
-            <option value="pending">Kutilmoqda</option>
-            <option value="approved">Tasdiqlangan</option>
-            <option value="rejected">Rad etilgan</option>
-          </select>
-        </div>
-        <div className="filter-box">
-          <Trophy size={18} className="filter-icon" />
-          <select value={leagueFilter} onChange={handleLeagueFilterChange} title="Liga bo'yicha filter">
-            <option value="all">Barcha ligalar</option>
-            <option value="Super liga">Super liga</option>
-            <option value="Pro liga">Pro liga</option>
-            <option value="3-liga">3-liga</option>
-            <option value="Chempionlar ligasi">Chempionlar ligasi</option>
-            <option value="Europa ligasi">Europa ligasi</option>
-            <option value="7x7 liga">7x7 liga</option>
-          </select>
-        </div>
+        <CustomSelect
+          value={filter}
+          onChange={(val) => { setFilter(val); setPage(1); }}
+          icon={Filter}
+          options={[
+            { value: 'all', label: 'Barcha holatlar' },
+            { value: 'pending', label: 'Kutilmoqda' },
+            { value: 'approved', label: 'Tasdiqlangan' },
+            { value: 'rejected', label: 'Rad etilgan' },
+          ]}
+        />
+
+        <CustomSelect
+          value={leagueFilter}
+          onChange={(val) => { setLeagueFilter(val); setPage(1); }}
+          icon={Trophy}
+          options={[
+            { value: 'all', label: 'Barcha ligalar' },
+            ...activeLeagues.map(l => ({ value: l.name, label: l.name }))
+          ]}
+        />
       </div>
 
       <div className="list-container">
