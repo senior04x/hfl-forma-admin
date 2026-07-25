@@ -68,7 +68,11 @@ const Layout = () => {
       {/* Mobile Header */}
       <header className="mobile-header">
         <div className="logo-container">
-          <img src="/images/logo.png" alt="HFL Logo" className="header-logo" />
+          <img 
+            src={currentOrg?.logo_url || "/images/logo.png"} 
+            alt={currentOrg?.name || "Logo"} 
+            className="header-logo" 
+          />
         </div>
         <button className={`menu-toggle ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           <Menu size={24} className="icon-menu" />
@@ -84,7 +88,11 @@ const Layout = () => {
       {/* Sidebar */}
       <aside className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="sidebar-header hide-mobile">
-          <img src="/images/logo.png" alt="HFL Logo" className="sidebar-logo" />
+          <img 
+            src={currentOrg?.logo_url || "/images/logo.png"} 
+            alt={currentOrg?.name || "Logo"} 
+            className="sidebar-logo" 
+          />
         </div>
 
         {/* Organization Switcher */}
