@@ -10,12 +10,15 @@ import { searchAndRankItems } from '../utils/fuzzySearch';
 // Reusing same CSS as PlayersTable
 import './PlayersTable.css';
 
-const TeamsTable = ({ onStatusChange }) => {
+import DeleteConfirmModal from './DeleteConfirmModal';
+
+const TeamsTable = ({ onStatusChange = () => {} }) => {
   const [teams, setTeams] = useState([]);
   const [activeLeagues, setActiveLeagues] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [modalMode, setModalMode] = useState('view');
   const [loading, setLoading] = useState(true);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
   const { orgId } = useOrg();
   
   // Pagination & Filtering
@@ -93,6 +96,24 @@ const TeamsTable = ({ onStatusChange }) => {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetId) return;
+    const id = deleteTargetId;
+    setTeams(prev => prev.filter(t => t.id !== id));
+    try {
+      const { error } = await supabase.from('teams').delete().eq('id', id);
+      if (error) throw error;
+      fetchTeams();
+      onStatusChange();
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      alert("Jamoani o'chirishda xatolik yuz berdi");
+      fetchTeams();
+    } finally {
+      setDeleteTargetId(null);
+    }
+  };
+
   const renderStatus = (status) => {
     const classes = {
       pending: 'status-pending',
@@ -116,16 +137,6 @@ const TeamsTable = ({ onStatusChange }) => {
     setPage(1);
   };
 
-  const handleFilterChange = (e) => {
-    setFilter(e.target.value);
-    setPage(1);
-  };
-
-  const handleLeagueFilterChange = (e) => {
-    setLeagueFilter(e.target.value);
-    setPage(1);
-  };
-
   return (
     <div className="table-wrapper">
       <div className="table-controls">
@@ -133,7 +144,7 @@ const TeamsTable = ({ onStatusChange }) => {
           <Search size={18} className="search-icon" />
           <input 
             type="text" 
-            placeholder="Jamoa nomi yoki telefon..." 
+            placeholder="Jamoa nomi, telefon yoki liga..." 
             value={search}
             onChange={handleSearch}
           />
@@ -183,7 +194,7 @@ const TeamsTable = ({ onStatusChange }) => {
               key={team.id} 
               actions={
                 <>
-                  <button className="action-btn view" title="Ko'rish" onClick={() => { setSelectedTeam(team); setModalMode('view'); }}><Eye size={20} /></button>
+                  <button className="action-btn delete" title="O'chirish" onClick={() => setDeleteTargetId(team.id)}><Trash2 size={20} /></button>
                   <button className="action-btn edit" title="Tahrirlash" onClick={() => { setSelectedTeam(team); setModalMode('edit'); }}><Edit size={20} /></button>
                 </>
               }
@@ -192,7 +203,7 @@ const TeamsTable = ({ onStatusChange }) => {
                 <img src={team.logo_url} alt="Logo" className="player-avatar" onClick={() => window.openImageViewer(team.logo_url)} />
               </div>
               <div className="list-cell info-cell">
-                <div className="player-name">{team.name}</div>
+                <div className="player-name" onClick={() => { setSelectedTeam(team); setModalMode('view'); }}>{team.name}</div>
                 <div className="player-team">{team.league || 'Kiritilmagan'}</div>
                 <div className="player-meta hide-mobile">
                   {team.captain_phone}
@@ -206,6 +217,7 @@ const TeamsTable = ({ onStatusChange }) => {
                 <div className="list-cell desktop-actions hide-mobile">
                   <button className="btn-icon" title="Ko'rish" onClick={() => { setSelectedTeam(team); setModalMode('view'); }}><Eye size={17} /></button>
                   <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => { setSelectedTeam(team); setModalMode('edit'); }}><Edit size={17} /></button>
+                  <button className="btn-icon text-red" title="O'chirish" onClick={() => setDeleteTargetId(team.id)}><Trash2 size={17} /></button>
                 </div>
               </div>
             </SwipeRow>
@@ -238,11 +250,17 @@ const TeamsTable = ({ onStatusChange }) => {
           onRefresh={() => { fetchTeams(); onStatusChange(); }} 
         />
       )}
+
+      {/* 5s Countdown Delete Confirm Modal */}
+      <DeleteConfirmModal
+        isOpen={!!deleteTargetId}
+        title="Jamoani o'chirish"
+        message="O'chirsangiz barcha ma'lumotlar o'chib ketadi!"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteTargetId(null)}
+      />
     </div>
   );
 };
 
 export default TeamsTable;
-
-
-

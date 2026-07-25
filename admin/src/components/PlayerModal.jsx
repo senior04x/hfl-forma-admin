@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { X, Trash2, Save, Eye } from 'lucide-react';
+import { X, Trash2, Save, Eye, Crop } from 'lucide-react';
+import ImageCropperModal from './ImageCropperModal';
+import DeleteConfirmModal from './DeleteConfirmModal';
 import './Modal.css';
 
 const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   const [currentMode, setCurrentMode] = useState(mode);
   const [status, setStatus] = useState(player.status);
   const [loading, setLoading] = useState(false);
-
   const [teams, setTeams] = useState([]);
   const [selectedLeague, setSelectedLeague] = useState('');
+
+  // Cropper and Delete confirm states
+  const [cropperRawImage, setCropperRawImage] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -26,7 +32,6 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     }
   }, [player.team_id, teams]);
 
-  // Form states for edit mode
   const [formData, setFormData] = useState({
     first_name: player.first_name || '',
     last_name: player.last_name || '',
@@ -41,22 +46,33 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     team_id: player.team_id || ''
   });
 
-  const [uploadingImage, setUploadingImage] = useState(false);
-
-  const handleFileUpload = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperRawImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCroppedSave = async (croppedBase64) => {
     setUploadingImage(true);
+    setCropperRawImage(null);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `admin_edit_${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const { error } = await supabase.storage.from('player-photos').upload(fileName, file);
+      const response = await fetch(croppedBase64);
+      const blob = await response.blob();
+      const fileName = `player_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+
+      const { error } = await supabase.storage.from('player-photos').upload(fileName, blob, {
+        contentType: 'image/jpeg'
+      });
       if (error) throw error;
-      
+
       const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
-      setFormData(prev => ({...prev, photo_url: data.publicUrl}));
-    } catch (error) {
-      console.error(error);
+      setFormData(prev => ({ ...prev, photo_url: data.publicUrl }));
+    } catch (err) {
+      console.error('Photo upload error:', err);
       alert('Rasm yuklashda xatolik yuz berdi');
     } finally {
       setUploadingImage(false);
@@ -94,165 +110,185 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     }
   };
 
-  const handleDelete = async () => {
-    if (window.confirm("Rostdan ham o'chirmoqchimisiz?")) {
-      try {
-        await supabase.from('applications').delete().eq('id', player.id);
-        onRefresh();
-        onClose();
-      } catch (error) {
-        console.error(error);
-      }
+  const handleConfirmDelete = async () => {
+    try {
+      await supabase.from('applications').delete().eq('id', player.id);
+      onRefresh();
+      setShowDeleteModal(false);
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert("O'chirishda xatolik yuz berdi");
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <button className="close-btn" onClick={onClose}><X size={24} /></button>
-        
-        {currentMode === 'view' ? (
-          <div className="modal-view">
-            <div className="modal-header-profile">
-              <img 
-                src={player.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop'} 
-                alt="Profile" 
-                className="modal-avatar" 
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop';
-                }}
-                onClick={() => player.photo_url && window.openImageViewer && window.openImageViewer(player.photo_url)} 
-              />
-              <h2>{player.first_name} {player.last_name} {player.father_name}</h2>
-              <p>{player.phone || 'Telefon kiritilmagan'}</p>
-              {teams.length > 0 && player.team_id ? (() => {
-                const pTeam = teams.find(t => t.id === player.team_id);
-                return pTeam ? (
-                  <p style={{ marginTop: '5px', fontSize: '14px', fontWeight: 'bold', color: '#3b82f6' }}>
-                    {pTeam.name} ({pTeam.league || 'Liga yo\'q'})
-                  </p>
-                ) : null;
-              })() : null}
-            </div>
-            
-            <div className="modal-details-grid">
-              <div className="detail-item">
-                <span className="label">Pasport:</span>
-                <span className="value">{player.passport_series} {player.passport_number}</span>
+    <>
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <button className="close-btn" onClick={onClose}><X size={24} /></button>
+          
+          {currentMode === 'view' ? (
+            <div className="modal-view">
+              <div className="modal-header-profile">
+                <img 
+                  src={player.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop'} 
+                  alt="Profile" 
+                  className="modal-avatar" 
+                />
+                <h2>{player.first_name} {player.last_name}</h2>
+                <p>{player.phone || 'Telefon kiritilmagan'}</p>
+                <p className="league-badge-text">
+                  {teams.find(t => t.id === player.team_id)?.name || 'Yakkaxon'} 
+                  {selectedLeague ? ` (${selectedLeague})` : ''}
+                </p>
               </div>
-              <div className="detail-item">
-                <span className="label">Tug'ilgan sana:</span>
-                <span className="value">{player.birth_date}</span>
-              </div>
-              <div className="detail-item">
-                <span className="label">Pozitsiya:</span>
-                <span className="value">{player.position}</span>
-              </div>
-              <div className="detail-item">
-                <span className="label">Raqam:</span>
-                <span className="value">{player.player_number}</span>
-              </div>
-            </div>
 
-            <div className="modal-actions">
-              <select value={status} onChange={(e) => handleStatusChange(e.target.value)} className="status-select">
-                <option value="pending">Kutilmoqda</option>
-                <option value="approved">Tasdiqlash</option>
-                <option value="rejected">Rad etish</option>
-              </select>
-              <button className="btn-edit" onClick={() => setCurrentMode('edit')}>Tahrirlash</button>
-              <button className="btn-delete" onClick={handleDelete}><Trash2 size={18} /> O'chirish</button>
-            </div>
-          </div>
-        ) : (
-          <div className="modal-edit">
-            <h2>O'yinchini Tahrirlash</h2>
-            <div className="edit-form-grid">
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Rasm (Yangi rasm yuklash)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  {formData.photo_url && <img src={formData.photo_url} alt="Preview" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover' }} />}
-                  <input type="file" accept="image/*" onChange={handleFileUpload} disabled={uploadingImage} />
-                  {uploadingImage && <span style={{fontSize: 12, color: '#666'}}>Yuklanmoqda...</span>}
+              <div className="modal-details-grid">
+                <div className="detail-item">
+                  <span className="label">Pasport</span>
+                  <span className="value">{player.passport_series || '—'} {player.passport_number || '—'}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Tug'ilgan sana</span>
+                  <span className="value">{player.birth_date || '—'}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Pozitsiya</span>
+                  <span className="value">{player.position || '—'}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Raqam</span>
+                  <span className="value">{player.player_number || '—'}</span>
                 </div>
               </div>
-              <div className="form-group">
-                <label>Ism</label>
-                <input name="first_name" value={formData.first_name} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Familiya</label>
-                <input name="last_name" value={formData.last_name} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Otasining ismi</label>
-                <input name="father_name" value={formData.father_name} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Telefon</label>
-                <input name="phone" value={formData.phone} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Pasport seriya</label>
-                <input name="passport_series" value={formData.passport_series} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Pasport raqam</label>
-                <input name="passport_number" value={formData.passport_number} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Tug'ilgan sana</label>
-                <input type="text" name="birth_date" value={formData.birth_date} onChange={handleChange} placeholder="masalan: 10.07.1991" />
-              </div>
-              <div className="form-group">
-                <label>Pozitsiya</label>
-                <input name="position" value={formData.position} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Raqam</label>
-                <input type="number" name="player_number" value={formData.player_number} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Liga</label>
+
+              <div className="modal-actions">
                 <select 
-                  value={selectedLeague} 
-                  onChange={(e) => {
-                    setSelectedLeague(e.target.value);
-                    setFormData({...formData, team_id: ''});
-                  }}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' }}
+                  className="status-select" 
+                  value={status} 
+                  onChange={(e) => handleStatusChange(e.target.value)}
                 >
-                  <option value="">Ligani tanlang</option>
-                  {[...new Set(teams.map(t => t.league).filter(Boolean))].map(l => (
-                    <option key={l} value={l}>{l}</option>
-                  ))}
+                  <option value="pending">Kutilmoqda</option>
+                  <option value="approved">Tasdiqlandi</option>
+                  <option value="rejected">Rad etildi</option>
                 </select>
-              </div>
-              <div className="form-group">
-                <label>Jamoa</label>
-                <select 
-                  name="team_id" 
-                  value={formData.team_id} 
-                  onChange={handleChange}
-                  disabled={!selectedLeague}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' }}
-                >
-                  <option value="">Jamoani tanlang</option>
-                  {teams.filter(t => t.league === selectedLeague).map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
+                <button className="btn-edit" onClick={() => setCurrentMode('edit')}>Tahrirlash</button>
+                <button className="btn-delete" onClick={() => setShowDeleteModal(true)}><Trash2 size={16} /> O'chirish</button>
               </div>
             </div>
-            <div className="modal-actions">
-              <button className="btn-cancel" onClick={() => setCurrentMode('view')}>Bekor qilish</button>
-              <button className="btn-save" onClick={handleSave} disabled={loading}>{loading ? 'Saqlanmoqda...' : 'Saqlash'}</button>
+          ) : (
+            <div className="modal-edit">
+              <h2 className="modal-edit-title">O'yinchini Tahrirlash</h2>
+              
+              {/* Photo 1:1 Crop Section */}
+              <div className="crop-photo-picker">
+                <img 
+                  src={formData.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop'} 
+                  alt="Avatar" 
+                  className="crop-preview-avatar"
+                />
+                <label className="btn-crop-upload">
+                  <Crop size={16} /> {uploadingImage ? 'Yuklanmoqda...' : "1:1 Rasm Almashtirish"}
+                  <input type="file" accept="image/*" onChange={handleFileSelect} hidden />
+                </label>
+              </div>
+
+              <div className="edit-form-grid">
+                <div className="form-group">
+                  <label>Ism</label>
+                  <input name="first_name" value={formData.first_name} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label>Familiya</label>
+                  <input name="last_name" value={formData.last_name} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label>Otasining ismi</label>
+                  <input name="father_name" value={formData.father_name} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label>Telefon</label>
+                  <input name="phone" value={formData.phone} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label>Pasport seriya</label>
+                  <input name="passport_series" value={formData.passport_series} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label>Pasport raqam</label>
+                  <input name="passport_number" value={formData.passport_number} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label>Tug'ilgan sana</label>
+                  <input type="text" name="birth_date" value={formData.birth_date} onChange={handleChange} placeholder="masalan: 10.07.1991" />
+                </div>
+                <div className="form-group">
+                  <label>Pozitsiya</label>
+                  <input name="position" value={formData.position} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label>Raqam</label>
+                  <input type="number" name="player_number" value={formData.player_number} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label>Liga</label>
+                  <select 
+                    value={selectedLeague} 
+                    onChange={(e) => {
+                      setSelectedLeague(e.target.value);
+                      setFormData({...formData, team_id: ''});
+                    }}
+                  >
+                    <option value="">Ligani tanlang</option>
+                    {[...new Set(teams.map(t => t.league).filter(Boolean))].map(l => (
+                      <option key={l} value={l}>{l}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Jamoa</label>
+                  <select 
+                    name="team_id" 
+                    value={formData.team_id} 
+                    onChange={handleChange}
+                    disabled={!selectedLeague}
+                  >
+                    <option value="">Jamoani tanlang</option>
+                    {teams.filter(t => t.league === selectedLeague).map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button className="btn-cancel" onClick={() => setCurrentMode('view')}>Bekor qilish</button>
+                <button className="btn-save" onClick={handleSave} disabled={loading}>{loading ? 'Saqlanmoqda...' : 'Saqlash'}</button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* 1:1 Image Cropper Modal */}
+      {cropperRawImage && (
+        <ImageCropperModal
+          imageSrc={cropperRawImage}
+          onCropComplete={handleCroppedSave}
+          onCancel={() => setCropperRawImage(null)}
+        />
+      )}
+
+      {/* 5s Countdown Delete Confirm Modal */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        title="O'yinchini o'chirish"
+        message="O'chirsangiz o'yinchining barcha ma'lumotlari o'chib ketadi!"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setShowDeleteModal(false)}
+      />
+    </>
   );
 };
 

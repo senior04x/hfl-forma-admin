@@ -218,3 +218,56 @@
         width: 100%;
     }
 }
+
+.modal-edit-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.crop-photo-picker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #0e1422;
+    border: 1px dashed rgba(0, 255, 102, 0.3);
+    border-radius: 16px;
+}
+
+.crop-preview-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #00ff66;
+    box-shadow: 0 0 15px rgba(0, 255, 102, 0.25);
+}
+
+.crop-preview-avatar.team {
+    border-radius: 16px;
+}
+
+.btn-crop-upload {
+    padding: 8px 16px;
+    background: rgba(0, 255, 102, 0.12);
+    border: 1px solid rgba(0, 255, 102, 0.3);
+    color: #00ff66;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-crop-upload:hover {
+    background: #00ff66;
+    color: #000000;
+}

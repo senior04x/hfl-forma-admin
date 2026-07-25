@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { X, Trash2, Save, Eye } from 'lucide-react';
+import { useOrg } from '../context/OrgContext';
+import { getActiveOrgLeagues } from '../utils/leagueUtils';
+import { X, Trash2, Save, Eye, Crop } from 'lucide-react';
 import PlayerModal from './PlayerModal';
+import ImageCropperModal from './ImageCropperModal';
+import DeleteConfirmModal from './DeleteConfirmModal';
 import './Modal.css';
 
 const TeamModal = ({ team, mode, onClose, onRefresh }) => {
+  const { orgId } = useOrg();
   const [currentMode, setCurrentMode] = useState(mode);
   const [status, setStatus] = useState(team.status);
   const [loading, setLoading] = useState(false);
+  const [availableLeagues, setAvailableLeagues] = useState([]);
+
+  // Cropper and Delete Confirm states
+  const [cropperRawImage, setCropperRawImage] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Form states for edit mode
   const [formData, setFormData] = useState({
@@ -20,6 +31,15 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
   const [players, setPlayers] = useState([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+
+  useEffect(() => {
+    loadLeagues();
+  }, [orgId]);
+
+  const loadLeagues = async () => {
+    const fetched = await getActiveOrgLeagues(orgId);
+    setAvailableLeagues(fetched);
+  };
 
   useEffect(() => {
     if (currentMode === 'view') {
@@ -66,22 +86,33 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
     }
   };
 
-  const [uploadingImage, setUploadingImage] = useState(false);
-
-  const handleFileUpload = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperRawImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCroppedSave = async (croppedBase64) => {
     setUploadingImage(true);
+    setCropperRawImage(null);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `admin_edit_team_${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const { error } = await supabase.storage.from('player-photos').upload(fileName, file);
+      const response = await fetch(croppedBase64);
+      const blob = await response.blob();
+      const fileName = `team_logo_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+
+      const { error } = await supabase.storage.from('player-photos').upload(fileName, blob, {
+        contentType: 'image/jpeg'
+      });
       if (error) throw error;
-      
+
       const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
-      setFormData(prev => ({...prev, logo_url: data.publicUrl}));
-    } catch (error) {
-      console.error(error);
+      setFormData(prev => ({ ...prev, logo_url: data.publicUrl }));
+    } catch (err) {
+      console.error('Logo upload error:', err);
       alert('Rasm yuklashda xatolik yuz berdi');
     } finally {
       setUploadingImage(false);
@@ -128,137 +159,147 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
     }
   };
 
-  const handleDelete = async () => {
-    if (window.confirm("Rostdan ham ushbu jamoani to'liq o'chirmoqchimisiz?")) {
-      try {
-        await supabase.from('teams').delete().eq('id', team.id);
-        onRefresh();
-        onClose();
-      } catch (error) {
-        console.error(error);
-      }
+  const handleConfirmDelete = async () => {
+    try {
+      await supabase.from('teams').delete().eq('id', team.id);
+      onRefresh();
+      setShowDeleteModal(false);
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert("Jamoani o'chirishda xatolik yuz berdi");
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <button className="close-btn" onClick={onClose}><X size={24} /></button>
-        
-        {currentMode === 'view' ? (
-          <div className="modal-view">
-            <div className="modal-header-profile">
-              <img src={team.logo_url} alt="Logo" className="modal-avatar team" onClick={() => window.openImageViewer(team.logo_url)} />
-              <h2>{team.name}</h2>
-              <p>{team.league || 'Liga tanlanmagan'}</p>
-            </div>
-            
-            <div className="modal-details-grid">
-              <div className="detail-item">
-                <span className="label">Sardor:</span>
-                <span className="value">{team.captain_name}</span>
+    <>
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <button className="close-btn" onClick={onClose}><X size={24} /></button>
+          
+          {currentMode === 'view' ? (
+            <div className="modal-view">
+              <div className="modal-header-profile">
+                <img src={team.logo_url} alt="Logo" className="modal-avatar team" />
+                <h2>{team.name}</h2>
+                <p>{team.league || 'Liga tanlanmagan'}</p>
               </div>
-              <div className="detail-item">
-                <span className="label">Telefon:</span>
-                <span className="value">{team.captain_phone}</span>
+              
+              <div className="modal-details-grid">
+                <div className="detail-item">
+                  <span className="label">Sardor:</span>
+                  <span className="value">{team.captain_name || '—'}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Telefon:</span>
+                  <span className="value">{team.captain_phone || '—'}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Viloyat:</span>
+                  <span className="value">{team.region || '—'}</span>
+                </div>
               </div>
-              <div className="detail-item">
-                <span className="label">Viloyat:</span>
-                <span className="value">{team.region}</span>
-              </div>
-            </div>
-            
-            {team.payment_receipt && (
-              <div style={{ marginTop: '20px' }}>
-                <span className="label" style={{display:'block', marginBottom: '10px'}}>To'lov cheki:</span>
-                <img src={team.payment_receipt} style={{maxWidth: '100px', cursor:'pointer', borderRadius: '8px'}} onClick={() => window.openImageViewer(team.payment_receipt)} />
-              </div>
-            )}
-
-            <div className="team-players-section" style={{ marginTop: '25px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-              <h3 style={{ marginBottom: '15px', fontSize: '16px', color: '#1e293b' }}>Jamoa o'yinchilari ({players.length})</h3>
-              {loadingPlayers ? (
-                <p style={{ color: '#64748b', fontSize: '14px' }}>Yuklanmoqda...</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {players.map(p => (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '15px', background: '#f8fafc', padding: '10px', borderRadius: '10px' }}>
-                      <img 
-                        src={p.photo_url} 
-                        alt="Profile" 
-                        style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', cursor: 'pointer' }} 
-                        onClick={() => setSelectedPlayer(p)}
-                      />
-                      <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setSelectedPlayer(p)}>
-                        <div style={{ fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>{p.first_name} {p.last_name}</div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>{p.position} • #{p.player_number}</div>
-                      </div>
-                      <select 
-                        value={p.status} 
-                        onChange={(e) => updatePlayerStatus(p.id, e.target.value)}
-                        style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', outline: 'none' }}
-                      >
-                        <option value="pending">Kutilmoqda</option>
-                        <option value="approved">Tasdiqlangan</option>
-                        <option value="rejected">Rad etilgan</option>
-                      </select>
-                    </div>
-                  ))}
-                  {players.length === 0 && <p style={{ color: '#64748b', fontSize: '14px' }}>O'yinchilar topilmadi.</p>}
+              
+              {team.payment_receipt && (
+                <div style={{ marginTop: '20px' }}>
+                  <span className="label" style={{display:'block', marginBottom: '10px'}}>To'lov cheki:</span>
+                  <img 
+                    src={team.payment_receipt} 
+                    style={{maxWidth: '120px', cursor:'pointer', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)'}} 
+                    onClick={() => window.open(team.payment_receipt, '_blank')} 
+                  />
                 </div>
               )}
-            </div>
 
-            <div className="modal-actions mt-4">
-              <select value={status} onChange={(e) => handleStatusChange(e.target.value)} className="status-select">
-                <option value="pending">Kutilmoqda</option>
-                <option value="approved">Tasdiqlash</option>
-                <option value="rejected">Rad etish</option>
-              </select>
-              <button className="btn-edit" onClick={() => setCurrentMode('edit')}>Tahrirlash</button>
-              <button className="btn-delete" onClick={handleDelete}><Trash2 size={18} /> O'chirish</button>
+              <div className="team-players-section" style={{ marginTop: '25px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '15px' }}>
+                <h3 style={{ marginBottom: '15px', fontSize: '16px', color: '#ffffff' }}>Jamoa o'yinchilari ({players.length})</h3>
+                {loadingPlayers ? (
+                  <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>Yuklanmoqda...</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {players.map(p => (
+                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '15px', background: '#0e1422', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                        <img 
+                          src={p.photo_url} 
+                          alt="Profile" 
+                          style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', cursor: 'pointer' }} 
+                          onClick={() => setSelectedPlayer(p)}
+                        />
+                        <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setSelectedPlayer(p)}>
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: '#ffffff' }}>{p.first_name} {p.last_name}</div>
+                          <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>{p.position} • #{p.player_number}</div>
+                        </div>
+                        <select 
+                          value={p.status} 
+                          onChange={(e) => updatePlayerStatus(p.id, e.target.value)}
+                          style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.15)', background: '#141922', color: '#ffffff', fontSize: '12px', outline: 'none' }}
+                        >
+                          <option value="pending">Kutilmoqda</option>
+                          <option value="approved">Tasdiqlangan</option>
+                          <option value="rejected">Rad etilgan</option>
+                        </select>
+                      </div>
+                    ))}
+                    {players.length === 0 && <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>O'yinchilar topilmadi.</p>}
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-actions mt-4">
+                <select value={status} onChange={(e) => handleStatusChange(e.target.value)} className="status-select">
+                  <option value="pending">Kutilmoqda</option>
+                  <option value="approved">Tasdiqlash</option>
+                  <option value="rejected">Rad etish</option>
+                </select>
+                <button className="btn-edit" onClick={() => setCurrentMode('edit')}>Tahrirlash</button>
+                <button className="btn-delete" onClick={() => setShowDeleteModal(true)}><Trash2 size={18} /> O'chirish</button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="modal-edit">
-            <h2>Jamoani Tahrirlash</h2>
-            <div className="edit-form-grid">
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Logotip (Yangi logotip yuklash)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  {formData.logo_url && <img src={formData.logo_url} alt="Preview" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover' }} />}
-                  <input type="file" accept="image/*" onChange={handleFileUpload} disabled={uploadingImage} />
-                  {uploadingImage && <span style={{fontSize: 12, color: '#666'}}>Yuklanmoqda...</span>}
+          ) : (
+            <div className="modal-edit">
+              <h2 className="modal-edit-title">Jamoani Tahrirlash</h2>
+
+              {/* 1:1 Logo Cropper */}
+              <div className="crop-photo-picker">
+                <img 
+                  src={formData.logo_url || 'https://via.placeholder.com/100'} 
+                  alt="Preview" 
+                  className="crop-preview-avatar team" 
+                />
+                <label className="btn-crop-upload">
+                  <Crop size={16} /> {uploadingImage ? 'Yuklanmoqda...' : "1:1 Logotip Almashtirish"}
+                  <input type="file" accept="image/*" onChange={handleFileSelect} hidden />
+                </label>
+              </div>
+
+              <div className="edit-form-grid">
+                <div className="form-group">
+                  <label>Jamoa nomi</label>
+                  <input name="name" value={formData.name} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label>Sardor telefoni</label>
+                  <input name="captain_phone" value={formData.captain_phone} onChange={handleChange} />
+                </div>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Liga</label>
+                  <select name="league" value={formData.league} onChange={handleChange}>
+                    <option value="">Ligani tanlang</option>
+                    {availableLeagues.map(l => (
+                      <option key={l.id || l.name} value={l.name}>{l.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-              <div className="form-group">
-                <label>Jamoa nomi</label>
-                <input name="name" value={formData.name} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Sardor telefoni</label>
-                <input name="captain_phone" value={formData.captain_phone} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Liga</label>
-                <select name="league" value={formData.league} onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', outline: 'none' }}>
-                  <option value="">Ligani tanlang</option>
-                  <option value="Super liga">Super liga</option>
-                  <option value="Pro liga">Pro liga</option>
-                  <option value="3-liga">3-liga</option>
-                  <option value="Europa ligasi">Europa ligasi</option>
-                  <option value="Chempionlar ligasi">Chempionlar ligasi</option>
-                  <option value="7x7 liga">7x7 liga</option>
-                </select>
+              <div className="modal-actions">
+                <button className="btn-cancel" onClick={() => setCurrentMode('view')}>Bekor qilish</button>
+                <button className="btn-save" onClick={handleSave} disabled={loading}>{loading ? 'Saqlanmoqda...' : 'Saqlash'}</button>
               </div>
             </div>
-            <div className="modal-actions">
-              <button className="btn-cancel" onClick={() => setCurrentMode('view')}>Bekor qilish</button>
-              <button className="btn-save" onClick={handleSave} disabled={loading}>{loading ? 'Saqlanmoqda...' : 'Saqlash'}</button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
       {selectedPlayer && (
         <PlayerModal 
           player={selectedPlayer} 
@@ -267,9 +308,26 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
           onRefresh={fetchPlayers} 
         />
       )}
-    </div>
+
+      {/* 1:1 Image Cropper Modal */}
+      {cropperRawImage && (
+        <ImageCropperModal
+          imageSrc={cropperRawImage}
+          onCropComplete={handleCroppedSave}
+          onCancel={() => setCropperRawImage(null)}
+        />
+      )}
+
+      {/* 5s Countdown Delete Confirm Modal */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        title="Jamoani o'chirish"
+        message="O'chirsangiz jamoaning barcha ma'lumotlari hamda o'yinchilari o'chib ketadi!"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setShowDeleteModal(false)}
+      />
+    </>
   );
 };
 
 export default TeamModal;
-

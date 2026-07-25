@@ -7,21 +7,22 @@ import SwipeRow from './SwipeRow';
 import PlayerModal from './PlayerModal';
 import CustomSelect from './CustomSelect';
 import { searchAndRankItems } from '../utils/fuzzySearch';
+import DeleteConfirmModal from './DeleteConfirmModal';
 import './PlayersTable.css';
 
-const PlayersTable = ({ onStatusChange }) => {
+const PlayersTable = ({ onStatusChange = () => {} }) => {
+  const { orgId } = useOrg();
   const [players, setPlayers] = useState([]);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [modalMode, setModalMode] = useState('view');
   const [teams, setTeams] = useState([]);
   const [activeLeagues, setActiveLeagues] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { orgId } = useOrg();
-  
-  // Pagination & Filtering
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [modalMode, setModalMode] = useState('view');
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [leagueFilter, setLeagueFilter] = useState('all');
   const itemsPerPage = 20;
@@ -143,20 +144,21 @@ const PlayersTable = ({ onStatusChange }) => {
     }
   };
 
-  const deletePlayer = async (id) => {
-    if (window.confirm("Haqiqatan ham bu zayavkani o'chirib tashlamoqchimisiz?")) {
-      // Optimistic update
-      setPlayers(prev => prev.filter(p => p.id !== id));
-      try {
-        const { error } = await supabase.from('applications').delete().eq('id', id);
-        if (error) throw error;
-        fetchPlayers(false);
-        onStatusChange();
-      } catch (error) {
-        console.error('Error deleting player:', error);
-        alert("Zayavkani o'chirishda xatolik yuz berdi");
-        fetchPlayers(false); // revert optimistic update on error
-      }
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetId) return;
+    const id = deleteTargetId;
+    setPlayers(prev => prev.filter(p => p.id !== id));
+    try {
+      const { error } = await supabase.from('applications').delete().eq('id', id);
+      if (error) throw error;
+      fetchPlayers(false);
+      onStatusChange();
+    } catch (error) {
+      console.error('Error deleting player:', error);
+      alert("Zayavkani o'chirishda xatolik yuz berdi");
+      fetchPlayers(false);
+    } finally {
+      setDeleteTargetId(null);
     }
   };
 
@@ -261,7 +263,7 @@ const PlayersTable = ({ onStatusChange }) => {
               key={app.id} 
               actions={
                 <>
-                  <button className="action-btn delete" title="O'chirish" onClick={() => deletePlayer(app.id)}><Trash2 size={20} /></button>
+                  <button className="action-btn delete" title="O'chirish" onClick={() => setDeleteTargetId(app.id)}><Trash2 size={20} /></button>
                   <button className="action-btn edit" title="Tahrirlash" onClick={() => { setSelectedPlayer(app); setModalMode('edit'); }}><Edit size={20} /></button>
                 </>
               }
@@ -288,7 +290,7 @@ const PlayersTable = ({ onStatusChange }) => {
                 </div>
                 <div className="player-team">{getTeamName(app.team_id)}</div>
                 <div className="player-meta hide-mobile">
-                  {app.passport_series}{app.passport_number} вЂў {app.phone}
+                  {app.passport_series}{app.passport_number} • {app.phone}
                 </div>
               </div>
               <div className="action-status-wrapper">
@@ -299,7 +301,7 @@ const PlayersTable = ({ onStatusChange }) => {
                 {/* Desktop Actions - Only visible on large screens */}
                 <div className="list-cell desktop-actions hide-mobile">
                   <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => { setSelectedPlayer(app); setModalMode('edit'); }}><Edit size={17} /></button>
-                  <button className="btn-icon text-red" title="O'chirish" onClick={() => deletePlayer(app.id)}><Trash2 size={17} /></button>
+                  <button className="btn-icon text-red" title="O'chirish" onClick={() => setDeleteTargetId(app.id)}><Trash2 size={17} /></button>
                 </div>
               </div>
             </SwipeRow>
@@ -324,6 +326,7 @@ const PlayersTable = ({ onStatusChange }) => {
           Keyingi <ChevronRight size={18} />
         </button>
       </div>
+
       {selectedPlayer && (
         <PlayerModal 
           player={selectedPlayer} 
@@ -332,6 +335,15 @@ const PlayersTable = ({ onStatusChange }) => {
           onRefresh={() => { fetchPlayers(false); onStatusChange(); }} 
         />
       )}
+
+      {/* 5s Countdown Delete Confirm Modal */}
+      <DeleteConfirmModal
+        isOpen={!!deleteTargetId}
+        title="O'yinchini o'chirish"
+        message="O'chirsangiz barcha ma'lumotlar o'chib ketadi!"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteTargetId(null)}
+      />
     </div>
   );
 };
