@@ -320,12 +320,6 @@ const Schedule = () => {
                 setAwayTeamId('');
               }}>
                 <option value="">Ligani tanlang</option>
-              <select value={selectedLeague} onChange={(e) => {
-                setSelectedLeague(e.target.value);
-                setHomeTeamId('');
-                setAwayTeamId('');
-              }}>
-                <option value="">Ligani tanlang</option>
                 {activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
               </select>
             </div>

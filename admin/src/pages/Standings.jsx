@@ -598,10 +598,9 @@ export default function Standings() {
 
           </div>
         </div>
+        );
+      })()}
       </div>
-      );
-    })()}
-    </div>
 
       {/* 2. CARDS EXPORT TEMPLATE (YELLOW & RED CARDS GLASSMORPHISM DESIGN) */}
       <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
