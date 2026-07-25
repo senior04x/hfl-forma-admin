@@ -38,15 +38,16 @@ const TeamsTable = ({ onStatusChange }) => {
 
   useEffect(() => {
     fetchTeams(activeLeagues);
-  }, [page, filter, leagueFilter, search, orgId]);
+  }, [page, filter, leagueFilter, search, orgId, activeLeagues]);
 
   const fetchTeams = async (leaguesList = activeLeagues) => {
     setLoading(true);
     try {
-      let query = supabase.from('teams').select('*').order('created_at', { ascending: false });
-      query = applyOrgAndCollabFilter(query, orgId, leaguesList);
+      const { data, error } = await supabase
+        .from('teams')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      const { data, error } = await query;
       if (error) {
         console.error('Error fetching teams:', error);
         setTeams([]);
@@ -54,7 +55,12 @@ const TeamsTable = ({ onStatusChange }) => {
         return;
       }
       
-      let filtered = data || [];
+      const activeNames = (leaguesList || []).map(l => l.name);
+      let filtered = (data || []).filter(t => 
+        t.organization_id === orgId || 
+        activeNames.includes(t.league) || 
+        (!orgId)
+      );
 
       // 1. Status Filter
       if (filter !== 'all') {
@@ -70,7 +76,7 @@ const TeamsTable = ({ onStatusChange }) => {
         filtered = filtered.filter(t => t.league === leagueFilter);
       }
 
-      // 3. Uzbek Fuzzy Search & Relevance Ranking
+      // 3. Search Filter
       if (search && search.trim()) {
         filtered = searchAndRankItems(filtered, search, ['name', 'captain_phone', 'league']);
       }

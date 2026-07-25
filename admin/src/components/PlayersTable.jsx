@@ -38,22 +38,26 @@ const PlayersTable = ({ onStatusChange }) => {
 
   useEffect(() => {
     fetchPlayers(true);
-  }, [page, filter, leagueFilter, search, teams, orgId]); // Re-fetch when these change
+  }, [page, filter, leagueFilter, search, orgId, activeLeagues]);
 
   const fetchTeams = async (leaguesList = activeLeagues) => {
-    let query = supabase.from('teams').select('id, name, league');
-    query = applyOrgAndCollabFilter(query, orgId, leaguesList);
+    const activeNames = (leaguesList || []).map(l => l.name);
+    let query = supabase.from('teams').select('id, name, league, organization_id');
     const { data } = await query;
-    if (data) setTeams(data);
+    if (data) {
+      const filteredTeams = data.filter(t => t.organization_id === orgId || activeNames.includes(t.league) || !orgId);
+      setTeams(filteredTeams);
+    }
   };
 
   const fetchPlayers = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      let query = supabase.from('applications').select('*').order('created_at', { ascending: false });
-      query = applyOrgAndCollabFilter(query, orgId, activeLeagues);
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      const { data, error } = await query;
       if (error) {
         console.error('Error fetching players:', error);
         setPlayers([]);
@@ -61,26 +65,36 @@ const PlayersTable = ({ onStatusChange }) => {
         return;
       }
       
-      let filtered = data || [];
+      const activeNames = (activeLeagues || []).map(l => l.name);
+      const validTeamIds = new Set(
+        teams
+          .filter(t => t.organization_id === orgId || activeNames.includes(t.league) || !orgId)
+          .map(t => t.id)
+      );
+
+      let filtered = (data || []).filter(app => 
+        app.organization_id === orgId || 
+        (app.team_id && validTeamIds.has(app.team_id)) ||
+        (!orgId)
+      );
 
       // 1. Status Filter
       if (filter !== 'all') {
-        filtered = filtered.filter(p => p.status === filter);
+        filtered = filtered.filter(p => {
+          if (filter === 'approved') return p.status === 'approved' || p.status === 'partially_approved';
+          return p.status === filter;
+        });
       }
 
       // 2. League Filter
       if (leagueFilter !== 'all') {
-        if (leagueFilter === 'yakkaxon') {
-          filtered = filtered.filter(p => !p.team_id);
-        } else {
-          filtered = filtered.filter(p => {
-            const team = teams.find(t => t.id === p.team_id);
-            return team && team.league === leagueFilter;
-          });
-        }
+        filtered = filtered.filter(p => {
+          const team = teams.find(t => t.id === p.team_id);
+          return team && team.league === leagueFilter;
+        });
       }
 
-      // 3. Uzbek Fuzzy Search & Relevance Ranking
+      // 3. Search Filter
       if (search && search.trim()) {
         filtered = searchAndRankItems(filtered, search, [
           'first_name',
@@ -91,7 +105,7 @@ const PlayersTable = ({ onStatusChange }) => {
           'passport_number',
           p => {
             const team = teams.find(t => t.id === p.team_id);
-            return team ? team.name : 'Yakkaxon';
+            return team ? team.name : '';
           }
         ]);
       }
