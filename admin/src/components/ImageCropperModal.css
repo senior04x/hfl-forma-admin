@@ -283,3 +283,126 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Cropper.js Core Mobile Touch & Pinch Zoom CSS */
+.cropper-container {
+  direction: ltr;
+  font-size: 0;
+  line-height: 0;
+  position: relative;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cropper-container img {
+  display: block;
+  height: 100%;
+  image-orientation: 0deg;
+  max-height: none !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  width: 100%;
+}
+
+.cropper-wrap-box,
+.cropper-canvas,
+.cropper-drag-box,
+.cropper-crop-box,
+.cropper-modal-box {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.cropper-wrap-box,
+.cropper-canvas {
+  overflow: hidden;
+}
+
+.cropper-drag-box {
+  background-color: #000;
+  opacity: 0;
+}
+
+.cropper-modal-box {
+  background-color: #000;
+  opacity: 0.6;
+}
+
+.cropper-view-box {
+  display: block;
+  height: 100%;
+  outline: 2.5px solid #00aaff;
+  outline-color: rgba(0, 170, 255, 0.9);
+  overflow: hidden;
+  width: 100%;
+  box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.55);
+}
+
+.cropper-dashed {
+  border: 0 dashed rgba(255, 255, 255, 0.35);
+  display: block;
+  opacity: 0.5;
+  position: absolute;
+}
+
+.cropper-dashed.dashed-h {
+  border-bottom-width: 1px;
+  border-top-width: 1px;
+  height: calc(100% / 3);
+  left: 0;
+  top: calc(100% / 3);
+  width: 100%;
+}
+
+.cropper-dashed.dashed-v {
+  border-left-width: 1px;
+  border-right-width: 1px;
+  height: 100%;
+  left: calc(100% / 3);
+  top: 0;
+  width: calc(100% / 3);
+}
+
+.cropper-center {
+  display: block;
+  height: 0;
+  left: 50%;
+  opacity: 0.75;
+  position: absolute;
+  top: 50%;
+  width: 0;
+}
+
+.cropper-center::before,
+.cropper-center::after {
+  background-color: #00aaff;
+  content: ' ';
+  display: block;
+  position: absolute;
+}
+
+.cropper-center::before {
+  height: 1px;
+  left: -5px;
+  top: 0;
+  width: 10px;
+}
+
+.cropper-center::after {
+  height: 10px;
+  left: 0;
+  top: -5px;
+  width: 1px;
+}
+
+.cropper-face,
+.cropper-line,
+.cropper-point {
+  display: none !important;
+}
+
