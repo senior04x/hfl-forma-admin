@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues } from '../utils/leagueUtils';
-import { X, Trash2, Save, Eye, Crop } from 'lucide-react';
+import { X, Trash2, Save, Eye, Crop, Plus, Check } from 'lucide-react';
 import PlayerModal from './PlayerModal';
 import ImageCropperModal from './ImageCropperModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
@@ -15,6 +15,15 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
   const [loading, setLoading] = useState(false);
   const [availableLeagues, setAvailableLeagues] = useState([]);
 
+  // Multi-league selection state
+  const parseLeagues = (str) => {
+    if (!str) return [];
+    return str.split(',').map(s => s.trim()).filter(Boolean);
+  };
+  const [selectedLeagues, setSelectedLeagues] = useState(() => parseLeagues(team.league));
+  const [customLeagueInput, setCustomLeagueInput] = useState('');
+  const [showCustomLeagueField, setShowCustomLeagueField] = useState(false);
+
   // Cropper and Delete Confirm states
   const [cropperRawImage, setCropperRawImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -24,7 +33,6 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
   const [formData, setFormData] = useState({
     name: team.name || '',
     captain_phone: team.captain_phone || '',
-    league: team.league || '',
     logo_url: team.logo_url || ''
   });
 
@@ -123,6 +131,25 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const addLeague = (leagueName) => {
+    if (!leagueName) return;
+    if (!selectedLeagues.includes(leagueName)) {
+      setSelectedLeagues(prev => [...prev, leagueName]);
+    }
+  };
+
+  const removeLeague = (leagueName) => {
+    setSelectedLeagues(prev => prev.filter(l => l !== leagueName));
+  };
+
+  const handleAddCustomLeague = () => {
+    if (customLeagueInput.trim()) {
+      addLeague(customLeagueInput.trim());
+      setCustomLeagueInput('');
+      setShowCustomLeagueField(false);
+    }
+  };
+
   const handleStatusChange = async (newStatus) => {
     if (window.confirm("Jamoaning barcha o'yinchilari holati o'zgartiriladi. Tasdiqlaysizmi?")) {
       try {
@@ -147,7 +174,13 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.from('teams').update(formData).eq('id', team.id);
+      const finalLeagueStr = selectedLeagues.join(', ');
+      const payload = {
+        ...formData,
+        league: finalLeagueStr
+      };
+
+      const { error } = await supabase.from('teams').update(payload).eq('id', team.id);
       if (error) throw error;
       onRefresh();
       setCurrentMode('view');
@@ -182,7 +215,13 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
               <div className="modal-header-profile">
                 <img src={team.logo_url} alt="Logo" className="modal-avatar team" />
                 <h2>{team.name}</h2>
-                <p>{team.league || 'Liga tanlanmagan'}</p>
+                <div className="team-leagues-badges">
+                  {selectedLeagues.length > 0 ? (
+                    selectedLeagues.map(l => <span key={l} className="team-league-pill">{l}</span>)
+                  ) : (
+                    <span className="team-league-pill muted">Liga tanlanmagan</span>
+                  )}
+                </div>
               </div>
               
               <div className="modal-details-grid">
@@ -281,16 +320,64 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
                   <label>Sardor telefoni</label>
                   <input name="captain_phone" value={formData.captain_phone} onChange={handleChange} />
                 </div>
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>Liga</label>
-                  <select name="league" value={formData.league} onChange={handleChange}>
-                    <option value="">Ligani tanlang</option>
-                    {availableLeagues.map(l => (
-                      <option key={l.id || l.name} value={l.name}>{l.name}</option>
+                
+                {/* Multi-league Selection */}
+                <div className="form-group full-width">
+                  <label>Biriktirilgan Ligalar (Bir nechta liga tanlashingiz mumkin)</label>
+                  
+                  <div className="selected-leagues-chips">
+                    {selectedLeagues.map(l => (
+                      <span key={l} className="league-chip">
+                        {l}
+                        <button type="button" onClick={() => removeLeague(l)} className="remove-chip-btn" title="O'chirish">
+                          <X size={14} />
+                        </button>
+                      </span>
                     ))}
-                  </select>
+                    {selectedLeagues.length === 0 && (
+                      <span className="no-leagues-text">Hozircha hech qanday liga tanlanmagan</span>
+                    )}
+                  </div>
+
+                  <div className="add-league-row">
+                    <select 
+                      className="dark-league-select" 
+                      value="" 
+                      onChange={(e) => addLeague(e.target.value)}
+                    >
+                      <option value="">+ Mavjud ligadan qo'shish...</option>
+                      {availableLeagues
+                        .filter(l => !selectedLeagues.includes(l.name))
+                        .map(l => (
+                          <option key={l.id || l.name} value={l.name}>{l.name}</option>
+                        ))}
+                    </select>
+
+                    {!showCustomLeagueField ? (
+                      <button 
+                        type="button" 
+                        className="btn-add-custom-league"
+                        onClick={() => setShowCustomLeagueField(true)}
+                      >
+                        <Plus size={16} /> Yangi liga kiritish
+                      </button>
+                    ) : (
+                      <div className="custom-league-input-group">
+                        <input 
+                          type="text" 
+                          placeholder="Yangi liga nomi..." 
+                          value={customLeagueInput} 
+                          onChange={(e) => setCustomLeagueInput(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomLeague(); } }}
+                        />
+                        <button type="button" onClick={handleAddCustomLeague} className="btn-confirm-add"><Check size={16} /></button>
+                        <button type="button" onClick={() => setShowCustomLeagueField(false)} className="btn-cancel-add"><X size={16} /></button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+
               <div className="modal-actions">
                 <button className="btn-cancel" onClick={() => setCurrentMode('view')}>Bekor qilish</button>
                 <button className="btn-save" onClick={handleSave} disabled={loading}>{loading ? 'Saqlanmoqda...' : 'Saqlash'}</button>

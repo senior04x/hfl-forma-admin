@@ -271,3 +271,169 @@
     background: #00ff66;
     color: #000000;
 }
+
+/* Multi-league selection styles */
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.team-leagues-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin-top: 6px;
+}
+
+.team-league-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    background: rgba(0, 255, 102, 0.15);
+    border: 1px solid rgba(0, 255, 102, 0.3);
+    color: #00ff66;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.team-league-pill.muted {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.selected-leagues-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    background: #0e1422;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    min-height: 48px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.league-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, rgba(0, 255, 102, 0.2), rgba(0, 204, 82, 0.1));
+    border: 1px solid rgba(0, 255, 102, 0.4);
+    color: #00ff66;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.remove-chip-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.remove-chip-btn:hover {
+    background: rgba(255, 59, 48, 0.3);
+    color: #ff3b30;
+}
+
+.no-leagues-text {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+}
+
+.add-league-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dark-league-select {
+    flex: 1;
+    min-width: 200px;
+    height: 42px;
+    background: #0e1422 !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 10px !important;
+    padding: 0 12px !important;
+    font-weight: 600;
+    outline: none;
+}
+
+.btn-add-custom-league {
+    height: 42px;
+    padding: 0 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-add-custom-league:hover {
+    background: rgba(0, 255, 102, 0.15);
+    border-color: rgba(0, 255, 102, 0.3);
+    color: #00ff66;
+}
+
+.custom-league-input-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex: 1;
+    min-width: 220px;
+}
+
+.custom-league-input-group input {
+    flex: 1;
+    height: 42px;
+    background: #0e1422;
+    border: 1px solid #00ff66;
+    color: #ffffff;
+    border-radius: 10px;
+    padding: 0 12px;
+    outline: none;
+}
+
+.btn-confirm-add {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: #00ff66;
+    border: none;
+    color: #000;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-cancel-add {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
