@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Search, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Filter, Trophy } from 'lucide-react';
+import { Search, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Filter, Trophy, Check, X } from 'lucide-react';
 import SwipeRow from './SwipeRow';
 import TeamModal from './TeamModal';
 import CustomSelect from './CustomSelect';
@@ -114,15 +114,48 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
     }
   };
 
-  const renderStatus = (status) => {
+  const updateTeamStatus = async (teamId, newStatus) => {
+    setTeams(prev => prev.map(t => t.id === teamId ? { ...t, status: newStatus } : t));
+    try {
+      const { error } = await supabase.from('teams').update({ status: newStatus }).eq('id', teamId);
+      if (error) throw error;
+      
+      let pStatus = 'pending';
+      if (newStatus === 'approved') pStatus = 'approved';
+      if (newStatus === 'rejected') pStatus = 'rejected';
+      
+      await supabase.from('applications').update({ status: pStatus }).eq('team_id', teamId);
+      
+      fetchTeams();
+      onStatusChange();
+    } catch (error) {
+      console.error('Error updating team status:', error);
+      alert("Jamoa holatini o'zgartirishda xatolik yuz berdi");
+      fetchTeams();
+    }
+  };
+
+  const renderStatus = (team) => {
+    const { id, status } = team;
+    if (status === 'pending') {
+      return (
+        <div className="quick-actions">
+          <button className="quick-btn approve" onClick={() => updateTeamStatus(id, 'approved')} title="Tasdiqlash">
+            <Check size={24} strokeWidth={3} />
+          </button>
+          <button className="quick-btn reject" onClick={() => updateTeamStatus(id, 'rejected')} title="Rad etish">
+            <X size={24} strokeWidth={3} />
+          </button>
+        </div>
+      );
+    }
+
     const classes = {
-      pending: 'status-pending',
       approved: 'status-approved',
-      partially_approved: 'status-approved', // or a different color
+      partially_approved: 'status-approved',
       rejected: 'status-rejected'
     };
     const labels = {
-      pending: 'Kutilmoqda',
       approved: 'Tasdiqlandi',
       partially_approved: 'Qisman',
       rejected: 'Rad etildi'
@@ -211,7 +244,7 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
               </div>
               <div className="action-status-wrapper">
                 <div className="list-cell status-cell">
-                  {renderStatus(team.status)}
+                  {renderStatus(team)}
                 </div>
                 
                 <div className="list-cell desktop-actions hide-mobile">
