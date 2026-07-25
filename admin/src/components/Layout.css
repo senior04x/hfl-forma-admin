@@ -1,7 +1,7 @@
 .admin-layout {
     display: flex;
     height: 100dvh;
-    background-color: var(--bg-main, #f4f7fb);
+    background-color: #0b0f19;
     width: 100vw;
     overflow: hidden;
 }
@@ -149,6 +149,7 @@
     flex: 1;
     padding: 40px;
     overflow-y: auto;
+    background-color: #0b0f19;
 }
 
 .mobile-overlay {
