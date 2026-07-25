@@ -118,7 +118,8 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
       const fileName = `team_logo_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
 
       const { error } = await supabase.storage.from('player-photos').upload(fileName, blob, {
-        contentType: 'image/jpeg'
+        contentType: 'image/jpeg',
+        upsert: true
       });
       if (error) throw error;
 
@@ -126,7 +127,7 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
       setFormData(prev => ({ ...prev, logo_url: data.publicUrl }));
     } catch (err) {
       console.error('Logo upload error:', err);
-      alert('Rasm yuklashda xatolik yuz berdi');
+      alert('Rasm yuklashda xatolik yuz berdi: ' + (err.message || ''));
     } finally {
       setUploadingImage(false);
     }
@@ -180,18 +181,35 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
     setLoading(true);
     try {
       const finalLeagueStr = selectedLeagues.join(', ');
-      const payload = {
-        ...formData,
+      const updateData = {
+        name: formData.name,
+        logo_url: formData.logo_url,
         league: finalLeagueStr
       };
 
-      const { error } = await supabase.from('teams').update(payload).eq('id', team.id);
-      if (error) throw error;
+      if (formData.captain_phone !== undefined) updateData.captain_phone = formData.captain_phone;
+      if (formData.captain_name !== undefined) updateData.captain_name = formData.captain_name;
+      if (formData.region !== undefined) updateData.region = formData.region;
+
+      const { error } = await supabase.from('teams').update(updateData).eq('id', team.id);
+      if (error) {
+        console.warn('First update attempt failed, trying fallback without optional columns:', error);
+        const fallbackData = {
+          name: formData.name,
+          logo_url: formData.logo_url,
+          league: finalLeagueStr
+        };
+        if (formData.captain_phone !== undefined) fallbackData.captain_phone = formData.captain_phone;
+
+        const { error: fallbackError } = await supabase.from('teams').update(fallbackData).eq('id', team.id);
+        if (fallbackError) throw fallbackError;
+      }
+
       onRefresh();
       setCurrentMode('view');
     } catch (error) {
-      console.error(error);
-      alert('Xatolik yuz berdi');
+      console.error('handleSave error:', error);
+      alert('Xatolik yuz berdi: ' + (error.message || error.details || ''));
     } finally {
       setLoading(false);
     }

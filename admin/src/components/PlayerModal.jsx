@@ -67,7 +67,8 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
       const fileName = `player_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
 
       const { error } = await supabase.storage.from('player-photos').upload(fileName, blob, {
-        contentType: 'image/jpeg'
+        contentType: 'image/jpeg',
+        upsert: true
       });
       if (error) throw error;
 
@@ -75,7 +76,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
       setFormData(prev => ({ ...prev, photo_url: data.publicUrl }));
     } catch (err) {
       console.error('Photo upload error:', err);
-      alert('Rasm yuklashda xatolik yuz berdi');
+      alert('Rasm yuklashda xatolik yuz berdi: ' + (err.message || ''));
     } finally {
       setUploadingImage(false);
     }
