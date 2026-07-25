@@ -23,6 +23,12 @@
     z-index: 1;
 }
 
+@media (min-width: 769px) {
+    .swipe-actions {
+        display: none !important;
+    }
+}
+
 .swipe-content {
     position: relative;
     width: 100%;

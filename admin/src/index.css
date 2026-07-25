@@ -1,15 +1,15 @@
-/* Admin CSS Reset & Variables (Premium) */
+/* Admin CSS Reset & Variables (Premium Dark Navy Theme) */
 :root {
-    --bg-main: #f8fafc;
+    --bg-main: #0b0f19;
     --bg-sidebar: #050910;
-    --bg-card: #ffffff;
-    --gold-primary: #f0d060;
-    --gold-hover: #c9a84c;
-    --text-dark: #1e293b;
-    --text-muted: #64748b;
+    --bg-card: #141922;
+    --gold-primary: #00ff66;
+    --gold-hover: #00cc52;
+    --text-dark: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.6);
     --text-light: #ffffff;
-    --border-color: #e2e8f0;
-    --success: #10b981;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --success: #00ff66;
     --warning: #f59e0b;
     --error: #ef4444;
 }
