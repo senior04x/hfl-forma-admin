@@ -67,6 +67,18 @@
     color: white;
     cursor: pointer;
 }
+.mobile-menu-btn .icon-x {
+    display: none !important;
+}
+.mobile-menu-btn .icon-menu {
+    display: inline-block !important;
+}
+.mobile-menu-btn.active .icon-menu {
+    display: none !important;
+}
+.mobile-menu-btn.active .icon-x {
+    display: inline-block !important;
+}
 @media (max-width: 768px) {
     .nav-links {
         display: none;
@@ -83,7 +95,9 @@
         display: flex;
     }
     .mobile-menu-btn {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }
 
