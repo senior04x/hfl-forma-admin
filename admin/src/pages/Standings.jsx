@@ -362,12 +362,10 @@ export default function Standings() {
         <div className="filter-group">
           <label>Liga</label>
           <select value={selectedLeague} onChange={(e) => setSelectedLeague(e.target.value)}>
-            <option value="Super">Super liga</option>
-            <option value="Pro">Pro liga</option>
-            <option value="3-liga">3-liga</option>
-            <option value="Europa">Europa ligasi</option>
-            <option value="Chempion">Chempionlar ligasi</option>
-            <option value="7x7 liga">7x7 liga</option>
+            {activeLeagues.map(l => (
+              <option key={l.id} value={l.name}>{l.name}</option>
+            ))}
+            {activeLeagues.length === 0 && <option value="">Hali ligalar yo'q</option>}
           </select>
         </div>
         <div className="filter-group">
