@@ -284,18 +284,23 @@
   cursor: not-allowed;
 }
 
-/* Cropper.js Core Mobile Touch & Pinch Zoom CSS */
+/* ===== Cropper.js v1.6.2 Full CSS (inlined to avoid import issues) ===== */
 .cropper-container {
   direction: ltr;
   font-size: 0;
   line-height: 0;
   position: relative;
+  -ms-touch-action: none;
   touch-action: none;
-  user-select: none;
+  -webkit-touch-callout: none;
   -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .cropper-container img {
+  backface-visibility: hidden;
   display: block;
   height: 100%;
   image-orientation: 0deg;
@@ -310,7 +315,7 @@
 .cropper-canvas,
 .cropper-drag-box,
 .cropper-crop-box,
-.cropper-modal-box {
+.cropper-modal {
   bottom: 0;
   left: 0;
   position: absolute;
@@ -324,13 +329,13 @@
 }
 
 .cropper-drag-box {
-  background-color: #000;
+  background-color: #fff;
   opacity: 0;
 }
 
-.cropper-modal-box {
+.cropper-modal {
   background-color: #000;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .cropper-view-box {
@@ -340,11 +345,10 @@
   outline-color: rgba(0, 170, 255, 0.9);
   overflow: hidden;
   width: 100%;
-  box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.55);
 }
 
 .cropper-dashed {
-  border: 0 dashed rgba(255, 255, 255, 0.35);
+  border: 0 dashed #eee;
   display: block;
   opacity: 0.5;
   position: absolute;
@@ -388,21 +392,56 @@
 
 .cropper-center::before {
   height: 1px;
-  left: -5px;
+  left: -3px;
   top: 0;
-  width: 10px;
+  width: 7px;
 }
 
 .cropper-center::after {
-  height: 10px;
+  height: 7px;
   left: 0;
-  top: -5px;
+  top: -3px;
   width: 1px;
 }
 
+/* Hide resize handles since cropBox is fixed 1:1 */
 .cropper-face,
 .cropper-line,
 .cropper-point {
   display: none !important;
+}
+
+.cropper-invisible {
+  opacity: 0;
+}
+
+.cropper-bg {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAAA3NCSVQICAjb4U/gAAAABlBMVEXMzMz////TjRV2AAAACXBIWXMAAArrAAAK6wGCiw1aAAAAHHRFWHRTb2Z0d2FyZQBBZG9iZSBGaXJld29ya3MgQ1M26LyyjAAAABFJREFUCJlj+M/AgBVhF/0PAH6/D/HkDxOGAAAAAElFTkSuQmCC');
+}
+
+.cropper-hide {
+  display: block;
+  height: 0;
+  position: absolute;
+  width: 0;
+}
+
+.cropper-hidden {
+  display: none !important;
+}
+
+.cropper-move {
+  cursor: move;
+}
+
+.cropper-crop {
+  cursor: crosshair;
+}
+
+.cropper-disabled .cropper-drag-box,
+.cropper-disabled .cropper-face,
+.cropper-disabled .cropper-line,
+.cropper-disabled .cropper-point {
+  cursor: not-allowed;
 }
 
