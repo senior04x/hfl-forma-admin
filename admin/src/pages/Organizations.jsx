@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, supabaseAdmin } from '../supabaseClient';
-import { Building2, Plus, Pencil, Trash2, X, Check, Globe, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Building2, Plus, Pencil, Trash2, X, Check, Globe, Mail, Lock, Eye, EyeOff, ShieldAlert, AlertTriangle } from 'lucide-react';
 import './Organizations.css';
+
+const generateRandomCode = (length = 8) => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
 
 const Organizations = () => {
   const [organizations, setOrganizations] = useState([]);
@@ -12,6 +21,12 @@ const Organizations = () => {
   const [stats, setStats] = useState({});
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingOrg, setDeletingOrg] = useState(null);
+  const [confirmCode, setConfirmCode] = useState('');
+  const [userInputCode, setUserInputCode] = useState('');
+  const [deletingLoading, setDeletingLoading] = useState(false);
 
   useEffect(() => {
     fetchOrganizations();
@@ -26,7 +41,6 @@ const Organizations = () => {
 
     if (!error && data) {
       setOrganizations(data);
-      // Har bir tashkilot uchun statistika olish
       const statsMap = {};
       for (const org of data) {
         const [teamsRes, playersRes, matchesRes] = await Promise.all([
@@ -54,7 +68,7 @@ const Organizations = () => {
 
   const openEditModal = (org) => {
     setEditingOrg(org);
-    setFormData({ name: org.name, slug: org.slug, logo_url: org.logo_url || '' });
+    setFormData({ name: org.name, slug: org.slug, logo_url: org.logo_url || '', admin_email: '', admin_password: '' });
     setShowModal(true);
   };
 
@@ -81,14 +95,12 @@ const Organizations = () => {
 
     try {
       if (editingOrg) {
-        // Tahrirlash rejimi — faqat tashkilot ma'lumotlarini yangilash
         const { error } = await supabase
           .from('organizations')
           .update({ name: formData.name, slug: formData.slug, logo_url: formData.logo_url || null })
           .eq('id', editingOrg.id);
         if (error) { alert('Xato: ' + error.message); return; }
       } else {
-        // Yangi tashkilot yaratish + Admin akkaunt
         if (!formData.admin_email.trim() || !formData.admin_password.trim()) {
           alert('Admin email va parolni kiriting!');
           return;
@@ -98,7 +110,6 @@ const Organizations = () => {
           return;
         }
 
-        // 1. Tashkilotni bazaga kiritish
         const { data: newOrg, error: orgError } = await supabase
           .from('organizations')
           .insert({ name: formData.name, slug: formData.slug, logo_url: formData.logo_url || null })
@@ -106,7 +117,6 @@ const Organizations = () => {
           .single();
         if (orgError) { alert('Tashkilot yaratishda xato: ' + orgError.message); return; }
 
-        // 2. Supabase Auth Admin API orqali admin foydalanuvchi yaratish (auto-confirm email, current session is preserved)
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: formData.admin_email.trim(),
           password: formData.admin_password,
@@ -114,23 +124,18 @@ const Organizations = () => {
           user_metadata: { role: 'org_admin', organization_id: newOrg.id }
         });
         if (authError) { 
-          // Revert created org if auth user creation fails
           await supabase.from('organizations').delete().eq('id', newOrg.id);
           alert('Admin akkaunt yaratishda xato: ' + authError.message); 
           return; 
         }
 
-        // 3. admin_users jadvaliga yozish
         if (authData.user) {
-          const { error: adminUserErr } = await supabase.from('admin_users').insert({
+          await supabase.from('admin_users').insert({
             id: authData.user.id,
             email: formData.admin_email.trim(),
             role: 'org_admin',
             organization_id: newOrg.id,
           });
-          if (adminUserErr) {
-            console.error('admin_users insert error:', adminUserErr);
-          }
         }
       }
       setShowModal(false);
@@ -142,20 +147,49 @@ const Organizations = () => {
     }
   };
 
-  const handleDelete = async (org) => {
+  const openDeleteModal = (org) => {
     if (org.id === 1) {
       alert('Asosiy tashkilotni o\'chirish mumkin emas!');
       return;
     }
-    const orgStats = stats[org.id] || {};
-    if ((orgStats.teams || 0) > 0 || (orgStats.players || 0) > 0) {
-      alert(`"${org.name}" tashkilotida hali ${orgStats.teams} ta jamoa va ${orgStats.players} ta o'yinchi bor. Avval ularni o'chiring.`);
-      return;
-    }
-    if (!window.confirm(`"${org.name}" tashkilotini o'chirmoqchimisiz?`)) return;
+    const code = generateRandomCode(8);
+    setDeletingOrg(org);
+    setConfirmCode(code);
+    setUserInputCode('');
+    setDeleteModalOpen(true);
+  };
 
-    await supabase.from('organizations').delete().eq('id', org.id);
-    fetchOrganizations();
+  const confirmDeleteOrganization = async () => {
+    if (!deletingOrg || userInputCode.trim().toUpperCase() !== confirmCode) return;
+    setDeletingLoading(true);
+
+    try {
+      const orgId = deletingOrg.id;
+      const { data: adminUsers } = await supabase.from('admin_users').select('id').eq('organization_id', orgId);
+      if (adminUsers && adminUsers.length > 0) {
+        for (const admin of adminUsers) {
+          await supabaseAdmin.auth.admin.deleteUser(admin.id).catch(() => {});
+        }
+        await supabase.from('admin_users').delete().eq('organization_id', orgId);
+      }
+
+      await supabase.from('league_collabs').delete().or(`sender_org_id.eq.${orgId},receiver_org_id.eq.${orgId}`);
+      await supabase.from('leagues').delete().eq('organization_id', orgId);
+      await supabase.from('applications').delete().eq('organization_id', orgId);
+      await supabase.from('matches').delete().eq('organization_id', orgId);
+      await supabase.from('teams').delete().eq('organization_id', orgId);
+
+      const { error: deleteOrgErr } = await supabase.from('organizations').delete().eq('id', orgId);
+      if (deleteOrgErr) throw deleteOrgErr;
+
+      setDeleteModalOpen(false);
+      setDeletingOrg(null);
+      fetchOrganizations();
+    } catch (err) {
+      alert('O\'chirishda xatolik: ' + err.message);
+    } finally {
+      setDeletingLoading(false);
+    }
   };
 
   if (loading) {
@@ -201,7 +235,7 @@ const Organizations = () => {
                     <Pencil size={14} />
                   </button>
                   {org.id !== 1 && (
-                    <button className="org-action-btn org-action-delete" onClick={() => handleDelete(org)} title="O'chirish">
+                    <button className="org-action-btn org-action-delete" onClick={() => openDeleteModal(org)} title="O'chirish">
                       <Trash2 size={14} />
                     </button>
                   )}
@@ -318,6 +352,60 @@ const Organizations = () => {
               <button className="org-btn-save" onClick={handleSave} disabled={saving}>
                 <Check size={16} />
                 <span>{saving ? 'Saqlanmoqda...' : (editingOrg ? 'Saqlash' : 'Yaratish')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Security Confirmation Delete Modal */}
+      {deleteModalOpen && deletingOrg && (
+        <div className="org-modal-overlay" onClick={() => setDeleteModalOpen(false)}>
+          <div className="org-modal org-delete-modal" onClick={e => e.stopPropagation()}>
+            <div className="org-delete-header">
+              <div className="org-delete-icon">
+                <ShieldAlert size={26} />
+              </div>
+              <h2>Tashkilotni O'chirish</h2>
+              <button className="org-modal-close" onClick={() => setDeleteModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="org-delete-body">
+              <div className="org-delete-warning">
+                <AlertTriangle size={16} />
+                <span>Ushbu harakat <strong>qaytarib bo'lmaydi!</strong> Tashkilot va unga tegishli barcha jamoa, o'yinchi hamda ligalar o'chiriladi.</span>
+              </div>
+
+              <p className="org-delete-target">
+                O'chirilayotgan tashkilot: <strong>"{deletingOrg.name}"</strong>
+              </p>
+
+              <div className="org-delete-code-box">
+                <label>Tasdiqlash uchun ushbu 8 xonali kodni kiriting:</label>
+                <div className="org-delete-code-badge">{confirmCode}</div>
+                <input
+                  type="text"
+                  className="org-delete-input"
+                  placeholder="Kodni kiriting..."
+                  value={userInputCode}
+                  onChange={e => setUserInputCode(e.target.value.toUpperCase())}
+                  maxLength={8}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="org-modal-footer">
+              <button className="org-btn-cancel" onClick={() => setDeleteModalOpen(false)}>Bekor qilish</button>
+              <button
+                className="org-btn-danger"
+                onClick={confirmDeleteOrganization}
+                disabled={userInputCode.trim().toUpperCase() !== confirmCode || deletingLoading}
+              >
+                <Trash2 size={16} />
+                <span>{deletingLoading ? "O'chirilmoqda..." : "O'chirish"}</span>
               </button>
             </div>
           </div>
