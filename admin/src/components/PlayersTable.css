@@ -28,8 +28,8 @@
     background: #0e1422 !important;
     border: 1px solid rgba(255, 255, 255, 0.18) !important;
     border-radius: 12px !important;
-    height: 44px !important;
-    padding: 0 14px !important;
+    height: 48px !important;
+    padding: 0 16px !important;
     transition: all 0.2s ease !important;
 }
 
@@ -41,13 +41,13 @@
 .search-box input {
     width: 100% !important;
     height: 100% !important;
-    padding: 0 0 0 10px !important;
+    padding: 0 0 0 12px !important;
     border: none !important;
     background: transparent !important;
     outline: none !important;
     box-shadow: none !important;
     font-family: inherit !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
     color: #ffffff !important;
 }
