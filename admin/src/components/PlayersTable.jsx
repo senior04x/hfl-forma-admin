@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter, Check, X, Trash2 } from 'lucide-react';
+import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter, Check, X, Trash2, Trophy } from 'lucide-react';
 import SwipeRow from './SwipeRow';
 import PlayerModal from './PlayerModal';
+import { searchAndRankItems } from '../utils/fuzzySearch';
 import './PlayersTable.css';
 
 const PlayersTable = ({ onStatusChange }) => {
@@ -17,6 +18,7 @@ const PlayersTable = ({ onStatusChange }) => {
   const [totalCount, setTotalCount] = useState(0);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [leagueFilter, setLeagueFilter] = useState('all');
   const itemsPerPage = 20;
 
   useEffect(() => {
@@ -25,39 +27,61 @@ const PlayersTable = ({ onStatusChange }) => {
 
   useEffect(() => {
     fetchPlayers(true);
-  }, [page, filter, search]); // Re-fetch when these change
+  }, [page, filter, leagueFilter, search, teams]); // Re-fetch when these change
 
   const fetchTeams = async () => {
-    const { data } = await supabase.from('teams').select('id, name');
+    const { data } = await supabase.from('teams').select('id, name, league');
     if (data) setTeams(data);
   };
 
   const fetchPlayers = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      let query = supabase.from('applications').select('*', { count: 'exact' });
+      let query = supabase.from('applications').select('*').order('created_at', { ascending: false });
 
-      // Apply Search (Local search approach or DB search)
-      // Supabase supports full-text search, but simple ilike is fine
-      if (search) {
-        query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,phone.ilike.%${search}%`);
-      }
-
-      // Apply Filter
-      if (filter !== 'all') {
-        query = query.eq('status', filter);
-      }
-
-      // Apply Pagination
-      const from = (page - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-      query = query.order('created_at', { ascending: false }).range(from, to);
-
-      const { data, count, error } = await query;
+      const { data, error } = await query;
       if (error) throw error;
       
-      setPlayers(data || []);
-      setTotalCount(count || 0);
+      let filtered = data || [];
+
+      // 1. Status Filter
+      if (filter !== 'all') {
+        filtered = filtered.filter(p => p.status === filter);
+      }
+
+      // 2. League Filter
+      if (leagueFilter !== 'all') {
+        if (leagueFilter === 'yakkaxon') {
+          filtered = filtered.filter(p => !p.team_id);
+        } else {
+          filtered = filtered.filter(p => {
+            const team = teams.find(t => t.id === p.team_id);
+            return team && team.league === leagueFilter;
+          });
+        }
+      }
+
+      // 3. Uzbek Fuzzy Search & Relevance Ranking
+      if (search && search.trim()) {
+        filtered = searchAndRankItems(filtered, search, [
+          'first_name',
+          'last_name',
+          p => `${p.first_name || ''} ${p.last_name || ''}`,
+          'phone',
+          'passport_series',
+          'passport_number',
+          p => {
+            const team = teams.find(t => t.id === p.team_id);
+            return team ? team.name : 'Yakkaxon';
+          }
+        ]);
+      }
+
+      setTotalCount(filtered.length);
+      const from = (page - 1) * itemsPerPage;
+      const paginated = filtered.slice(from, from + itemsPerPage);
+
+      setPlayers(paginated);
     } catch (error) {
       console.error('Error fetching players:', error);
     } finally {
@@ -142,6 +166,11 @@ const PlayersTable = ({ onStatusChange }) => {
     setPage(1);
   };
 
+  const handleLeagueFilterChange = (e) => {
+    setLeagueFilter(e.target.value);
+    setPage(1);
+  };
+
   return (
     <div className="table-wrapper">
       <div className="table-controls">
@@ -156,11 +185,24 @@ const PlayersTable = ({ onStatusChange }) => {
         </div>
         <div className="filter-box">
           <Filter size={18} className="filter-icon" />
-          <select value={filter} onChange={handleFilterChange}>
-            <option value="all">Barchasi</option>
+          <select value={filter} onChange={handleFilterChange} title="Holat bo'yicha filter">
+            <option value="all">Barcha holatlar</option>
             <option value="pending">Kutilmoqda</option>
             <option value="approved">Tasdiqlangan</option>
             <option value="rejected">Rad etilgan</option>
+          </select>
+        </div>
+        <div className="filter-box">
+          <Trophy size={18} className="filter-icon" />
+          <select value={leagueFilter} onChange={handleLeagueFilterChange} title="Liga bo'yicha filter">
+            <option value="all">Barcha ligalar</option>
+            <option value="Super liga">Super liga</option>
+            <option value="Pro liga">Pro liga</option>
+            <option value="3-liga">3-liga</option>
+            <option value="Chempionlar ligasi">Chempionlar ligasi</option>
+            <option value="Europa ligasi">Europa ligasi</option>
+            <option value="7x7 liga">7x7 liga</option>
+            <option value="yakkaxon">Yakkaxon</option>
           </select>
         </div>
       </div>

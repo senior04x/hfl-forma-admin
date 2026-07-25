@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter, Trophy } from 'lucide-react';
 import SwipeRow from './SwipeRow';
 import TeamModal from './TeamModal';
+import { searchAndRankItems } from '../utils/fuzzySearch';
 // Reusing same CSS as PlayersTable
 import './PlayersTable.css';
 
@@ -17,38 +18,47 @@ const TeamsTable = ({ onStatusChange }) => {
   const [totalCount, setTotalCount] = useState(0);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [leagueFilter, setLeagueFilter] = useState('all');
   const itemsPerPage = 20;
 
   useEffect(() => {
     fetchTeams();
-  }, [page, filter, search]);
+  }, [page, filter, leagueFilter, search]);
 
   const fetchTeams = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('teams').select('*', { count: 'exact' });
+      let query = supabase.from('teams').select('*').order('created_at', { ascending: false });
 
-      if (search) {
-        query = query.or(`name.ilike.%${search}%,captain_phone.ilike.%${search}%`);
-      }
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      let filtered = data || [];
 
+      // 1. Status Filter
       if (filter !== 'all') {
         if (filter === 'approved') {
-          query = query.in('status', ['approved', 'partially_approved']);
+          filtered = filtered.filter(t => t.status === 'approved' || t.status === 'partially_approved');
         } else {
-          query = query.eq('status', filter);
+          filtered = filtered.filter(t => t.status === filter);
         }
       }
 
-      const from = (page - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-      query = query.order('created_at', { ascending: false }).range(from, to);
+      // 2. League Filter
+      if (leagueFilter !== 'all') {
+        filtered = filtered.filter(t => t.league === leagueFilter);
+      }
 
-      const { data, count, error } = await query;
-      if (error) throw error;
-      
-      setTeams(data || []);
-      setTotalCount(count || 0);
+      // 3. Uzbek Fuzzy Search & Relevance Ranking
+      if (search && search.trim()) {
+        filtered = searchAndRankItems(filtered, search, ['name', 'captain_phone', 'league']);
+      }
+
+      setTotalCount(filtered.length);
+      const from = (page - 1) * itemsPerPage;
+      const paginated = filtered.slice(from, from + itemsPerPage);
+
+      setTeams(paginated);
     } catch (error) {
       console.error('Error fetching teams:', error);
     } finally {
@@ -84,6 +94,11 @@ const TeamsTable = ({ onStatusChange }) => {
     setPage(1);
   };
 
+  const handleLeagueFilterChange = (e) => {
+    setLeagueFilter(e.target.value);
+    setPage(1);
+  };
+
   return (
     <div className="table-wrapper">
       <div className="table-controls">
@@ -98,11 +113,23 @@ const TeamsTable = ({ onStatusChange }) => {
         </div>
         <div className="filter-box">
           <Filter size={18} className="filter-icon" />
-          <select value={filter} onChange={handleFilterChange}>
-            <option value="all">Barchasi</option>
+          <select value={filter} onChange={handleFilterChange} title="Holat bo'yicha filter">
+            <option value="all">Barcha holatlar</option>
             <option value="pending">Kutilmoqda</option>
             <option value="approved">Tasdiqlangan</option>
             <option value="rejected">Rad etilgan</option>
+          </select>
+        </div>
+        <div className="filter-box">
+          <Trophy size={18} className="filter-icon" />
+          <select value={leagueFilter} onChange={handleLeagueFilterChange} title="Liga bo'yicha filter">
+            <option value="all">Barcha ligalar</option>
+            <option value="Super liga">Super liga</option>
+            <option value="Pro liga">Pro liga</option>
+            <option value="3-liga">3-liga</option>
+            <option value="Chempionlar ligasi">Chempionlar ligasi</option>
+            <option value="Europa ligasi">Europa ligasi</option>
+            <option value="7x7 liga">7x7 liga</option>
           </select>
         </div>
       </div>

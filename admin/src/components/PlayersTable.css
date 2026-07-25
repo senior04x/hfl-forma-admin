@@ -195,6 +195,20 @@
     .hide-mobile {
         display: none !important;
     }
+    .table-controls {
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px;
+    }
+    .search-box, .filter-box {
+        width: 100%;
+        min-width: 100%;
+    }
+    .search-box input, .filter-box select {
+        font-size: 13.5px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
 }
 
 /* Quick Actions in Table */
