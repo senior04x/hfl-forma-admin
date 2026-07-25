@@ -52,3 +52,17 @@ export async function getActiveOrgLeagues(orgId) {
     return [];
   }
 }
+
+/**
+ * Applies organization filter OR shared collab league filter to a Supabase query.
+ * If there are collab leagues, fetches data matching orgId OR matching collab league names.
+ */
+export function applyOrgAndCollabFilter(query, orgId, activeLeagues) {
+  const collabLeagueNames = (activeLeagues || []).filter(l => l.isCollab).map(l => l.name);
+  if (collabLeagueNames.length > 0) {
+    const escapedNames = collabLeagueNames.map(n => `"${n.replace(/"/g, '""')}"`).join(',');
+    return query.or(`organization_id.eq.${orgId},league.in.(${escapedNames})`);
+  }
+  return query.eq('organization_id', orgId);
+}
+

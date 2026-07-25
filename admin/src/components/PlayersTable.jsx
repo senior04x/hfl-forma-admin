@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
+import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
 import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter, Check, X, Trash2, Trophy } from 'lucide-react';
 import SwipeRow from './SwipeRow';
 import PlayerModal from './PlayerModal';
@@ -12,6 +13,7 @@ const PlayersTable = ({ onStatusChange }) => {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [modalMode, setModalMode] = useState('view');
   const [teams, setTeams] = useState([]);
+  const [activeLeagues, setActiveLeagues] = useState([]);
   const [loading, setLoading] = useState(true);
   const { orgId } = useOrg();
   
@@ -24,22 +26,31 @@ const PlayersTable = ({ onStatusChange }) => {
   const itemsPerPage = 20;
 
   useEffect(() => {
-    fetchTeams();
+    loadLeaguesAndData();
   }, [orgId]);
+
+  const loadLeaguesAndData = async () => {
+    const fetched = await getActiveOrgLeagues(orgId);
+    setActiveLeagues(fetched);
+    fetchTeams(fetched);
+  };
 
   useEffect(() => {
     fetchPlayers(true);
   }, [page, filter, leagueFilter, search, teams, orgId]); // Re-fetch when these change
 
-  const fetchTeams = async () => {
-    const { data } = await supabase.from('teams').select('id, name, league').eq('organization_id', orgId);
+  const fetchTeams = async (leaguesList = activeLeagues) => {
+    let query = supabase.from('teams').select('id, name, league');
+    query = applyOrgAndCollabFilter(query, orgId, leaguesList);
+    const { data } = await query;
     if (data) setTeams(data);
   };
 
   const fetchPlayers = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      let query = supabase.from('applications').select('*').eq('organization_id', orgId).order('created_at', { ascending: false });
+      let query = supabase.from('applications').select('*').order('created_at', { ascending: false });
+      query = applyOrgAndCollabFilter(query, orgId, activeLeagues);
 
       const { data, error } = await query;
       if (error) {

@@ -3,31 +3,49 @@ import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import PlayersTable from '../components/PlayersTable';
 import TeamsTable from '../components/TeamsTable';
+import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const [currentTab, setCurrentTab] = useState('players');
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0 });
+  const [activeLeagues, setActiveLeagues] = useState([]);
   const { orgId } = useOrg();
 
   useEffect(() => {
-    fetchStats();
+    loadLeaguesAndStats();
   }, [currentTab, orgId]);
 
-  const fetchStats = async () => {
+  const loadLeaguesAndStats = async () => {
+    const fetched = await getActiveOrgLeagues(orgId);
+    setActiveLeagues(fetched);
+    fetchStats(fetched);
+  };
+
+  const fetchStats = async (leaguesList = activeLeagues) => {
     try {
       if (currentTab === 'players') {
-        const { count: total, error: e1 } = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('organization_id', orgId);
-        const { count: pending, error: e2 } = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'pending');
-        const { count: approved, error: e3 } = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'approved');
-        
-        if (!e1 && !e2 && !e3) setStats({ total: total || 0, pending: pending || 0, approved: approved || 0 });
+        let q1 = supabase.from('applications').select('*', { count: 'exact', head: true });
+        let q2 = supabase.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+        let q3 = supabase.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'approved');
+
+        q1 = applyOrgAndCollabFilter(q1, orgId, leaguesList);
+        q2 = applyOrgAndCollabFilter(q2, orgId, leaguesList);
+        q3 = applyOrgAndCollabFilter(q3, orgId, leaguesList);
+
+        const [r1, r2, r3] = await Promise.all([q1, q2, q3]);
+        setStats({ total: r1.count || 0, pending: r2.count || 0, approved: r3.count || 0 });
       } else {
-        const { count: total, error: e1 } = await supabase.from('teams').select('*', { count: 'exact', head: true }).eq('organization_id', orgId);
-        const { count: pending, error: e2 } = await supabase.from('teams').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('status', 'pending');
-        const { count: approved, error: e3 } = await supabase.from('teams').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).in('status', ['approved', 'partially_approved']);
-        
-        if (!e1 && !e2 && !e3) setStats({ total: total || 0, pending: pending || 0, approved: approved || 0 });
+        let q1 = supabase.from('teams').select('*', { count: 'exact', head: true });
+        let q2 = supabase.from('teams').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+        let q3 = supabase.from('teams').select('*', { count: 'exact', head: true }).in('status', ['approved', 'partially_approved']);
+
+        q1 = applyOrgAndCollabFilter(q1, orgId, leaguesList);
+        q2 = applyOrgAndCollabFilter(q2, orgId, leaguesList);
+        q3 = applyOrgAndCollabFilter(q3, orgId, leaguesList);
+
+        const [r1, r2, r3] = await Promise.all([q1, q2, q3]);
+        setStats({ total: r1.count || 0, pending: r2.count || 0, approved: r3.count || 0 });
       }
     } catch (error) {
       console.error('Error fetching stats:', error);

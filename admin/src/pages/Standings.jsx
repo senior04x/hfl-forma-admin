@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { getActiveOrgLeagues } from '../utils/leagueUtils';
+import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
 import { Download, Save, ShieldAlert } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Standings.css';
@@ -36,51 +36,21 @@ export default function Standings() {
     if (fetched.length > 0) {
       setSelectedLeague(fetched[0].name);
     }
-    fetchData();
+    fetchData(fetched);
   };
-  
-  // Computed states
-  const [standings, setStandings] = useState([]);
-  const [recentMatches, setRecentMatches] = useState([]);
-  const [topScorers, setTopScorers] = useState([]);
-  const [topAssists, setTopAssists] = useState([]);
-  const [topYellowCards, setTopYellowCards] = useState([]);
-  const [topRedCards, setTopRedCards] = useState([]);
-  
-  const [penalties, setPenalties] = useState({});
-  const [savingPenalty, setSavingPenalty] = useState(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isExportingCards, setIsExportingCards] = useState(false);
-  
-  const [selectedSponsors, setSelectedSponsors] = useState(() => {
-    try {
-      const saved = localStorage.getItem('hfl_selectedSponsors');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return [];
-  });
 
-  useEffect(() => {
-    localStorage.setItem('hfl_selectedSponsors', JSON.stringify(selectedSponsors));
-  }, [selectedSponsors]);
-
-  const exportRef = useRef(null);
-  const cardsExportRef = useRef(null);
-
-  useEffect(() => {
-    fetchData();
-  }, [orgId]);
-
-  const fetchData = async () => {
+  const fetchData = async (leaguesList = activeLeagues) => {
     setLoading(true);
     try {
-      // Fetch Teams
-      const { data: teamsData, error: teamsError } = await supabase
+      // Fetch Teams with collab filter
+      let teamsQuery = supabase
         .from('teams')
         .select('id, name, logo_url, league, penalty_points')
-        .in('status', ['approved', 'partially_approved'])
-        .eq('organization_id', orgId);
-      
+        .in('status', ['approved', 'partially_approved']);
+
+      teamsQuery = applyOrgAndCollabFilter(teamsQuery, orgId, leaguesList);
+
+      const { data: teamsData, error: teamsError } = await teamsQuery;
       if (teamsError) throw teamsError;
       setTeams(teamsData || []);
       
@@ -91,14 +61,16 @@ export default function Standings() {
       });
       setPenalties(initialPenalties);
 
-      // Fetch Matches
-      const { data: matchesData, error: matchesError } = await supabase
+      // Fetch Matches with collab filter
+      let matchesQuery = supabase
         .from('matches')
         .select('*')
         .eq('status', 'finished')
-        .eq('organization_id', orgId)
         .order('match_date', { ascending: false });
 
+      matchesQuery = applyOrgAndCollabFilter(matchesQuery, orgId, leaguesList);
+
+      const { data: matchesData, error: matchesError } = await matchesQuery;
       if (matchesError) throw matchesError;
       setMatches(matchesData || []);
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
+import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
 import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter, Trophy } from 'lucide-react';
 import SwipeRow from './SwipeRow';
 import TeamModal from './TeamModal';
@@ -10,6 +11,7 @@ import './PlayersTable.css';
 
 const TeamsTable = ({ onStatusChange }) => {
   const [teams, setTeams] = useState([]);
+  const [activeLeagues, setActiveLeagues] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [modalMode, setModalMode] = useState('view');
   const [loading, setLoading] = useState(true);
@@ -24,13 +26,24 @@ const TeamsTable = ({ onStatusChange }) => {
   const itemsPerPage = 20;
 
   useEffect(() => {
-    fetchTeams();
+    loadLeaguesAndData();
+  }, [orgId]);
+
+  const loadLeaguesAndData = async () => {
+    const fetched = await getActiveOrgLeagues(orgId);
+    setActiveLeagues(fetched);
+    fetchTeams(fetched);
+  };
+
+  useEffect(() => {
+    fetchTeams(activeLeagues);
   }, [page, filter, leagueFilter, search, orgId]);
 
-  const fetchTeams = async () => {
+  const fetchTeams = async (leaguesList = activeLeagues) => {
     setLoading(true);
     try {
-      let query = supabase.from('teams').select('*').eq('organization_id', orgId).order('created_at', { ascending: false });
+      let query = supabase.from('teams').select('*').order('created_at', { ascending: false });
+      query = applyOrgAndCollabFilter(query, orgId, leaguesList);
 
       const { data, error } = await query;
       if (error) {
