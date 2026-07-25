@@ -33,7 +33,12 @@ const TeamsTable = ({ onStatusChange }) => {
       let query = supabase.from('teams').select('*').eq('organization_id', orgId).order('created_at', { ascending: false });
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching teams:', error);
+        setTeams([]);
+        setTotalCount(0);
+        return;
+      }
       
       let filtered = data || [];
 

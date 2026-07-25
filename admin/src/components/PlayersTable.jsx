@@ -42,7 +42,12 @@ const PlayersTable = ({ onStatusChange }) => {
       let query = supabase.from('applications').select('*').eq('organization_id', orgId).order('created_at', { ascending: false });
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching players:', error);
+        setPlayers([]);
+        setTotalCount(0);
+        return;
+      }
       
       let filtered = data || [];
 
