@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter, Trophy } from 'lucide-react';
+import { Search, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Filter, Trophy } from 'lucide-react';
 import SwipeRow from './SwipeRow';
 import TeamModal from './TeamModal';
 import CustomSelect from './CustomSelect';
