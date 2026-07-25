@@ -349,7 +349,11 @@ export default function Standings() {
         .update({ export_bg_url: croppedDataUrl })
         .eq('id', currentLeagueObj.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Save export_bg_url error:", error);
+        alert('Supabase bazangizda `export_bg_url` ustuni hali yo\'q.\n\nIltimos, Supabase SQL Editor-da quyidagi kodni Run qiling:\n\nALTER TABLE public.leagues ADD COLUMN IF NOT EXISTS export_bg_url TEXT;');
+        return;
+      }
 
       setActiveLeagues(prev => prev.map(l => l.id === currentLeagueObj.id ? { ...l, export_bg_url: croppedDataUrl } : l));
       setIsCropperOpen(false);

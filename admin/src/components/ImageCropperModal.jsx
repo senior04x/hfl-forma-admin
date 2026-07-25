@@ -104,7 +104,15 @@ const ImageCropperModal = ({ isOpen, onClose, onSave, title = "Fon Rasmini 1:1 F
       return;
     }
     const canvas = canvasRef.current;
-    const croppedDataUrl = canvas.toDataURL('image/png', 0.95);
+
+    // Output optimized 500x500 cropped image for fast network loading & storage
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = 500;
+    outputCanvas.height = 500;
+    const ctx = outputCanvas.getContext('2d');
+    ctx.drawImage(canvas, 0, 0, 500, 500);
+
+    const croppedDataUrl = outputCanvas.toDataURL('image/jpeg', 0.82);
     onSave(croppedDataUrl);
   };
 
