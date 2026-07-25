@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues } from '../utils/leagueUtils';
-import { X, Trash2, Save, Eye, Crop, Plus, Check } from 'lucide-react';
+import { X, Trash2, Save, Eye, Crop, Plus, Check, Trophy } from 'lucide-react';
 import PlayerModal from './PlayerModal';
 import ImageCropperModal from './ImageCropperModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
+import CustomSelect from './CustomSelect';
 import './Modal.css';
 
 const TeamModal = ({ team, mode, onClose, onRefresh }) => {
@@ -340,18 +341,20 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
                   </div>
 
                   <div className="add-league-row">
-                    <select 
-                      className="dark-league-select" 
-                      value="" 
-                      onChange={(e) => addLeague(e.target.value)}
-                    >
-                      <option value="">+ Mavjud ligadan qo'shish...</option>
-                      {availableLeagues
-                        .filter(l => !selectedLeagues.includes(l.name))
-                        .map(l => (
-                          <option key={l.id || l.name} value={l.name}>{l.name}</option>
-                        ))}
-                    </select>
+                    <CustomSelect
+                      value=""
+                      onChange={(val) => {
+                        if (val) addLeague(val);
+                      }}
+                      icon={Trophy}
+                      placeholder="+ Yangi liga biriktirish..."
+                      options={[
+                        { value: '', label: '+ Yangi liga biriktirish...' },
+                        ...availableLeagues
+                          .filter(l => !selectedLeagues.includes(l.name))
+                          .map(l => ({ value: l.name, label: l.name }))
+                      ]}
+                    />
                   </div>
                 </div>
               </div>
