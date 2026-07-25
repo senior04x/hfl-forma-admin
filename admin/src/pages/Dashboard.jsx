@@ -25,20 +25,54 @@ const Dashboard = () => {
 
   const fetchStats = async (leaguesList = activeLeagues) => {
     try {
-      const table = currentTab === 'players' ? 'applications' : 'teams';
-      let query = supabase.from(table).select('status');
-      query = applyOrgAndCollabFilter(query, orgId, leaguesList);
+      const activeLeagueNames = (leaguesList || []).map(l => l.name);
 
-      const { data, error } = await query;
-      if (error) throw error;
+      if (currentTab === 'players') {
+        const [appRes, teamRes] = await Promise.all([
+          supabase.from('applications').select('id, status, team_id, organization_id'),
+          supabase.from('teams').select('id, league, organization_id')
+        ]);
 
-      if (data) {
-        let total = data.length;
+        const allApps = appRes.data || [];
+        const allTeams = teamRes.data || [];
+
+        const validTeamIds = new Set(
+          allTeams
+            .filter(t => t.organization_id === orgId || activeLeagueNames.includes(t.league))
+            .map(t => t.id)
+        );
+
+        const filteredApps = allApps.filter(app => 
+          app.organization_id === orgId || 
+          (app.team_id && validTeamIds.has(app.team_id)) ||
+          (!orgId)
+        );
+
+        let total = filteredApps.length;
         let pending = 0;
         let approved = 0;
         let rejected = 0;
 
-        data.forEach(item => {
+        filteredApps.forEach(item => {
+          const s = item.status;
+          if (s === 'pending') pending++;
+          else if (s === 'approved' || s === 'partially_approved') approved++;
+          else if (s === 'rejected') rejected++;
+        });
+
+        setStats({ total, pending, approved, rejected });
+      } else {
+        const { data: allTeams } = await supabase.from('teams').select('id, status, league, organization_id');
+        const filteredTeams = (allTeams || []).filter(t => 
+          t.organization_id === orgId || activeLeagueNames.includes(t.league)
+        );
+
+        let total = filteredTeams.length;
+        let pending = 0;
+        let approved = 0;
+        let rejected = 0;
+
+        filteredTeams.forEach(item => {
           const s = item.status;
           if (s === 'pending') pending++;
           else if (s === 'approved' || s === 'partially_approved') approved++;
