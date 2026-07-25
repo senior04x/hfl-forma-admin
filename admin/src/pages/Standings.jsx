@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Download, Save, ShieldAlert } from 'lucide-react';
+import { Download, Save, ShieldAlert, Crop, Image as ImageIcon, Upload, Sparkles, AlertCircle, X, Check } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import ImageCropperModal from '../components/ImageCropperModal';
 import './Standings.css';
 
 const DEFAULT_LEAGUE_LOGOS = {
@@ -37,6 +38,11 @@ export default function Standings() {
   const [savingPenalty, setSavingPenalty] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingCards, setIsExportingCards] = useState(false);
+
+  // Background Image Cropper & Prompt Modal states
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
+  const [pendingExportType, setPendingExportType] = useState(null); // 'standings' | 'cards'
   
   const [selectedSponsors, setSelectedSponsors] = useState(() => {
     try {
@@ -275,51 +281,85 @@ export default function Standings() {
     }
   };
 
-  const handleExport = async () => {
-    if (!exportRef.current || isExporting) return;
-    setIsExporting(true);
-    try {
-      const canvas = await html2canvas(exportRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: null
-      });
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `turnir_jadvali_${selectedLeague}_${selectedRound}.png`;
-      link.href = dataUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      console.error("Export error:", err);
-      alert("Rasmni yuklab olishda xatolik yuz berdi.");
-    } finally {
-      setIsExporting(false);
+  const handleExportWithCheck = (type) => {
+    const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+    if (!currentLeagueObj?.export_bg_url) {
+      setPendingExportType(type);
+      setIsPromptModalOpen(true);
+    } else {
+      executeExport(type);
     }
   };
 
-  const handleExportCards = async () => {
-    if (!cardsExportRef.current || isExportingCards) return;
-    setIsExportingCards(true);
+  const executeExport = async (type) => {
+    if (type === 'standings') {
+      if (!exportRef.current || isExporting) return;
+      setIsExporting(true);
+      try {
+        const canvas = await html2canvas(exportRef.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: null
+        });
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `turnir_jadvali_${selectedLeague}_${selectedRound}.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error("Export error:", err);
+        alert("Rasmni yuklab olishda xatolik yuz berdi.");
+      } finally {
+        setIsExporting(false);
+      }
+    } else if (type === 'cards') {
+      if (!cardsExportRef.current || isExportingCards) return;
+      setIsExportingCards(true);
+      try {
+        const canvas = await html2canvas(cardsExportRef.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: null
+        });
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `kartochkalar_${selectedLeague}_${selectedRound}.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error("Export cards error:", err);
+        alert("Kartochkalar rasmini yuklab olishda xatolik yuz berdi.");
+      } finally {
+        setIsExportingCards(false);
+      }
+    }
+  };
+
+  const handleSaveCroppedBg = async (croppedDataUrl) => {
+    const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+    if (!currentLeagueObj) return;
+
     try {
-      const canvas = await html2canvas(cardsExportRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: null
-      });
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `kartochkalar_${selectedLeague}_${selectedRound}.png`;
-      link.href = dataUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const { error } = await supabase
+        .from('leagues')
+        .update({ export_bg_url: croppedDataUrl })
+        .eq('id', currentLeagueObj.id);
+
+      if (error) throw error;
+
+      setActiveLeagues(prev => prev.map(l => l.id === currentLeagueObj.id ? { ...l, export_bg_url: croppedDataUrl } : l));
+      setIsCropperOpen(false);
+
+      if (pendingExportType) {
+        executeExport(pendingExportType);
+        setPendingExportType(null);
+      }
     } catch (err) {
-      console.error("Export cards error:", err);
-      alert("Kartochkalar rasmini yuklab olishda xatolik yuz berdi.");
-    } finally {
-      setIsExportingCards(false);
+      alert('Fon rasmini saqlashda xatolik: ' + err.message);
     }
   };
 
@@ -347,12 +387,15 @@ export default function Standings() {
     <div className="standings-page">
       <div className="standings-header">
         <h1>Turnir Jadvali va Export</h1>
-        <div className="standings-header-actions" style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn-download" onClick={handleExport} disabled={isExporting}>
-            <Download size={18} /> {isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish'}
+        <div className="standings-header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button className="btn-download bg-upload-btn" onClick={() => setIsCropperOpen(true)} title="1:1 formatda liga uchun fon rasmi yuklash va qirqish">
+            <Crop size={18} /> <span>1:1 Fon Rasmi</span>
           </button>
-          <button className="btn-download cards-btn" onClick={handleExportCards} disabled={isExportingCards}>
-            <ShieldAlert size={18} /> {isExportingCards ? 'Yuklanmoqda...' : 'Kartochkalarni yuklab olish'}
+          <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting}>
+            <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish'}</span>
+          </button>
+          <button className="btn-download cards-btn" onClick={() => handleExportWithCheck('cards')} disabled={isExportingCards}>
+            <ShieldAlert size={18} /> <span>{isExportingCards ? 'Yuklanmoqda...' : 'Kartochkalarni yuklab olish'}</span>
           </button>
         </div>
       </div>
@@ -428,7 +471,16 @@ export default function Standings() {
           const isCollab = currentLeagueObj?.isCollab;
 
           return (
-            <div ref={exportRef} className={`export-wrapper ${exportThemeClass}`}>
+            <div 
+              ref={exportRef} 
+              className={`export-wrapper ${exportThemeClass}`}
+              style={currentLeagueObj?.export_bg_url ? {
+                backgroundImage: `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${currentLeagueObj.export_bg_url})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+              } : {}}
+            >
               <div className="export-container">
                 
                 {/* Header */}
@@ -601,15 +653,22 @@ export default function Standings() {
 
       {/* 2. CARDS EXPORT TEMPLATE (YELLOW & RED CARDS GLASSMORPHISM DESIGN) */}
       <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
-        <div className={`export-wrapper ${exportThemeClass}`} ref={cardsExportRef}>
-          <div className="export-container">
-            
-            {/* Header */}
-            {(() => {
-              const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
-              const isCollab = currentLeagueObj?.isCollab;
+        {(() => {
+          const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+          const isCollab = currentLeagueObj?.isCollab;
 
-              return (
+          return (
+            <div 
+              className={`export-wrapper ${exportThemeClass}`} 
+              ref={cardsExportRef}
+              style={currentLeagueObj?.export_bg_url ? {
+                backgroundImage: `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${currentLeagueObj.export_bg_url})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+              } : {}}
+            >
+              <div className="export-container">
                 <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div className="export-logo-left" style={{ width: 'auto', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
                     {isCollab ? (
@@ -637,8 +696,6 @@ export default function Standings() {
                     <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
                   </div>
                 </div>
-              );
-            })()}
 
             {/* Title Banner */}
             <div className="cards-export-title-banner">
@@ -746,8 +803,67 @@ export default function Standings() {
 
           </div>
         </div>
+        );
+      })()}
       </div>
       
+      {/* 1:1 Image Cropper Modal */}
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        onClose={() => setIsCropperOpen(false)}
+        onSave={handleSaveCroppedBg}
+        title={`"${selectedLeague}" Ligasi Uchun Fon Rasmini 1:1 Formatda Qirqish`}
+      />
+
+      {/* Background Prompt Modal */}
+      {isPromptModalOpen && (
+        <div className="cropper-modal-overlay" onClick={() => setIsPromptModalOpen(false)}>
+          <div className="cropper-modal" style={{ maxWidth: '460px' }} onClick={e => e.stopPropagation()}>
+            <div className="cropper-header">
+              <div className="cropper-title">
+                <ImageIcon size={22} />
+                <h2>Eksport Fon Rasmi Yo'q</h2>
+              </div>
+              <button className="cropper-close-btn" onClick={() => setIsPromptModalOpen(false)}><X size={18} /></button>
+            </div>
+            <div className="cropper-body" style={{ textAlign: 'center', gap: '16px' }}>
+              <div style={{ background: 'rgba(0, 255, 102, 0.1)', border: '1px solid rgba(0, 255, 102, 0.25)', padding: '16px', borderRadius: '14px', color: '#fff' }}>
+                <Sparkles size={32} style={{ color: '#00ff66', marginBottom: '8px' }} />
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5' }}>
+                  <strong>"{selectedLeague}"</strong> ligasi uchun hali maxsus 1:1 eksport fon rasmi yuklanmagan.
+                </p>
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', margin: 0 }}>
+                Hozir rasm yuklab 1:1 formatda qirqasizmi yoki odatiy to'q fon bilan yuklab olasizmi?
+              </p>
+            </div>
+            <div className="cropper-footer" style={{ justifyContent: 'space-between' }}>
+              <button
+                className="cropper-cancel-btn"
+                onClick={() => {
+                  setIsPromptModalOpen(false);
+                  if (pendingExportType) {
+                    executeExport(pendingExportType);
+                    setPendingExportType(null);
+                  }
+                }}
+              >
+                Odatiy fon bilan yuklab olish
+              </button>
+              <button
+                className="cropper-save-btn"
+                onClick={() => {
+                  setIsPromptModalOpen(false);
+                  setIsCropperOpen(true);
+                }}
+              >
+                <Crop size={16} /> Rasm Yuklash & Qirqish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
