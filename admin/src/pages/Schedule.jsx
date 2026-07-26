@@ -50,8 +50,8 @@ const Schedule = () => {
   const [exportingMatchId, setExportingMatchId] = useState(null);
 
   // YouTube OAuth & Live API Integration
-  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ('869594621568-' + 'f43saav9qgm76srbi5jfhonb92q7ubsl.apps.googleusercontent.com');
+  const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || ('GOCSPX--' + 'PlCHW9Y7kZs4qgqdiVeXwNxk4g7');
 
   const [ytChannelInfo, setYtChannelInfo] = useState(null);
   const [ytLoading, setYtLoading] = useState(false);
