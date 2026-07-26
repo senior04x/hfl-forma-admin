@@ -59,23 +59,63 @@ const Schedule = () => {
 
   const getYtTokensKey = () => `hfl_yt_tokens_${orgId || 'default'}`;
 
-  const saveYtTokens = (tokens) => {
+  const saveYtTokens = async (tokens, channelInfoObj = null) => {
     try {
       const expiresAt = Date.now() + (tokens.expires_in || 3600) * 1000;
-      const dataToSave = { ...tokens, expires_at: expiresAt };
+      const dataToSave = { 
+        ...tokens, 
+        expires_at: expiresAt,
+        channel_info: channelInfoObj || tokens.channel_info || ytChannelInfo
+      };
+
+      // 1. Save to localStorage for quick access on current device
       localStorage.setItem(getYtTokensKey(), JSON.stringify(dataToSave));
+
+      // 2. Persist to Supabase organizations table so ALL devices of this organization share connection!
+      if (orgId) {
+        const payloadStr = JSON.stringify(dataToSave);
+        try {
+          await supabase
+            .from('organizations')
+            .update({ yt_tokens: payloadStr })
+            .eq('id', orgId);
+        } catch (dbErr) {
+          console.warn('DB update notice for yt_tokens:', dbErr);
+        }
+      }
     } catch (e) {}
   };
 
-  const getYtTokens = () => {
+  const getYtTokens = async () => {
+    // 1. Check localStorage for current orgId
     try {
       const raw = localStorage.getItem(getYtTokensKey());
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) { return null; }
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+
+    // 2. If not found in localStorage (new device/phone), fetch from Supabase DB!
+    if (orgId) {
+      try {
+        const { data, error } = await supabase
+          .from('organizations')
+          .select('yt_tokens')
+          .eq('id', orgId)
+          .maybeSingle();
+
+        if (!error && data?.yt_tokens) {
+          const parsed = typeof data.yt_tokens === 'string' ? JSON.parse(data.yt_tokens) : data.yt_tokens;
+          localStorage.setItem(getYtTokensKey(), JSON.stringify(parsed));
+          return parsed;
+        }
+      } catch (err) {
+        console.warn('Error reading yt_tokens from DB:', err);
+      }
+    }
+    return null;
   };
 
   const getValidAccessToken = async () => {
-    const tokens = getYtTokens();
+    const tokens = await getYtTokens();
     if (!tokens || !tokens.refresh_token) return null;
 
     if (tokens.access_token && tokens.expires_at && Date.now() < tokens.expires_at - 60000) {
@@ -101,7 +141,7 @@ const Schedule = () => {
           access_token: data.access_token,
           expires_at: Date.now() + (data.expires_in || 3600) * 1000
         };
-        saveYtTokens(updated);
+        await saveYtTokens(updated);
         return data.access_token;
       }
     } catch (err) {
@@ -113,7 +153,10 @@ const Schedule = () => {
   const fetchYtChannelInfo = async (token) => {
     try {
       const accessToken = token || await getValidAccessToken();
-      if (!accessToken) return;
+      if (!accessToken) {
+        setYtChannelInfo(null);
+        return;
+      }
 
       const res = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
         headers: { 'Authorization': `Bearer ${accessToken}` }
@@ -121,13 +164,17 @@ const Schedule = () => {
       const data = await res.json();
       if (data.items && data.items.length > 0) {
         const ch = data.items[0].snippet;
-        setYtChannelInfo({
+        const info = {
           title: ch.title,
           thumbnail: ch.thumbnails?.default?.url || ''
-        });
+        };
+        setYtChannelInfo(info);
+      } else {
+        setYtChannelInfo(null);
       }
     } catch (e) {
       console.error('Error fetching YT channel info:', e);
+      setYtChannelInfo(null);
     }
   };
 
@@ -150,9 +197,18 @@ const Schedule = () => {
     window.location.href = authUrl;
   };
 
-  const handleDisconnectYouTube = () => {
+  const handleDisconnectYouTube = async () => {
     try { localStorage.removeItem(getYtTokensKey()); } catch (e) {}
     setYtChannelInfo(null);
+
+    if (orgId) {
+      try {
+        await supabase
+          .from('organizations')
+          .update({ yt_tokens: null })
+          .eq('id', orgId);
+      } catch (e) {}
+    }
   };
 
   const exchangeCodeForTokens = async (code) => {
@@ -171,8 +227,8 @@ const Schedule = () => {
       });
       const data = await response.json();
       if (data.access_token) {
-        saveYtTokens(data);
-        fetchYtChannelInfo(data.access_token);
+        await saveYtTokens(data);
+        await fetchYtChannelInfo(data.access_token);
       } else {
         console.error('YouTube bog\'lanishda xatolik:', data);
       }
@@ -181,14 +237,25 @@ const Schedule = () => {
     }
   };
 
+  const loadYtChannelForCurrentOrg = async () => {
+    if (!orgId) return;
+    const tokens = await getYtTokens();
+    if (tokens) {
+      await fetchYtChannelInfo(tokens.access_token);
+    } else {
+      setYtChannelInfo(null);
+    }
+  };
+
   useEffect(() => {
+    setYtChannelInfo(null);
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     if (code) {
       exchangeCodeForTokens(code);
       window.history.replaceState({}, document.title, window.location.pathname);
     } else {
-      fetchYtChannelInfo();
+      loadYtChannelForCurrentOrg();
     }
   }, [orgId]);
 
