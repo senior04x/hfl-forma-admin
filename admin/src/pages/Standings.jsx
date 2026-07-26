@@ -394,6 +394,14 @@ export default function Standings() {
 
   const displayRound = selectedRound || '1';
 
+  // Background theme mapping for export
+  let exportThemeClass = 'theme-export-Super';
+  if (selectedLeague.includes('Pro')) exportThemeClass = 'theme-export-Pro';
+  else if (selectedLeague.includes('3-liga') || selectedLeague.includes('3 liga')) exportThemeClass = 'theme-export-3-liga';
+  else if (selectedLeague.includes('Europa')) exportThemeClass = 'theme-export-Europa';
+  else if (selectedLeague.includes('Chempion')) exportThemeClass = 'theme-export-Chempion';
+  else if (selectedLeague.includes('7x7')) exportThemeClass = 'theme-export-7x7';
+
   const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
   const currentLeagueBg = currentLeagueObj?.export_bg_url || getLeagueBgForOrg(orgId, selectedLeague);
 
