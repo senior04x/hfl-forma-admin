@@ -21,6 +21,8 @@ const Settings = () => {
 
   // League Logo Direct Upload
   const leagueFileInputRef = useRef(null);
+  const leagueFormRef = useRef(null);
+  const leagueInputRef = useRef(null);
   const [uploadingLeagueLogo, setUploadingLeagueLogo] = useState(false);
 
   useEffect(() => {
