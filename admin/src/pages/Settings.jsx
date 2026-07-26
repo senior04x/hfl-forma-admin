@@ -127,6 +127,7 @@ const Settings = () => {
   const [targetOrgId, setTargetOrgId] = useState('');
   const [sendingCollab, setSendingCollab] = useState(false);
   const [incomingCollabs, setIncomingCollabs] = useState([]);
+  const [allCollabs, setAllCollabs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
