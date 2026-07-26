@@ -41,9 +41,22 @@ export default function Standings() {
 
   // Background Image Cropper & Prompt Modal states
   const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [cropperRawImage, setCropperRawImage] = useState(null);
+  const bgFileInputRef = useRef(null);
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
   const [pendingExportType, setPendingExportType] = useState(null); // 'standings' | 'cards'
   
+  const handleBgFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperRawImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const [selectedSponsors, setSelectedSponsors] = useState(() => {
     try {
       const saved = localStorage.getItem('hfl_selectedSponsors');
@@ -532,7 +545,7 @@ export default function Standings() {
             </div>
 
             <div className="poster-sub-buttons" style={{ width: '100%', display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
-              <button className="btn-banner-action btn-upload" onClick={() => setIsCropperOpen(true)}>
+              <button className="btn-banner-action btn-upload" onClick={() => bgFileInputRef.current?.click()}>
                 <Crop size={15} /> <span>{currentLeagueBg ? 'Boshqa rasm yuklash (1:1)' : '1:1 Fon Rasm yuklash'}</span>
               </button>
               {currentLeagueBg && (
@@ -541,6 +554,7 @@ export default function Standings() {
                 </button>
               )}
             </div>
+            <input ref={bgFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBgFileSelect} />
           </div>
         </div>
       </div>
@@ -939,12 +953,15 @@ export default function Standings() {
       </div>
       
       {/* 1:1 Image Cropper Modal */}
-      <ImageCropperModal
-        isOpen={isCropperOpen}
-        onClose={() => setIsCropperOpen(false)}
-        onSave={handleSaveCroppedBg}
-        title={`"${selectedLeague}" Ligasi Uchun Fon Rasmini 1:1 Formatda Qirqish`}
-      />
+      {cropperRawImage && (
+        <ImageCropperModal
+          isOpen={!!cropperRawImage}
+          imageSrc={cropperRawImage}
+          onClose={() => setCropperRawImage(null)}
+          onSave={handleSaveCroppedBg}
+          title={`"${selectedLeague}" Ligasi Uchun Fon Rasmini 1:1 Formatda Qirqish`}
+        />
+      )}
 
       {/* Background Prompt Modal */}
       {isPromptModalOpen && (
@@ -985,7 +1002,7 @@ export default function Standings() {
                 className="cropper-save-btn"
                 onClick={() => {
                   setIsPromptModalOpen(false);
-                  setIsCropperOpen(true);
+                  bgFileInputRef.current?.click();
                 }}
               >
                 <Crop size={16} /> Rasm Yuklash & Qirqish
