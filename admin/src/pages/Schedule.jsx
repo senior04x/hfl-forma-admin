@@ -232,6 +232,202 @@ const Schedule = () => {
     if (homeTeamId === awayTeamId) {
       alert("Mezbon va mehmon jamoalar har xil bo'lishi kerak.");
       return;
+const [exportLeague, setExportLeague] = useState('');
+  const [exportRound, setExportRound] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [selectedSponsors, setSelectedSponsors] = useState([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(true);
+  const exportRef = useRef(null);
+
+  const [scheduleBanner, setScheduleBanner] = useState('');
+  const [cropperRawImage, setCropperRawImage] = useState(null);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const bannerFileInputRef = useRef(null);
+  const [filterStatus, setFilterStatus] = useState('all');
+
+  useEffect(() => {
+    loadLeaguesAndData();
+    try {
+      const saved = localStorage.getItem('hfl_selectedSponsors');
+      if (saved) setSelectedSponsors(JSON.parse(saved));
+    } catch (e) {}
+  }, [orgId]);
+
+  const loadLeaguesAndData = async () => {
+    setLoading(true);
+    try {
+      const fetchedLeagues = await getActiveOrgLeagues(orgId);
+      setActiveLeagues(fetchedLeagues);
+      if (fetchedLeagues.length > 0) {
+        setExportLeague(fetchedLeagues[0].name);
+      }
+      await Promise.all([
+        fetchTeams(fetchedLeagues),
+        fetchMatches(fetchedLeagues)
+      ]);
+    } catch (err) {
+      console.error('Error loading schedule:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!exportLeague || !activeLeagues.length) return;
+    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+    if (!currentLeagueObj) return;
+
+    const dbUrl = currentLeagueObj.schedule_banner_url || currentLeagueObj.banner_url;
+    if (dbUrl) {
+      setScheduleBanner(dbUrl);
+    } else {
+      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
+      const savedLocal = localStorage.getItem(localKey);
+      setScheduleBanner(savedLocal || '');
+    }
+  }, [exportLeague, activeLeagues, orgId]);
+
+  useEffect(() => {
+    const leagueMatches = matches.filter(m => m.league === exportLeague && m.round);
+    if (leagueMatches.length > 0) {
+      const maxR = Math.max(...leagueMatches.map(m => Number(m.round)));
+      setExportRound(maxR.toString());
+    } else {
+      setExportRound('');
+    }
+  }, [matches, exportLeague]);
+
+  const handleBannerFileSelect = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperRawImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCroppedBannerSave = async (croppedBlob) => {
+    if (!croppedBlob) return;
+    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+    if (!currentLeagueObj) return;
+
+    setUploadingBanner(true);
+    try {
+      const publicUrl = await new Promise((res) => {
+        const reader = new FileReader();
+        reader.onloadend = () => res(reader.result);
+        reader.readAsDataURL(croppedBlob);
+      });
+
+      setScheduleBanner(publicUrl);
+      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
+      localStorage.setItem(localKey, publicUrl);
+
+      try {
+        await supabase
+          .from('leagues')
+          .update({ schedule_banner_url: publicUrl })
+          .eq('id', currentLeagueObj.id);
+      } catch (e) {}
+
+    } catch (err) {
+      console.error('Error saving schedule banner:', err);
+    } finally {
+      setUploadingBanner(false);
+      setCropperRawImage(null);
+    }
+  };
+
+  const handleDeleteBanner = async () => {
+    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+    if (!currentLeagueObj) return;
+    if (!window.confirm(`"${exportLeague}" ligasi uchun 1x1 orqa fon rasmini o'chirmoqchimisiz?`)) return;
+
+    setScheduleBanner('');
+    const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
+    localStorage.removeItem(localKey);
+
+    try {
+      await supabase
+        .from('leagues')
+        .update({ schedule_banner_url: null })
+        .eq('id', currentLeagueObj.id);
+    } catch (e) {}
+  };
+
+  const handleExport = async () => {
+    if (!exportRef.current || isExporting) return;
+    if (!exportLeague || !exportRound) {
+      alert("Iltimos eksport qilish uchun liga va turni tanlang.");
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(exportRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `jadval_${exportLeague}_${exportRound}_tur.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error(err);
+      alert("Xatolik yuz berdi");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const fetchTeams = async (leaguesList = activeLeagues) => {
+    let query = supabase.from('teams').select('id, name, logo_url, league').eq('status', 'approved');
+    query = applyOrgAndCollabFilter(query, orgId, leaguesList);
+    const { data } = await query;
+    if (data) setTeams(data);
+  };
+
+  const fetchMatches = async (leaguesList = activeLeagues) => {
+    let query = supabase
+      .from('matches')
+      .select(`
+        *,
+        home_team:home_team_id (id, name, logo_url),
+        away_team:away_team_id (id, name, logo_url)
+      `)
+      .order('match_date', { ascending: true })
+      .order('match_time', { ascending: true });
+
+    query = applyOrgAndCollabFilter(query, orgId, leaguesList);
+
+    const { data } = await query;
+    if (data) setMatches(data);
+  };
+
+  const handleOpenModal = () => {
+    setSelectedLeague('');
+    setHomeTeamId('');
+    setAwayTeamId('');
+    setMatchDate('');
+    setMatchTime('');
+    setLocation('');
+    setStadiumName('');
+    setYoutubeLink('');
+    setMatchRound('');
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!homeTeamId || !awayTeamId || !matchDate || !matchTime || !location) {
+      alert("Iltimos, barcha majburiy maydonlarni to'ldiring.");
+      return;
+    }
+    if (homeTeamId === awayTeamId) {
+      alert("Mezbon va mehmon jamoalar har xil bo'lishi kerak.");
+      return;
     }
 
     setLoading(true);
@@ -256,7 +452,7 @@ const Schedule = () => {
       fetchMatches();
     } catch (error) {
       console.error(error);
-      alert('Xatolik yuz berdi');
+      alert('Xatolik yuz berdi: ' + (error.message || ''));
     } finally {
       setLoading(false);
     }
@@ -276,6 +472,7 @@ const Schedule = () => {
 
   return (
     <div className="schedule-page">
+      {/* Header */}
       <div className="schedule-header">
         <div>
           <h1>O'yinlar Jadvali</h1>
@@ -286,22 +483,24 @@ const Schedule = () => {
         </button>
       </div>
 
+      {/* Modern Filter & 1x1 Poster Banner Control Card */}
       <div className="schedule-filter-banner-card">
+        {/* Header Bar */}
         <div className="filter-header-bar">
           <div className="filter-title-group" onClick={() => setIsFilterOpen(!isFilterOpen)}>
             <Filter size={18} className="filter-icon" />
-            <span>Liga & Tur Filterlari</span>
+            <span>O'yinlar Filteri (Liga, Tur, Holat)</span>
             <ChevronDown size={18} className={`chevron-icon ${isFilterOpen ? 'open' : ''}`} />
           </div>
-
-          <div className="schedule-status-tabs">
-            <button className={`status-tab ${filterStatus === 'all' ? 'active' : ''}`} onClick={() => setFilterStatus('all')}>Barchasi</button>
-            <button className={`status-tab ${filterStatus === 'scheduled' ? 'active' : ''}`} onClick={() => setFilterStatus('scheduled')}>Rejalashtirilgan</button>
-            <button className={`status-tab ${filterStatus === 'live' ? 'active' : ''}`} onClick={() => setFilterStatus('live')}>Jonli (Live)</button>
-            <button className={`status-tab ${filterStatus === 'finished' ? 'active' : ''}`} onClick={() => setFilterStatus('finished')}>Tugagan</button>
+          <div className="filter-active-status-badge">
+            {filterStatus === 'all' && 'Barcha o\'yinlar'}
+            {filterStatus === 'scheduled' && 'Rejalashtirilgan'}
+            {filterStatus === 'live' && '🔴 Jonli (Live)'}
+            {filterStatus === 'finished' && 'Yakunlangan'}
           </div>
         </div>
 
+        {/* Expandable Select Filters */}
         {isFilterOpen && (
           <div className="filter-expanded-content">
             <div className="filter-row">
@@ -309,17 +508,37 @@ const Schedule = () => {
                 <label><Trophy size={14} /> Liga tanlang</label>
                 <div className="custom-select-wrapper">
                   <select value={exportLeague} onChange={e => setExportLeague(e.target.value)}>
-                    {activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name} {l.isCollab ? '(Co-Host)' : ''}</option>)}
+                    {activeLeagues.map(l => (
+                      <option key={l.id} value={l.name}>
+                        {l.name} {l.isCollab ? '(Co-Host)' : ''}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown size={16} className="select-arrow" />
                 </div>
               </div>
+
               <div className="filter-field">
                 <label><Layers size={14} /> Tur</label>
                 <div className="custom-select-wrapper">
                   <select value={exportRound} onChange={e => setExportRound(e.target.value)}>
                     <option value="">Barcha turlar</option>
-                    {availableRounds.map(r => <option key={r} value={r}>{r}-Tur</option>)}
+                    {availableRounds.map(r => (
+                      <option key={r} value={r}>{r}-Tur</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="select-arrow" />
+                </div>
+              </div>
+
+              <div className="filter-field">
+                <label><Clock size={14} /> O'yin Holati</label>
+                <div className="custom-select-wrapper">
+                  <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                    <option value="all">Barchasi</option>
+                    <option value="scheduled">Rejalashtirilgan</option>
+                    <option value="live">Jonli (Live)</option>
+                    <option value="finished">Tugagan</option>
                   </select>
                   <ChevronDown size={16} className="select-arrow" />
                 </div>
@@ -328,7 +547,9 @@ const Schedule = () => {
           </div>
         )}
 
+        {/* 1x1 Poster Banner Section */}
         <div className="poster-banner-section">
+          {/* Left: 1x1 Poster Image Box */}
           <div className="poster-preview-square">
             {scheduleBanner ? (
               <img src={scheduleBanner} alt="1x1 Schedule Banner" className="poster-img-1x1" />
@@ -336,18 +557,25 @@ const Schedule = () => {
               <div className="poster-placeholder-1x1">
                 <ImageIcon size={32} />
                 <span>1x1 Orqa Fon</span>
+                <span className="sub-tag">({exportLeague || 'Tanlanmagan'})</span>
               </div>
             )}
           </div>
+
+          {/* Right: Actions */}
           <div className="poster-action-buttons">
             <button className="btn-download-poster" onClick={handleExport} disabled={isExporting}>
               <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Rasmni Yuklab Olish'}</span>
             </button>
             <div className="poster-sub-buttons">
-              <button className="btn-banner-action btn-upload" onClick={() => bannerFileInputRef.current?.click()}>
-                <Upload size={15} /> <span>{scheduleBanner ? 'Almashtirish' : 'Rasm yuklash'}</span>
+              <button className="btn-banner-action btn-upload" onClick={() => bannerFileInputRef.current?.click()} disabled={uploadingBanner}>
+                <Upload size={15} /> <span>{scheduleBanner ? 'Boshqa rasm yuklash' : 'Rasm yuklash'}</span>
               </button>
-              {scheduleBanner && <button className="btn-banner-action btn-delete" onClick={handleDeleteBanner}><Trash2 size={15} /> <span>O'chirish</span></button>}
+              {scheduleBanner && (
+                <button className="btn-banner-action btn-delete" onClick={handleDeleteBanner}>
+                  <Trash2 size={15} /> <span>O'chirish</span>
+                </button>
+              )}
             </div>
             <input ref={bannerFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBannerFileSelect} />
           </div>
@@ -364,7 +592,7 @@ const Schedule = () => {
           })
           .map(match => (
           <div key={match.id} className="match-card">
-            <button className="delete-match-btn" onClick={() => handleDelete(match.id)}><Trash2 size={16} /></button>
+            <button className="delete-match-btn" onClick={() => handleDelete(match.id)} title="O'chiresh"><Trash2 size={16} /></button>
             <div className="match-badges-container">
                <div className="match-league-badge">{match.league}</div>
                {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
@@ -407,8 +635,9 @@ const Schedule = () => {
           imageSrc={cropperRawImage}
           onClose={() => setCropperRawImage(null)}
           onSave={handleCroppedBannerSave}
-          title="Banner qirqish"
+          title="Schedule 1:1 Orqa Fon Rasmini Qirqish"
           aspect={1 / 1}
+          showAspectSelector={false}
         />
       )}
 
