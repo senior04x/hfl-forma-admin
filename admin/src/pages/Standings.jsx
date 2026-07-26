@@ -546,9 +546,9 @@ export default function Standings() {
           </div>
         </div>
 
-        {/* 1x1 Poster Image Box & Buttons directly below */}
-        <div className="poster-banner-section" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
-          <div className="poster-preview-square" style={{ width: '220px', height: '220px' }}>
+        {/* 1x1 Poster Image Box & Buttons */}
+        <div className="poster-banner-section">
+          <div className="poster-preview-square" style={{ width: '200px', height: '200px' }}>
             {currentLeagueBg ? (
               <img src={currentLeagueBg} alt="1x1 Export Background" className="poster-img-1x1" />
             ) : (
@@ -560,8 +560,8 @@ export default function Standings() {
             )}
           </div>
 
-          <div className="poster-action-buttons" style={{ width: '100%', maxWidth: '480px', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: '12px', width: '100%', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="poster-action-buttons">
+            <div style={{ display: 'flex', gap: '12px', width: '100%', flexWrap: 'wrap' }}>
               <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
                 <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish'}</span>
               </button>
@@ -570,7 +570,7 @@ export default function Standings() {
               </button>
             </div>
 
-            <div className="poster-sub-buttons" style={{ width: '100%', display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
+            <div className="poster-sub-buttons" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
               <button className="btn-banner-action btn-upload" onClick={() => bgFileInputRef.current?.click()}>
                 <Crop size={15} /> <span>{currentLeagueBg ? 'Boshqa rasm yuklash (1:1)' : '1:1 Fon Rasm yuklash'}</span>
               </button>
