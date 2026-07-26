@@ -338,6 +338,25 @@ const Settings = () => {
     }
   };
 
+  const handleCancelCollab = async (collabId, leagueName) => {
+    if (!window.confirm(`"${leagueName}" ligasi bo'yicha sheriklikni bekor qilmoqchimisiz (uzmoqchimisiz)?`)) {
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('league_collabs')
+        .delete()
+        .eq('id', collabId);
+
+      if (error) throw error;
+
+      setMessage({ type: 'success', text: 'Sheriklik bitimi muvaffaqiyatli uzildi!' });
+      fetchLeaguesAndOrgs();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Sheriklikni uzishda xatolik: ' + err.message });
+    }
+  };
+
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
@@ -631,6 +650,9 @@ const Settings = () => {
                         ? (activeCollab.sender_org_id === orgId ? activeCollab.receiver_org : activeCollab.sender_org)
                         : null;
 
+                      // Faqat ligani asl yaratgan/egasi bo'lgan tashkilot (owner) boshqaruv huquqiga ega
+                      const isOwner = l.isOwn !== false && l.organization_id === orgId;
+
                       return (
                         <div key={l.id} className={`league-card ${editingLeague?.id === l.id ? 'editing' : ''}`}>
                           <div className="league-card-header">
@@ -640,7 +662,7 @@ const Settings = () => {
                             <div>
                               <h4 className="league-title">{l.name}</h4>
                               {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
-                              {l.isCollab && <span className="junior-badge" style={{ background: 'rgba(0, 255, 102, 0.15)', color: '#00ff66', marginLeft: '6px' }}>CO-HOST</span>}
+                              {!isOwner && <span className="junior-badge" style={{ background: 'rgba(0, 255, 102, 0.15)', color: '#00ff66', marginLeft: '6px' }}>SHERIKLIK (CO-HOST)</span>}
                             </div>
                           </div>
 
@@ -660,14 +682,29 @@ const Settings = () => {
                           )}
 
                           <div className="league-card-actions">
-                            <button
-                              className={`btn-collab ${partnerOrg ? 'active-collab' : ''}`}
-                              onClick={() => setSelectedLeagueForCollab(l)}
-                              title="Boshqa tashkilotga sheriklik taklifi yuborish"
-                            >
-                              <Send size={13} /> {partnerOrg ? 'Collab (Faol)' : 'Collab'}
-                            </button>
-                            {l.isOwn !== false && (
+                            {/* Faqat liga asl egasi collab yuborishi yoki collabni uzishi mumkin */}
+                            {isOwner && (
+                              activeCollab ? (
+                                <button
+                                  className="btn-collab active-collab"
+                                  onClick={() => handleCancelCollab(activeCollab.id, l.name)}
+                                  title="Sheriklikni bekor qilish (Collabni uzish)"
+                                  style={{ border: '1px solid rgba(255, 59, 48, 0.4)', color: '#ff3b30', background: 'rgba(255, 59, 48, 0.12)' }}
+                                >
+                                  <X size={13} /> Collabni uzish
+                                </button>
+                              ) : (
+                                <button
+                                  className="btn-collab"
+                                  onClick={() => setSelectedLeagueForCollab(l)}
+                                  title="Boshqa tashkilotga sheriklik taklifi yuborish"
+                                >
+                                  <Send size={13} /> Collab
+                                </button>
+                              )
+                            )}
+
+                            {isOwner && (
                               <>
                                 <button
                                   className="btn-league-action btn-league-edit"
