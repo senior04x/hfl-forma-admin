@@ -46,6 +46,7 @@ const Schedule = () => {
   const [uploadingYtBanner, setUploadingYtBanner] = useState(false);
   const ytFileInputRef = useRef(null);
   const exportYtRef = useRef(null);
+  const [showBannerControls, setShowBannerControls] = useState(false);
   const [selectedMatchForYtExport, setSelectedMatchForYtExport] = useState(null);
   const [exportingMatchId, setExportingMatchId] = useState(null);
 
