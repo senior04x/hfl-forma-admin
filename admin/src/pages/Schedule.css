@@ -478,6 +478,44 @@
   border-color: rgba(0, 170, 255, 0.3);
 }
 
+.match-postponed-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.match-postponed-toggle:hover {
+  background: rgba(255, 59, 48, 0.15);
+  border-color: rgba(255, 59, 48, 0.4);
+  color: #ff4d4d;
+}
+
+.match-postponed-toggle.is-postponed {
+  background: rgba(255, 59, 48, 0.2);
+  border-color: #ff3b30;
+  color: #ff4d4d;
+  font-weight: 800;
+  box-shadow: 0 0 10px rgba(255, 59, 48, 0.3);
+}
+
+.match-postponed-toggle input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #ff3b30;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+}
+
 .match-status-badge {
   padding: 4px 10px;
   border-radius: 8px;

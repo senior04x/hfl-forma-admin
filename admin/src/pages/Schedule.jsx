@@ -28,6 +28,7 @@ const Schedule = () => {
   const [stadiumName, setStadiumName] = useState('');
   const [youtubeLink, setYoutubeLink] = useState('');
   const [matchRound, setMatchRound] = useState('');
+  const [isPostponed, setIsPostponed] = useState(false);
 
   const [exportLeague, setExportLeague] = useState('');
   const [exportRound, setExportRound] = useState('');
@@ -415,6 +416,23 @@ const Schedule = () => {
     if (data) setMatches(data);
   };
 
+  const handleTogglePostponed = async (match, isPostponedVal) => {
+    setMatches(prev => prev.map(m => m.id === match.id ? { ...m, is_postponed: isPostponedVal } : m));
+
+    try {
+      const { error } = await supabase
+        .from('matches')
+        .update({ is_postponed: isPostponedVal })
+        .eq('id', match.id);
+
+      if (error) {
+        console.warn('is_postponed update notice:', error);
+      }
+    } catch (err) {
+      console.error('Error toggling is_postponed:', err);
+    }
+  };
+
   const handleOpenModal = () => {
     setEditingMatch(null);
     setSelectedLeague(exportLeague || (activeLeagues[0]?.name || ''));
@@ -426,6 +444,7 @@ const Schedule = () => {
     setStadiumName('');
     setYoutubeLink('');
     setMatchRound('');
+    setIsPostponed(false);
     setIsModalOpen(true);
   };
 
@@ -440,6 +459,7 @@ const Schedule = () => {
     setMatchRound(match.round ? String(match.round) : '');
     setLocation(match.location || '1-maydon');
     setStadiumName(match.stadium_name || '');
+    setIsPostponed(!!match.is_postponed);
     setIsModalOpen(true);
   };
 
@@ -464,23 +484,33 @@ const Schedule = () => {
         location: location,
         youtube_link: youtubeLink,
         round: matchRound ? parseInt(matchRound) : null,
+        is_postponed: isPostponed,
         organization_id: orgId,
       };
 
       if (editingMatch) {
-        const { error } = await supabase
+        let { error } = await supabase
           .from('matches')
           .update(matchData)
           .eq('id', editingMatch.id);
 
-        if (error) throw error;
+        if (error) {
+          delete matchData.is_postponed;
+          await supabase.from('matches').update(matchData).eq('id', editingMatch.id);
+        }
       } else {
-        const { error } = await supabase.from('matches').insert([{
+        let { error } = await supabase.from('matches').insert([{
           ...matchData,
           status: 'scheduled'
         }]);
 
-        if (error) throw error;
+        if (error) {
+          delete matchData.is_postponed;
+          await supabase.from('matches').insert([{
+            ...matchData,
+            status: 'scheduled'
+          }]);
+        }
       }
 
       setIsModalOpen(false);
@@ -692,6 +722,18 @@ const Schedule = () => {
               <div className="match-badges-container">
                  <div className="match-league-badge">{match.league}</div>
                  {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
+                 <label 
+                   className={`match-postponed-toggle ${match.is_postponed ? 'is-postponed' : ''}`}
+                   onClick={(e) => e.stopPropagation()}
+                   title="Qoldirilgan o'yin deb belgilash"
+                 >
+                   <input 
+                     type="checkbox" 
+                     checked={!!match.is_postponed} 
+                     onChange={(e) => handleTogglePostponed(match, e.target.checked)} 
+                   />
+                   <span>{match.is_postponed ? "⚠️ Qoldirilgan o'yin" : "Qoldirilgan"}</span>
+                 </label>
               </div>
               <div className="match-teams">
                 <div className="team"><img src={match.home_team?.logo_url || '/images/default-team.png'} alt="Home" className="team-logo" /><span>{match.home_team?.name}</span></div>
@@ -790,6 +832,19 @@ const Schedule = () => {
                 value={youtubeLink} 
                 onChange={(e) => setYoutubeLink(e.target.value)} 
               />
+            </div>
+
+            <div className="form-group checkbox-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px', background: 'rgba(255, 59, 48, 0.1)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255, 59, 48, 0.25)' }}>
+              <input 
+                type="checkbox" 
+                id="is_postponed_checkbox"
+                checked={isPostponed} 
+                onChange={(e) => setIsPostponed(e.target.checked)} 
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#ff3b30' }}
+              />
+              <label htmlFor="is_postponed_checkbox" style={{ margin: 0, cursor: 'pointer', fontWeight: '700', color: isPostponed ? '#ff4d4d' : 'rgba(255,255,255,0.9)', fontSize: '13px' }}>
+                ⚠️ Qoldirilgan o'yin (Eksport rasmida ajratilib eng pastda ko'rsatiladi)
+              </label>
             </div>
 
             <div className="modal-actions">
@@ -996,16 +1051,44 @@ const Schedule = () => {
                 </div>
               </div>
 
-              <div className="sch-export-body" style={{ flex: 1 }}>
-                {matches.filter(m => m.league === exportLeague && m.round == exportRound).map(match => (
-                  <div key={match.id} className="sch-match-row">
-                    <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                    <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
-                    <div className="sch-time-container"><div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div><div className="sch-time-box">{match.match_time?.substring(0, 5)}</div></div>
-                    <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
-                    <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                  </div>
-                ))}
+              <div className="sch-export-body" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center' }}>
+                {(() => {
+                  const currentRoundMatches = matches.filter(m => m.league === exportLeague && m.round == exportRound && !m.is_postponed);
+                  const postponedMatches = matches.filter(m => m.league === exportLeague && m.is_postponed);
+
+                  return (
+                    <>
+                      {currentRoundMatches.map(match => (
+                        <div key={match.id} className="sch-match-row">
+                          <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                          <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
+                          <div className="sch-time-container"><div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div><div className="sch-time-box">{match.match_time?.substring(0, 5)}</div></div>
+                          <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
+                          <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                        </div>
+                      ))}
+
+                      {postponedMatches.length > 0 && (
+                        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', alignItems: 'center' }}>
+                          {postponedMatches.map(match => (
+                            <div key={match.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', width: '100%' }}>
+                              <div style={{ background: 'rgba(255, 59, 48, 0.35)', border: '1px solid rgba(255, 59, 48, 0.75)', color: '#ffffff', padding: '5px 20px', borderRadius: '12px', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }}>
+                                ⚠️ QOLDIRILGAN O'YIN {match.round ? `(${match.round}-TURDAN QOLGAN O'YIN)` : ''}
+                              </div>
+                              <div className="sch-match-row" style={{ borderColor: 'rgba(255, 59, 48, 0.65)', background: 'rgba(255, 59, 48, 0.2)' }}>
+                                <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                                <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
+                                <div className="sch-time-container"><div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div><div className="sch-time-box">{match.match_time?.substring(0, 5)}</div></div>
+                                <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
+                                <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Bottom Selected Secondary Sponsors Banner */}
