@@ -541,13 +541,11 @@ const Schedule = () => {
             </div>
 
             <div className="form-group">
-              <label>Maydon (OBS Stream Havolasi uchun)</label>
+              <label>Maydon (OBS Stream uchun)</label>
               <select value={location} onChange={(e) => setLocation(e.target.value)} required>
                 <option value="">Maydonni tanlang</option>
                 <option value="1-maydon">1-Maydon</option>
                 <option value="2-maydon">2-Maydon</option>
-                <option value="3-maydon">3-Maydon</option>
-                <option value="4-maydon">4-Maydon</option>
               </select>
             </div>
 
