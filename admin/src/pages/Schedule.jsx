@@ -66,7 +66,7 @@ const Schedule = () => {
     }
   };
 
-  const mainSponsorLogo = mainSponsor?.logo_url || '/Joma-logo.png';
+  const mainSponsorLogo = mainSponsor?.logo_url || '';
 
   const loadLeaguesAndData = async () => {
     setLoading(true);
@@ -475,28 +475,30 @@ const Schedule = () => {
             <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', padding: '40px 50px', boxSizing: 'border-box' }}>
               {/* Header */}
               <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', width: '100%' }}>
-                <div className="export-logo-left" style={{ width: 'auto', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                <div className="export-logo-left" style={{ width: '250px', minWidth: '250px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>
                   {isCollab ? (
                     <>
-                      <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '90px', objectFit: 'contain' }} />
-                      <img src="/x.png" crossOrigin="anonymous" style={{ height: '18px', objectFit: 'contain', opacity: 0.7 }} />
-                      <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain' }} />
+                      <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '90px', objectFit: 'contain', background: 'transparent' }} />
+                      <img src="/x.png" crossOrigin="anonymous" style={{ height: '18px', objectFit: 'contain', opacity: 0.7, background: 'transparent' }} />
+                      <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain', background: 'transparent' }} />
                     </>
                   ) : (
-                    <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain' }} />
+                    <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain', background: 'transparent' }} />
                   )}
                 </div>
 
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
                   {currentLeagueObj?.logo_url ? (
-                    <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                    <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain', background: 'transparent', border: 'none' }} crossOrigin="anonymous" />
                   ) : (
-                    <h2 style={{ color: '#fff', fontSize: '32px', fontWeight: '900', textTransform: 'uppercase' }}>{exportLeague} {exportRound ? `(${exportRound}-TUR)` : ''}</h2>
+                    <h2 style={{ color: '#fff', fontSize: '32px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>{exportLeague} {exportRound ? `(${exportRound}-TUR)` : ''}</h2>
                   )}
                 </div>
 
-                <div className="export-logo-right" style={{ width: '220px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
-                  <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
+                <div className="export-logo-right" style={{ width: '250px', minWidth: '250px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  {mainSponsorLogo ? (
+                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain', background: 'transparent' }} />
+                  ) : null}
                 </div>
               </div>
 
