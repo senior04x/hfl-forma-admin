@@ -69,22 +69,53 @@ const Schedule = () => {
         channel_info: channelInfoObj || tokens.channel_info || ytChannelInfo
       };
 
-      // 1. Save to localStorage for quick access on current device
-      localStorage.setItem(getYtTokensKey(), JSON.stringify(dataToSave));
+      const payloadStr = JSON.stringify(dataToSave);
 
-      // 2. Persist to Supabase organizations table so ALL devices of this organization share connection!
-      if (orgId) {
-        const payloadStr = JSON.stringify(dataToSave);
-        try {
+      // 1. Save to localStorage for quick access on current device
+      localStorage.setItem(getYtTokensKey(), payloadStr);
+
+      // 2. Persist to Supabase so ALL devices of this organization share connection!
+      const currentOrgId = orgId || 1;
+      const configName = `YT_OAUTH_TOKENS_${currentOrgId}`;
+
+      // a) Try updating organizations table
+      try {
+        await supabase
+          .from('organizations')
+          .update({ yt_tokens: payloadStr })
+          .eq('id', currentOrgId);
+      } catch (e) {}
+
+      // b) Guaranteed cross-device storage in sponsors table
+      try {
+        const { data: existing } = await supabase
+          .from('sponsors')
+          .select('id')
+          .eq('name', configName)
+          .maybeSingle();
+
+        if (existing) {
           await supabase
-            .from('organizations')
-            .update({ yt_tokens: payloadStr })
-            .eq('id', orgId);
-        } catch (dbErr) {
-          console.warn('DB update notice for yt_tokens:', dbErr);
+            .from('sponsors')
+            .update({ logo_url: payloadStr, organization_id: currentOrgId })
+            .eq('id', existing.id);
+        } else {
+          await supabase
+            .from('sponsors')
+            .insert([{
+              name: configName,
+              logo_url: payloadStr,
+              organization_id: currentOrgId,
+              is_main: false,
+              is_selected: false
+            }]);
         }
+      } catch (err) {
+        console.warn('Sponsors table token sync:', err);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Error saving YT tokens:', e);
+    }
   };
 
   const getYtTokens = async () => {
@@ -95,23 +126,39 @@ const Schedule = () => {
     } catch (e) {}
 
     // 2. If not found in localStorage (new device/phone), fetch from Supabase DB!
-    if (orgId) {
-      try {
-        const { data, error } = await supabase
-          .from('organizations')
-          .select('yt_tokens')
-          .eq('id', orgId)
-          .maybeSingle();
+    const currentOrgId = orgId || 1;
 
-        if (!error && data?.yt_tokens) {
-          const parsed = typeof data.yt_tokens === 'string' ? JSON.parse(data.yt_tokens) : data.yt_tokens;
-          localStorage.setItem(getYtTokensKey(), JSON.stringify(parsed));
-          return parsed;
-        }
-      } catch (err) {
-        console.warn('Error reading yt_tokens from DB:', err);
+    // a) Try organizations table
+    try {
+      const { data } = await supabase
+        .from('organizations')
+        .select('yt_tokens')
+        .eq('id', currentOrgId)
+        .maybeSingle();
+
+      if (data?.yt_tokens) {
+        const parsed = typeof data.yt_tokens === 'string' ? JSON.parse(data.yt_tokens) : data.yt_tokens;
+        localStorage.setItem(getYtTokensKey(), JSON.stringify(parsed));
+        return parsed;
       }
-    }
+    } catch (err) {}
+
+    // b) Guaranteed cross-device check from sponsors table
+    try {
+      const configName = `YT_OAUTH_TOKENS_${currentOrgId}`;
+      const { data } = await supabase
+        .from('sponsors')
+        .select('logo_url')
+        .eq('name', configName)
+        .maybeSingle();
+
+      if (data?.logo_url) {
+        const parsed = JSON.parse(data.logo_url);
+        localStorage.setItem(getYtTokensKey(), JSON.stringify(parsed));
+        return parsed;
+      }
+    } catch (err) {}
+
     return null;
   };
 
@@ -202,14 +249,14 @@ const Schedule = () => {
     try { localStorage.removeItem(getYtTokensKey()); } catch (e) {}
     setYtChannelInfo(null);
 
-    if (orgId) {
-      try {
-        await supabase
-          .from('organizations')
-          .update({ yt_tokens: null })
-          .eq('id', orgId);
-      } catch (e) {}
-    }
+    const currentOrgId = orgId || 1;
+    try {
+      await supabase.from('organizations').update({ yt_tokens: null }).eq('id', currentOrgId);
+    } catch (e) {}
+
+    try {
+      await supabase.from('sponsors').delete().eq('name', `YT_OAUTH_TOKENS_${currentOrgId}`);
+    } catch (e) {}
   };
 
   const exchangeCodeForTokens = async (code) => {
