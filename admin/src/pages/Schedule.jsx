@@ -547,23 +547,22 @@ const Schedule = () => {
 
   useEffect(() => {
     if (!exportLeague || !activeLeagues.length) return;
-    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
-    if (!currentLeagueObj) return;
+    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
 
-    const dbUrl = currentLeagueObj.schedule_banner_url || currentLeagueObj.export_bg_url || currentLeagueObj.banner_url;
+    const dbUrl = currentLeagueObj?.schedule_banner_url || currentLeagueObj?.export_bg_url || currentLeagueObj?.banner_url;
     if (dbUrl) {
       setScheduleBanner(dbUrl);
     } else {
-      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
+      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
       const savedLocal = localStorage.getItem(localKey);
       setScheduleBanner(savedLocal || '');
     }
 
-    const ytDbUrl = currentLeagueObj.yt_banner_url || currentLeagueObj.banner_url;
+    const ytDbUrl = currentLeagueObj?.yt_banner_url || currentLeagueObj?.banner_url;
     if (ytDbUrl) {
       setYtBanner(ytDbUrl);
     } else {
-      const ytLocalKey = `hfl_yt_banner_${orgId}_${currentLeagueObj.id}`;
+      const ytLocalKey = `hfl_yt_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
       const savedYtLocal = localStorage.getItem(ytLocalKey);
       setYtBanner(savedYtLocal || '');
     }
@@ -603,8 +602,7 @@ const Schedule = () => {
 
   const handleCroppedBannerSave = async (croppedDataUrl) => {
     if (!croppedDataUrl) return;
-    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
-    if (!currentLeagueObj) return;
+    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
 
     setUploadingBanner(true);
     try {
@@ -631,29 +629,29 @@ const Schedule = () => {
       }
 
       setScheduleBanner(publicUrl);
-      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id || currentLeagueObj.name}`;
+      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
       try { localStorage.setItem(localKey, publicUrl); } catch (e) {}
 
-      // Update Supabase DB leagues table
+      // Update Supabase DB leagues table for cross-device sync
       let updateQuery = supabase.from('leagues').update({ schedule_banner_url: publicUrl, export_bg_url: publicUrl });
-      if (currentLeagueObj.id) {
+      if (currentLeagueObj?.id) {
         updateQuery = updateQuery.eq('id', currentLeagueObj.id);
       } else {
-        updateQuery = updateQuery.eq('name', currentLeagueObj.name);
+        updateQuery = updateQuery.ilike('name', exportLeague);
       }
       let { error: dbErr } = await updateQuery;
 
       if (dbErr) {
         let fallbackQuery = supabase.from('leagues').update({ export_bg_url: publicUrl });
-        if (currentLeagueObj.id) {
+        if (currentLeagueObj?.id) {
           fallbackQuery = fallbackQuery.eq('id', currentLeagueObj.id);
         } else {
-          fallbackQuery = fallbackQuery.eq('name', currentLeagueObj.name);
+          fallbackQuery = fallbackQuery.ilike('name', exportLeague);
         }
         await fallbackQuery;
       }
 
-      setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj.id || l.name === currentLeagueObj.name) ? { ...l, schedule_banner_url: publicUrl, export_bg_url: publicUrl } : l));
+      setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj?.id || String(l.name).toLowerCase() === String(exportLeague).toLowerCase()) ? { ...l, schedule_banner_url: publicUrl, export_bg_url: publicUrl } : l));
     } catch (err) {
       console.error('Error saving schedule banner:', err);
     } finally {
@@ -664,8 +662,7 @@ const Schedule = () => {
 
   const handleCroppedYtBannerSave = async (croppedDataUrl) => {
     if (!croppedDataUrl) return;
-    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
-    if (!currentLeagueObj) return;
+    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
 
     setUploadingYtBanner(true);
     try {
@@ -692,28 +689,28 @@ const Schedule = () => {
       }
 
       setYtBanner(publicUrl);
-      const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj.id || currentLeagueObj.name}`;
+      const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
       try { localStorage.setItem(localKey, publicUrl); } catch (e) {}
 
       let updateQuery = supabase.from('leagues').update({ yt_banner_url: publicUrl, banner_url: publicUrl });
-      if (currentLeagueObj.id) {
+      if (currentLeagueObj?.id) {
         updateQuery = updateQuery.eq('id', currentLeagueObj.id);
       } else {
-        updateQuery = updateQuery.eq('name', currentLeagueObj.name);
+        updateQuery = updateQuery.ilike('name', exportLeague);
       }
       let { error: dbErr } = await updateQuery;
 
       if (dbErr) {
         let fallbackQuery = supabase.from('leagues').update({ banner_url: publicUrl });
-        if (currentLeagueObj.id) {
+        if (currentLeagueObj?.id) {
           fallbackQuery = fallbackQuery.eq('id', currentLeagueObj.id);
         } else {
-          fallbackQuery = fallbackQuery.eq('name', currentLeagueObj.name);
+          fallbackQuery = fallbackQuery.ilike('name', exportLeague);
         }
         await fallbackQuery;
       }
 
-      setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj.id || l.name === currentLeagueObj.name) ? { ...l, yt_banner_url: publicUrl, banner_url: publicUrl } : l));
+      setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj?.id || String(l.name).toLowerCase() === String(exportLeague).toLowerCase()) ? { ...l, yt_banner_url: publicUrl, banner_url: publicUrl } : l));
     } catch (err) {
       console.error('Error saving YouTube banner:', err);
     } finally {
@@ -723,37 +720,35 @@ const Schedule = () => {
   };
 
   const handleDeleteBanner = async () => {
-    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
-    if (!currentLeagueObj) return;
+    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
     if (!window.confirm(`"${exportLeague}" ligasi uchun 1x1 orqa fon rasmini o'chirmoqchimisiz?`)) return;
 
     setScheduleBanner('');
-    const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
+    const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
     localStorage.removeItem(localKey);
 
     try {
-      if (currentLeagueObj.id) {
+      if (currentLeagueObj?.id) {
         await supabase.from('leagues').update({ schedule_banner_url: null, export_bg_url: null }).eq('id', currentLeagueObj.id);
       } else {
-        await supabase.from('leagues').update({ schedule_banner_url: null, export_bg_url: null }).eq('name', currentLeagueObj.name);
+        await supabase.from('leagues').update({ schedule_banner_url: null, export_bg_url: null }).ilike('name', exportLeague);
       }
     } catch (e) {}
   };
 
   const handleDeleteYtBanner = async () => {
-    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
-    if (!currentLeagueObj) return;
+    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
     if (!window.confirm(`"${exportLeague}" ligasi uchun YouTube 16:9 fon rasmini o'chirmoqchimisiz?`)) return;
 
     setYtBanner('');
-    const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj.id}`;
+    const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
     localStorage.removeItem(localKey);
 
     try {
-      if (currentLeagueObj.id) {
+      if (currentLeagueObj?.id) {
         await supabase.from('leagues').update({ yt_banner_url: null, banner_url: null }).eq('id', currentLeagueObj.id);
       } else {
-        await supabase.from('leagues').update({ yt_banner_url: null, banner_url: null }).eq('name', currentLeagueObj.name);
+        await supabase.from('leagues').update({ yt_banner_url: null, banner_url: null }).ilike('name', exportLeague);
       }
     } catch (e) {}
   };

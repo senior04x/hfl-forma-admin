@@ -336,7 +336,7 @@ export default function Standings() {
   };
 
   const handleExportWithCheck = (type) => {
-    const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
     if (!currentLeagueObj?.export_bg_url) {
       setPendingExportType(type);
       setIsPromptModalOpen(true);
@@ -395,8 +395,7 @@ export default function Standings() {
 
   const handleSaveCroppedBg = async (croppedDataUrl) => {
     if (!croppedDataUrl) return;
-    const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
-    if (!currentLeagueObj) return;
+    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
 
     setCropperRawImage(null);
     try {
@@ -406,9 +405,9 @@ export default function Standings() {
         localStorage.setItem(storageKey, croppedDataUrl);
       } catch (e) {}
 
-      setActiveLeagues(prev => prev.map(l => l.name === selectedLeague ? { ...l, export_bg_url: croppedDataUrl } : l));
+      setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj?.id || String(l.name).toLowerCase() === String(selectedLeague).toLowerCase()) ? { ...l, export_bg_url: croppedDataUrl } : l));
 
-      // 2. Upload to Supabase Storage bucket for clean publicUrl and permanent persistence
+      // 2. Upload to Supabase Storage bucket for clean publicUrl and permanent persistence across all devices
       let publicUrl = croppedDataUrl;
       try {
         const response = await fetch(croppedDataUrl);
@@ -433,11 +432,14 @@ export default function Standings() {
         console.warn('Storage upload fallback:', uploadException);
       }
 
-      // 3. Update leagues table with clean publicUrl (no 400 payload errors)
-      const { error: updateErr } = await supabase
-        .from('leagues')
-        .update({ export_bg_url: publicUrl })
-        .eq('id', currentLeagueObj.id);
+      // 3. Update leagues table with clean publicUrl
+      let updateQuery = supabase.from('leagues').update({ export_bg_url: publicUrl, schedule_banner_url: publicUrl });
+      if (currentLeagueObj?.id) {
+        updateQuery = updateQuery.eq('id', currentLeagueObj.id);
+      } else {
+        updateQuery = updateQuery.ilike('name', selectedLeague);
+      }
+      const { error: updateErr } = await updateQuery;
 
       if (updateErr) {
         console.warn('Leagues table update notice:', updateErr);
@@ -470,15 +472,21 @@ export default function Standings() {
   else if (selectedLeague.includes('Chempion')) exportThemeClass = 'theme-export-Chempion';
   else if (selectedLeague.includes('7x7')) exportThemeClass = 'theme-export-7x7';
 
-  const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+  const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
   const currentLeagueBg = currentLeagueObj?.export_bg_url || getLeagueBgForOrg(orgId, selectedLeague);
 
-  const handleDeleteLeagueBg = () => {
+  const handleDeleteLeagueBg = async () => {
     if (!window.confirm(`"${selectedLeague}" ligasi uchun saqlangan 1:1 fon rasmini o'chirmoqchimisiz?`)) return;
     try {
       localStorage.removeItem(`hfl_export_bg_${orgId}_${selectedLeague}`);
-      const updatedLeagues = activeLeagues.map(l => l.name === selectedLeague ? { ...l, export_bg_url: null } : l);
+      const updatedLeagues = activeLeagues.map(l => (l.id === currentLeagueObj?.id || String(l.name).toLowerCase() === String(selectedLeague).toLowerCase()) ? { ...l, export_bg_url: null } : l);
       setActiveLeagues(updatedLeagues);
+
+      if (currentLeagueObj?.id) {
+        await supabase.from('leagues').update({ export_bg_url: null }).eq('id', currentLeagueObj.id);
+      } else {
+        await supabase.from('leagues').update({ export_bg_url: null }).ilike('name', selectedLeague);
+      }
     } catch (e) {
       console.error(e);
     }
