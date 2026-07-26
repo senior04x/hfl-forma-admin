@@ -259,8 +259,19 @@ const Schedule = () => {
     }
   }, [orgId]);
 
-  const updateYouTubeThumbnailForBroadcast = async (broadcastId, token = null) => {
+  const updateYouTubeThumbnailForBroadcast = async (broadcastId, token = null, matchObj = null) => {
     try {
+      if (matchObj) {
+        const homeTeamObj = teams.find(t => t.id === matchObj.home_team_id) || matchObj.home_team;
+        const awayTeamObj = teams.find(t => t.id === matchObj.away_team_id) || matchObj.away_team;
+        setSelectedMatchForYtExport({
+          ...matchObj,
+          home_team: homeTeamObj,
+          away_team: awayTeamObj
+        });
+        await new Promise(r => setTimeout(r, 850));
+      }
+
       if (!exportYtRef.current || !broadcastId) return;
       const accessToken = token || await getValidAccessToken();
       if (!accessToken) return;
@@ -276,7 +287,7 @@ const Schedule = () => {
 
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
       if (blob) {
-        const thumbRes = await fetch(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?youtubeId=${broadcastId}`, {
+        const thumbRes = await fetch(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${broadcastId}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -285,7 +296,7 @@ const Schedule = () => {
           body: blob
         });
         const thumbData = await thumbRes.json();
-        console.log('YouTube Thumbnail set response:', thumbData);
+        console.log('✅ YouTube 16:9 Thumbnail upload response:', thumbData);
       }
     } catch (err) {
       console.warn('Error updating YouTube thumbnail:', err);
@@ -708,6 +719,21 @@ const Schedule = () => {
         link.download = `YouTube_Match_${homeName}_VS_${awayName}_${match.round ? match.round + '_tur' : ''}.png`;
         link.href = dataUrl;
         link.click();
+
+        // Also upload/set thumbnail directly to YouTube if channel is connected and match has YT link
+        if (ytChannelInfo && match.youtube_link) {
+          const extractId = (url) => {
+            if (!url) return null;
+            if (url.includes('/live/')) return url.split('/live/')[1]?.split('?')[0];
+            if (url.includes('v=')) return url.split('v=')[1]?.split('&')[0];
+            if (url.includes('youtu.be/')) return url.split('youtu.be/')[1]?.split('?')[0];
+            return null;
+          };
+          const broadcastId = extractId(match.youtube_link);
+          if (broadcastId) {
+            await updateYouTubeThumbnailForBroadcast(broadcastId, null, match);
+          }
+        }
       } catch (err) {
         console.error('YouTube Thumbnail Export Error:', err);
         alert('YouTube Shablon rasmini yuklab olishda xatolik yuz berdi');
@@ -899,11 +925,13 @@ const Schedule = () => {
 
       // AUTOMATIC YouTube Live stream creation & thumbnail upload when YouTube is connected
       const existingYtLink = editingMatch?.youtube_link || youtubeLink;
+      const fullSavedMatch = {
+        ...editingMatch,
+        ...matchData,
+        id: savedMatchId
+      };
+
       if (ytChannelInfo && savedMatchId && !existingYtLink) {
-        const fullSavedMatch = {
-          ...matchData,
-          id: savedMatchId
-        };
         await createYouTubeLiveStream(fullSavedMatch, true);
       } else if (existingYtLink) {
         // Auto-update YouTube thumbnail with scores if match was updated
@@ -916,17 +944,7 @@ const Schedule = () => {
         };
         const broadcastId = extractId(existingYtLink);
         if (broadcastId) {
-          const homeTeamObj = teams.find(t => t.id === matchData.home_team_id);
-          const awayTeamObj = teams.find(t => t.id === matchData.away_team_id);
-          setSelectedMatchForYtExport({
-            ...editingMatch,
-            ...matchData,
-            home_team: homeTeamObj,
-            away_team: awayTeamObj
-          });
-          setTimeout(() => {
-            updateYouTubeThumbnailForBroadcast(broadcastId);
-          }, 850);
+          await updateYouTubeThumbnailForBroadcast(broadcastId, null, fullSavedMatch);
         }
       }
     } catch (error) {
