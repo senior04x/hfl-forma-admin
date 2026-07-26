@@ -133,6 +133,7 @@ const Layout = () => {
                     onClick={() => {
                       switchOrg(org);
                       setShowOrgDropdown(false);
+                      setMobileMenuOpen(false);
                     }}
                   >
                     <Building2 size={14} />
