@@ -128,6 +128,7 @@ const Settings = () => {
   const [targetOrgId, setTargetOrgId] = useState('');
   const [sendingCollab, setSendingCollab] = useState(false);
   const [incomingCollabs, setIncomingCollabs] = useState([]);
+  const [allCollabs, setAllCollabs] = useState([]);
 
   useEffect(() => {
     fetchUserData();
@@ -163,12 +164,19 @@ const Settings = () => {
         .select(`
           *,
           league:league_id (*),
-          sender_org:sender_org_id (id, name, logo_url)
+          sender_org:sender_org_id (id, name, logo_url),
+          receiver_org:receiver_org_id (id, name, logo_url)
         `)
-        .eq('receiver_org_id', orgId)
+        .or(`receiver_org_id.eq.${orgId},sender_org_id.eq.${orgId}`)
         .order('created_at', { ascending: false });
 
-      setIncomingCollabs(collabs || []);
+      if (collabs) {
+        setAllCollabs(collabs);
+        setIncomingCollabs(collabs.filter(c => c.receiver_org_id === orgId));
+      } else {
+        setAllCollabs([]);
+        setIncomingCollabs([]);
+      }
     } catch (err) {
       console.error('Error fetching leagues/collabs:', err);
     }
@@ -496,42 +504,65 @@ const Settings = () => {
               <p className="no-data-text">Hali ligalar qo'shilmagan.</p>
             ) : (
               <div className="leagues-grid">
-                {leagues.map(l => (
-                  <div key={l.id} className={`league-card ${editingLeague?.id === l.id ? 'editing' : ''}`}>
-                    <div className="league-card-header">
-                      <div className="league-icon">
-                        {l.logo_url ? <img src={l.logo_url} alt={l.name} /> : <Trophy size={20} />}
+                {leagues.map(l => {
+                  const activeCollab = allCollabs.find(c => c.league_id === l.id && c.status === 'accepted');
+                  const partnerOrg = activeCollab 
+                    ? (activeCollab.sender_org_id === orgId ? activeCollab.receiver_org : activeCollab.sender_org)
+                    : null;
+
+                  return (
+                    <div key={l.id} className={`league-card ${editingLeague?.id === l.id ? 'editing' : ''}`}>
+                      <div className="league-card-header">
+                        <div className="league-icon">
+                          {l.logo_url ? <img src={l.logo_url} alt={l.name} /> : <Trophy size={20} />}
+                        </div>
+                        <div>
+                          <h4 className="league-title">{l.name}</h4>
+                          {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="league-title">{l.name}</h4>
-                        {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
+
+                      {partnerOrg && (
+                        <div className="league-collab-partner-badge">
+                          <div className="partner-logo-box">
+                            {partnerOrg.logo_url ? (
+                              <img src={partnerOrg.logo_url} alt={partnerOrg.name} />
+                            ) : (
+                              <Building2 size={12} />
+                            )}
+                          </div>
+                          <span className="partner-text">
+                            Sherik: <strong>{partnerOrg.name}</strong>
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="league-card-actions">
+                        <button
+                          className={`btn-collab ${partnerOrg ? 'active-collab' : ''}`}
+                          onClick={() => setSelectedLeagueForCollab(l)}
+                          title="Boshqa tashkilotga sheriklik taklifi yuborish"
+                        >
+                          <Send size={13} /> {partnerOrg ? 'Collab (Faol)' : 'Collab'}
+                        </button>
+                        <button
+                          className="btn-league-action btn-league-edit"
+                          onClick={() => startEditLeague(l)}
+                          title="Liga ma'lumotlarini tahrirlash"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          className="btn-league-action btn-league-delete"
+                          onClick={() => handleDeleteLeague(l)}
+                          title="Liganı o'chirish"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
-                    <div className="league-card-actions">
-                      <button
-                        className="btn-collab"
-                        onClick={() => setSelectedLeagueForCollab(l)}
-                        title="Boshqa tashkilotga sheriklik taklifi yuborish"
-                      >
-                        <Send size={13} /> Collab
-                      </button>
-                      <button
-                        className="btn-league-action btn-league-edit"
-                        onClick={() => startEditLeague(l)}
-                        title="Liga ma'lumotlarini tahrirlash"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        className="btn-league-action btn-league-delete"
-                        onClick={() => handleDeleteLeague(l)}
-                        title="Liganı o'chirish"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
