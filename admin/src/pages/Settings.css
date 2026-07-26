@@ -444,6 +444,28 @@
   color: #ff3b30;
 }
 
+.btn-collab-disconnect {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 59, 48, 0.4);
+  background: rgba(255, 59, 48, 0.12);
+  color: #ff3b30;
+  cursor: pointer;
+  margin-left: 6px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-collab-disconnect:hover {
+  background: #ff3b30;
+  color: #ffffff;
+  border-color: #ff3b30;
+}
+
 .no-data-text {
   color: rgba(255,255,255,0.4);
   font-size: 13px;

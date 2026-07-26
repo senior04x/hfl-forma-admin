@@ -678,30 +678,29 @@ const Settings = () => {
                               <span className="partner-text">
                                 Sherik: <strong>{partnerOrg.name}</strong>
                               </span>
+                              {isOwner && activeCollab && (
+                                <button
+                                  type="button"
+                                  className="btn-collab-disconnect"
+                                  onClick={() => handleCancelCollab(activeCollab.id, l.name)}
+                                  title="Sheriklikni uzish"
+                                >
+                                  <X size={14} />
+                                </button>
+                              )}
                             </div>
                           )}
 
                           <div className="league-card-actions">
-                            {/* Faqat liga asl egasi collab yuborishi yoki collabni uzishi mumkin */}
-                            {isOwner && (
-                              activeCollab ? (
-                                <button
-                                  className="btn-collab active-collab"
-                                  onClick={() => handleCancelCollab(activeCollab.id, l.name)}
-                                  title="Sheriklikni bekor qilish (Collabni uzish)"
-                                  style={{ border: '1px solid rgba(255, 59, 48, 0.4)', color: '#ff3b30', background: 'rgba(255, 59, 48, 0.12)' }}
-                                >
-                                  <X size={13} /> Collabni uzish
-                                </button>
-                              ) : (
-                                <button
-                                  className="btn-collab"
-                                  onClick={() => setSelectedLeagueForCollab(l)}
-                                  title="Boshqa tashkilotga sheriklik taklifi yuborish"
-                                >
-                                  <Send size={13} /> Collab
-                                </button>
-                              )
+                            {/* Faqat liga asl egasi hamkorligi bo'lmaganda collab yuborishi mumkin */}
+                            {isOwner && !activeCollab && (
+                              <button
+                                className="btn-collab"
+                                onClick={() => setSelectedLeagueForCollab(l)}
+                                title="Boshqa tashkilotga sheriklik taklifi yuborish"
+                              >
+                                <Send size={13} /> Collab
+                              </button>
                             )}
 
                             {isOwner && (
