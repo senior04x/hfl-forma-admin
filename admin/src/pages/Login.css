@@ -72,15 +72,17 @@
   text-align: left;
 }
 
+.login-label,
+.login-card .form-group .login-label,
 .login-card label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-  font-size: 14px;
+  display: block !important;
+  margin-bottom: 8px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
   color: #ffffff !important;
   opacity: 1 !important;
-  letter-spacing: 0.2px;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.8) !important;
 }
 
 .password-input-wrapper {
