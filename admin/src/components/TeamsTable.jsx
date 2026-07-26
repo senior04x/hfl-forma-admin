@@ -61,7 +61,7 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
       const activeNames = (leaguesList || []).map(l => l.name);
       let filtered = (data || []).filter(t => 
         t.organization_id === orgId || 
-        activeNames.includes(t.league) || 
+        (t.league && t.league.split(',').some(l => activeNames.includes(l.trim()))) || 
         (!orgId)
       );
 
@@ -76,7 +76,7 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
 
       // 2. League Filter
       if (leagueFilter !== 'all') {
-        filtered = filtered.filter(t => t.league === leagueFilter);
+        filtered = filtered.filter(t => t.league && t.league.split(',').map(s => s.trim()).includes(leagueFilter));
       }
 
       // 3. Search Filter

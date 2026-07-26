@@ -46,7 +46,11 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
     let query = supabase.from('teams').select('id, name, league, organization_id');
     const { data } = await query;
     if (data) {
-      const filteredTeams = data.filter(t => t.organization_id === orgId || activeNames.includes(t.league) || !orgId);
+      const filteredTeams = data.filter(t => 
+        t.organization_id === orgId || 
+        (t.league && t.league.split(',').some(l => activeNames.includes(l.trim()))) || 
+        !orgId
+      );
       setTeams(filteredTeams);
     }
   };
@@ -69,7 +73,11 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
       const activeNames = (activeLeagues || []).map(l => l.name);
       const validTeamIds = new Set(
         teams
-          .filter(t => t.organization_id === orgId || activeNames.includes(t.league) || !orgId)
+          .filter(t => 
+            t.organization_id === orgId || 
+            (t.league && t.league.split(',').some(l => activeNames.includes(l.trim()))) || 
+            !orgId
+          )
           .map(t => t.id)
       );
 
@@ -91,7 +99,7 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
       if (leagueFilter !== 'all') {
         filtered = filtered.filter(p => {
           const team = teams.find(t => t.id === p.team_id);
-          return team && team.league === leagueFilter;
+          return team && team.league && team.league.split(',').map(s => s.trim()).includes(leagueFilter);
         });
       }
 

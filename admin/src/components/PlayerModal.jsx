@@ -29,7 +29,12 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   useEffect(() => {
     if (player.team_id && teams.length > 0) {
       const t = teams.find(t => t.id === player.team_id);
-      if (t) setSelectedLeague(t.league);
+      if (t && t.league) {
+        const teamLeagues = t.league.split(',').map(s => s.trim()).filter(Boolean);
+        if (teamLeagues.length > 0 && !teamLeagues.includes(selectedLeague)) {
+          setSelectedLeague(teamLeagues[0]);
+        }
+      }
     }
   }, [player.team_id, teams]);
 
@@ -250,7 +255,11 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
                     }}
                   >
                     <option value="">Ligani tanlang</option>
-                    {[...new Set(teams.map(t => t.league).filter(Boolean))].map(l => (
+                    {Array.from(new Set(
+                      teams
+                        .flatMap(t => t.league ? t.league.split(',').map(s => s.trim()) : [])
+                        .filter(Boolean)
+                    )).sort().map(l => (
                       <option key={l} value={l}>{l}</option>
                     ))}
                   </select>
@@ -264,7 +273,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
                     disabled={!selectedLeague}
                   >
                     <option value="">Jamoani tanlang</option>
-                    {teams.filter(t => t.league === selectedLeague).map(t => (
+                    {teams.filter(t => t.league && t.league.split(',').map(s => s.trim()).includes(selectedLeague)).map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>
