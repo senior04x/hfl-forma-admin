@@ -2,6 +2,19 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
+    { "source": "/:org/js/:path*", "destination": "/client/js/:path*" },
+    { "source": "/:org/css/:path*", "destination": "/client/css/:path*" },
+    { "source": "/:org/images/:path*", "destination": "/client/images/:path*" },
+    { "source": "/:org/assets/:path*", "destination": "/client/assets/:path*" },
+    { "source": "/:org/apply-team", "destination": "/client/apply-team.html" },
+    { "source": "/:org/apply-individual", "destination": "/client/apply-individual.html" },
+    { "source": "/:org/apply", "destination": "/client/apply.html" },
+    { "source": "/:org/teams", "destination": "/client/teams.html" },
+    { "source": "/:org/team-details", "destination": "/client/team-details.html" },
+    { "source": "/:org/matches", "destination": "/client/matches.html" },
+    { "source": "/:org/match-details", "destination": "/client/match-details.html" },
+    { "source": "/:org/standings", "destination": "/client/standings.html" },
+    { "source": "/:org", "destination": "/client/index.html" },
     { "source": "/(.*)", "destination": "/client/$1" }
   ],
   "images": {
