@@ -84,6 +84,45 @@
     width: 100px;
 }
 
+/* Logo Skeleton Loading Shimmer */
+.logo-skeleton {
+    width: 90px;
+    height: 45px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.05) 75%);
+    background-size: 200% 100%;
+    animation: logoShimmer 1.5s infinite ease-in-out;
+    margin: 0 auto;
+}
+
+@keyframes logoShimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.logo-placeholder-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: rgba(0, 255, 102, 0.1);
+    border: 1px solid rgba(0, 255, 102, 0.25);
+    color: #00ff66;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.logo-placeholder-avatar.large {
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+}
+
 .sidebar-nav {
     flex: 1;
     padding: 20px 0;

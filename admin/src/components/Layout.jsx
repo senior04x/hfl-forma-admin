@@ -13,7 +13,7 @@ const Layout = () => {
   const [allOrgs, setAllOrgs] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentOrg, isSuperAdmin, switchOrg } = useOrg();
+  const { currentOrg, isSuperAdmin, switchOrg, loading: orgLoading } = useOrg();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -68,11 +68,19 @@ const Layout = () => {
       {/* Mobile Header */}
       <header className="mobile-header">
         <div className="logo-container">
-          <img 
-            src={currentOrg?.logo_url || "/images/logo.png"} 
-            alt={currentOrg?.name || "Logo"} 
-            className="header-logo" 
-          />
+          {orgLoading ? (
+            <div className="logo-skeleton" style={{ width: '75px', height: '36px' }}></div>
+          ) : currentOrg?.logo_url ? (
+            <img 
+              src={currentOrg.logo_url} 
+              alt={currentOrg?.name || "Logo"} 
+              className="header-logo" 
+            />
+          ) : (
+            <div className="logo-placeholder-avatar">
+              <Building2 size={20} />
+            </div>
+          )}
         </div>
         <button className={`menu-toggle ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           <Menu size={24} className="icon-menu" />
@@ -88,11 +96,19 @@ const Layout = () => {
       {/* Sidebar */}
       <aside className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="sidebar-header hide-mobile">
-          <img 
-            src={currentOrg?.logo_url || "/images/logo.png"} 
-            alt={currentOrg?.name || "Logo"} 
-            className="sidebar-logo" 
-          />
+          {orgLoading ? (
+            <div className="logo-skeleton"></div>
+          ) : currentOrg?.logo_url ? (
+            <img 
+              src={currentOrg.logo_url} 
+              alt={currentOrg?.name || "Logo"} 
+              className="sidebar-logo" 
+            />
+          ) : (
+            <div className="logo-placeholder-avatar large">
+              <Building2 size={28} />
+            </div>
+          )}
         </div>
 
         {/* Organization Switcher */}
