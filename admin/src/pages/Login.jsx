@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 import { supabase } from '../supabaseClient';
@@ -40,8 +40,7 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <img src="/images/logo.png" alt="Logo" className="logo" />
-        <h2>Admin Kirish</h2>
+        <h2 className="login-subtitle">Futbolni avtomatlashtirish biz bilan oson</h2>
         
         <form onSubmit={handleLogin}>
           <div className="form-group">
@@ -77,4 +76,3 @@ const Login = () => {
 };
 
 export default Login;
-
