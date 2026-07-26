@@ -679,7 +679,6 @@ const Settings = () => {
               </form>
             </div>
           </div>
-        </div>
 
       {/* Collab Request Modal */}
       {selectedLeagueForCollab && (
