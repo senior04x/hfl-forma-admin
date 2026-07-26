@@ -722,28 +722,30 @@ const Schedule = () => {
               <div className="match-badges-container">
                  <div className="match-league-badge">{match.league}</div>
                  {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
-                 <label 
-                   className={`match-postponed-toggle ${match.is_postponed ? 'is-postponed' : ''}`}
-                   onClick={(e) => e.stopPropagation()}
-                   title="Qoldirilgan o'yin deb belgilash"
-                 >
-                   <input 
-                     type="checkbox" 
-                     checked={!!match.is_postponed} 
-                     onChange={(e) => handleTogglePostponed(match, e.target.checked)} 
-                   />
-                   <span>{match.is_postponed ? "⚠️ Qoldirilgan o'yin" : "Qoldirilgan"}</span>
-                 </label>
               </div>
               <div className="match-teams">
                 <div className="team"><img src={match.home_team?.logo_url || '/images/default-team.png'} alt="Home" className="team-logo" /><span>{match.home_team?.name}</span></div>
                 <div className="match-vs">{(match.status === 'finished' || match.home_score > 0 || match.away_score > 0) ? <>{match.home_score || 0} : {match.away_score || 0}</> : 'VS'}</div>
                 <div className="team"><img src={match.away_team?.logo_url || '/images/default-team.png'} alt="Away" className="team-logo" /><span>{match.away_team?.name}</span></div>
               </div>
-              <div className="match-details">
-                <div className="detail-row"><Calendar size={14} /> <span>{match.match_date}</span></div>
-                <div className="detail-row"><Clock size={14} /> <span>{match.match_time}</span></div>
-                <div className="detail-row"><MapPin size={14} /> <span>{match.location}</span></div>
+              <div className="match-footer-row" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', width: '100%', marginTop: '6px' }}>
+                <div className="match-details">
+                  <div className="detail-row"><Calendar size={14} /> <span>{match.match_date}</span></div>
+                  <div className="detail-row"><Clock size={14} /> <span>{match.match_time}</span></div>
+                  <div className="detail-row"><MapPin size={14} /> <span>{match.location}</span></div>
+                </div>
+                <label 
+                  className={`match-postponed-toggle ${match.is_postponed ? 'is-postponed' : ''}`}
+                  onClick={(e) => e.stopPropagation()}
+                  title="Qoldirilgan o'yin deb belgilash"
+                >
+                  <input 
+                    type="checkbox" 
+                    checked={!!match.is_postponed} 
+                    onChange={(e) => handleTogglePostponed(match, e.target.checked)} 
+                  />
+                  <span>{match.is_postponed ? "⚠️ Qoldirilgan o'yin" : "Qoldirilgan"}</span>
+                </label>
               </div>
               <button className="btn-manage-match" onClick={() => navigate('/match/' + match.id)}>⚙️ Boshqarish</button>
             </div>
