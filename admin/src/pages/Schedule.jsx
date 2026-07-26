@@ -1317,7 +1317,7 @@ const Schedule = () => {
               />
             </div>
 
-            <div className="form-group checkbox-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px', background: 'rgba(255, 59, 48, 0.1)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255, 59, 48, 0.25)' }}>
+            <div className="form-group checkbox-group" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginTop: '12px', background: 'rgba(255, 59, 48, 0.12)', padding: '10px 16px', borderRadius: '10px', border: '1px solid rgba(255, 59, 48, 0.3)', width: 'fit-content' }}>
               <input 
                 type="checkbox" 
                 id="is_postponed_checkbox"
@@ -1325,8 +1325,8 @@ const Schedule = () => {
                 onChange={(e) => setIsPostponed(e.target.checked)} 
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#ff3b30' }}
               />
-              <label htmlFor="is_postponed_checkbox" style={{ margin: 0, cursor: 'pointer', fontWeight: '700', color: isPostponed ? '#ff4d4d' : 'rgba(255,255,255,0.9)', fontSize: '13px' }}>
-                ⚠️ Qoldirilgan o'yin (Eksport rasmida ajratilib eng pastda ko'rsatiladi)
+              <label htmlFor="is_postponed_checkbox" style={{ margin: 0, cursor: 'pointer', fontWeight: '700', color: isPostponed ? '#ff4d4d' : '#ffffff', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
+                Qoldirilgan o'yin
               </label>
             </div>
 
