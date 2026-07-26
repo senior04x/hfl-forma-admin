@@ -469,6 +469,7 @@ const Schedule = () => {
 
   const [mainSponsor, setMainSponsor] = useState(null);
   const [selectedSponsors, setSelectedSponsors] = useState([]);
+  const [allSponsors, setAllSponsors] = useState([]);
 
   useEffect(() => {
     fetchSponsorsData();
@@ -491,6 +492,8 @@ const Schedule = () => {
         const { data } = await supabase.from('sponsors').select('*').order('created_at', { ascending: false });
         loadedSponsors = data || [];
       }
+
+      setAllSponsors(loadedSponsors);
 
       // 1. Main sponsor
       const mainFromDb = loadedSponsors.find(s => s.is_main === true);
@@ -546,10 +549,13 @@ const Schedule = () => {
   };
 
   useEffect(() => {
-    if (!exportLeague || !activeLeagues.length) return;
+    if (!exportLeague) return;
     const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
 
-    const dbUrl = currentLeagueObj?.schedule_banner_url || currentLeagueObj?.export_bg_url;
+    const scheduleSponsorKey = `BANNER_SCHEDULE_${orgId}_${exportLeague}`;
+    const scheduleSponsorRow = allSponsors.find(s => s.name === scheduleSponsorKey);
+
+    const dbUrl = currentLeagueObj?.schedule_banner_url || currentLeagueObj?.export_bg_url || scheduleSponsorRow?.logo_url;
     if (dbUrl) {
       setScheduleBanner(dbUrl);
     } else {
@@ -558,7 +564,10 @@ const Schedule = () => {
       setScheduleBanner(savedLocal || '');
     }
 
-    const ytDbUrl = currentLeagueObj?.yt_banner_url || currentLeagueObj?.banner_url;
+    const ytSponsorKey = `BANNER_YT_${orgId}_${exportLeague}`;
+    const ytSponsorRow = allSponsors.find(s => s.name === ytSponsorKey);
+
+    const ytDbUrl = currentLeagueObj?.yt_banner_url || currentLeagueObj?.banner_url || ytSponsorRow?.logo_url;
     if (ytDbUrl) {
       setYtBanner(ytDbUrl);
     } else {
@@ -566,7 +575,7 @@ const Schedule = () => {
       const savedYtLocal = localStorage.getItem(ytLocalKey);
       setYtBanner(savedYtLocal || '');
     }
-  }, [exportLeague, activeLeagues, orgId]);
+  }, [exportLeague, activeLeagues, allSponsors, orgId]);
 
   useEffect(() => {
     const leagueMatches = matches.filter(m => m.league === exportLeague && m.round);
@@ -645,7 +654,35 @@ const Schedule = () => {
           : supabase.from('leagues').update({ export_bg_url: publicUrl }).ilike('name', targetName)
       ]);
 
+      // Dual-sync to sponsors table as guaranteed cross-device key-value entry
+      const scheduleSponsorKey = `BANNER_SCHEDULE_${orgId}_${exportLeague}`;
+      try {
+        const { data: existingSponsor } = await supabase.from('sponsors').select('id').eq('name', scheduleSponsorKey).maybeSingle();
+        if (existingSponsor?.id) {
+          await supabase.from('sponsors').update({ logo_url: publicUrl }).eq('id', existingSponsor.id);
+        } else {
+          await supabase.from('sponsors').insert([{
+            name: scheduleSponsorKey,
+            logo_url: publicUrl,
+            organization_id: orgId || null,
+            is_main: false,
+            is_selected: false
+          }]);
+        }
+      } catch (kvErr) {
+        console.warn('Sponsors KV error:', kvErr);
+      }
+
       setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj?.id || String(l.name).toLowerCase() === String(exportLeague).toLowerCase()) ? { ...l, schedule_banner_url: publicUrl, export_bg_url: publicUrl } : l));
+      setAllSponsors(prev => {
+        const idx = prev.findIndex(s => s.name === scheduleSponsorKey);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], logo_url: publicUrl };
+          return updated;
+        }
+        return [...prev, { name: scheduleSponsorKey, logo_url: publicUrl, organization_id: orgId || null, is_main: false, is_selected: false }];
+      });
     } catch (err) {
       console.error('Error saving schedule banner:', err);
     } finally {
@@ -699,7 +736,35 @@ const Schedule = () => {
           : supabase.from('leagues').update({ banner_url: publicUrl }).ilike('name', targetName)
       ]);
 
+      // Dual-sync to sponsors table as guaranteed cross-device key-value entry
+      const ytSponsorKey = `BANNER_YT_${orgId}_${exportLeague}`;
+      try {
+        const { data: existingSponsor } = await supabase.from('sponsors').select('id').eq('name', ytSponsorKey).maybeSingle();
+        if (existingSponsor?.id) {
+          await supabase.from('sponsors').update({ logo_url: publicUrl }).eq('id', existingSponsor.id);
+        } else {
+          await supabase.from('sponsors').insert([{
+            name: ytSponsorKey,
+            logo_url: publicUrl,
+            organization_id: orgId || null,
+            is_main: false,
+            is_selected: false
+          }]);
+        }
+      } catch (kvErr) {
+        console.warn('Sponsors KV error:', kvErr);
+      }
+
       setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj?.id || String(l.name).toLowerCase() === String(exportLeague).toLowerCase()) ? { ...l, yt_banner_url: publicUrl, banner_url: publicUrl } : l));
+      setAllSponsors(prev => {
+        const idx = prev.findIndex(s => s.name === ytSponsorKey);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], logo_url: publicUrl };
+          return updated;
+        }
+        return [...prev, { name: ytSponsorKey, logo_url: publicUrl, organization_id: orgId || null, is_main: false, is_selected: false }];
+      });
     } catch (err) {
       console.error('Error saving YouTube banner:', err);
     } finally {
@@ -716,6 +781,7 @@ const Schedule = () => {
     const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
     localStorage.removeItem(localKey);
 
+    const scheduleSponsorKey = `BANNER_SCHEDULE_${orgId}_${exportLeague}`;
     const targetId = currentLeagueObj?.id;
     const targetName = currentLeagueObj?.name || exportLeague;
     await Promise.allSettled([
@@ -724,8 +790,11 @@ const Schedule = () => {
         : supabase.from('leagues').update({ schedule_banner_url: null }).ilike('name', targetName),
       targetId
         ? supabase.from('leagues').update({ export_bg_url: null }).eq('id', targetId)
-        : supabase.from('leagues').update({ export_bg_url: null }).ilike('name', targetName)
+        : supabase.from('leagues').update({ export_bg_url: null }).ilike('name', targetName),
+      supabase.from('sponsors').delete().eq('name', scheduleSponsorKey)
     ]);
+
+    setAllSponsors(prev => prev.filter(s => s.name !== scheduleSponsorKey));
   };
 
   const handleDeleteYtBanner = async () => {
@@ -736,6 +805,7 @@ const Schedule = () => {
     const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
     localStorage.removeItem(localKey);
 
+    const ytSponsorKey = `BANNER_YT_${orgId}_${exportLeague}`;
     const targetId = currentLeagueObj?.id;
     const targetName = currentLeagueObj?.name || exportLeague;
     await Promise.allSettled([
@@ -744,8 +814,11 @@ const Schedule = () => {
         : supabase.from('leagues').update({ yt_banner_url: null }).ilike('name', targetName),
       targetId
         ? supabase.from('leagues').update({ banner_url: null }).eq('id', targetId)
-        : supabase.from('leagues').update({ banner_url: null }).ilike('name', targetName)
+        : supabase.from('leagues').update({ banner_url: null }).ilike('name', targetName),
+      supabase.from('sponsors').delete().eq('name', ytSponsorKey)
     ]);
+
+    setAllSponsors(prev => prev.filter(s => s.name !== ytSponsorKey));
   };
 
   const handleExportYtThumbnail = async (match) => {
