@@ -319,6 +319,16 @@
   height: 44px;
 }
 
+.create-league-form.editing-active {
+  border: 1.5px solid #00aaff;
+  background: rgba(0, 170, 255, 0.06);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 0 20px rgba(0, 170, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
 /* Leagues List */
 .leagues-list-container h3 {
   color: rgba(255,255,255,0.6);

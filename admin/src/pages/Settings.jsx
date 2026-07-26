@@ -211,6 +211,11 @@ const Settings = () => {
     setLeagueLogo(league.logo_url || '');
     setIsJunior(!!league.is_junior);
     setMessage({ type: '', text: '' });
+
+    setTimeout(() => {
+      leagueFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      leagueInputRef.current?.focus();
+    }, 100);
   };
 
   const cancelEditLeague = () => {
@@ -567,11 +572,23 @@ const Settings = () => {
                 <h2>Tashkilot Ligalari Boshqaruvi</h2>
               </div>
 
-              <form onSubmit={handleSaveLeague} className="create-league-form">
+              <form ref={leagueFormRef} onSubmit={handleSaveLeague} className={`create-league-form ${editingLeague ? 'editing-active' : ''}`}>
+                {editingLeague && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid rgba(0, 170, 255, 0.2)' }}>
+                    <span style={{ color: '#00aaff', fontWeight: '800', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Pencil size={14} /> <strong>"{editingLeague.name}"</strong> ligasi tahrirlanmoqda
+                    </span>
+                    <button type="button" onClick={cancelEditLeague} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '12px' }}>
+                      Bekor qilish ✕
+                    </button>
+                  </div>
+                )}
+
                 <div className="form-row">
                   <div className="settings-form-group flex-2">
-                    <label>{editingLeague ? 'Liga Nominı Tahrirlash' : 'Yangi Liga Nomi'}</label>
+                    <label>{editingLeague ? 'Liga Nomi' : 'Yangi Liga Nomi'}</label>
                     <input
+                      ref={leagueInputRef}
                       type="text"
                       placeholder="Masalan: Farg'ona Super Liga"
                       value={leagueName}
@@ -583,9 +600,19 @@ const Settings = () => {
                   {/* League Logo Direct Upload (PNG / Transparent) */}
                   <div className="settings-form-group flex-2">
                     <label>Liga Logosi</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
                       {leagueLogo && (
-                        <img src={leagueLogo} alt="League Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <img src={leagueLogo} alt="League Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                          <button
+                            type="button"
+                            onClick={() => setLeagueLogo('')}
+                            title="Logotipni o'chirish"
+                            style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', padding: '6px 10px', borderRadius: '8px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       )}
                       <button
                         type="button"
@@ -606,7 +633,7 @@ const Settings = () => {
                         }}
                       >
                         <Upload size={15} />
-                        <span>{uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Almashtirish' : 'Logo yuklash (PNG / Transparent)')}</span>
+                        <span>{uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Logo almashtirish' : 'Logo yuklash (PNG / Transparent)')}</span>
                       </button>
 
                       <input
