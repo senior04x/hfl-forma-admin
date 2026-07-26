@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download } from 'lucide-react';
+import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Image as ImageIcon, Upload } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import ImageCropperModal from '../components/ImageCropperModal';
 import './Schedule.css';
 
 const DEFAULT_LEAGUE_LOGOS = {
@@ -23,10 +24,9 @@ const Schedule = () => {
   const [activeLeagues, setActiveLeagues] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState('all'); // all, scheduled, live, finished
+  const [filterStatus, setFilterStatus] = useState('all'); 
   const { currentOrg, orgId } = useOrg();
 
-  // Form states
   const [selectedLeague, setSelectedLeague] = useState('');
   const [homeTeamId, setHomeTeamId] = useState('');
   const [awayTeamId, setAwayTeamId] = useState('');
@@ -37,12 +37,17 @@ const Schedule = () => {
   const [youtubeLink, setYoutubeLink] = useState('');
   const [matchRound, setMatchRound] = useState('');
 
-  // Export states
   const [exportLeague, setExportLeague] = useState('');
   const [exportRound, setExportRound] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [selectedSponsors, setSelectedSponsors] = useState([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(true);
   const exportRef = useRef(null);
+
+  const [scheduleBanner, setScheduleBanner] = useState('');
+  const [cropperRawImage, setCropperRawImage] = useState(null);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const bannerFileInputRef = useRef(null);
 
   useEffect(() => {
     loadLeaguesAndData();
@@ -53,24 +58,108 @@ const Schedule = () => {
   }, [orgId]);
 
   const loadLeaguesAndData = async () => {
-    const fetchedLeagues = await getActiveOrgLeagues(orgId);
-    setActiveLeagues(fetchedLeagues);
-    if (fetchedLeagues.length > 0) {
-      setExportLeague(fetchedLeagues[0].name);
+    setLoading(true);
+    try {
+      const fetchedLeagues = await getActiveOrgLeagues(orgId);
+      setActiveLeagues(fetchedLeagues);
+      if (fetchedLeagues.length > 0) {
+        setExportLeague(fetchedLeagues[0].name);
+      }
+      await Promise.all([
+        fetchTeams(fetchedLeagues),
+        fetchMatches(fetchedLeagues)
+      ]);
+    } catch (err) {
+      console.error('Error loading schedule:', err);
+    } finally {
+      setLoading(false);
     }
-    fetchTeams(fetchedLeagues);
-    fetchMatches(fetchedLeagues);
   };
+
+  useEffect(() => {
+    if (!exportLeague || !activeLeagues.length) return;
+    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+    if (!currentLeagueObj) return;
+
+    const dbUrl = currentLeagueObj.schedule_banner_url || currentLeagueObj.banner_url;
+    if (dbUrl) {
+      setScheduleBanner(dbUrl);
+    } else {
+      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
+      const savedLocal = localStorage.getItem(localKey);
+      setScheduleBanner(savedLocal || '');
+    }
+  }, [exportLeague, activeLeagues, orgId]);
 
   useEffect(() => {
     const leagueMatches = matches.filter(m => m.league === exportLeague && m.round);
     if (leagueMatches.length > 0) {
-      const maxR = Math.max(...leagueMatches.map(m => m.round));
+      const maxR = Math.max(...leagueMatches.map(m => Number(m.round)));
       setExportRound(maxR.toString());
     } else {
       setExportRound('');
     }
   }, [matches, exportLeague]);
+
+  const handleBannerFileSelect = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperRawImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCroppedBannerSave = async (croppedBlob) => {
+    if (!croppedBlob) return;
+    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+    if (!currentLeagueObj) return;
+
+    setUploadingBanner(true);
+    try {
+      const publicUrl = await new Promise((res) => {
+        const reader = new FileReader();
+        reader.onloadend = () => res(reader.result);
+        reader.readAsDataURL(croppedBlob);
+      });
+
+      setScheduleBanner(publicUrl);
+      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
+      localStorage.setItem(localKey, publicUrl);
+
+      try {
+        await supabase
+          .from('leagues')
+          .update({ schedule_banner_url: publicUrl })
+          .eq('id', currentLeagueObj.id);
+      } catch (e) {}
+
+    } catch (err) {
+      console.error('Error saving schedule banner:', err);
+    } finally {
+      setUploadingBanner(false);
+      setCropperRawImage(null);
+    }
+  };
+
+  const handleDeleteBanner = async () => {
+    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+    if (!currentLeagueObj) return;
+    if (!window.confirm(`"${exportLeague}" ligasi uchun 1x1 orqa fon rasmini o'chirmoqchimisiz?`)) return;
+
+    setScheduleBanner('');
+    const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
+    localStorage.removeItem(localKey);
+
+    try {
+      await supabase
+        .from('leagues')
+        .update({ schedule_banner_url: null })
+        .eq('id', currentLeagueObj.id);
+    } catch (e) {}
+  };
 
   const handleExport = async () => {
     if (!exportRef.current || isExporting) return;
@@ -157,7 +246,8 @@ const Schedule = () => {
         location: finalLocation,
         youtube_link: youtubeLink,
         round: matchRound ? parseInt(matchRound) : null,
-        organization_id: orgId
+        organization_id: orgId,
+        status: 'scheduled'
       }]);
 
       if (error) throw error;
@@ -181,62 +271,86 @@ const Schedule = () => {
     }
   };
 
-  // Filtered teams for dropdowns
   const availableTeams = teams.filter(t => t.league === selectedLeague);
+  const availableRounds = Array.from(new Set(matches.filter(m => m.league === exportLeague && m.round).map(m => Number(m.round)))).sort((a, b) => b - a);
 
   return (
-    <div className="schedule-container">
+    <div className="schedule-page">
       <div className="schedule-header">
-        <h1>O'yinlar Jadvali</h1>
+        <div>
+          <h1>O'yinlar Jadvali</h1>
+          <p>{currentOrg?.name} ({exportLeague || 'Barcha ligalar'})</p>
+        </div>
         <button className="btn-add-match" onClick={handleOpenModal}>
           <Plus size={18} /> O'yin qo'shish
         </button>
       </div>
 
-      <div className="schedule-filters">
-        <button 
-          className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`} 
-          onClick={() => setFilterStatus('all')}
-        >Barchasi</button>
-        <button 
-          className={`filter-btn ${filterStatus === 'scheduled' ? 'active' : ''}`} 
-          onClick={() => setFilterStatus('scheduled')}
-        >Rejalashtirilgan</button>
-        <button 
-          className={`filter-btn ${filterStatus === 'live' ? 'active' : ''}`} 
-          onClick={() => setFilterStatus('live')}
-        >Jonli (Live)</button>
-        <button 
-          className={`filter-btn ${filterStatus === 'finished' ? 'active' : ''}`} 
-          onClick={() => setFilterStatus('finished')}
-        >Tugagan</button>
-      </div>
+      <div className="schedule-filter-banner-card">
+        <div className="filter-header-bar">
+          <div className="filter-title-group" onClick={() => setIsFilterOpen(!isFilterOpen)}>
+            <Filter size={18} className="filter-icon" />
+            <span>Liga & Tur Filterlari</span>
+            <ChevronDown size={18} className={`chevron-icon ${isFilterOpen ? 'open' : ''}`} />
+          </div>
 
-      <div className="admin-controls" style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-        <div className="filter-group" style={{ width: '100%' }}>
-          <label>Liga tanlang (Ekranda ko'rish va Eksport uchun)</label>
-          <select value={exportLeague} onChange={(e) => setExportLeague(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-            {activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
-          </select>
+          <div className="schedule-status-tabs">
+            <button className={`status-tab ${filterStatus === 'all' ? 'active' : ''}`} onClick={() => setFilterStatus('all')}>Barchasi</button>
+            <button className={`status-tab ${filterStatus === 'scheduled' ? 'active' : ''}`} onClick={() => setFilterStatus('scheduled')}>Rejalashtirilgan</button>
+            <button className={`status-tab ${filterStatus === 'live' ? 'active' : ''}`} onClick={() => setFilterStatus('live')}>Jonli (Live)</button>
+            <button className={`status-tab ${filterStatus === 'finished' ? 'active' : ''}`} onClick={() => setFilterStatus('finished')}>Tugagan</button>
+          </div>
         </div>
-        <div className="filter-group" style={{ width: '100%' }}>
-          <label>Tur (Eksport va ekranda ko'rish uchun)</label>
-          <select value={exportRound} onChange={(e) => setExportRound(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-            <option value="">Barchasi</option>
-            {Array.from(new Set(matches.filter(m => m.league === exportLeague && m.round).map(m => m.round)))
-              .sort((a, b) => b - a)
-              .map(r => <option key={r} value={r}>{r}-tur</option>)}
-          </select>
-        </div>
-        <div className="filter-group" style={{ width: '100%', display: 'flex' }}>
-          <button 
-            className="btn-export" 
-            onClick={handleExport} 
-            disabled={isExporting}
-            style={{ display: 'flex', width: '100%', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '12px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
-          >
-            <Download size={18} /> {isExporting ? 'Yuklanmoqda...' : 'Rasmni yuklab olish'}
-          </button>
+
+        {isFilterOpen && (
+          <div className="filter-expanded-content">
+            <div className="filter-row">
+              <div className="filter-field">
+                <label><Trophy size={14} /> Liga tanlang</label>
+                <div className="custom-select-wrapper">
+                  <select value={exportLeague} onChange={e => setExportLeague(e.target.value)}>
+                    {activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name} {l.isCollab ? '(Co-Host)' : ''}</option>)}
+                  </select>
+                  <ChevronDown size={16} className="select-arrow" />
+                </div>
+              </div>
+              <div className="filter-field">
+                <label><Layers size={14} /> Tur</label>
+                <div className="custom-select-wrapper">
+                  <select value={exportRound} onChange={e => setExportRound(e.target.value)}>
+                    <option value="">Barcha turlar</option>
+                    {availableRounds.map(r => <option key={r} value={r}>{r}-Tur</option>)}
+                  </select>
+                  <ChevronDown size={16} className="select-arrow" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="poster-banner-section">
+          <div className="poster-preview-square">
+            {scheduleBanner ? (
+              <img src={scheduleBanner} alt="1x1 Schedule Banner" className="poster-img-1x1" />
+            ) : (
+              <div className="poster-placeholder-1x1">
+                <ImageIcon size={32} />
+                <span>1x1 Orqa Fon</span>
+              </div>
+            )}
+          </div>
+          <div className="poster-action-buttons">
+            <button className="btn-download-poster" onClick={handleExport} disabled={isExporting}>
+              <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Rasmni Yuklab Olish'}</span>
+            </button>
+            <div className="poster-sub-buttons">
+              <button className="btn-banner-action btn-upload" onClick={() => bannerFileInputRef.current?.click()}>
+                <Upload size={15} /> <span>{scheduleBanner ? 'Almashtirish' : 'Rasm yuklash'}</span>
+              </button>
+              {scheduleBanner && <button className="btn-banner-action btn-delete" onClick={handleDeleteBanner}><Trash2 size={15} /> <span>O'chirish</span></button>}
+            </div>
+            <input ref={bannerFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBannerFileSelect} />
+          </div>
         </div>
       </div>
 
@@ -250,64 +364,26 @@ const Schedule = () => {
           })
           .map(match => (
           <div key={match.id} className="match-card">
-            <button className="delete-match-btn" onClick={() => handleDelete(match.id)}>
-              <Trash2 size={16} />
-            </button>
+            <button className="delete-match-btn" onClick={() => handleDelete(match.id)}><Trash2 size={16} /></button>
             <div className="match-badges-container">
                <div className="match-league-badge">{match.league}</div>
-               {match.round && <div className="match-league-badge" style={{background: '#3b82f6'}}>{match.round}-Tur</div>}
-               {match.status === 'scheduled' && <div className="match-status-badge scheduled">Rejalashtirilgan</div>}
-               {(match.status === 'first_half' || match.status === 'second_half' || match.status === 'half_time') && <div className="match-status-badge live">Jonli (Live)</div>}
-               {match.status === 'finished' && <div className="match-status-badge finished">Yakunlangan</div>}
+               {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
             </div>
-            
             <div className="match-teams">
-              <div className="team">
-                <img src={match.home_team?.logo_url || '/images/default-team.png'} alt="Home" className="team-logo" />
-                <span className="team-name">{match.home_team?.name}</span>
-              </div>
-              <div className="match-vs">
-              {(match.status === 'finished' || match.home_score > 0 || match.away_score > 0) 
-                ? <>{match.home_score || 0} : {match.away_score || 0}</>
-                : 'VS'}
+              <div className="team"><img src={match.home_team?.logo_url || '/images/default-team.png'} alt="Home" className="team-logo" /><span>{match.home_team?.name}</span></div>
+              <div className="match-vs">{(match.status === 'finished' || match.home_score > 0 || match.away_score > 0) ? <>{match.home_score || 0} : {match.away_score || 0}</> : 'VS'}</div>
+              <div className="team"><img src={match.away_team?.logo_url || '/images/default-team.png'} alt="Away" className="team-logo" /><span>{match.away_team?.name}</span></div>
             </div>
-              <div className="team">
-                <img src={match.away_team?.logo_url || '/images/default-team.png'} alt="Away" className="team-logo" />
-                <span className="team-name">{match.away_team?.name}</span>
-              </div>
-            </div>
-
             <div className="match-details">
-              <div className="detail-row">
-                <Calendar size={14} /> <span>{match.match_date}</span>
-              </div>
-              <div className="detail-row">
-                <Clock size={14} /> <span>{match.match_time}</span>
-              </div>
-              <div className="detail-row">
-                <MapPin size={14} /> <span>{match.location}</span>
-              </div>
-              {match.youtube_link && (
-                <div className="detail-row">
-                  <Video size={14} color="#ef4444" /> 
-                  <a href={match.youtube_link} target="_blank" rel="noreferrer" className="youtube-link">Jonli ko'rish</a>
-                </div>
-              )}
+              <div className="detail-row"><Calendar size={14} /> <span>{match.match_date}</span></div>
+              <div className="detail-row"><Clock size={14} /> <span>{match.match_time}</span></div>
+              <div className="detail-row"><MapPin size={14} /> <span>{match.location}</span></div>
             </div>
-
-            <button
-              className="btn-add-match"
-              style={{width: '100%', justifyContent: 'center', borderRadius: '10px', marginTop: '0'}}
-              onClick={() => navigate('/match/' + match.id)}
-            >
-              ⚙️ Boshqarish
-            </button>
+            <button className="btn-manage-match" onClick={() => navigate('/match/' + match.id)}>⚙️ Boshqarish</button>
           </div>
         ))}
-        {matches.length === 0 && (
-          <div style={{gridColumn: '1 / -1', textAlign: 'center', color: '#64748b', padding: '40px'}}>
-            Hali o'yinlar rejalashtirilmagan.
-          </div>
+        {matches.filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound)).length === 0 && (
+          <div className="no-matches-box"><Calendar size={36} /><p>O'yinlar topilmadi.</p></div>
         )}
       </div>
 
@@ -315,185 +391,41 @@ const Schedule = () => {
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content schedule-modal" onClick={e => e.stopPropagation()}>
             <h2>Yangi o'yin rejalashtirish</h2>
-            
-            <div className="form-group">
-              <label>Liga</label>
-              <select value={selectedLeague} onChange={(e) => {
-                setSelectedLeague(e.target.value);
-                setHomeTeamId('');
-                setAwayTeamId('');
-              }}>
-                <option value="">Ligani tanlang</option>
-                {activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Mezbon jamoa</label>
-              <select value={homeTeamId} onChange={(e) => setHomeTeamId(e.target.value)} disabled={!selectedLeague}>
-                <option value="">Jamoani tanlang</option>
-                {availableTeams.map(t => (
-                  <option key={t.id} value={t.id} disabled={t.id === awayTeamId}>{t.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="vs-text">VS</div>
-
-            <div className="form-group">
-              <label>Mehmon jamoa</label>
-              <select value={awayTeamId} onChange={(e) => setAwayTeamId(e.target.value)} disabled={!selectedLeague}>
-                <option value="">Jamoani tanlang</option>
-                {availableTeams.map(t => (
-                  <option key={t.id} value={t.id} disabled={t.id === homeTeamId}>{t.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="datetime-row">
-              <div className="form-group">
-                <label>Sana</label>
-                <input type="date" value={matchDate} onChange={(e) => setMatchDate(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Vaqt</label>
-                <input type="time" value={matchTime} onChange={(e) => setMatchTime(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Nechanchi tur? (Majburiy emas)</label>
-              <input type="number" placeholder="Masalan: 1" value={matchRound} onChange={(e) => setMatchRound(e.target.value)} />
-            </div>
-
-            <div className="form-group">
-              <label>Lokatsiya / Stadion nomi (Majburiy emas)</label>
-              <input type="text" placeholder="Masalan: Sergeli" value={stadiumName} onChange={(e) => setStadiumName(e.target.value)} />
-            </div>
-
-            <div className="form-group">
-              <label>Maydonni tanlang (Majburiy, OBS uchun)</label>
-              <select value={location} onChange={(e) => setLocation(e.target.value)}>
-                <option value="">Maydonni tanlang</option>
-                <option value="1-maydon">1-Maydon</option>
-                <option value="2-maydon">2-Maydon</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>YouTube Translatsiya Linki (Ixtiyoriy)</label>
-              <input type="text" placeholder="https://youtube.com/..." value={youtubeLink} onChange={(e) => setYoutubeLink(e.target.value)} />
-            </div>
-
-            <div className="modal-actions">
-              <button className="btn-cancel" onClick={() => setIsModalOpen(false)}>Bekor qilish</button>
-              <button className="btn-save" onClick={handleSave} disabled={loading}>
-                {loading ? 'Saqlanmoqda...' : 'Saqlash'}
-              </button>
-            </div>
+            <div className="form-group"><label>Liga</label><select value={selectedLeague} onChange={(e) => {setSelectedLeague(e.target.value); setHomeTeamId(''); setAwayTeamId('');}}><option value="">Tanlang</option>{activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}</select></div>
+            <div className="form-group"><label>Mezbon</label><select value={homeTeamId} onChange={(e) => setHomeTeamId(e.target.value)}><option value="">Tanlang</option>{availableTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+            <div className="form-group"><label>Mehmon</label><select value={awayTeamId} onChange={(e) => setAwayTeamId(e.target.value)}><option value="">Tanlang</option>{availableTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+            <div className="datetime-row"><div className="form-group"><label>Sana</label><input type="date" value={matchDate} onChange={(e) => setMatchDate(e.target.value)} /></div><div className="form-group"><label>Vaqt</label><input type="time" value={matchTime} onChange={(e) => setMatchTime(e.target.value)} /></div></div>
+            <div className="form-group"><label>Maydon</label><select value={location} onChange={(e) => setLocation(e.target.value)}><option value="">Tanlang</option><option value="1-maydon">1-Maydon</option><option value="2-maydon">2-Maydon</option></select></div>
+            <div className="modal-actions"><button className="btn-cancel" onClick={() => setIsModalOpen(false)}>Bekor</button><button className="btn-save" onClick={handleSave}>Saqlash</button></div>
           </div>
         </div>
       )}
 
-      {/* HIDDEN EXPORT TEMPLATE */}
-      <div style={{ position: 'fixed', left: '-9999px', top: 0, opacity: 1, pointerEvents: 'none', zIndex: -100 }}>
-        {(() => {
-          const currentExpLeagueObj = activeLeagues.find(l => l.name === exportLeague);
-          const isCollab = currentExpLeagueObj?.isCollab;
+      {cropperRawImage && (
+        <ImageCropperModal
+          isOpen={!!cropperRawImage}
+          imageSrc={cropperRawImage}
+          onClose={() => setCropperRawImage(null)}
+          onSave={handleCroppedBannerSave}
+          title="Banner qirqish"
+          aspect={1 / 1}
+        />
+      )}
 
-          return (
-            <div 
-              ref={exportRef} 
-              className={`schedule-export-container theme-export-${exportLeague.split(' ')[0]}`}
-            >
-              <div className="sch-export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0px', padding: '0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isCollab ? (
-                    <>
-                      <img src={currentExpLeagueObj.org1?.logo_url || '/hfl-logo-for-jadval.png'} alt="Org 1" style={{ height: '90px', objectFit: 'contain' }} crossOrigin="anonymous" />
-                      <img src="/x.png" crossOrigin="anonymous" style={{ height: '18px', objectFit: 'contain', opacity: 0.7 }} />
-                      <img src={currentExpLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" style={{ height: '75px', objectFit: 'contain' }} crossOrigin="anonymous" />
-                    </>
-                  ) : (
-                    <img src={currentOrg?.logo_url || '/hfl-logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} style={{ height: '100px', objectFit: 'contain' }} crossOrigin="anonymous" />
-                  )}
-                </div>
-
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  {currentExpLeagueObj?.logo_url ? (
-                    <img src={currentExpLeagueObj.logo_url} alt={exportLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
-                  ) : DEFAULT_LEAGUE_LOGOS[exportLeague] ? (
-                    <img src={DEFAULT_LEAGUE_LOGOS[exportLeague]} alt={exportLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
-                  ) : (
-                    <h2 style={{ color: '#fff', fontSize: '32px', fontWeight: '900', textTransform: 'uppercase' }}>{exportLeague}</h2>
-                  )}
-                </div>
-
-                <img src="/joma.png" alt="Joma" style={{ height: '80px', filter: 'brightness(0) invert(1)', objectFit: 'contain' }} crossOrigin="anonymous" />
-              </div>
-
+      <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
+        <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
           <div className="sch-export-body">
-            {matches
-              .filter(m => m.league === exportLeague && m.round == exportRound)
-              .map(match => (
-                <div key={match.id} className="sch-match-row">
-                  {/* 1. Home Logo */}
-                  <img 
-                    src={match.home_team?.logo_url} 
-                    alt="" 
-                    crossOrigin="anonymous" 
-                    className="sch-team-logo"
-                    onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }}
-                  />
-
-                  {/* 2. Home Team Name */}
-                  <div style={{ textAlign: 'center', fontSize: '20px', fontWeight: '800', textTransform: 'uppercase', color: '#ffffff', wordBreak: 'break-word', whiteSpace: 'pre-wrap', lineHeight: '1.2', padding: '0 10px' }}>
-                    {match.home_team?.name}
-                  </div>
-                  
-                  {/* 3. Time Container */}
-                  <div className="sch-time-container">
-                    <div className="sch-time-date">
-                      {match.match_date ? match.match_date.split('-').reverse().join('.') : ''}
-                    </div>
-                    <div className="sch-time-box">
-                      {match.match_time ? match.match_time.substring(0, 5) : '00:00'}
-                    </div>
-                  </div>
-
-                  {/* 4. Away Team Name */}
-                  <div style={{ textAlign: 'center', fontSize: '20px', fontWeight: '800', textTransform: 'uppercase', color: '#ffffff', wordBreak: 'break-word', whiteSpace: 'pre-wrap', lineHeight: '1.2', padding: '0 10px' }}>
-                    {match.away_team?.name}
-                  </div>
-
-                  {/* 5. Away Logo */}
-                  <img 
-                    src={match.away_team?.logo_url} 
-                    alt="" 
-                    crossOrigin="anonymous" 
-                    className="sch-team-logo"
-                    onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }}
-                  />
-                </div>
-              ))}
-          </div>
-
-          <div className="sch-export-footer">
-            <div style={{ display: 'flex', gap: '30px', alignItems: 'center', marginBottom: '10px' }}>
-              {exportLeague !== '7x7 liga' && selectedSponsors.map((s, idx) => (
-                <React.Fragment key={s.id}>
-                  <img src={s.logo_url} alt="Sponsor" style={{ height: '45px', filter: 'brightness(0) invert(1)' }} crossOrigin="anonymous" />
-                  {idx < selectedSponsors.length - 1 && <div style={{ height: '30px', width: '1px', background: '#fff', opacity: 0.5 }}></div>}
-                </React.Fragment>
-              ))}
-            </div>
-            <div className="sch-social" style={{ color: exportLeague === '7x7 liga' ? '#ffffff' : 'white', marginBottom: '0px' }}>
-              @havas_football
-            </div>
+            {matches.filter(m => m.league === exportLeague && m.round == exportRound).map(match => (
+              <div key={match.id} className="sch-match-row">
+                <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                <div style={{ color: '#fff', fontSize: '20px', fontWeight: '800' }}>{match.home_team?.name}</div>
+                <div className="sch-time-container"><div>{match.match_date?.split('-').reverse().join('.')}</div><div>{match.match_time?.substring(0, 5)}</div></div>
+                <div style={{ color: '#fff', fontSize: '20px', fontWeight: '800' }}>{match.away_team?.name}</div>
+                <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+              </div>
+            ))}
           </div>
         </div>
-        );
-      })()}
       </div>
     </div>
   );
