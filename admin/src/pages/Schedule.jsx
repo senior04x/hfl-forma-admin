@@ -897,14 +897,15 @@ const Schedule = () => {
       setEditingMatch(null);
       await fetchMatches();
 
-      // Auto-create YouTube live stream if checkbox was checked
-      if (autoCreateYtLive && ytChannelInfo && savedMatchId) {
+      // AUTOMATIC YouTube Live stream creation & thumbnail upload when YouTube is connected
+      const existingYtLink = editingMatch?.youtube_link || youtubeLink;
+      if (ytChannelInfo && savedMatchId && !existingYtLink) {
         const fullSavedMatch = {
           ...matchData,
           id: savedMatchId
         };
         await createYouTubeLiveStream(fullSavedMatch, true);
-      } else if (editingMatch?.youtube_link) {
+      } else if (existingYtLink) {
         // Auto-update YouTube thumbnail with scores if match was updated
         const extractId = (url) => {
           if (!url) return null;
@@ -913,7 +914,7 @@ const Schedule = () => {
           if (url.includes('youtu.be/')) return url.split('youtu.be/')[1]?.split('?')[0];
           return null;
         };
-        const broadcastId = extractId(editingMatch.youtube_link);
+        const broadcastId = extractId(existingYtLink);
         if (broadcastId) {
           const homeTeamObj = teams.find(t => t.id === matchData.home_team_id);
           const awayTeamObj = teams.find(t => t.id === matchData.away_team_id);
@@ -1316,16 +1317,6 @@ const Schedule = () => {
               />
             </div>
 
-            <div className="form-group">
-              <label>YouTube Translyatsiya Linki (ixtiyoriy)</label>
-              <input 
-                type="url" 
-                placeholder="https://youtube.com/live/..." 
-                value={youtubeLink} 
-                onChange={(e) => setYoutubeLink(e.target.value)} 
-              />
-            </div>
-
             <div className="form-group checkbox-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px', background: 'rgba(255, 59, 48, 0.1)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255, 59, 48, 0.25)' }}>
               <input 
                 type="checkbox" 
@@ -1338,21 +1329,6 @@ const Schedule = () => {
                 ⚠️ Qoldirilgan o'yin (Eksport rasmida ajratilib eng pastda ko'rsatiladi)
               </label>
             </div>
-
-            {ytChannelInfo && (
-              <div className="form-group checkbox-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', background: 'rgba(255, 0, 0, 0.1)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255, 0, 0, 0.3)' }}>
-                <input 
-                  type="checkbox" 
-                  id="auto_yt_live_checkbox"
-                  checked={autoCreateYtLive} 
-                  onChange={(e) => setAutoCreateYtLive(e.target.checked)} 
-                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#ff0000' }}
-                />
-                <label htmlFor="auto_yt_live_checkbox" style={{ margin: 0, cursor: 'pointer', fontWeight: '700', color: '#ff4d4d', fontSize: '13px' }}>
-                  YouTube'da avtomatik Jonli Efir ochish va 16:9 oblojka yuklash
-                </label>
-              </div>
-            )}
 
             <div className="modal-actions">
               <button className="btn-cancel" onClick={() => setIsModalOpen(false)}>Bekor qilish</button>
