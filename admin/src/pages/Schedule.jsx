@@ -308,27 +308,24 @@ const [exportLeague, setExportLeague] = useState('');
     e.target.value = '';
   };
 
-  const handleCroppedBannerSave = async (croppedBlob) => {
-    if (!croppedBlob) return;
+  const handleCroppedBannerSave = async (croppedDataUrl) => {
+    if (!croppedDataUrl) return;
     const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
     if (!currentLeagueObj) return;
 
     setUploadingBanner(true);
     try {
-      const publicUrl = await new Promise((res) => {
-        const reader = new FileReader();
-        reader.onloadend = () => res(reader.result);
-        reader.readAsDataURL(croppedBlob);
-      });
+      setScheduleBanner(croppedDataUrl);
 
-      setScheduleBanner(publicUrl);
+      // Save to localStorage per org & league
       const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
-      localStorage.setItem(localKey, publicUrl);
+      localStorage.setItem(localKey, croppedDataUrl);
 
+      // Try update in Supabase leagues table if column exists
       try {
         await supabase
           .from('leagues')
-          .update({ schedule_banner_url: publicUrl })
+          .update({ schedule_banner_url: croppedDataUrl })
           .eq('id', currentLeagueObj.id);
       } catch (e) {}
 
@@ -582,37 +579,48 @@ const [exportLeague, setExportLeague] = useState('');
         </div>
       </div>
 
-      <div className="matches-grid">
-        {matches
-          .filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound))
-          .filter(m => {
-            if (filterStatus === 'all') return true;
-            if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
-            return m.status === filterStatus;
-          })
-          .map(match => (
-          <div key={match.id} className="match-card">
-            <button className="delete-match-btn" onClick={() => handleDelete(match.id)} title="O'chiresh"><Trash2 size={16} /></button>
-            <div className="match-badges-container">
-               <div className="match-league-badge">{match.league}</div>
-               {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
+      {/* Matches Grid Wrapper with Glassmorphism overlay on 1x1 scheduleBanner */}
+      <div 
+        className={`schedule-matches-wrapper ${scheduleBanner ? 'has-bg-banner' : ''}`}
+        style={scheduleBanner ? {
+          backgroundImage: `linear-gradient(rgba(11, 14, 23, 0.55), rgba(11, 14, 23, 0.8)), url(${scheduleBanner})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        } : {}}
+      >
+        <div className="matches-grid">
+          {matches
+            .filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound))
+            .filter(m => {
+              if (filterStatus === 'all') return true;
+              if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
+              return m.status === filterStatus;
+            })
+            .map(match => (
+            <div key={match.id} className="match-card glassmorphic-card">
+              <button className="delete-match-btn" onClick={() => handleDelete(match.id)} title="O'chirish"><Trash2 size={16} /></button>
+              <div className="match-badges-container">
+                 <div className="match-league-badge">{match.league}</div>
+                 {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
+              </div>
+              <div className="match-teams">
+                <div className="team"><img src={match.home_team?.logo_url || '/images/default-team.png'} alt="Home" className="team-logo" /><span>{match.home_team?.name}</span></div>
+                <div className="match-vs">{(match.status === 'finished' || match.home_score > 0 || match.away_score > 0) ? <>{match.home_score || 0} : {match.away_score || 0}</> : 'VS'}</div>
+                <div className="team"><img src={match.away_team?.logo_url || '/images/default-team.png'} alt="Away" className="team-logo" /><span>{match.away_team?.name}</span></div>
+              </div>
+              <div className="match-details">
+                <div className="detail-row"><Calendar size={14} /> <span>{match.match_date}</span></div>
+                <div className="detail-row"><Clock size={14} /> <span>{match.match_time}</span></div>
+                <div className="detail-row"><MapPin size={14} /> <span>{match.location}</span></div>
+              </div>
+              <button className="btn-manage-match" onClick={() => navigate('/match/' + match.id)}>⚙️ Boshqarish</button>
             </div>
-            <div className="match-teams">
-              <div className="team"><img src={match.home_team?.logo_url || '/images/default-team.png'} alt="Home" className="team-logo" /><span>{match.home_team?.name}</span></div>
-              <div className="match-vs">{(match.status === 'finished' || match.home_score > 0 || match.away_score > 0) ? <>{match.home_score || 0} : {match.away_score || 0}</> : 'VS'}</div>
-              <div className="team"><img src={match.away_team?.logo_url || '/images/default-team.png'} alt="Away" className="team-logo" /><span>{match.away_team?.name}</span></div>
-            </div>
-            <div className="match-details">
-              <div className="detail-row"><Calendar size={14} /> <span>{match.match_date}</span></div>
-              <div className="detail-row"><Clock size={14} /> <span>{match.match_time}</span></div>
-              <div className="detail-row"><MapPin size={14} /> <span>{match.location}</span></div>
-            </div>
-            <button className="btn-manage-match" onClick={() => navigate('/match/' + match.id)}>⚙️ Boshqarish</button>
-          </div>
-        ))}
-        {matches.filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound)).length === 0 && (
-          <div className="no-matches-box"><Calendar size={36} /><p>O'yinlar topilmadi.</p></div>
-        )}
+          ))}
+          {matches.filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound)).length === 0 && (
+            <div className="no-matches-box"><Calendar size={36} /><p>O'yinlar topilmadi.</p></div>
+          )}
+        </div>
       </div>
 
       {isModalOpen && (
