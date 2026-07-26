@@ -472,17 +472,6 @@ const Settings = () => {
                 </div>
               </div>
 
-              <div className="settings-form-group checkbox-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={isJunior}
-                    onChange={e => setIsJunior(e.target.checked)}
-                  />
-                  <span>Junior (U-14)</span>
-                </label>
-              </div>
-
               <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
                 <button type="submit" className="settings-btn settings-btn-primary add-league-btn" disabled={creatingLeague}>
                   {editingLeague ? <Save size={16} /> : <Plus size={16} />}
