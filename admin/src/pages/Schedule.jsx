@@ -130,7 +130,7 @@ const Schedule = () => {
     const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
     if (!currentLeagueObj) return;
 
-    const dbUrl = currentLeagueObj.schedule_banner_url || currentLeagueObj.banner_url;
+    const dbUrl = currentLeagueObj.schedule_banner_url || currentLeagueObj.export_bg_url || currentLeagueObj.banner_url;
     if (dbUrl) {
       setScheduleBanner(dbUrl);
     } else {
@@ -139,7 +139,7 @@ const Schedule = () => {
       setScheduleBanner(savedLocal || '');
     }
 
-    const ytDbUrl = currentLeagueObj.yt_banner_url;
+    const ytDbUrl = currentLeagueObj.yt_banner_url || currentLeagueObj.banner_url;
     if (ytDbUrl) {
       setYtBanner(ytDbUrl);
     } else {
@@ -219,16 +219,19 @@ const Schedule = () => {
         console.warn('Storage upload fallback:', uploadExc);
       }
 
-      const { error: dbErr } = await supabase
+      let { error: dbErr } = await supabase
         .from('leagues')
-        .update({ schedule_banner_url: publicUrl })
+        .update({ schedule_banner_url: publicUrl, export_bg_url: publicUrl })
         .eq('id', currentLeagueObj.id);
 
       if (dbErr) {
-        console.error('Database update error for schedule_banner_url:', dbErr);
-      } else {
-        setActiveLeagues(prev => prev.map(l => l.id === currentLeagueObj.id ? { ...l, schedule_banner_url: publicUrl } : l));
+        await supabase
+          .from('leagues')
+          .update({ export_bg_url: publicUrl })
+          .eq('id', currentLeagueObj.id);
       }
+
+      setActiveLeagues(prev => prev.map(l => l.id === currentLeagueObj.id ? { ...l, schedule_banner_url: publicUrl, export_bg_url: publicUrl } : l));
     } catch (err) {
       console.error('Error saving schedule banner:', err);
     } finally {
@@ -275,16 +278,19 @@ const Schedule = () => {
         console.warn('Storage upload fallback:', uploadExc);
       }
 
-      const { error: dbErr } = await supabase
+      let { error: dbErr } = await supabase
         .from('leagues')
         .update({ yt_banner_url: publicUrl })
         .eq('id', currentLeagueObj.id);
 
       if (dbErr) {
-        console.error('Database update error for yt_banner_url:', dbErr);
-      } else {
-        setActiveLeagues(prev => prev.map(l => l.id === currentLeagueObj.id ? { ...l, yt_banner_url: publicUrl } : l));
+        await supabase
+          .from('leagues')
+          .update({ banner_url: publicUrl })
+          .eq('id', currentLeagueObj.id);
       }
+
+      setActiveLeagues(prev => prev.map(l => l.id === currentLeagueObj.id ? { ...l, yt_banner_url: publicUrl, banner_url: publicUrl } : l));
     } catch (err) {
       console.error('Error saving YouTube banner:', err);
     } finally {
