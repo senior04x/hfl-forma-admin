@@ -21,7 +21,6 @@ export default function Sponsors() {
     try {
       let loadedSponsors = [];
 
-      // 1. Try fetching with organization_id filter
       try {
         let query = supabase.from('sponsors').select('*').order('created_at', { ascending: false });
         if (orgId) {
@@ -34,32 +33,47 @@ export default function Sponsors() {
           throw error;
         }
       } catch (err) {
-        // Fallback if organization_id column doesn't exist yet in Supabase
         const { data } = await supabase.from('sponsors').select('*').order('created_at', { ascending: false });
         loadedSponsors = data || [];
       }
       
       setSponsors(loadedSponsors);
 
-      // Restore main sponsor
+      // 1. Restore main sponsor directly from DB
       const mainFromDb = loadedSponsors.find(s => s.is_main === true);
       if (mainFromDb) {
         setMainSponsorState(mainFromDb);
-        localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(mainFromDb));
+        try { localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(mainFromDb)); } catch (e) {}
       } else {
         try {
           const savedMain = localStorage.getItem(`hfl_main_sponsor_${orgId}`);
           if (savedMain) setMainSponsorState(JSON.parse(savedMain));
-        } catch (e) {}
+          else setMainSponsorState(null);
+        } catch (e) {
+          setMainSponsorState(null);
+        }
       }
 
-      // Restore selected secondary sponsors
-      try {
-        const savedSelected = localStorage.getItem(`hfl_selectedSponsors_${orgId}`);
-        if (savedSelected) {
-          setSelectedSponsors(JSON.parse(savedSelected));
+      // 2. Restore selected secondary sponsors directly from DB
+      const selectedFromDb = loadedSponsors.filter(s => s.is_selected === true && !s.is_main);
+      if (selectedFromDb.length > 0) {
+        setSelectedSponsors(selectedFromDb);
+        try { localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(selectedFromDb)); } catch (e) {}
+      } else {
+        try {
+          const savedSelected = localStorage.getItem(`hfl_selectedSponsors_${orgId}`);
+          if (savedSelected) {
+            setSelectedSponsors(JSON.parse(savedSelected));
+          } else {
+            // Default to all non-main sponsors
+            const nonMain = loadedSponsors.filter(s => !s.is_main);
+            setSelectedSponsors(nonMain);
+          }
+        } catch (e) {
+          const nonMain = loadedSponsors.filter(s => !s.is_main);
+          setSelectedSponsors(nonMain);
         }
-      } catch (e) {}
+      }
 
     } catch (err) {
       console.error("Error fetching sponsors:", err);
@@ -95,13 +109,12 @@ export default function Sponsors() {
         const { data, error } = await supabase
           .from('sponsors')
           .insert([
-            { name: file.name, logo_url: publicUrl, organization_id: orgId, is_main: false }
+            { name: file.name, logo_url: publicUrl, organization_id: orgId, is_main: false, is_selected: true }
           ])
           .select();
         if (error) throw error;
         insertData = data;
       } catch (e) {
-        // Fallback insert without organization_id/is_main columns if DB not migrated yet
         const { data } = await supabase
           .from('sponsors')
           .insert([
@@ -113,6 +126,7 @@ export default function Sponsors() {
 
       if (insertData && insertData.length > 0) {
         setSponsors([insertData[0], ...sponsors]);
+        setSelectedSponsors([insertData[0], ...selectedSponsors]);
       }
     } catch (err) {
       console.error("Error uploading sponsor:", err);
@@ -130,33 +144,49 @@ export default function Sponsors() {
 
     setMainSponsorState(targetMain);
     if (targetMain) {
-      localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(targetMain));
+      try { localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(targetMain)); } catch (e) {}
       const filteredSelected = selectedSponsors.filter(s => s.id !== targetMain.id);
       setSelectedSponsors(filteredSelected);
-      localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(filteredSelected));
+      try { localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(filteredSelected)); } catch (e) {}
     } else {
-      localStorage.removeItem(`hfl_main_sponsor_${orgId}`);
+      try { localStorage.removeItem(`hfl_main_sponsor_${orgId}`); } catch (e) {}
     }
 
-    // Try updating DB columns if available
     try {
-      await supabase.from('sponsors').update({ is_main: false }).eq('organization_id', orgId);
-      if (targetMain) {
-        await supabase.from('sponsors').update({ is_main: true }).eq('id', targetMain.id);
+      if (orgId) {
+        await supabase.from('sponsors').update({ is_main: false }).or(`organization_id.eq.${orgId},organization_id.is.null`);
+      } else {
+        await supabase.from('sponsors').update({ is_main: false }).is('organization_id', null);
       }
-    } catch (e) {}
+
+      if (targetMain) {
+        await supabase.from('sponsors').update({ is_main: true, is_selected: false }).eq('id', targetMain.id);
+      }
+    } catch (e) {
+      console.error("Error updating main sponsor in DB:", e);
+    }
   };
 
-  const toggleSelectSponsor = (sponsor) => {
-    let newSelected = [];
+  const toggleSelectSponsor = async (sponsor) => {
+    if (mainSponsor?.id === sponsor.id) return;
+
     const isSelected = selectedSponsors.some(s => s.id === sponsor.id);
+    const nextSelectedState = !isSelected;
+
+    let newSelected = [];
     if (isSelected) {
       newSelected = selectedSponsors.filter(s => s.id !== sponsor.id);
     } else {
       newSelected = [...selectedSponsors, sponsor];
     }
     setSelectedSponsors(newSelected);
-    localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(newSelected));
+    try { localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(newSelected)); } catch (e) {}
+
+    try {
+      await supabase.from('sponsors').update({ is_selected: nextSelectedState }).eq('id', sponsor.id);
+    } catch (e) {
+      console.error("Error updating is_selected in DB:", e);
+    }
   };
 
   const [deletingId, setDeletingId] = useState(null);
@@ -238,7 +268,7 @@ export default function Sponsors() {
                   )}
 
                   <div className="sponsor-img-container-page">
-                    <img src={sponsor.logo_url} alt="Sponsor" crossOrigin="anonymous" />
+                    <img src={sponsor.logo_url} alt={sponsor.name || "Sponsor"} />
                   </div>
 
                   <div className="sponsor-actions-footer">
