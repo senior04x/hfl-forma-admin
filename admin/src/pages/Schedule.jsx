@@ -39,6 +39,15 @@ const Schedule = () => {
   const [cropperRawImage, setCropperRawImage] = useState(null);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const bannerFileInputRef = useRef(null);
+
+  const [ytBanner, setYtBanner] = useState('');
+  const [cropperRawYtImage, setCropperRawYtImage] = useState(null);
+  const [uploadingYtBanner, setUploadingYtBanner] = useState(false);
+  const ytFileInputRef = useRef(null);
+  const exportYtRef = useRef(null);
+  const [selectedMatchForYtExport, setSelectedMatchForYtExport] = useState(null);
+  const [exportingMatchId, setExportingMatchId] = useState(null);
+
   const [mainSponsor, setMainSponsor] = useState(null);
   const [selectedSponsors, setSelectedSponsors] = useState([]);
 
@@ -114,6 +123,15 @@ const Schedule = () => {
       const savedLocal = localStorage.getItem(localKey);
       setScheduleBanner(savedLocal || '');
     }
+
+    const ytDbUrl = currentLeagueObj.yt_banner_url;
+    if (ytDbUrl) {
+      setYtBanner(ytDbUrl);
+    } else {
+      const ytLocalKey = `hfl_yt_banner_${orgId}_${currentLeagueObj.id}`;
+      const savedYtLocal = localStorage.getItem(ytLocalKey);
+      setYtBanner(savedYtLocal || '');
+    }
   }, [exportLeague, activeLeagues, orgId]);
 
   useEffect(() => {
@@ -132,6 +150,17 @@ const Schedule = () => {
     const reader = new FileReader();
     reader.onload = () => {
       setCropperRawImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleYtFileSelect = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperRawYtImage(reader.result);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -164,6 +193,31 @@ const Schedule = () => {
     }
   };
 
+  const handleCroppedYtBannerSave = async (croppedDataUrl) => {
+    if (!croppedDataUrl) return;
+    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+    if (!currentLeagueObj) return;
+
+    setUploadingYtBanner(true);
+    try {
+      setYtBanner(croppedDataUrl);
+      const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj.id}`;
+      localStorage.setItem(localKey, croppedDataUrl);
+
+      try {
+        await supabase
+          .from('leagues')
+          .update({ yt_banner_url: croppedDataUrl })
+          .eq('id', currentLeagueObj.id);
+      } catch (e) {}
+    } catch (err) {
+      console.error('Error saving YouTube banner:', err);
+    } finally {
+      setUploadingYtBanner(false);
+      setCropperRawYtImage(null);
+    }
+  };
+
   const handleDeleteBanner = async () => {
     const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
     if (!currentLeagueObj) return;
@@ -179,6 +233,55 @@ const Schedule = () => {
         .update({ schedule_banner_url: null })
         .eq('id', currentLeagueObj.id);
     } catch (e) {}
+  };
+
+  const handleDeleteYtBanner = async () => {
+    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+    if (!currentLeagueObj) return;
+    if (!window.confirm(`"${exportLeague}" ligasi uchun YouTube 16:9 fon rasmini o'chirmoqchimisiz?`)) return;
+
+    setYtBanner('');
+    const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj.id}`;
+    localStorage.removeItem(localKey);
+
+    try {
+      await supabase
+        .from('leagues')
+        .update({ yt_banner_url: null })
+        .eq('id', currentLeagueObj.id);
+    } catch (e) {}
+  };
+
+  const handleExportYtThumbnail = async (match) => {
+    setSelectedMatchForYtExport(match);
+    setExportingMatchId(match.id);
+
+    setTimeout(async () => {
+      if (!exportYtRef.current) {
+        setExportingMatchId(null);
+        return;
+      }
+
+      try {
+        const canvas = await html2canvas(exportYtRef.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: null
+        });
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        const homeName = (match.home_team?.name || 'Home').replace(/\s+/g, '_');
+        const awayName = (match.away_team?.name || 'Away').replace(/\s+/g, '_');
+        link.download = `YouTube_Match_${homeName}_VS_${awayName}_${match.round ? match.round + '_tur' : ''}.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        console.error('YouTube Thumbnail Export Error:', err);
+        alert('YouTube Shablon rasmini yuklab olishda xatolik yuz berdi');
+      } finally {
+        setExportingMatchId(null);
+      }
+    }, 150);
   };
 
   const handleExport = async () => {
@@ -436,6 +539,37 @@ const Schedule = () => {
             <input ref={bannerFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBannerFileSelect} />
           </div>
         </div>
+
+        {/* YouTube Shablon 16:9 Background Control Section */}
+        <div className="poster-banner-section" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+          {/* Left: 16:9 Preview Square/Rectangle */}
+          <div className="poster-preview-square" style={{ width: '220px', height: '124px', aspectRatio: '16/9' }}>
+            {ytBanner ? (
+              <img src={ytBanner} alt="16:9 YouTube Banner" className="poster-img-1x1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <div className="poster-placeholder-1x1">
+                <Video size={28} />
+                <span style={{ fontSize: '12px' }}>YouTube Shablon Fon (16:9)</span>
+                <span className="sub-tag">({exportLeague || 'Tanlanmagan'})</span>
+              </div>
+            )}
+          </div>
+
+          {/* Right: Upload & Delete Actions */}
+          <div className="poster-action-buttons" style={{ justifyContent: 'center' }}>
+            <div className="poster-sub-buttons" style={{ flexDirection: 'column', gap: '8px' }}>
+              <button className="btn-banner-action btn-upload" onClick={() => ytFileInputRef.current?.click()} disabled={uploadingYtBanner}>
+                <Upload size={15} /> <span>{ytBanner ? 'YouTube Shablon fonini almashtirish (16:9)' : 'YouTube Shablon Fon yuklash (16:9)'}</span>
+              </button>
+              {ytBanner && (
+                <button className="btn-banner-action btn-delete" onClick={handleDeleteYtBanner}>
+                  <Trash2 size={15} /> <span>Fonni o'chirish</span>
+                </button>
+              )}
+            </div>
+            <input ref={ytFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleYtFileSelect} />
+          </div>
+        </div>
       </div>
 
       {/* Matches Grid Wrapper with Glassmorphism overlay on 1x1 scheduleBanner */}
@@ -459,6 +593,14 @@ const Schedule = () => {
             .map(match => (
             <div key={match.id} className="match-card glassmorphic-card">
               <div className="match-card-actions">
+                <button 
+                  className="yt-download-match-btn" 
+                  onClick={() => handleExportYtThumbnail(match)} 
+                  disabled={exportingMatchId === match.id}
+                  title="YouTube Shablon Rasmini Yuklab Olish (16:9)"
+                >
+                  {exportingMatchId === match.id ? <span className="btn-spinner"></span> : <Video size={15} />}
+                </button>
                 <button className="edit-match-btn" onClick={() => handleEditMatch(match)} title="Tahrirlash">
                   <Pencil size={15} />
                 </button>
@@ -590,6 +732,152 @@ const Schedule = () => {
           showAspectSelector={false}
         />
       )}
+
+      {cropperRawYtImage && (
+        <ImageCropperModal
+          isOpen={!!cropperRawYtImage}
+          imageSrc={cropperRawYtImage}
+          onClose={() => setCropperRawYtImage(null)}
+          onSave={handleCroppedYtBannerSave}
+          title="YouTube Shablon 16:9 Orqa Fon Rasmini Qirqish"
+          aspect={16 / 9}
+          showAspectSelector={false}
+        />
+      )}
+
+      {/* HIDDEN YOUTUBE THUMBNAIL 16:9 EXPORT TEMPLATE */}
+      <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
+        {(() => {
+          const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+          const isCollab = currentLeagueObj?.isCollab;
+
+          return (
+            <div 
+              ref={exportYtRef} 
+              className="yt-thumbnail-export" 
+              style={{ 
+                width: '1280px', 
+                height: '720px', 
+                backgroundImage: ytBanner ? `linear-gradient(rgba(10, 13, 18, 0.45), rgba(10, 13, 18, 0.75)), url(${ytBanner})` : 'linear-gradient(135deg, #0b0f19 0%, #050910 100%)', 
+                backgroundSize: 'cover', 
+                backgroundPosition: 'center', 
+                position: 'relative', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                justify: 'space-between',
+                padding: '30px 45px', 
+                boxSizing: 'border-box',
+                fontFamily: "'Outfit', 'Inter', sans-serif"
+              }}
+            >
+              {/* Header */}
+              <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <div className="export-logo-left" style={{ width: '280px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
+                  {isCollab ? (
+                    <>
+                      <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '70px', objectFit: 'contain', background: 'transparent' }} />
+                      <img src="/x.png" crossOrigin="anonymous" style={{ height: '16px', objectFit: 'contain', opacity: 0.8, background: 'transparent' }} />
+                      <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain', background: 'transparent' }} />
+                    </>
+                  ) : (
+                    <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain', background: 'transparent' }} />
+                  )}
+                </div>
+
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                  {currentLeagueObj?.logo_url ? (
+                    <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ height: '90px', maxWidth: '380px', objectFit: 'contain', background: 'transparent', border: 'none' }} crossOrigin="anonymous" />
+                  ) : (
+                    <h2 style={{ color: '#fff', fontSize: '38px', fontWeight: '900', textTransform: 'uppercase', margin: 0, fontStyle: 'italic', letterSpacing: '1px' }}>{exportLeague}</h2>
+                  )}
+                </div>
+
+                <div className="export-logo-right" style={{ width: '280px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  {mainSponsorLogo ? (
+                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ height: '65px', objectFit: 'contain', background: 'transparent' }} />
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Center Match Banner: Home Team vs Away Team */}
+              {selectedMatchForYtExport && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '60px', flex: 1, margin: '20px 0' }}>
+                  {/* Home Team */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '320px', textAlign: 'center' }}>
+                    <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.08)', border: '4px solid rgba(0, 255, 102, 0.6)', padding: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 35px rgba(0, 255, 102, 0.3)' }}>
+                      <img 
+                        src={selectedMatchForYtExport.home_team?.logo_url || '/images/default-team.png'} 
+                        alt={selectedMatchForYtExport.home_team?.name} 
+                        crossOrigin="anonymous"
+                        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'contain', background: 'transparent' }} 
+                      />
+                    </div>
+                    <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '900', textTransform: 'uppercase', marginTop: '16px', marginBottom: '0', letterSpacing: '1px', textShadow: '0 4px 12px rgba(0,0,0,0.8)' }}>
+                      {selectedMatchForYtExport.home_team?.name}
+                    </h2>
+                  </div>
+
+                  {/* VS / Score Badge */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <div style={{ background: 'linear-gradient(135deg, #00ff66 0%, #00cc52 100%)', color: '#050910', padding: '10px 24px', borderRadius: '16px', fontSize: '32px', fontWeight: '900', fontStyle: 'italic', letterSpacing: '2px', boxShadow: '0 0 25px rgba(0, 255, 102, 0.5)' }}>
+                      {(selectedMatchForYtExport.status === 'finished' || selectedMatchForYtExport.home_score > 0 || selectedMatchForYtExport.away_score > 0)
+                        ? `${selectedMatchForYtExport.home_score || 0} : ${selectedMatchForYtExport.away_score || 0}`
+                        : 'VS'}
+                    </div>
+                    {selectedMatchForYtExport.round && (
+                      <span style={{ color: '#00ff66', fontSize: '16px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        {selectedMatchForYtExport.round}-TUR
+                      </span>
+                    )}
+                    <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px', fontWeight: '600', display: 'flex', gap: '12px', marginTop: '4px' }}>
+                      <span>📅 {selectedMatchForYtExport.match_date}</span>
+                      <span>⏰ {selectedMatchForYtExport.match_time?.substring(0, 5)}</span>
+                    </div>
+                    {selectedMatchForYtExport.location && (
+                      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: '500' }}>
+                        📍 {selectedMatchForYtExport.location}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Away Team */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '320px', textAlign: 'center' }}>
+                    <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.08)', border: '4px solid rgba(0, 255, 102, 0.6)', padding: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 35px rgba(0, 255, 102, 0.3)' }}>
+                      <img 
+                        src={selectedMatchForYtExport.away_team?.logo_url || '/images/default-team.png'} 
+                        alt={selectedMatchForYtExport.away_team?.name} 
+                        crossOrigin="anonymous"
+                        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'contain', background: 'transparent' }} 
+                      />
+                    </div>
+                    <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '900', textTransform: 'uppercase', marginTop: '16px', marginBottom: '0', letterSpacing: '1px', textShadow: '0 4px 12px rgba(0,0,0,0.8)' }}>
+                      {selectedMatchForYtExport.away_team?.name}
+                    </h2>
+                  </div>
+                </div>
+              )}
+
+              {/* Footer Secondary Sponsors Banner */}
+              {(() => {
+                const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
+                if (secondarySponsors.length === 0) return null;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px', marginBottom: '5px' }}>
+                    {secondarySponsors.map((s, idx) => (
+                      <React.Fragment key={s.id || idx}>
+                        <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '36px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                        {idx < secondarySponsors.length - 1 && (
+                          <div style={{ height: '22px', width: '1px', backgroundColor: '#ffffff', opacity: 0.4 }}></div>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          );
+        })()}
+      </div>
 
       <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
         {(() => {
