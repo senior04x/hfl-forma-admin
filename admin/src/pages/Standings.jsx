@@ -817,18 +817,22 @@ export default function Standings() {
               </div>
             </div>
 
-            {selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '15px' }}>
-                {selectedSponsors.map((s, idx) => (
-                  <React.Fragment key={s.id}>
-                    <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
-                    {idx < selectedSponsors.length - 1 && (
-                      <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-            )}
+            {(() => {
+              const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
+              if (selectedLeague === '7x7 liga' || secondarySponsors.length === 0) return null;
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '15px' }}>
+                  {secondarySponsors.map((s, idx) => (
+                    <React.Fragment key={s.id || idx}>
+                      <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                      {idx < secondarySponsors.length - 1 && (
+                        <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            })()}
 
             <div style={{
               textAlign: 'center', 
@@ -973,18 +977,22 @@ export default function Standings() {
 
             </div>
 
-            {selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '15px' }}>
-                {selectedSponsors.map((s, idx) => (
-                  <React.Fragment key={s.id}>
-                    <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
-                    {idx < selectedSponsors.length - 1 && (
-                      <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-            )}
+            {(() => {
+              const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
+              if (selectedLeague === '7x7 liga' || secondarySponsors.length === 0) return null;
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '15px' }}>
+                  {secondarySponsors.map((s, idx) => (
+                    <React.Fragment key={s.id || idx}>
+                      <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                      {idx < secondarySponsors.length - 1 && (
+                        <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            })()}
 
             <div style={{
               textAlign: 'center', 

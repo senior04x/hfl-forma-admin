@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Image as ImageIcon, Upload } from 'lucide-react';
+import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Image as ImageIcon, Upload, Pencil } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import ImageCropperModal from '../components/ImageCropperModal';
 import './Schedule.css';
@@ -14,6 +14,7 @@ const Schedule = () => {
   const [teams, setTeams] = useState([]);
   const [activeLeagues, setActiveLeagues] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMatch, setEditingMatch] = useState(null);
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all'); 
   const { currentOrg, orgId } = useOrg();
@@ -231,7 +232,8 @@ const Schedule = () => {
   };
 
   const handleOpenModal = () => {
-    setSelectedLeague('');
+    setEditingMatch(null);
+    setSelectedLeague(exportLeague || (activeLeagues[0]?.name || ''));
     setHomeTeamId('');
     setAwayTeamId('');
     setMatchDate('');
@@ -243,9 +245,36 @@ const Schedule = () => {
     setIsModalOpen(true);
   };
 
+  const handleEditMatch = (match) => {
+    setEditingMatch(match);
+    setSelectedLeague(match.league || '');
+    setHomeTeamId(match.home_team_id || '');
+    setAwayTeamId(match.away_team_id || '');
+    setMatchDate(match.match_date || '');
+    setMatchTime(match.match_time || '');
+    setYoutubeLink(match.youtube_link || '');
+    setMatchRound(match.round ? String(match.round) : '');
+
+    if (match.location) {
+      if (match.location.includes(',')) {
+        const parts = match.location.split(',');
+        setStadiumName(parts[0].trim());
+        setLocation(parts.slice(1).join(',').trim());
+      } else {
+        setStadiumName('');
+        setLocation(match.location);
+      }
+    } else {
+      setStadiumName('');
+      setLocation('');
+    }
+
+    setIsModalOpen(true);
+  };
+
   const handleSave = async () => {
-    if (!homeTeamId || !awayTeamId || !matchDate || !matchTime || !location) {
-      alert("Iltimos, barcha majburiy maydonlarni to'ldiring.");
+    if (!selectedLeague || !homeTeamId || !awayTeamId || !matchDate || !matchTime) {
+      alert("Iltimos, barcha majburiy maydonlarni (Liga, Jamoalar, Sana, Vaqt) to'ldiring.");
       return;
     }
     if (homeTeamId === awayTeamId) {
@@ -255,8 +284,11 @@ const Schedule = () => {
 
     setLoading(true);
     try {
-      const finalLocation = stadiumName.trim() ? `${stadiumName.trim()}, ${location}` : location;
-      const { error } = await supabase.from('matches').insert([{
+      const finalLocation = stadiumName.trim() && location.trim()
+        ? `${stadiumName.trim()}, ${location.trim()}`
+        : (stadiumName.trim() || location.trim() || 'Asosiy maydon');
+
+      const matchData = {
         league: selectedLeague,
         home_team_id: homeTeamId,
         away_team_id: awayTeamId,
@@ -266,12 +298,26 @@ const Schedule = () => {
         youtube_link: youtubeLink,
         round: matchRound ? parseInt(matchRound) : null,
         organization_id: orgId,
-        status: 'scheduled'
-      }]);
+      };
 
-      if (error) throw error;
+      if (editingMatch) {
+        const { error } = await supabase
+          .from('matches')
+          .update(matchData)
+          .eq('id', editingMatch.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('matches').insert([{
+          ...matchData,
+          status: 'scheduled'
+        }]);
+
+        if (error) throw error;
+      }
 
       setIsModalOpen(false);
+      setEditingMatch(null);
       fetchMatches();
     } catch (error) {
       console.error(error);
@@ -429,7 +475,14 @@ const Schedule = () => {
             })
             .map(match => (
             <div key={match.id} className="match-card glassmorphic-card">
-              <button className="delete-match-btn" onClick={() => handleDelete(match.id)} title="O'chirish"><Trash2 size={16} /></button>
+              <div style={{ display: 'flex', gap: '6px', position: 'absolute', top: '12px', right: '12px', zIndex: 5 }}>
+                <button className="edit-match-btn" onClick={() => handleEditMatch(match)} title="Tahrirlash" style={{ background: 'rgba(0, 170, 255, 0.15)', border: '1px solid rgba(0, 170, 255, 0.3)', color: '#00aaff', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                  <Pencil size={14} />
+                </button>
+                <button className="delete-match-btn" onClick={() => handleDelete(match.id)} title="O'chirish" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
               <div className="match-badges-container">
                  <div className="match-league-badge">{match.league}</div>
                  {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
@@ -456,13 +509,90 @@ const Schedule = () => {
       {isModalOpen && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content schedule-modal" onClick={e => e.stopPropagation()}>
-            <h2>Yangi o'yin rejalashtirish</h2>
-            <div className="form-group"><label>Liga</label><select value={selectedLeague} onChange={(e) => {setSelectedLeague(e.target.value); setHomeTeamId(''); setAwayTeamId('');}}><option value="">Tanlang</option>{activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}</select></div>
-            <div className="form-group"><label>Mezbon</label><select value={homeTeamId} onChange={(e) => setHomeTeamId(e.target.value)}><option value="">Tanlang</option>{availableTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
-            <div className="form-group"><label>Mehmon</label><select value={awayTeamId} onChange={(e) => setAwayTeamId(e.target.value)}><option value="">Tanlang</option>{availableTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
-            <div className="datetime-row"><div className="form-group"><label>Sana</label><input type="date" value={matchDate} onChange={(e) => setMatchDate(e.target.value)} /></div><div className="form-group"><label>Vaqt</label><input type="time" value={matchTime} onChange={(e) => setMatchTime(e.target.value)} /></div></div>
-            <div className="form-group"><label>Maydon</label><select value={location} onChange={(e) => setLocation(e.target.value)}><option value="">Tanlang</option><option value="1-maydon">1-Maydon</option><option value="2-maydon">2-Maydon</option></select></div>
-            <div className="modal-actions"><button className="btn-cancel" onClick={() => setIsModalOpen(false)}>Bekor</button><button className="btn-save" onClick={handleSave}>Saqlash</button></div>
+            <h2>{editingMatch ? 'O\'yinni tahrirlash' : 'Yangi o\'yin rejalashtirish'}</h2>
+            
+            <div className="form-group">
+              <label>Liga</label>
+              <select value={selectedLeague} onChange={(e) => {setSelectedLeague(e.target.value); setHomeTeamId(''); setAwayTeamId('');}}>
+                <option value="">Tanlang</option>
+                {activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Nechanchi Tur (Round)</label>
+              <input 
+                type="number" 
+                placeholder="Masalan: 1" 
+                value={matchRound} 
+                onChange={(e) => setMatchRound(e.target.value)} 
+                min="1"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Mezbon Jamoa</label>
+              <select value={homeTeamId} onChange={(e) => setHomeTeamId(e.target.value)}>
+                <option value="">Tanlang</option>
+                {availableTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Mehmon Jamoa</label>
+              <select value={awayTeamId} onChange={(e) => setAwayTeamId(e.target.value)}>
+                <option value="">Tanlang</option>
+                {availableTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+
+            <div className="datetime-row">
+              <div className="form-group">
+                <label>Sana</label>
+                <input type="date" value={matchDate} onChange={(e) => setMatchDate(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Vaqt</label>
+                <input type="time" value={matchTime} onChange={(e) => setMatchTime(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Stadion Nomi (Lokatsiya)</label>
+              <input 
+                type="text" 
+                placeholder="Stadion nomi (masalan: Dinamo Arena)" 
+                value={stadiumName} 
+                onChange={(e) => setStadiumName(e.target.value)} 
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Maydon / Sektor</label>
+              <input 
+                type="text" 
+                placeholder="Masalan: 1-maydon yoki Asosiy maydon" 
+                value={location} 
+                onChange={(e) => setLocation(e.target.value)} 
+              />
+            </div>
+
+            <div className="form-group">
+              <label>YouTube Translyatsiya Linki (ixtiyoriy)</label>
+              <input 
+                type="url" 
+                placeholder="https://youtube.com/live/..." 
+                value={youtubeLink} 
+                onChange={(e) => setYoutubeLink(e.target.value)} 
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setIsModalOpen(false)}>Bekor qilish</button>
+              <button className="btn-save" onClick={handleSave} disabled={loading}>
+                {loading ? <><span className="btn-spinner"></span> Saqlanmoqda...</> : (editingMatch ? 'Yangilash' : 'Saqlash')}
+              </button>
+            </div>
           </div>
         </div>
       )}

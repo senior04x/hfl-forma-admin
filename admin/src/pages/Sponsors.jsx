@@ -131,6 +131,9 @@ export default function Sponsors() {
     setMainSponsorState(targetMain);
     if (targetMain) {
       localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(targetMain));
+      const filteredSelected = selectedSponsors.filter(s => s.id !== targetMain.id);
+      setSelectedSponsors(filteredSelected);
+      localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(filteredSelected));
     } else {
       localStorage.removeItem(`hfl_main_sponsor_${orgId}`);
     }
