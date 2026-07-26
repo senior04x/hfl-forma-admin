@@ -254,27 +254,14 @@ const Schedule = () => {
     setMatchTime(match.match_time || '');
     setYoutubeLink(match.youtube_link || '');
     setMatchRound(match.round ? String(match.round) : '');
-
-    if (match.location) {
-      if (match.location.includes(',')) {
-        const parts = match.location.split(',');
-        setStadiumName(parts[0].trim());
-        setLocation(parts.slice(1).join(',').trim());
-      } else {
-        setStadiumName('');
-        setLocation(match.location);
-      }
-    } else {
-      setStadiumName('');
-      setLocation('');
-    }
-
+    setLocation(match.location || '1-maydon');
+    setStadiumName(match.stadium_name || '');
     setIsModalOpen(true);
   };
 
   const handleSave = async () => {
-    if (!selectedLeague || !homeTeamId || !awayTeamId || !matchDate || !matchTime) {
-      alert("Iltimos, barcha majburiy maydonlarni (Liga, Jamoalar, Sana, Vaqt) to'ldiring.");
+    if (!selectedLeague || !homeTeamId || !awayTeamId || !matchDate || !matchTime || !location) {
+      alert("Iltimos, barcha majburiy maydonlarni (Liga, Jamoalar, Sana, Vaqt, Maydon) to'ldiring.");
       return;
     }
     if (homeTeamId === awayTeamId) {
@@ -284,17 +271,13 @@ const Schedule = () => {
 
     setLoading(true);
     try {
-      const finalLocation = stadiumName.trim() && location.trim()
-        ? `${stadiumName.trim()}, ${location.trim()}`
-        : (stadiumName.trim() || location.trim() || 'Asosiy maydon');
-
       const matchData = {
         league: selectedLeague,
         home_team_id: homeTeamId,
         away_team_id: awayTeamId,
         match_date: matchDate,
         match_time: matchTime,
-        location: finalLocation,
+        location: location,
         youtube_link: youtubeLink,
         round: matchRound ? parseInt(matchRound) : null,
         organization_id: orgId,
@@ -558,22 +541,23 @@ const Schedule = () => {
             </div>
 
             <div className="form-group">
-              <label>Stadion Nomi (Lokatsiya)</label>
+              <label>Maydon (OBS Stream Havolasi uchun)</label>
+              <select value={location} onChange={(e) => setLocation(e.target.value)} required>
+                <option value="">Maydonni tanlang</option>
+                <option value="1-maydon">1-Maydon</option>
+                <option value="2-maydon">2-Maydon</option>
+                <option value="3-maydon">3-Maydon</option>
+                <option value="4-maydon">4-Maydon</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Stadion Nomi (ixtiyoriy)</label>
               <input 
                 type="text" 
                 placeholder="Stadion nomi (masalan: Dinamo Arena)" 
                 value={stadiumName} 
                 onChange={(e) => setStadiumName(e.target.value)} 
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Maydon / Sektor</label>
-              <input 
-                type="text" 
-                placeholder="Masalan: 1-maydon yoki Asosiy maydon" 
-                value={location} 
-                onChange={(e) => setLocation(e.target.value)} 
               />
             </div>
 
