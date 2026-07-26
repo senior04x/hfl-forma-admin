@@ -39,11 +39,24 @@ const Schedule = () => {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const bannerFileInputRef = useRef(null);
   const [mainSponsor, setMainSponsor] = useState(null);
+  const [selectedSponsors, setSelectedSponsors] = useState([]);
 
   useEffect(() => {
     fetchMainSponsor();
+    fetchSelectedSponsors();
     loadLeaguesAndData();
   }, [orgId]);
+
+  const fetchSelectedSponsors = async () => {
+    try {
+      const savedSelected = localStorage.getItem(`hfl_selectedSponsors_${orgId}`);
+      if (savedSelected) {
+        setSelectedSponsors(JSON.parse(savedSelected));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchMainSponsor = async () => {
     try {
@@ -513,6 +526,20 @@ const Schedule = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Bottom Selected Secondary Sponsors Banner */}
+              {selectedSponsors.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '20px', marginBottom: '15px' }}>
+                  {selectedSponsors.map((s, idx) => (
+                    <React.Fragment key={s.id || idx}>
+                      <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                      {idx < selectedSponsors.length - 1 && (
+                        <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })()}
