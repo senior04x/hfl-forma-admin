@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { supabase } from '../supabaseClient';
+import { useOrg } from '../context/OrgContext';
 import { 
   ArrowLeft, Trash2, Monitor, Share2, Play, Pause, RotateCcw, 
   Clock, ChevronLeft, ChevronRight
@@ -27,6 +28,7 @@ const STATUS_LABELS = {
 const MatchControl = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { currentOrg, orgId } = useOrg();
 
   const [match, setMatch] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
@@ -72,23 +74,22 @@ const MatchControl = () => {
   const extractYtVideoId = (input) => {
     if (!input) return null;
     const str = input.trim();
-    if (str.length === 11 && !str.includes('/') && !str.includes('?')) return str;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    if (str.length === 11 && !str.includes('/') && !str.includes('?') && !str.includes(':')) return str;
+    const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|live\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = str.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  const getYtTokens = async (orgId) => {
-    const key = `hfl_yt_tokens_${orgId || 'default'}`;
+  const getYtTokens = async (targetOrgId) => {
+    const activeId = targetOrgId || orgId || 1;
+    const key = `hfl_yt_tokens_${activeId}`;
     try {
       const raw = localStorage.getItem(key);
       if (raw) return JSON.parse(raw);
     } catch (e) {}
 
-    const currentOrgId = orgId || 1;
-
     try {
-      const { data } = await supabase.from('organizations').select('yt_tokens').eq('id', currentOrgId).maybeSingle();
+      const { data } = await supabase.from('organizations').select('yt_tokens').eq('id', activeId).maybeSingle();
       if (data?.yt_tokens) {
         const parsed = typeof data.yt_tokens === 'string' ? JSON.parse(data.yt_tokens) : data.yt_tokens;
         localStorage.setItem(key, JSON.stringify(parsed));
@@ -97,7 +98,7 @@ const MatchControl = () => {
     } catch (err) {}
 
     try {
-      const configName = `YT_OAUTH_TOKENS_${currentOrgId}`;
+      const configName = `YT_OAUTH_TOKENS_${activeId}`;
       const { data } = await supabase.from('sponsors').select('logo_url').eq('name', configName).maybeSingle();
       if (data?.logo_url) {
         const parsed = JSON.parse(data.logo_url);
@@ -109,8 +110,9 @@ const MatchControl = () => {
     return null;
   };
 
-  const getValidAccessToken = async (orgId) => {
-    const tokens = await getYtTokens(orgId);
+  const getValidAccessToken = async (targetOrgId) => {
+    const activeId = targetOrgId || orgId || 1;
+    const tokens = await getYtTokens(activeId);
     if (!tokens || !tokens.refresh_token) return null;
 
     if (tokens.access_token && tokens.expires_at && Date.now() < tokens.expires_at - 60000) {
@@ -139,9 +141,9 @@ const MatchControl = () => {
           expires_at: Date.now() + (data.expires_in || 3600) * 1000
         };
         const payloadStr = JSON.stringify(updated);
-        localStorage.setItem(`hfl_yt_tokens_${orgId || 'default'}`, payloadStr);
+        localStorage.setItem(`hfl_yt_tokens_${activeId}`, payloadStr);
         try {
-          await supabase.from('sponsors').update({ logo_url: payloadStr }).eq('name', `YT_OAUTH_TOKENS_${orgId || 1}`);
+          await supabase.from('sponsors').update({ logo_url: payloadStr }).eq('name', `YT_OAUTH_TOKENS_${activeId}`);
         } catch (e) {}
         return data.access_token;
       }
@@ -152,17 +154,47 @@ const MatchControl = () => {
   };
 
   const autoUpdateYouTubeThumbnail = async (finishedMatchObj) => {
-    const videoId = extractYtVideoId(finishedMatchObj?.youtube_link);
-    if (!videoId) return;
+    let videoId = extractYtVideoId(finishedMatchObj?.youtube_link);
+    const targetOrgId = finishedMatchObj?.organization_id || orgId || 1;
+    const accessToken = await getValidAccessToken(targetOrgId);
 
-    const currentOrgId = finishedMatchObj.organization_id || 1;
-    const accessToken = await getValidAccessToken(currentOrgId);
-    if (!accessToken) return;
+    if (!accessToken) {
+      console.warn('YouTube OAuth token topilmadi.');
+      return;
+    }
+
+    // If videoId was not directly in youtube_link, fetch active live broadcast from YouTube API
+    if (!videoId) {
+      try {
+        const bcRes = await fetch('https://www.googleapis.com/youtube/v3/liveBroadcasts?broadcastStatus=active&mine=true', {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        const bcData = await bcRes.json();
+        if (bcData.items && bcData.items.length > 0) {
+          videoId = bcData.items[0].id;
+        } else {
+          const bcResAll = await fetch('https://www.googleapis.com/youtube/v3/liveBroadcasts?broadcastStatus=all&mine=true&maxResults=5', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+          });
+          const bcDataAll = await bcResAll.json();
+          if (bcDataAll.items && bcDataAll.items.length > 0) {
+            videoId = bcDataAll.items[0].id;
+          }
+        }
+      } catch (bcErr) {
+        console.warn('Live broadcast fetch error:', bcErr);
+      }
+    }
+
+    if (!videoId) {
+      console.warn('YouTube Video / Broadcast ID topilmadi.');
+      return;
+    }
 
     setUpdatingYtThumb(true);
     try {
       const { data: leagueData } = await supabase.from('leagues').select('*').eq('name', finishedMatchObj.league).maybeSingle();
-      const { data: orgData } = await supabase.from('organizations').select('*').eq('id', currentOrgId).maybeSingle();
+      const { data: orgData } = await supabase.from('organizations').select('*').eq('id', targetOrgId).maybeSingle();
       
       let loadedSponsors = [];
       const { data: spData } = await supabase.from('sponsors').select('*');
