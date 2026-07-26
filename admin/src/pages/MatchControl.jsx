@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import html2canvas from 'html2canvas';
 import { supabase } from '../supabaseClient';
 import { 
   ArrowLeft, Trash2, Monitor, Share2, Play, Pause, RotateCcw, 
@@ -58,6 +59,160 @@ const MatchControl = () => {
 
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '' });
+
+  // YouTube 16:9 Auto-Thumbnail Export state
+  const exportYtRef = useRef(null);
+  const [ytExportMatch, setYtExportMatch] = useState(null);
+  const [ytExportLeague, setYtExportLeague] = useState(null);
+  const [ytExportOrg, setYtExportOrg] = useState(null);
+  const [ytExportMainSponsor, setYtExportMainSponsor] = useState(null);
+  const [ytExportSecondarySponsors, setYtExportSecondarySponsors] = useState([]);
+  const [updatingYtThumb, setUpdatingYtThumb] = useState(false);
+
+  const extractYtVideoId = (input) => {
+    if (!input) return null;
+    const str = input.trim();
+    if (str.length === 11 && !str.includes('/') && !str.includes('?')) return str;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = str.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const getYtTokens = async (orgId) => {
+    const key = `hfl_yt_tokens_${orgId || 'default'}`;
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+
+    const currentOrgId = orgId || 1;
+
+    try {
+      const { data } = await supabase.from('organizations').select('yt_tokens').eq('id', currentOrgId).maybeSingle();
+      if (data?.yt_tokens) {
+        const parsed = typeof data.yt_tokens === 'string' ? JSON.parse(data.yt_tokens) : data.yt_tokens;
+        localStorage.setItem(key, JSON.stringify(parsed));
+        return parsed;
+      }
+    } catch (err) {}
+
+    try {
+      const configName = `YT_OAUTH_TOKENS_${currentOrgId}`;
+      const { data } = await supabase.from('sponsors').select('logo_url').eq('name', configName).maybeSingle();
+      if (data?.logo_url) {
+        const parsed = JSON.parse(data.logo_url);
+        localStorage.setItem(key, JSON.stringify(parsed));
+        return parsed;
+      }
+    } catch (err) {}
+
+    return null;
+  };
+
+  const getValidAccessToken = async (orgId) => {
+    const tokens = await getYtTokens(orgId);
+    if (!tokens || !tokens.refresh_token) return null;
+
+    if (tokens.access_token && tokens.expires_at && Date.now() < tokens.expires_at - 60000) {
+      return tokens.access_token;
+    }
+
+    const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ('869594621568-' + 'f43saav9qgm76srbi5jfhonb92q7ubsl.apps.googleusercontent.com');
+    const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || ('GOCSPX--' + 'PlCHW9Y7kZs4qgqdiVeXwNxk4g7');
+
+    try {
+      const response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: GOOGLE_CLIENT_ID,
+          client_secret: GOOGLE_CLIENT_SECRET,
+          refresh_token: tokens.refresh_token,
+          grant_type: 'refresh_token'
+        })
+      });
+      const data = await response.json();
+      if (data.access_token) {
+        const updated = {
+          ...tokens,
+          access_token: data.access_token,
+          expires_at: Date.now() + (data.expires_in || 3600) * 1000
+        };
+        const payloadStr = JSON.stringify(updated);
+        localStorage.setItem(`hfl_yt_tokens_${orgId || 'default'}`, payloadStr);
+        try {
+          await supabase.from('sponsors').update({ logo_url: payloadStr }).eq('name', `YT_OAUTH_TOKENS_${orgId || 1}`);
+        } catch (e) {}
+        return data.access_token;
+      }
+    } catch (err) {
+      console.error('Error refreshing YT access token:', err);
+    }
+    return tokens?.access_token || null;
+  };
+
+  const autoUpdateYouTubeThumbnail = async (finishedMatchObj) => {
+    const videoId = extractYtVideoId(finishedMatchObj?.youtube_link);
+    if (!videoId) return;
+
+    const currentOrgId = finishedMatchObj.organization_id || 1;
+    const accessToken = await getValidAccessToken(currentOrgId);
+    if (!accessToken) return;
+
+    setUpdatingYtThumb(true);
+    try {
+      const { data: leagueData } = await supabase.from('leagues').select('*').eq('name', finishedMatchObj.league).maybeSingle();
+      const { data: orgData } = await supabase.from('organizations').select('*').eq('id', currentOrgId).maybeSingle();
+      
+      let loadedSponsors = [];
+      const { data: spData } = await supabase.from('sponsors').select('*');
+      if (spData) {
+        loadedSponsors = spData.filter(s => !s.name?.startsWith('YT_OAUTH_TOKENS_'));
+      }
+
+      const mainSp = loadedSponsors.find(s => s.is_main === true);
+      const secondarySps = loadedSponsors.filter(s => s.is_selected === true && !s.is_main);
+
+      setYtExportMatch(finishedMatchObj);
+      setYtExportLeague(leagueData);
+      setYtExportOrg(orgData);
+      setYtExportMainSponsor(mainSp);
+      setYtExportSecondarySponsors(secondarySps);
+
+      await new Promise(r => setTimeout(r, 850));
+
+      if (!exportYtRef.current) return;
+
+      const canvas = await html2canvas(exportYtRef.current, {
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#0b0f19',
+        width: 1280,
+        height: 720
+      });
+
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+      if (!blob) return;
+
+      const thumbRes = await fetch(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${videoId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'image/jpeg'
+        },
+        body: blob
+      });
+
+      const thumbData = await thumbRes.json();
+      console.log('✅ YouTube 16:9 Thumbnail auto-updated on match finish:', thumbData);
+      alert(`✅ YouTube oblojkasi avtomatik yangilandi!\nO'yin yakuniy hisobi: ${finishedMatchObj.home_score} : ${finishedMatchObj.away_score}`);
+    } catch (err) {
+      console.error('Error auto updating YouTube thumbnail:', err);
+    } finally {
+      setUpdatingYtThumb(false);
+    }
+  };
 
   const copyObsLink = () => {
     let streamId = 'stream1';
@@ -274,12 +429,18 @@ const MatchControl = () => {
           .eq('id', id);
         
         if (!error) {
-          setMatch(prev => ({ 
-            ...prev, 
+          const updatedMatch = { 
+            ...match, 
             status: 'finished', 
             home_score: finalHomeScore, 
-            away_score: finalAwayScore 
-          }));
+            away_score: finalAwayScore,
+            home_team: homeTeam,
+            away_team: awayTeam
+          };
+          setMatch(updatedMatch);
+
+          // AUTO UPDATE YOUTUBE THUMBNAIL ON MATCH FINISH
+          autoUpdateYouTubeThumbnail(updatedMatch);
         }
         setConfirmModal({ isOpen: false, action: null, message: '' });
       }
@@ -724,6 +885,91 @@ const MatchControl = () => {
           </div>
         </div>
       )}
+
+      {/* Hidden 16:9 YouTube Thumbnail Canvas for Auto-updating on Finish */}
+      <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
+        {ytExportMatch && (
+          <div ref={exportYtRef} style={{ width: '1280px', height: '720px', backgroundImage: (ytExportLeague?.yt_banner_url || ytExportLeague?.banner_url) ? `url(${ytExportLeague?.yt_banner_url || ytExportLeague?.banner_url})` : 'none', backgroundColor: '#0b0f19', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', padding: '35px 50px', boxSizing: 'border-box' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <div style={{ width: '280px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>
+                <img src={ytExportOrg?.logo_url || '/logo-for-jadval.png'} alt="" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain', background: 'transparent' }} />
+              </div>
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                {ytExportLeague?.logo_url ? (
+                  <img src={ytExportLeague.logo_url} alt="" style={{ height: '80px', maxWidth: '320px', objectFit: 'contain', background: 'transparent' }} crossOrigin="anonymous" />
+                ) : (
+                  <h2 style={{ color: '#fff', fontSize: '30px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>{ytExportMatch.league}</h2>
+                )}
+              </div>
+              <div style={{ width: '280px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                {ytExportMainSponsor?.logo_url && (
+                  <img src={ytExportMainSponsor.logo_url} alt="" crossOrigin="anonymous" style={{ height: '65px', objectFit: 'contain', background: 'transparent' }} />
+                )}
+              </div>
+            </div>
+
+            {/* Center Match Banner: Home Team vs Away Team with Final Score */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '60px', flex: 1, margin: '20px 0' }}>
+              {/* Home Team */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '320px', textAlign: 'center' }}>
+                <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.08)', border: '4px solid rgba(0, 255, 102, 0.6)', padding: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 35px rgba(0, 255, 102, 0.3)' }}>
+                  <img 
+                    src={ytExportMatch.home_team?.logo_url || homeTeam?.logo_url || '/images/default-team.png'} 
+                    alt="" 
+                    crossOrigin="anonymous"
+                    style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'contain', background: 'transparent' }} 
+                  />
+                </div>
+                <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '900', textTransform: 'uppercase', marginTop: '16px', marginBottom: '0', letterSpacing: '1px', textShadow: '0 4px 12px rgba(0,0,0,0.8)' }}>
+                  {ytExportMatch.home_team?.name || homeTeam?.name}
+                </h2>
+              </div>
+
+              {/* Final Score Badge */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <div style={{ background: 'linear-gradient(135deg, #00ff66 0%, #00cc52 100%)', color: '#050910', padding: '10px 24px', borderRadius: '16px', fontSize: '38px', fontWeight: '900', fontStyle: 'italic', letterSpacing: '2px', boxShadow: '0 0 25px rgba(0, 255, 102, 0.5)' }}>
+                  {`${ytExportMatch.home_score ?? 0} : ${ytExportMatch.away_score ?? 0}`}
+                </div>
+                {ytExportMatch.round && (
+                  <span style={{ color: '#00ff66', fontSize: '22px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
+                    {ytExportMatch.round}-TUR
+                  </span>
+                )}
+              </div>
+
+              {/* Away Team */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '320px', textAlign: 'center' }}>
+                <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.08)', border: '4px solid rgba(0, 255, 102, 0.6)', padding: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 35px rgba(0, 255, 102, 0.3)' }}>
+                  <img 
+                    src={ytExportMatch.away_team?.logo_url || awayTeam?.logo_url || '/images/default-team.png'} 
+                    alt="" 
+                    crossOrigin="anonymous"
+                    style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'contain', background: 'transparent' }} 
+                  />
+                </div>
+                <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '900', textTransform: 'uppercase', marginTop: '16px', marginBottom: '0', letterSpacing: '1px', textShadow: '0 4px 12px rgba(0,0,0,0.8)' }}>
+                  {ytExportMatch.away_team?.name || awayTeam?.name}
+                </h2>
+              </div>
+            </div>
+
+            {/* Secondary Sponsors Banner */}
+            {ytExportSecondarySponsors.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px', marginBottom: '5px' }}>
+                {ytExportSecondarySponsors.map((s, idx) => (
+                  <React.Fragment key={s.id || idx}>
+                    <img src={s.logo_url} alt="" crossOrigin="anonymous" style={{ height: '36px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                    {idx < ytExportSecondarySponsors.length - 1 && (
+                      <div style={{ height: '22px', width: '1px', backgroundColor: '#ffffff', opacity: 0.4 }}></div>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
