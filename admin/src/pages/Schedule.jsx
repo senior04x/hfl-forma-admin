@@ -1000,9 +1000,9 @@ const Schedule = () => {
                 {matches.filter(m => m.league === exportLeague && m.round == exportRound).map(match => (
                   <div key={match.id} className="sch-match-row">
                     <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                    <div style={{ color: '#fff', fontSize: '20px', fontWeight: '800', textAlign: 'center' }}>{match.home_team?.name}</div>
+                    <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
                     <div className="sch-time-container"><div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div><div className="sch-time-box">{match.match_time?.substring(0, 5)}</div></div>
-                    <div style={{ color: '#fff', fontSize: '20px', fontWeight: '800', textAlign: 'center' }}>{match.away_team?.name}</div>
+                    <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
                     <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
                   </div>
                 ))}
