@@ -32,9 +32,14 @@ async function getCroppedImg(imageSrc, pixelCrop) {
 function createImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (url && !url.startsWith('data:')) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => resolve(img);
-    img.onerror = reject;
+    img.onerror = (err) => {
+      console.error('Image load error in cropper:', err);
+      reject(err);
+    };
     img.src = url;
   });
 }
