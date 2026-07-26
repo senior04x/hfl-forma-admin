@@ -889,6 +889,13 @@
   cursor: not-allowed;
 }
 
+.card-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.35);
+  transform: scale(1.05);
+}
+
 /* Mobile responsive */
 @media (max-width: 640px) {
   .tw-card-content {
@@ -903,5 +910,15 @@
   
   .filter-dropdown-container {
     max-width: 100%;
+  }
+
+  .modal-body .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .transfer-edit-modal {
+    max-height: 90vh;
+    overflow-y: auto;
   }
 }

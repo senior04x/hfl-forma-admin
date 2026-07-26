@@ -43,6 +43,8 @@ const Transfers = () => {
   
   const filterRef = useRef(null);
 
+  const [allTeams, setAllTeams] = useState([]);
+
   useEffect(() => {
     fetchTransfers();
     fetchTransferWindowStatus();
@@ -165,8 +167,13 @@ const Transfers = () => {
     try {
       const { data: orgTeams } = await supabase
         .from('teams')
-        .select('id')
-        .eq('organization_id', orgId);
+        .select('id, name, logo_url')
+        .eq('organization_id', orgId)
+        .order('name');
+
+      if (orgTeams) {
+        setAllTeams(orgTeams);
+      }
 
       const teamIdSet = new Set((orgTeams || []).map(t => t.id));
 
@@ -256,8 +263,12 @@ const Transfers = () => {
       player_name: transfer.player_name || '',
       reason: transfer.reason || '',
       status: transfer.status || 'pending',
+      old_team_id: transfer.old_team_id || '',
       old_team_name: transfer.old_team_name || '',
-      new_team_name: transfer.new_team_name || ''
+      old_team_logo: transfer.old_team_logo || '',
+      new_team_id: transfer.new_team_id || '',
+      new_team_name: transfer.new_team_name || '',
+      new_team_logo: transfer.new_team_logo || ''
     });
   };
 
@@ -265,23 +276,38 @@ const Transfers = () => {
     if (!editingTransfer) return;
     setSavingEdit(true);
     try {
+      const selectedOld = allTeams.find(t => String(t.id) === String(editForm.old_team_id));
+      const selectedNew = allTeams.find(t => String(t.id) === String(editForm.new_team_id));
+
+      const oldTeamId = selectedOld ? selectedOld.id : (editForm.old_team_id || null);
+      const oldTeamName = selectedOld ? selectedOld.name : editForm.old_team_name;
+      const oldTeamLogo = selectedOld ? selectedOld.logo_url : editForm.old_team_logo;
+
+      const newTeamId = selectedNew ? selectedNew.id : (editForm.new_team_id || null);
+      const newTeamName = selectedNew ? selectedNew.name : editForm.new_team_name;
+      const newTeamLogo = selectedNew ? selectedNew.logo_url : editForm.new_team_logo;
+
       const { error } = await supabase
         .from('transfers')
         .update({
           player_name: editForm.player_name,
           reason: editForm.reason,
           status: editForm.status,
-          old_team_name: editForm.old_team_name,
-          new_team_name: editForm.new_team_name
+          old_team_id: oldTeamId,
+          old_team_name: oldTeamName,
+          old_team_logo: oldTeamLogo,
+          new_team_id: newTeamId,
+          new_team_name: newTeamName,
+          new_team_logo: newTeamLogo
         })
         .eq('id', editingTransfer.id);
 
       if (error) throw error;
 
-      if (editForm.status === 'approved' && editingTransfer.player_id && editingTransfer.new_team_id) {
+      if (editForm.status === 'approved' && editingTransfer.player_id && newTeamId) {
         await supabase
           .from('applications')
-          .update({ team_id: editingTransfer.new_team_id })
+          .update({ team_id: newTeamId })
           .eq('id', editingTransfer.player_id);
       }
 
@@ -555,21 +581,49 @@ const Transfers = () => {
               <div className="form-row">
                 <div className="form-group">
                   <label><Shield size={14} /> Eski jamoa</label>
-                  <input 
-                    type="text" 
-                    value={editForm.old_team_name}
-                    onChange={e => setEditForm({ ...editForm, old_team_name: e.target.value })}
-                    placeholder="Eski jamoa nomi"
-                  />
+                  <select 
+                    value={editForm.old_team_id || ''}
+                    onChange={e => {
+                      const selectedId = e.target.value;
+                      const selected = allTeams.find(t => String(t.id) === String(selectedId));
+                      setEditForm(prev => ({
+                        ...prev,
+                        old_team_id: selectedId,
+                        old_team_name: selected ? selected.name : prev.old_team_name,
+                        old_team_logo: selected ? selected.logo_url : prev.old_team_logo
+                      }));
+                    }}
+                  >
+                    <option value="">{editForm.old_team_name ? `Eski: ${editForm.old_team_name}` : "-- Jamoani tanlang --"}</option>
+                    {allTeams.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label><Shield size={14} /> Yangi jamoa</label>
-                  <input 
-                    type="text" 
-                    value={editForm.new_team_name}
-                    onChange={e => setEditForm({ ...editForm, new_team_name: e.target.value })}
-                    placeholder="Yangi jamoa nomi"
-                  />
+                  <select 
+                    value={editForm.new_team_id || ''}
+                    onChange={e => {
+                      const selectedId = e.target.value;
+                      const selected = allTeams.find(t => String(t.id) === String(selectedId));
+                      setEditForm(prev => ({
+                        ...prev,
+                        new_team_id: selectedId,
+                        new_team_name: selected ? selected.name : prev.new_team_name,
+                        new_team_logo: selected ? selected.logo_url : prev.new_team_logo
+                      }));
+                    }}
+                  >
+                    <option value="">{editForm.new_team_name ? `Yangi: ${editForm.new_team_name}` : "-- Jamoani tanlang --"}</option>
+                    {allTeams.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
