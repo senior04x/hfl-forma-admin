@@ -199,45 +199,58 @@ const Transfers = () => {
     }
   };
 
-  const handleApprove = async (transfer) => {
+  const handleUpdateTransferStatus = async (transfer, newStatus) => {
     try {
+      const oldStatus = transfer.status;
+      if (oldStatus === newStatus) return;
+
       const { error: transferError } = await supabase
         .from('transfers')
-        .update({ status: 'approved' })
+        .update({ status: newStatus })
         .eq('id', transfer.id);
       
       if (transferError) throw transferError;
 
-      if (transfer.player_id && transfer.new_team_id) {
-        const { error: appError } = await supabase
-          .from('applications')
-          .update({ team_id: transfer.new_team_id })
-          .eq('id', transfer.player_id);
-          
-        if (appError) throw appError;
+      // Handle player team movement in applications and players tables
+      if (transfer.player_id) {
+        if (newStatus === 'approved' && transfer.new_team_id) {
+          // Move player to NEW team
+          await supabase
+            .from('applications')
+            .update({ team_id: transfer.new_team_id })
+            .eq('id', transfer.player_id);
+
+          await supabase
+            .from('players')
+            .update({ team_id: transfer.new_team_id })
+            .eq('id', transfer.player_id);
+        } else if (oldStatus === 'approved' && (newStatus === 'pending' || newStatus === 'rejected') && transfer.old_team_id) {
+          // Revert player BACK to OLD team
+          await supabase
+            .from('applications')
+            .update({ team_id: transfer.old_team_id })
+            .eq('id', transfer.player_id);
+
+          await supabase
+            .from('players')
+            .update({ team_id: transfer.old_team_id })
+            .eq('id', transfer.player_id);
+        }
       }
 
       fetchTransfers();
     } catch (err) {
-      console.error('Error approving transfer:', err);
-      alert('Xatolik yuz berdi');
+      console.error('Error updating transfer status:', err);
+      alert('Xatolik yuz berdi: ' + (err.message || ''));
     }
   };
 
-  const handleReject = async (transferId) => {
-    try {
-      const { error } = await supabase
-        .from('transfers')
-        .update({ status: 'rejected' })
-        .eq('id', transferId);
-        
-      if (error) throw error;
-      
-      fetchTransfers();
-    } catch (err) {
-      console.error('Error rejecting transfer:', err);
-      alert('Xatolik yuz berdi');
-    }
+  const handleApprove = async (transfer) => {
+    await handleUpdateTransferStatus(transfer, 'approved');
+  };
+
+  const handleReject = async (transfer) => {
+    await handleUpdateTransferStatus(transfer, 'rejected');
   };
 
   const handleDeleteTransfer = async (transferId) => {
@@ -287,12 +300,15 @@ const Transfers = () => {
       const newTeamName = selectedNew ? selectedNew.name : editForm.new_team_name;
       const newTeamLogo = selectedNew ? selectedNew.logo_url : editForm.new_team_logo;
 
+      const oldStatus = editingTransfer.status;
+      const newStatus = editForm.status;
+
       const { error } = await supabase
         .from('transfers')
         .update({
           player_name: editForm.player_name,
           reason: editForm.reason,
-          status: editForm.status,
+          status: newStatus,
           old_team_id: oldTeamId,
           old_team_name: oldTeamName,
           old_team_logo: oldTeamLogo,
@@ -304,11 +320,29 @@ const Transfers = () => {
 
       if (error) throw error;
 
-      if (editForm.status === 'approved' && editingTransfer.player_id && newTeamId) {
-        await supabase
-          .from('applications')
-          .update({ team_id: newTeamId })
-          .eq('id', editingTransfer.player_id);
+      // Handle team movement when status changes in edit modal
+      if (editingTransfer.player_id) {
+        if (newStatus === 'approved' && newTeamId) {
+          await supabase
+            .from('applications')
+            .update({ team_id: newTeamId })
+            .eq('id', editingTransfer.player_id);
+
+          await supabase
+            .from('players')
+            .update({ team_id: newTeamId })
+            .eq('id', editingTransfer.player_id);
+        } else if (oldStatus === 'approved' && (newStatus === 'pending' || newStatus === 'rejected') && oldTeamId) {
+          await supabase
+            .from('applications')
+            .update({ team_id: oldTeamId })
+            .eq('id', editingTransfer.player_id);
+
+          await supabase
+            .from('players')
+            .update({ team_id: oldTeamId })
+            .eq('id', editingTransfer.player_id);
+        }
       }
 
       setEditingTransfer(null);
@@ -538,16 +572,33 @@ const Transfers = () => {
                 </div>
               </div>
               
-              {transfer.status === 'pending' && (
-                <div className="card-bottom">
-                  <button className="action-btn reject" onClick={() => handleReject(transfer.id)} title="Rad etish">
-                    <X size={18} /> Rad etish
+              <div className="card-bottom">
+                {transfer.status === 'pending' && (
+                  <>
+                    <button className="action-btn reject" onClick={() => handleReject(transfer)} title="Rad etish">
+                      <X size={18} /> Rad etish
+                    </button>
+                    <button className="action-btn approve" onClick={() => handleApprove(transfer)} title="Tasdiqlash">
+                      <Check size={18} /> Tasdiqlash
+                    </button>
+                  </>
+                )}
+                {transfer.status === 'approved' && (
+                  <button className="action-btn reject" style={{ width: '100%', background: 'rgba(255, 170, 0, 0.15)', color: '#ffaa00', borderColor: 'rgba(255, 170, 0, 0.3)' }} onClick={() => handleUpdateTransferStatus(transfer, 'pending')} title="Kutilmoqdaga qaytarish (O'yinchini eski jamoasiga qaytarish)">
+                    <Clock size={16} /> Kutilmoqdaga qaytarish
                   </button>
-                  <button className="action-btn approve" onClick={() => handleApprove(transfer)} title="Tasdiqlash">
-                    <Check size={18} /> Tasdiqlash
-                  </button>
-                </div>
-              )}
+                )}
+                {transfer.status === 'rejected' && (
+                  <>
+                    <button className="action-btn reject" style={{ background: 'rgba(255, 170, 0, 0.15)', color: '#ffaa00', borderColor: 'rgba(255, 170, 0, 0.3)' }} onClick={() => handleUpdateTransferStatus(transfer, 'pending')} title="Kutilmoqdaga qaytarish">
+                      <Clock size={16} /> Kutilmoqdaga
+                    </button>
+                    <button className="action-btn approve" onClick={() => handleApprove(transfer)} title="Tasdiqlash">
+                      <Check size={18} /> Tasdiqlash
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
