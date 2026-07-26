@@ -259,6 +259,39 @@ const Schedule = () => {
     }
   }, [orgId]);
 
+  const updateYouTubeThumbnailForBroadcast = async (broadcastId, token = null) => {
+    try {
+      if (!exportYtRef.current || !broadcastId) return;
+      const accessToken = token || await getValidAccessToken();
+      if (!accessToken) return;
+
+      const canvas = await html2canvas(exportYtRef.current, {
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#0b0f19',
+        width: 1280,
+        height: 720
+      });
+
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+      if (blob) {
+        const thumbRes = await fetch(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?youtubeId=${broadcastId}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'image/jpeg'
+          },
+          body: blob
+        });
+        const thumbData = await thumbRes.json();
+        console.log('YouTube Thumbnail set response:', thumbData);
+      }
+    } catch (err) {
+      console.warn('Error updating YouTube thumbnail:', err);
+    }
+  };
+
   const createYouTubeLiveStream = async (matchObj, autoThumbnail = true) => {
     const accessToken = await getValidAccessToken();
     if (!accessToken) {
@@ -268,8 +301,6 @@ const Schedule = () => {
 
     setYtLoading(true);
     try {
-      setSelectedMatchForYtExport(matchObj);
-
       let startTime;
       try {
         startTime = new Date(`${matchObj.match_date}T${matchObj.match_time}:00`).toISOString();
@@ -286,8 +317,16 @@ const Schedule = () => {
       };
       setSelectedMatchForYtExport(fullMatchObj);
 
-      const title = `${homeTeamObj?.name || 'Home'} vs ${awayTeamObj?.name || 'Away'} | ${matchObj.league || 'HFL'} ${matchObj.round ? matchObj.round + '-Tur' : ''}`;
-      const description = `${matchObj.league || 'HFL'} ${matchObj.round ? matchObj.round + '-Tur' : ''} o'yini: ${homeTeamObj?.name} vs ${awayTeamObj?.name}.\nSana: ${matchObj.match_date}\nVaqt: ${matchObj.match_time}\nMaydon: ${matchObj.location || '1-maydon'}\nHFL Live Stream.`;
+      const leagueName = matchObj.league || exportLeague || 'JOMA PROBOTAS LIGA';
+      const roundText = matchObj.round ? `${matchObj.round}-TUR` : 'GURUH BOSQICHI';
+      const homeName = (homeTeamObj?.name || 'HOME').toUpperCase();
+      const awayName = (awayTeamObj?.name || 'AWAY').toUpperCase();
+
+      // Requested Title Format: JOMA PROBOTAS LIGA | 3-TUR | FC TEAM 1 - FC TEAM 2
+      const title = `${leagueName.toUpperCase()} | ${roundText} | ${homeName} - ${awayName}`;
+      
+      // Requested Description Format:
+      const description = `🏆 LIGA: ${leagueName.toUpperCase()}\n⚽ O'YIN: ${homeName} - ${awayName}\n📌 BOSQICH: ${roundText}\n📅 SANA: ${matchObj.match_date || ''}\n⏰ VAQT: ${matchObj.match_time || ''}\n📍 MAYDON: ${matchObj.location || '1-maydon'} ${matchObj.stadium_name ? '(' + matchObj.stadium_name + ')' : ''}\n\n🔥 Havas Futbol Ligasi (HFL) rasmiy YouTube kanali! Obuna bo'ling va barcha futbol uchrashuvlarini jonli tomosha qiling!`;
 
       // 1. Create Broadcast
       const bRes = await fetch('https://www.googleapis.com/youtube/v3/liveBroadcasts?part=snippet,status,contentDetails', {
@@ -322,7 +361,7 @@ const Schedule = () => {
       const broadcastId = bData.id;
       const liveUrl = `https://youtube.com/live/${broadcastId}`;
 
-      // 2. Create Stream for RTMP Key
+      // 2. Bind Stream
       try {
         const sRes = await fetch('https://www.googleapis.com/youtube/v3/liveStreams?part=snippet,cdn', {
           method: 'POST',
@@ -350,35 +389,15 @@ const Schedule = () => {
       }
 
       // 3. Render 16:9 Thumbnail and Upload to YouTube
-      if (autoThumbnail && exportYtRef.current) {
-        await new Promise(r => setTimeout(r, 600));
-        const canvas = await html2canvas(exportYtRef.current, {
-          scale: 1,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#0b0f19',
-          width: 1280,
-          height: 720
-        });
-
-        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
-        if (blob) {
-          await fetch(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?youtubeId=${broadcastId}`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'image/jpeg'
-            },
-            body: blob
-          });
-        }
+      if (autoThumbnail) {
+        await new Promise(r => setTimeout(r, 900));
+        await updateYouTubeThumbnailForBroadcast(broadcastId, accessToken);
       }
 
       // 4. Update youtube_link in Supabase DB
       await supabase.from('matches').update({ youtube_link: liveUrl }).eq('id', matchObj.id);
       setMatches(prev => prev.map(m => m.id === matchObj.id ? { ...m, youtube_link: liveUrl } : m));
 
-      alert(`✅ YouTube Jonli Efir Ochildi va 16:9 Oblojka Yuklandi!\n\nLink: ${liveUrl}`);
       return liveUrl;
     } catch (err) {
       console.error('Error creating YT stream:', err);
@@ -530,13 +549,8 @@ const Schedule = () => {
 
     setUploadingBanner(true);
     try {
-      setScheduleBanner(croppedDataUrl);
-      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
-      try {
-        localStorage.setItem(localKey, croppedDataUrl);
-      } catch (e) {}
-
       let publicUrl = croppedDataUrl;
+
       try {
         const response = await fetch(croppedDataUrl);
         const blob = await response.blob();
@@ -551,29 +565,30 @@ const Schedule = () => {
           const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
           if (data?.publicUrl) {
             publicUrl = data.publicUrl;
-            setScheduleBanner(publicUrl);
-            try {
-              localStorage.setItem(localKey, publicUrl);
-            } catch (e) {}
           }
         }
       } catch (uploadExc) {
         console.warn('Storage upload fallback:', uploadExc);
       }
 
+      setScheduleBanner(publicUrl);
+      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id || currentLeagueObj.name}`;
+      try { localStorage.setItem(localKey, publicUrl); } catch (e) {}
+
+      // Update Supabase DB leagues table
       let { error: dbErr } = await supabase
         .from('leagues')
         .update({ schedule_banner_url: publicUrl, export_bg_url: publicUrl })
-        .eq('id', currentLeagueObj.id);
+        .or(`id.eq.${currentLeagueObj.id},name.eq.${currentLeagueObj.name}`);
 
       if (dbErr) {
         await supabase
           .from('leagues')
           .update({ export_bg_url: publicUrl })
-          .eq('id', currentLeagueObj.id);
+          .or(`id.eq.${currentLeagueObj.id},name.eq.${currentLeagueObj.name}`);
       }
 
-      setActiveLeagues(prev => prev.map(l => l.id === currentLeagueObj.id ? { ...l, schedule_banner_url: publicUrl, export_bg_url: publicUrl } : l));
+      setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj.id || l.name === currentLeagueObj.name) ? { ...l, schedule_banner_url: publicUrl, export_bg_url: publicUrl } : l));
     } catch (err) {
       console.error('Error saving schedule banner:', err);
     } finally {
@@ -589,13 +604,8 @@ const Schedule = () => {
 
     setUploadingYtBanner(true);
     try {
-      setYtBanner(croppedDataUrl);
-      const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj.id}`;
-      try {
-        localStorage.setItem(localKey, croppedDataUrl);
-      } catch (e) {}
-
       let publicUrl = croppedDataUrl;
+
       try {
         const response = await fetch(croppedDataUrl);
         const blob = await response.blob();
@@ -610,29 +620,29 @@ const Schedule = () => {
           const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
           if (data?.publicUrl) {
             publicUrl = data.publicUrl;
-            setYtBanner(publicUrl);
-            try {
-              localStorage.setItem(localKey, publicUrl);
-            } catch (e) {}
           }
         }
       } catch (uploadExc) {
         console.warn('Storage upload fallback:', uploadExc);
       }
 
+      setYtBanner(publicUrl);
+      const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj.id || currentLeagueObj.name}`;
+      try { localStorage.setItem(localKey, publicUrl); } catch (e) {}
+
       let { error: dbErr } = await supabase
         .from('leagues')
-        .update({ yt_banner_url: publicUrl })
-        .eq('id', currentLeagueObj.id);
+        .update({ yt_banner_url: publicUrl, banner_url: publicUrl })
+        .or(`id.eq.${currentLeagueObj.id},name.eq.${currentLeagueObj.name}`);
 
       if (dbErr) {
         await supabase
           .from('leagues')
           .update({ banner_url: publicUrl })
-          .eq('id', currentLeagueObj.id);
+          .or(`id.eq.${currentLeagueObj.id},name.eq.${currentLeagueObj.name}`);
       }
 
-      setActiveLeagues(prev => prev.map(l => l.id === currentLeagueObj.id ? { ...l, yt_banner_url: publicUrl, banner_url: publicUrl } : l));
+      setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj.id || l.name === currentLeagueObj.name) ? { ...l, yt_banner_url: publicUrl, banner_url: publicUrl } : l));
     } catch (err) {
       console.error('Error saving YouTube banner:', err);
     } finally {
@@ -854,6 +864,7 @@ const Schedule = () => {
         organization_id: orgId,
       };
 
+      let savedMatchId = editingMatch?.id;
       if (editingMatch) {
         let { error } = await supabase
           .from('matches')
@@ -865,23 +876,58 @@ const Schedule = () => {
           await supabase.from('matches').update(matchData).eq('id', editingMatch.id);
         }
       } else {
-        let { error } = await supabase.from('matches').insert([{
+        let { data, error } = await supabase.from('matches').insert([{
           ...matchData,
           status: 'scheduled'
-        }]);
+        }]).select();
 
         if (error) {
           delete matchData.is_postponed;
-          await supabase.from('matches').insert([{
+          const fallbackRes = await supabase.from('matches').insert([{
             ...matchData,
             status: 'scheduled'
-          }]);
+          }]).select();
+          savedMatchId = fallbackRes.data ? fallbackRes.data[0]?.id : null;
+        } else if (data && data.length > 0) {
+          savedMatchId = data[0].id;
         }
       }
 
       setIsModalOpen(false);
       setEditingMatch(null);
-      fetchMatches();
+      await fetchMatches();
+
+      // Auto-create YouTube live stream if checkbox was checked
+      if (autoCreateYtLive && ytChannelInfo && savedMatchId) {
+        const fullSavedMatch = {
+          ...matchData,
+          id: savedMatchId
+        };
+        await createYouTubeLiveStream(fullSavedMatch, true);
+      } else if (editingMatch?.youtube_link) {
+        // Auto-update YouTube thumbnail with scores if match was updated
+        const extractId = (url) => {
+          if (!url) return null;
+          if (url.includes('/live/')) return url.split('/live/')[1]?.split('?')[0];
+          if (url.includes('v=')) return url.split('v=')[1]?.split('&')[0];
+          if (url.includes('youtu.be/')) return url.split('youtu.be/')[1]?.split('?')[0];
+          return null;
+        };
+        const broadcastId = extractId(editingMatch.youtube_link);
+        if (broadcastId) {
+          const homeTeamObj = teams.find(t => t.id === matchData.home_team_id);
+          const awayTeamObj = teams.find(t => t.id === matchData.away_team_id);
+          setSelectedMatchForYtExport({
+            ...editingMatch,
+            ...matchData,
+            home_team: homeTeamObj,
+            away_team: awayTeamObj
+          });
+          setTimeout(() => {
+            updateYouTubeThumbnailForBroadcast(broadcastId);
+          }, 850);
+        }
+      }
     } catch (error) {
       console.error(error);
       alert('Xatolik yuz berdi: ' + (error.message || ''));
@@ -892,6 +938,36 @@ const Schedule = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm("Rostdan ham ushbu o'yinni o'chirmoqchimisiz?")) {
+      const matchToDelete = matches.find(m => m.id === id);
+
+      // Auto-delete live broadcast from YouTube API if youtube_link exists
+      if (matchToDelete?.youtube_link) {
+        try {
+          const accessToken = await getValidAccessToken();
+          if (accessToken) {
+            const matchLink = matchToDelete.youtube_link;
+            let broadcastId = null;
+            if (matchLink.includes('/live/')) {
+              broadcastId = matchLink.split('/live/')[1]?.split('?')[0];
+            } else if (matchLink.includes('v=')) {
+              broadcastId = matchLink.split('v=')[1]?.split('&')[0];
+            } else if (matchLink.includes('youtu.be/')) {
+              broadcastId = matchLink.split('youtu.be/')[1]?.split('?')[0];
+            }
+
+            if (broadcastId) {
+              await fetch(`https://www.googleapis.com/youtube/v3/liveBroadcasts?id=${broadcastId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+              });
+              console.log('Successfully deleted YouTube live broadcast:', broadcastId);
+            }
+          }
+        } catch (ytErr) {
+          console.warn('Error auto-deleting YouTube broadcast:', ytErr);
+        }
+      }
+
       const { error } = await supabase.from('matches').delete().eq('id', id);
       if (!error) {
         fetchMatches();
@@ -1102,6 +1178,31 @@ const Schedule = () => {
                 >
                   {exportingMatchId === match.id ? <span className="btn-spinner"></span> : <Download size={15} />}
                 </button>
+                {match.youtube_link && (
+                  <a 
+                    href={match.youtube_link} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="yt-watch-live-btn"
+                    title="YouTube'da Jonli Efirni Ko'rish"
+                    style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '4px', 
+                      background: 'linear-gradient(135deg, #ff0000 0%, #cc0000 100%)', 
+                      color: '#ffffff', 
+                      padding: '4px 8px', 
+                      borderRadius: '8px', 
+                      fontSize: '11px', 
+                      fontWeight: '800', 
+                      textDecoration: 'none',
+                      boxShadow: '0 2px 10px rgba(255,0,0,0.35)',
+                      transition: 'transform 0.2s'
+                    }}
+                  >
+                    <Video size={13} /> Jonli Ko'rish
+                  </a>
+                )}
                 <button className="edit-match-btn" onClick={() => handleEditMatch(match)} title="Tahrirlash">
                   <Pencil size={15} />
                 </button>
