@@ -397,24 +397,6 @@ const Settings = () => {
 
       {loading ? (
         <>
-          {/* Collab Banner Skeleton */}
-          <div className="collab-incoming-banner">
-            <div className="collab-incoming-header">
-              <div className="skeleton-box" style={{ width: '20px', height: '20px', borderRadius: '4px' }}></div>
-              <div style={{ flex: 1 }}>
-                <div className="skeleton-box" style={{ width: '200px', height: '18px', marginBottom: '6px' }}></div>
-                <div className="skeleton-box" style={{ width: '280px', height: '12px' }}></div>
-              </div>
-            </div>
-            <div className="collab-incoming-item">
-              <div className="skeleton-box" style={{ height: '16px', width: '65%' }}></div>
-              <div className="collab-incoming-actions">
-                <div className="skeleton-box" style={{ width: '44px', height: '44px', borderRadius: '12px' }}></div>
-                <div className="skeleton-box" style={{ width: '44px', height: '44px', borderRadius: '12px' }}></div>
-              </div>
-            </div>
-          </div>
-
           {/* Settings Grid Skeleton (1:1 identical to real cards) */}
           <div className="settings-grid">
             <div className="settings-card full-width">
