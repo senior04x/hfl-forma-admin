@@ -317,16 +317,16 @@ const Schedule = () => {
       };
       setSelectedMatchForYtExport(fullMatchObj);
 
-      const leagueName = matchObj.league || exportLeague || 'JOMA PROBOTAS LIGA';
+      let formattedLeague = (matchObj.league || exportLeague || 'HAVAS FUTBOL LIGASI').toUpperCase();
       const roundText = matchObj.round ? `${matchObj.round}-TUR` : 'GURUH BOSQICHI';
       const homeName = (homeTeamObj?.name || 'HOME').toUpperCase();
       const awayName = (awayTeamObj?.name || 'AWAY').toUpperCase();
 
-      // Requested Title Format: JOMA PROBOTAS LIGA | 3-TUR | FC TEAM 1 - FC TEAM 2
-      const title = `${leagueName.toUpperCase()} | ${roundText} | ${homeName} - ${awayName}`;
+      // Dynamic Title Format for any league: HAVAS 1-LIGA | 3-TUR | FC TEAM 1 - FC TEAM 2
+      const title = `${formattedLeague} | ${roundText} | ${homeName} - ${awayName}`;
       
-      // Requested Description Format:
-      const description = `🏆 LIGA: ${leagueName.toUpperCase()}\n⚽ O'YIN: ${homeName} - ${awayName}\n📌 BOSQICH: ${roundText}\n📅 SANA: ${matchObj.match_date || ''}\n⏰ VAQT: ${matchObj.match_time || ''}\n📍 MAYDON: ${matchObj.location || '1-maydon'} ${matchObj.stadium_name ? '(' + matchObj.stadium_name + ')' : ''}\n\n🔥 Havas Futbol Ligasi (HFL) rasmiy YouTube kanali! Obuna bo'ling va barcha futbol uchrashuvlarini jonli tomosha qiling!`;
+      // Dynamic Description Format with full match info:
+      const description = `🏆 LIGA: ${formattedLeague}\n⚽ O'YIN: ${homeName} - ${awayName}\n📌 BOSQICH / TUR: ${roundText}\n📅 SANA: ${matchObj.match_date || ''}\n⏰ VAQT: ${matchObj.match_time || ''}\n📍 MAYDON: ${matchObj.location || '1-maydon'} ${matchObj.stadium_name ? '(' + matchObj.stadium_name + ')' : ''}\n🏢 TASHKILOT: ${currentOrg?.name || 'Havas Futbol Ligasi'}\n\n🔥 Havas Futbol Ligasi (HFL) rasmiy YouTube kanali! Obuna bo'ling va barcha futbol uchrashuvlarini jonli tomosha qiling!`;
 
       // 1. Create Broadcast
       const bRes = await fetch('https://www.googleapis.com/youtube/v3/liveBroadcasts?part=snippet,status,contentDetails', {
