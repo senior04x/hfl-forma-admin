@@ -30,11 +30,11 @@
 .login-card {
   position: relative;
   z-index: 2;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08) !important;
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45), inset 0 0 1px rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 0 1px rgba(255, 255, 255, 0.4);
   padding: 40px 34px;
   border-radius: 20px;
   width: 100%;
@@ -48,7 +48,7 @@
   font-size: 20px;
   font-weight: 700;
   line-height: 1.35;
-  color: #ffffff;
+  color: #ffffff !important;
   margin-top: 0;
   margin-bottom: 28px;
   letter-spacing: 0.2px;
@@ -57,13 +57,13 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 
 .login-subtitle-line2 {
   display: block;
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.95) !important;
   font-weight: 500;
 }
 
@@ -75,11 +75,12 @@
 .login-card label {
   display: block;
   margin-bottom: 8px;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 14px;
-  color: #ffffff;
+  color: #ffffff !important;
+  opacity: 1 !important;
   letter-spacing: 0.2px;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
 }
 
 .password-input-wrapper {
@@ -92,16 +93,26 @@
 .login-card input {
   width: 100%;
   padding: 13px 16px;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
   border-radius: 9px;
   font-family: 'Inter', sans-serif;
   font-size: 14px;
-  color: #ffffff;
+  color: #ffffff !important;
   box-sizing: border-box;
   outline: none;
   transition: all 0.2s ease;
   backdrop-filter: blur(10px);
+}
+
+/* Chrome/Safari Autofill transparency fix */
+.login-card input:-webkit-autofill,
+.login-card input:-webkit-autofill:hover,
+.login-card input:-webkit-autofill:focus,
+.login-card input:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(30, 50, 40, 0.5) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .password-input-wrapper input {
@@ -109,13 +120,13 @@
 }
 
 .login-card input::placeholder {
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.5) !important;
 }
 
 .login-card input:focus {
-  border-color: rgba(255, 255, 255, 0.6);
-  background: rgba(0, 0, 0, 0.38);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.65) !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.25) !important;
 }
 
 .password-toggle-btn {
@@ -123,7 +134,7 @@
   right: 12px;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -142,9 +153,9 @@
   width: 100%;
   padding: 13px;
   margin-top: 10px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  color: #ffffff !important;
   border-radius: 9px;
   font-weight: 600;
   font-size: 15px;
@@ -159,8 +170,8 @@
 }
 
 .login-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.24) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
