@@ -328,7 +328,7 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
                   alt="Preview" 
                   className="crop-preview-avatar team" 
                 />
-                <button type="button" className="btn-crop-upload" onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileInputRef.current?.click(); }}>
+                <button type="button" className="btn-crop-upload" onClick={() => fileInputRef.current?.click()}>
                   <Crop size={16} /> {uploadingImage ? 'Yuklanmoqda...' : "1:1 Logotip Almashtirish"}
                 </button>
                 <input 

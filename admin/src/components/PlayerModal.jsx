@@ -214,7 +214,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
                   alt="Avatar" 
                   className="crop-preview-avatar"
                 />
-                <button type="button" className="btn-crop-upload" onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileInputRef.current?.click(); }}>
+                <button type="button" className="btn-crop-upload" onClick={() => fileInputRef.current?.click()}>
                   <Crop size={16} /> {uploadingImage ? 'Yuklanmoqda...' : "1:1 Rasm Almashtirish"}
                 </button>
                 <input 
