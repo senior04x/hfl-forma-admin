@@ -278,10 +278,13 @@ const Settings = () => {
     }
   };
 
+  const [deletingLeagueId, setDeletingLeagueId] = useState(null);
+
   const handleDeleteLeague = async (league) => {
     if (!window.confirm(`"${league.name}" ligasini o'chirmoqchimisiz? Ushbu ligaga tegishli collab sherikchiliklari ham o'chib ketadi.`)) {
       return;
     }
+    setDeletingLeagueId(league.id);
     setMessage({ type: '', text: '' });
     try {
       await supabase.from('league_collabs').delete().eq('league_id', league.id);
@@ -292,6 +295,8 @@ const Settings = () => {
       fetchLeaguesAndOrgs();
     } catch (err) {
       setMessage({ type: 'error', text: 'O\'chirishda xato: ' + err.message });
+    } finally {
+      setDeletingLeagueId(null);
     }
   };
 
@@ -738,9 +743,10 @@ const Settings = () => {
                                 <button
                                   className="btn-league-action btn-league-delete"
                                   onClick={() => handleDeleteLeague(l)}
+                                  disabled={deletingLeagueId === l.id}
                                   title="Liganı o'chirish"
                                 >
-                                  <Trash2 size={14} />
+                                  {deletingLeagueId === l.id ? <span className="btn-spinner"></span> : <Trash2 size={14} />}
                                 </button>
                               </>
                             )}

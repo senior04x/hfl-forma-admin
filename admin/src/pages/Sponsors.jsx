@@ -156,10 +156,13 @@ export default function Sponsors() {
     localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(newSelected));
   };
 
+  const [deletingId, setDeletingId] = useState(null);
+
   const handleDelete = async (e, id, logoUrl) => {
     e.stopPropagation();
     if (!window.confirm("Haqiqatan ham ushbu homiyni o'chirmoqchimisiz?")) return;
     
+    setDeletingId(id);
     try {
       const fileName = logoUrl.split('/').pop();
       if (fileName) {
@@ -182,6 +185,8 @@ export default function Sponsors() {
       
     } catch (err) {
       console.error("Error deleting sponsor:", err);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -199,8 +204,8 @@ export default function Sponsors() {
       
       <div className="sponsors-content">
         <div className="upload-section-page">
-          <label className="upload-btn-page">
-            {uploading ? "Yuklanmoqda..." : <><Upload size={18} /> Yangi homiy logotipini qo'shish</>}
+          <label className={`upload-btn-page ${uploading ? 'disabled' : ''}`}>
+            {uploading ? <><span className="btn-spinner"></span> Yuklanmoqda...</> : <><Upload size={18} /> Yangi homiy logotipini qo'shish</>}
             <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} hidden />
           </label>
         </div>
@@ -246,9 +251,10 @@ export default function Sponsors() {
                       type="button"
                       className="sponsor-delete-btn-page" 
                       onClick={(e) => handleDelete(e, sponsor.id, sponsor.logo_url)}
+                      disabled={deletingId === sponsor.id}
                       title="O'chirish"
                     >
-                      <Trash2 size={16} />
+                      {deletingId === sponsor.id ? <span className="btn-spinner"></span> : <Trash2 size={16} />}
                     </button>
                   </div>
                 </div>
