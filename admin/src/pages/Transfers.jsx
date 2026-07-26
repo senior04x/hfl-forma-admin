@@ -16,18 +16,35 @@ const Transfers = () => {
 
   const fetchTransfers = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('transfers')
-      .select('*')
-      .eq('organization_id', orgId)
-      .order('created_at', { ascending: false });
+    try {
+      // Fetch organization teams to match transfers by team ID
+      const { data: orgTeams } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('organization_id', orgId);
 
-    if (error) {
-      console.error('Error fetching transfers:', error);
-    } else {
-      setTransfers(data || []);
+      const teamIdSet = new Set((orgTeams || []).map(t => t.id));
+
+      const { data, error } = await supabase
+        .from('transfers')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching transfers:', error);
+        setTransfers([]);
+      } else {
+        const orgTransfers = (data || []).filter(t => 
+          t.organization_id === orgId ||
+          (!t.organization_id && (teamIdSet.has(t.old_team_id) || teamIdSet.has(t.new_team_id)))
+        );
+        setTransfers(orgTransfers);
+      }
+    } catch (err) {
+      console.error('Fetch transfers error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleApprove = async (transfer) => {
