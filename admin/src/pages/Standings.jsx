@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Download, Save, ShieldAlert, Crop, Image as ImageIcon, Upload, Sparkles, AlertCircle, X, Check } from 'lucide-react';
+import { Download, Save, ShieldAlert, Crop, Image as ImageIcon, Upload, Sparkles, AlertCircle, X, Check, Trophy } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import ImageCropperModal from '../components/ImageCropperModal';
 import './Standings.css';
@@ -402,12 +402,62 @@ export default function Standings() {
   else if (selectedLeague.includes('Chempion')) exportThemeClass = 'theme-export-Chempion';
   else if (selectedLeague.includes('7x7')) exportThemeClass = 'theme-export-7x7';
 
-  if (loading) return <div>Yuklanmoqda...</div>;
+  if (loading) {
+    return (
+      <div className="standings-page">
+        <div className="standings-header">
+          <div className="skeleton-pulse skeleton-title"></div>
+          <div className="standings-header-actions" style={{ display: 'flex', gap: '10px' }}>
+            <div className="skeleton-pulse skeleton-btn"></div>
+            <div className="skeleton-pulse skeleton-btn"></div>
+            <div className="skeleton-pulse skeleton-btn"></div>
+          </div>
+        </div>
+
+        <div className="skeleton-pulse skeleton-filter-box" style={{ marginBottom: '24px' }}></div>
+
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Jamoa</th>
+                <th>O'yin</th>
+                <th>Farq</th>
+                <th>Ochko</th>
+                <th>Jarima / Bonus (Ochko)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(idx => (
+                <tr key={idx}>
+                  <td><div className="skeleton-pulse skeleton-circle"></div></td>
+                  <td>
+                    <div className="team-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div className="skeleton-pulse skeleton-circle"></div>
+                      <div className="skeleton-pulse skeleton-text" style={{ width: '120px' }}></div>
+                    </div>
+                  </td>
+                  <td><div className="skeleton-pulse skeleton-text" style={{ width: '30px' }}></div></td>
+                  <td><div className="skeleton-pulse skeleton-text" style={{ width: '30px' }}></div></td>
+                  <td><div className="skeleton-pulse skeleton-text" style={{ width: '30px' }}></div></td>
+                  <td><div className="skeleton-pulse skeleton-text" style={{ width: '100px' }}></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="standings-page">
       <div className="standings-header">
-        <h1>Turnir Jadvali va Export</h1>
+        <div className="standings-title-box">
+          <Trophy size={26} className="standings-title-icon" />
+          <h1>Turnir Jadvali va Export</h1>
+        </div>
         <div className="standings-header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button className="btn-download bg-upload-btn" onClick={() => setIsCropperOpen(true)} title="1:1 formatda liga uchun fon rasmi yuklash va qirqish">
             <Crop size={18} /> <span>1:1 Fon Rasmi</span>
@@ -454,7 +504,11 @@ export default function Standings() {
           <tbody>
             {standings.map((t, i) => (
               <tr key={t.id}>
-                <td>{i + 1}</td>
+                <td>
+                  <span className={`rank-badge rank-${i + 1}`}>
+                    {i + 1}
+                  </span>
+                </td>
                 <td>
                   <div className="team-info">
                     <img src={t.logo_url} alt="" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
