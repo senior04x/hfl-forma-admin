@@ -60,6 +60,27 @@
 
     <!-- Scripts -->
     <script>lucide.createIcons();</script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/layout.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/org-resolver.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof window.resolveOrg === 'function') {
+                await window.resolveOrg();
+            }
+            const teamCard = document.querySelector('a[href="apply-team.html"]');
+            const indCard = document.querySelector('a[href="apply-individual.html"]');
+            if (teamCard) teamCard.href = window.buildOrgUrl('apply-team.html');
+            if (indCard) indCard.href = window.buildOrgUrl('apply-individual.html');
+
+            if (window.currentOrg && window.currentOrg.name) {
+                const title = document.querySelector('h1');
+                if (title) {
+                    title.textContent = `${window.currentOrg.name} — Qanday ro'yxatdan o'tmoqchisiz?`;
+                }
+            }
+        });
+    </script>
 </body>
 </html>

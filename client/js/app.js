@@ -22,14 +22,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewTeamBtn = document.getElementById('viewTeamBtn');
     let allTeams = [];
 
-    // Fetch Teams
+    // Fetch Teams & Initialize Org Leagues
+    async function initApp() {
+        if (typeof window.resolveOrg === 'function') {
+            await window.resolveOrg();
+        }
+        await fetchTeams();
+        populateLeagues();
+    }
+
+    function populateLeagues() {
+        if (!tournamentSelect) return;
+        tournamentSelect.innerHTML = '<option value="" disabled selected>Turnirni tanlang</option>';
+
+        let leagueNames = [];
+        if (window.orgLeagues && window.orgLeagues.length > 0) {
+            leagueNames = window.orgLeagues.map(l => l.name);
+        } else if (allTeams && allTeams.length > 0) {
+            leagueNames = Array.from(new Set(
+                allTeams.flatMap(t => t.league ? t.league.split(',').map(s => s.trim()) : []).filter(Boolean)
+            )).sort();
+        } else {
+            leagueNames = ['Super liga', 'Pro liga', '3-liga', '7x7 liga'];
+        }
+
+        leagueNames.forEach(lName => {
+            const opt = document.createElement('option');
+            opt.value = lName;
+            opt.textContent = lName;
+            tournamentSelect.appendChild(opt);
+        });
+    }
+
     async function fetchTeams() {
         if (!teamSelect) return;
         try {
-            // Also include partially_approved if they are registering players? Wait, usually approved. Let's add partially_approved too.
+            const currentOrgId = (window.currentOrg && window.currentOrg.id) ? window.currentOrg.id : 1;
             const { data, error } = await db
                 .from('teams')
-                .select('id, name, league')
+                .select('id, name, league, organization_id')
+                .eq('organization_id', currentOrgId)
                 .in('status', ['approved', 'partially_approved'])
                 .order('name');
                 
@@ -43,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    fetchTeams();
+    initApp();
 
     // Cascading dropdown logic
     if (tournamentSelect && teamSelect) {
@@ -51,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectedLeague = tournamentSelect.value;
             teamSelect.innerHTML = '<option value="" disabled selected>Jamoani tanlang</option>';
             
-            const filteredTeams = allTeams.filter(t => t.league === selectedLeague);
+            const filteredTeams = allTeams.filter(t => t.league && t.league.split(',').map(s => s.trim()).includes(selectedLeague));
             
             if (filteredTeams.length > 0) {
                 filteredTeams.forEach(team => {
@@ -260,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .from('player-photos')
                 .getPublicUrl(filePath);
 
+            const currentOrgId = (window.currentOrg && window.currentOrg.id) ? window.currentOrg.id : 1;
             const applicationId = crypto.randomUUID();
             const applicationData = {
                 id: applicationId,
@@ -275,7 +308,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 player_number: numberInputVal,
                 comment: '[INDIVIDUAL]' + document.getElementById('comment').value.trim(),
                 team_id: teamSelect ? (teamSelect.value || null) : null,
-                status: 'pending'
+                status: 'pending',
+                organization_id: currentOrgId
             };
 
             const { error: insertError } = await db

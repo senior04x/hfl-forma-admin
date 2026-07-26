@@ -38,6 +38,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressBar = document.getElementById('progressBar');
     const progressText = document.getElementById('progressText');
 
+    // --- Org Resolver & Dynamic League Select ---
+    async function initOrgAndLeagues() {
+        const teamLeagueSelect = document.getElementById('teamLeague');
+        if (typeof window.resolveOrg === 'function') {
+            await window.resolveOrg();
+        }
+        if (teamLeagueSelect) {
+            teamLeagueSelect.innerHTML = '<option value="" disabled selected>Turnirni tanlang</option>';
+            const leagues = (window.orgLeagues && window.orgLeagues.length > 0)
+                ? window.orgLeagues.map(l => l.name)
+                : ['Super liga', 'Pro liga', '3-liga', '7x7 liga'];
+            
+            leagues.forEach(lName => {
+                const opt = document.createElement('option');
+                opt.value = lName;
+                opt.textContent = lName;
+                teamLeagueSelect.appendChild(opt);
+            });
+        }
+    }
+    initOrgAndLeagues();
+
     // --- State ---
     let teamLogoBase64 = null;
     let currentPlayerPhotoBase64 = null;
@@ -506,6 +528,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     .from('player-photos')
                     .getPublicUrl(pFileName);
 
+                const currentOrgId = (window.currentOrg && window.currentOrg.id) ? window.currentOrg.id : 1;
+
                 applicationsToInsert.push({
                     id: p.id,
                     team_id: teamId,
@@ -520,7 +544,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     position: p.position,
                     player_number: p.player_number,
                     comment: p.comment,
-                    status: 'pending'
+                    status: 'pending',
+                    organization_id: currentOrgId
                 });
 
                 updateProgress();
@@ -528,6 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 3. Insert Team Record (ONLY after all photos succeeded)
             const fullCaptainPhone = '+998' + captainPhoneVal;
+            const currentOrgId = (window.currentOrg && window.currentOrg.id) ? window.currentOrg.id : 1;
             const { error: teamInsertError } = await db
                 .from('teams')
                 .insert([{
@@ -536,7 +562,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     league: teamLeague,
                     logo_url: teamLogoUrl,
                     captain_phone: fullCaptainPhone,
-                    status: 'pending'
+                    status: 'pending',
+                    organization_id: currentOrgId
                 }]);
             
             if (teamInsertError) {
