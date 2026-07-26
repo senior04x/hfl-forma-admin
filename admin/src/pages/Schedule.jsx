@@ -88,15 +88,16 @@ const Schedule = () => {
 
       // 2. Selected secondary sponsors
       let selectedList = [];
-      try {
-        const savedSelected = localStorage.getItem(`hfl_selectedSponsors_${orgId}`);
-        if (savedSelected) {
-          selectedList = JSON.parse(savedSelected);
-        }
-      } catch (e) {}
-
-      if (!selectedList || selectedList.length === 0) {
-        selectedList = loadedSponsors.filter(s => !s.is_main);
+      const selectedFromDb = loadedSponsors.filter(s => s.is_selected === true && !s.is_main);
+      if (selectedFromDb.length > 0) {
+        selectedList = selectedFromDb;
+      } else {
+        try {
+          const savedSelected = localStorage.getItem(`hfl_selectedSponsors_${orgId}`);
+          if (savedSelected) {
+            selectedList = JSON.parse(savedSelected);
+          }
+        } catch (e) {}
       }
 
       setSelectedSponsors(selectedList);
@@ -1096,18 +1097,16 @@ const Schedule = () => {
 
                       {postponedMatches.length > 0 && (
                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', alignItems: 'center' }}>
+                          <div style={{ background: 'rgba(255, 59, 48, 0.35)', border: '1px solid rgba(255, 59, 48, 0.75)', color: '#ffffff', padding: '5px 20px', borderRadius: '12px', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }}>
+                            {postponedMatches.length > 1 ? "QOLDIRILGAN O'YINLAR" : "QOLDIRILGAN O'YIN"}
+                          </div>
                           {postponedMatches.map(match => (
-                            <div key={match.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', width: '100%' }}>
-                              <div style={{ background: 'rgba(255, 59, 48, 0.35)', border: '1px solid rgba(255, 59, 48, 0.75)', color: '#ffffff', padding: '5px 20px', borderRadius: '12px', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }}>
-                                ⚠️ QOLDIRILGAN O'YIN {match.round ? `(${match.round}-TURDAN QOLGAN O'YIN)` : ''}
-                              </div>
-                              <div className="sch-match-row" style={{ borderColor: 'rgba(255, 59, 48, 0.65)', background: 'rgba(255, 59, 48, 0.2)' }}>
-                                <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                                <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
-                                <div className="sch-time-container"><div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div><div className="sch-time-box">{match.match_time?.substring(0, 5)}</div></div>
-                                <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
-                                <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                              </div>
+                            <div key={match.id} className="sch-match-row" style={{ borderColor: 'rgba(255, 59, 48, 0.65)', background: 'rgba(255, 59, 48, 0.2)', width: '100%' }}>
+                              <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                              <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
+                              <div className="sch-time-container"><div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div><div className="sch-time-box">{match.match_time?.substring(0, 5)}</div></div>
+                              <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
+                              <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
                             </div>
                           ))}
                         </div>
