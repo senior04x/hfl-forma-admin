@@ -47,7 +47,7 @@ const Login = () => {
         </h2>
         
         <form onSubmit={handleLogin}>
-          <div className="form-group">
+          <div className="login-field-group">
             <label className="login-label">Login / Email</label>
             <input 
               type="text" 
@@ -57,7 +57,7 @@ const Login = () => {
               required 
             />
           </div>
-          <div className="form-group">
+          <div className="login-field-group">
             <label className="login-label">Parol</label>
             <div className="password-input-wrapper">
               <input 
