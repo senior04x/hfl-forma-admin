@@ -732,3 +732,95 @@
   border-radius: 16px;
   margin: 0 auto;
 }
+
+/* Custom Disconnect Confirmation Modal */
+.disconnect-confirm-modal {
+  text-align: center;
+  max-width: 440px;
+  background: #141922;
+  border: 1px solid rgba(255, 59, 48, 0.35);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 35px rgba(255, 59, 48, 0.15);
+  padding: 28px 24px;
+}
+
+.disconnect-modal-icon-box {
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 59, 48, 0.12);
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+}
+
+.disconnect-modal-title {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.disconnect-modal-desc {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.disconnect-modal-desc strong {
+  color: #00ff66;
+}
+
+.disconnect-modal-desc span {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.disconnect-modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-disconnect-cancel {
+  flex: 1;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-disconnect-cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.btn-disconnect-confirm {
+  flex: 1;
+  padding: 12px;
+  background: #ff3b30;
+  border: none;
+  color: #ffffff;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(255, 59, 48, 0.4);
+  transition: all 0.2s;
+}
+
+.btn-disconnect-confirm:hover:not(:disabled) {
+  background: #e03126;
+  box-shadow: 0 6px 18px rgba(255, 59, 48, 0.6);
+}
+
+@media (max-width: 480px) {
+  .disconnect-modal-actions {
+    flex-direction: column-reverse;
+  }
+}

@@ -128,6 +128,8 @@ const Settings = () => {
   const [sendingCollab, setSendingCollab] = useState(false);
   const [incomingCollabs, setIncomingCollabs] = useState([]);
   const [allCollabs, setAllCollabs] = useState([]);
+  const [collabToDisconnect, setCollabToDisconnect] = useState(null);
+  const [disconnectingCollab, setDisconnectingCollab] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -338,22 +340,24 @@ const Settings = () => {
     }
   };
 
-  const handleCancelCollab = async (collabId, leagueName) => {
-    if (!window.confirm(`"${leagueName}" ligasi bo'yicha sheriklikni bekor qilmoqchimisiz (uzmoqchimisiz)?`)) {
-      return;
-    }
+  const handleConfirmDisconnectCollab = async () => {
+    if (!collabToDisconnect) return;
+    setDisconnectingCollab(true);
     try {
       const { error } = await supabase
         .from('league_collabs')
         .delete()
-        .eq('id', collabId);
+        .eq('id', collabToDisconnect.id);
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'Sheriklik bitimi muvaffaqiyatli uzildi!' });
+      setMessage({ type: 'success', text: `"${collabToDisconnect.leagueName}" ligasi bo'yicha sheriklik bitimi muvaffaqiyatli uzildi!` });
+      setCollabToDisconnect(null);
       fetchLeaguesAndOrgs();
     } catch (err) {
       setMessage({ type: 'error', text: 'Sheriklikni uzishda xatolik: ' + err.message });
+    } finally {
+      setDisconnectingCollab(false);
     }
   };
 
@@ -682,7 +686,7 @@ const Settings = () => {
                                 <button
                                   type="button"
                                   className="btn-collab-disconnect"
-                                  onClick={() => handleCancelCollab(activeCollab.id, l.name)}
+                                  onClick={() => setCollabToDisconnect({ id: activeCollab.id, leagueName: l.name, partnerName: partnerOrg.name })}
                                   title="Sheriklikni uzish"
                                 >
                                   <X size={14} />
@@ -891,6 +895,39 @@ const Settings = () => {
           aspect={16 / 9}
           showAspectSelector={true}
         />
+      )}
+
+      {/* Collab Disconnect Confirmation Modal */}
+      {collabToDisconnect && (
+        <div className="settings-modal-overlay" onClick={() => setCollabToDisconnect(null)}>
+          <div className="settings-modal disconnect-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="disconnect-modal-icon-box">
+              <ShieldAlert size={36} color="#ff3b30" />
+            </div>
+            <h2 className="disconnect-modal-title">Sheriklikni Uzish</h2>
+            <p className="disconnect-modal-desc">
+              Siz rostdan ham <strong>"{collabToDisconnect.leagueName}"</strong> ligasi bo'yicha <span>{collabToDisconnect.partnerName}</span> tashkiloti bilan tuzilgan sheriklikni (co-host) bekor qilmoqchimisiz?
+            </p>
+            <div className="disconnect-modal-actions">
+              <button
+                type="button"
+                className="btn-disconnect-cancel"
+                onClick={() => setCollabToDisconnect(null)}
+                disabled={disconnectingCollab}
+              >
+                Yo'q, bekor qilish
+              </button>
+              <button
+                type="button"
+                className="btn-disconnect-confirm"
+                onClick={handleConfirmDisconnectCollab}
+                disabled={disconnectingCollab}
+              >
+                {disconnectingCollab ? 'Uzilmoqda...' : 'Ha, sheriklikni uzish'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
