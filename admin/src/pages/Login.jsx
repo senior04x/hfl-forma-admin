@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn } from 'lucide-react';
+import { LogIn, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import './Login.css';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -58,17 +59,28 @@ const Login = () => {
           </div>
           <div className="form-group">
             <label>Parol</label>
-            <input 
-              type="password" 
-              placeholder="Parolni kiriting" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required 
-            />
+            <div className="password-input-wrapper">
+              <input 
+                type={showPassword ? 'text' : 'password'} 
+                placeholder="Parolni kiriting" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required 
+              />
+              <button 
+                type="button" 
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                title={showPassword ? "Parolni berkitish" : "Parolni ko'rsatish"}
+              >
+                {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
           </div>
           
           <button type="submit" className="login-btn" disabled={loading}>
-            <LogIn size={20} /> {loading ? 'Tekshirilmoqda...' : 'Tizimga kirish'}
+            <LogIn size={18} /> {loading ? 'Tekshirilmoqda...' : 'Tizimga kirish'}
           </button>
           
           {error && <div className="error-msg" style={{display: 'block'}}>Login yoki parol xato!</div>}
