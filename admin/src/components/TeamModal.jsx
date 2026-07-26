@@ -40,6 +40,17 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
     logo_url: team.logo_url || ''
   });
 
+  useEffect(() => {
+    setFormData({
+      name: team.name || '',
+      captain_name: team.captain_name || '',
+      captain_phone: team.captain_phone || '',
+      region: team.region || '',
+      logo_url: team.logo_url || ''
+    });
+    setSelectedLeagues(parseLeagues(team.league));
+  }, [team]);
+
   const [players, setPlayers] = useState([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -110,6 +121,8 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
   };
 
   const handleCroppedSave = async (croppedBase64) => {
+    // 1. Immediately update preview in form data
+    setFormData(prev => ({ ...prev, logo_url: croppedBase64 }));
     setUploadingImage(true);
     setCropperRawImage(null);
     try {
@@ -223,7 +236,7 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
           {currentMode === 'view' ? (
             <div className="modal-view">
               <div className="modal-header-profile">
-                <img src={team.logo_url} alt="Logo" className="modal-avatar team" />
+                <img src={formData.logo_url || team.logo_url} alt="Logo" className="modal-avatar team" />
                 <h2>{team.name}</h2>
                 <div className="team-leagues-badges">
                   {selectedLeagues.length > 0 ? (

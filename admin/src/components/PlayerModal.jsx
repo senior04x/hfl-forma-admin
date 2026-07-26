@@ -38,19 +38,21 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     }
   }, [player.team_id, teams]);
 
-  const [formData, setFormData] = useState({
-    first_name: player.first_name || '',
-    last_name: player.last_name || '',
-    father_name: player.father_name || '',
-    phone: player.phone || '',
-    passport_series: player.passport_series || '',
-    passport_number: player.passport_number || '',
-    birth_date: player.birth_date || '',
-    position: player.position || '',
-    player_number: player.player_number || '',
-    photo_url: player.photo_url || '',
-    team_id: player.team_id || ''
-  });
+  useEffect(() => {
+    setFormData({
+      first_name: player.first_name || '',
+      last_name: player.last_name || '',
+      father_name: player.father_name || '',
+      phone: player.phone || '',
+      passport_series: player.passport_series || '',
+      passport_number: player.passport_number || '',
+      birth_date: player.birth_date || '',
+      position: player.position || '',
+      player_number: player.player_number || '',
+      photo_url: player.photo_url || '',
+      team_id: player.team_id || ''
+    });
+  }, [player]);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -64,6 +66,8 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   };
 
   const handleCroppedSave = async (croppedBase64) => {
+    // 1. Immediately show cropped preview image
+    setFormData(prev => ({ ...prev, photo_url: croppedBase64 }));
     setUploadingImage(true);
     setCropperRawImage(null);
     try {
@@ -140,7 +144,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
             <div className="modal-view">
               <div className="modal-header-profile">
                 <img 
-                  src={player.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop'} 
+                  src={formData.photo_url || player.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop'} 
                   alt="Profile" 
                   className="modal-avatar" 
                 />
