@@ -174,17 +174,46 @@ const Schedule = () => {
     setUploadingBanner(true);
     try {
       setScheduleBanner(croppedDataUrl);
-
       const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
-      localStorage.setItem(localKey, croppedDataUrl);
-
       try {
-        await supabase
-          .from('leagues')
-          .update({ schedule_banner_url: croppedDataUrl })
-          .eq('id', currentLeagueObj.id);
+        localStorage.setItem(localKey, croppedDataUrl);
       } catch (e) {}
 
+      let publicUrl = croppedDataUrl;
+      try {
+        const response = await fetch(croppedDataUrl);
+        const blob = await response.blob();
+        const fileName = `schedule_banner_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
+
+        const { error: uploadErr } = await supabase.storage.from('player-photos').upload(fileName, blob, {
+          contentType: 'image/png',
+          upsert: true
+        });
+
+        if (!uploadErr) {
+          const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
+          if (data?.publicUrl) {
+            publicUrl = data.publicUrl;
+            setScheduleBanner(publicUrl);
+            try {
+              localStorage.setItem(localKey, publicUrl);
+            } catch (e) {}
+          }
+        }
+      } catch (uploadExc) {
+        console.warn('Storage upload fallback:', uploadExc);
+      }
+
+      const { error: dbErr } = await supabase
+        .from('leagues')
+        .update({ schedule_banner_url: publicUrl })
+        .eq('id', currentLeagueObj.id);
+
+      if (dbErr) {
+        console.error('Database update error for schedule_banner_url:', dbErr);
+      } else {
+        setActiveLeagues(prev => prev.map(l => l.id === currentLeagueObj.id ? { ...l, schedule_banner_url: publicUrl } : l));
+      }
     } catch (err) {
       console.error('Error saving schedule banner:', err);
     } finally {
@@ -202,14 +231,45 @@ const Schedule = () => {
     try {
       setYtBanner(croppedDataUrl);
       const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj.id}`;
-      localStorage.setItem(localKey, croppedDataUrl);
-
       try {
-        await supabase
-          .from('leagues')
-          .update({ yt_banner_url: croppedDataUrl })
-          .eq('id', currentLeagueObj.id);
+        localStorage.setItem(localKey, croppedDataUrl);
       } catch (e) {}
+
+      let publicUrl = croppedDataUrl;
+      try {
+        const response = await fetch(croppedDataUrl);
+        const blob = await response.blob();
+        const fileName = `yt_banner_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
+
+        const { error: uploadErr } = await supabase.storage.from('player-photos').upload(fileName, blob, {
+          contentType: 'image/png',
+          upsert: true
+        });
+
+        if (!uploadErr) {
+          const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
+          if (data?.publicUrl) {
+            publicUrl = data.publicUrl;
+            setYtBanner(publicUrl);
+            try {
+              localStorage.setItem(localKey, publicUrl);
+            } catch (e) {}
+          }
+        }
+      } catch (uploadExc) {
+        console.warn('Storage upload fallback:', uploadExc);
+      }
+
+      const { error: dbErr } = await supabase
+        .from('leagues')
+        .update({ yt_banner_url: publicUrl })
+        .eq('id', currentLeagueObj.id);
+
+      if (dbErr) {
+        console.error('Database update error for yt_banner_url:', dbErr);
+      } else {
+        setActiveLeagues(prev => prev.map(l => l.id === currentLeagueObj.id ? { ...l, yt_banner_url: publicUrl } : l));
+      }
     } catch (err) {
       console.error('Error saving YouTube banner:', err);
     } finally {
