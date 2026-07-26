@@ -11,7 +11,8 @@ const ImageCropperModal = ({
   onCropComplete,
   imageSrc: propImageSrc,
   initialImageSrc,
-  title = "Rasmni Qirqish (1:1)"
+  title = "Rasmni Qirqish",
+  aspect = 1
 }) => {
   const handleClose = onClose || onCancel || (() => {});
   const handleSave = onSave || onCropComplete || (() => {});
@@ -23,6 +24,10 @@ const ImageCropperModal = ({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Calculate viewport dimensions based on aspect ratio
+  const viewWidth = aspect > 1 ? 440 : 320;
+  const viewHeight = Math.round(viewWidth / aspect);
 
   // Load image
   useEffect(() => {
@@ -47,27 +52,27 @@ const ImageCropperModal = ({
     if (!imageObj || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const size = 320; // viewport square size
 
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = viewWidth;
+    canvas.height = viewHeight;
 
     ctx.fillStyle = '#0b1221';
-    ctx.fillRect(0, 0, size, size);
+    ctx.fillRect(0, 0, viewWidth, viewHeight);
 
-    // Calculate scaling to cover 320x320
-    const minDim = Math.min(imageObj.width, imageObj.height);
-    const baseScale = size / minDim;
+    // Calculate scaling to cover viewport
+    const scaleX = viewWidth / imageObj.width;
+    const scaleY = viewHeight / imageObj.height;
+    const baseScale = Math.max(scaleX, scaleY);
     const currentScale = baseScale * zoom;
 
     const drawW = imageObj.width * currentScale;
     const drawH = imageObj.height * currentScale;
 
-    const drawX = (size - drawW) / 2 + offset.x;
-    const drawY = (size - drawH) / 2 + offset.y;
+    const drawX = (viewWidth - drawW) / 2 + offset.x;
+    const drawY = (viewHeight - drawH) / 2 + offset.y;
 
     ctx.drawImage(imageObj, drawX, drawY, drawW, drawH);
-  }, [imageObj, zoom, offset]);
+  }, [imageObj, zoom, offset, viewWidth, viewHeight]);
 
   // Mouse Drag handlers
   const handleMouseDown = (e) => {
@@ -110,27 +115,28 @@ const ImageCropperModal = ({
   const handleCropAndSave = () => {
     if (!imageObj) return;
 
-    // Create high-res 500x500 cropped output canvas
-    const exportSize = 500;
+    // Create high-res export output canvas
+    const exportWidth = aspect > 1 ? 1280 : 800;
+    const exportHeight = Math.round(exportWidth / aspect);
     const outCanvas = document.createElement('canvas');
-    outCanvas.width = exportSize;
-    outCanvas.height = exportSize;
+    outCanvas.width = exportWidth;
+    outCanvas.height = exportHeight;
     const ctx = outCanvas.getContext('2d');
 
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, exportSize, exportSize);
+    ctx.fillRect(0, 0, exportWidth, exportHeight);
 
-    const size = 320;
-    const minDim = Math.min(imageObj.width, imageObj.height);
-    const baseScale = size / minDim;
+    const scaleX = viewWidth / imageObj.width;
+    const scaleY = viewHeight / imageObj.height;
+    const baseScale = Math.max(scaleX, scaleY);
     const currentScale = baseScale * zoom;
 
     const drawW = imageObj.width * currentScale;
     const drawH = imageObj.height * currentScale;
-    const drawX = (size - drawW) / 2 + offset.x;
-    const drawY = (size - drawH) / 2 + offset.y;
+    const drawX = (viewWidth - drawW) / 2 + offset.x;
+    const drawY = (viewHeight - drawH) / 2 + offset.y;
 
-    const scaleFactor = exportSize / size;
+    const scaleFactor = exportWidth / viewWidth;
     ctx.drawImage(
       imageObj,
       drawX * scaleFactor,
@@ -139,7 +145,7 @@ const ImageCropperModal = ({
       drawH * scaleFactor
     );
 
-    const croppedBase64 = outCanvas.toDataURL('image/jpeg', 0.9);
+    const croppedBase64 = outCanvas.toDataURL('image/png');
     handleSave(croppedBase64);
   };
 
@@ -168,7 +174,13 @@ const ImageCropperModal = ({
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+            style={{ 
+              width: `${viewWidth}px`, 
+              height: `${viewHeight}px`, 
+              maxWidth: '100%',
+              aspectRatio: `${aspect}`,
+              cursor: isDragging ? 'grabbing' : 'grab' 
+            }}
           >
             <canvas ref={canvasRef} className="cropper-canvas" />
             <div className="cropper-grid-overlay">
