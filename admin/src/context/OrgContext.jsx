@@ -46,16 +46,25 @@ export const OrgProvider = ({ children }) => {
         .maybeSingle();
 
       const effectiveRole = adminData?.role || metaRole || (user.email === 'azamat@havas.uz' ? 'super_admin' : 'org_admin');
-      const effectiveOrgId = adminData?.organization_id || metaOrgId || 1;
+      const defaultOrgId = adminData?.organization_id || metaOrgId || 1;
 
       setAdminRole(effectiveRole);
 
+      // Check if super_admin (or active admin) previously switched org saved in localStorage
+      const savedOrgId = localStorage.getItem('hfl_active_org_id');
+      const effectiveOrgId = (effectiveRole === 'super_admin' && savedOrgId) ? Number(savedOrgId) : defaultOrgId;
+
       // 3. Fetch organization details
-      const { data: orgData } = await supabase
+      let { data: orgData } = await supabase
         .from('organizations')
         .select('*')
         .eq('id', effectiveOrgId)
         .maybeSingle();
+
+      if (!orgData && effectiveOrgId !== defaultOrgId) {
+        const fallbackRes = await supabase.from('organizations').select('*').eq('id', defaultOrgId).maybeSingle();
+        orgData = fallbackRes.data;
+      }
 
       if (orgData) {
         setCurrentOrg(orgData);
@@ -77,10 +86,15 @@ export const OrgProvider = ({ children }) => {
   };
 
   const switchOrg = (orgOrId, name, logo_url) => {
+    let targetOrg = null;
     if (typeof orgOrId === 'object' && orgOrId !== null) {
-      setCurrentOrg(orgOrId);
+      targetOrg = orgOrId;
     } else {
-      setCurrentOrg({ id: orgOrId, name, logo_url });
+      targetOrg = { id: orgOrId, name, logo_url };
+    }
+    setCurrentOrg(targetOrg);
+    if (targetOrg && targetOrg.id) {
+      localStorage.setItem('hfl_active_org_id', targetOrg.id);
     }
   };
 

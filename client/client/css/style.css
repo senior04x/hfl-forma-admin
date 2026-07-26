@@ -1,0 +1,512 @@
+/* Premium CSS Reset & Variables */
+:root {
+    --bg-dark: #050505;
+    --bg-card: rgba(15, 15, 25, 0.7);
+    --gold-primary: #f0d060;
+    --gold-secondary: #c9a84c;
+    --gold-accent: #b8860b;
+    --gold-glow: rgba(240, 208, 96, 0.4);
+    --text-main: #ffffff;
+    --text-muted: #9ca3af;
+    --success: #10b981;
+    --error: #ef4444;
+    --border-radius: 16px;
+    --glass-border: rgba(240, 208, 96, 0.15);
+    --glass-bg: rgba(255, 255, 255, 0.03);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 30px 20px;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Background Premium Glow */
+.particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background: radial-gradient(circle at 50% -20%, rgba(201, 168, 76, 0.2) 0%, transparent 70%),
+                radial-gradient(circle at -20% 50%, rgba(201, 168, 76, 0.05) 0%, transparent 50%),
+                linear-gradient(to bottom, #0a0a0a 0%, var(--bg-dark) 100%);
+}
+
+.container {
+    width: 100%;
+    max-width: 550px;
+    margin: 0 auto;
+    z-index: 1;
+}
+
+/* Header */
+.header {
+    text-align: center;
+    margin-bottom: 40px;
+    animation: fadeInDown 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.logo {
+    width: 130px;
+    height: auto;
+    margin-bottom: 15px;
+    filter: drop-shadow(0 0 25px rgba(240, 208, 96, 0.4));
+    transition: transform 0.3s ease;
+}
+
+.logo:hover {
+    transform: scale(1.05);
+}
+
+.title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff 0%, var(--gold-primary) 50%, var(--gold-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.subtitle {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* Form Styles (Premium Glassmorphism) */
+.registration-form {
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 35px 30px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--gold-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.label-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--gold-secondary);
+}
+
+.form-control {
+    width: 100%;
+    background: var(--glass-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-main);
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 0 4px rgba(240, 208, 96, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+/* Passport Group */
+.passport-group {
+    display: flex;
+    gap: 12px;
+}
+
+.passport-series {
+    flex: 0 0 90px;
+    text-align: center;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.passport-number {
+    letter-spacing: 2px;
+}
+
+/* Phone Group */
+.phone-group {
+    display: flex;
+    align-items: center;
+    background: var(--glass-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.phone-group:focus-within {
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 0 4px rgba(240, 208, 96, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.phone-prefix {
+    padding-left: 20px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.phone-group .form-control {
+    border: none;
+    background: transparent;
+    padding-left: 10px;
+}
+.phone-group .form-control:focus {
+    box-shadow: none;
+}
+
+/* Top Section */
+.top-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.logo-group {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 25px; /* Offset to account for the label height on the left, making it centered with the input box */
+}
+
+.logo-group .logo {
+    width: 110px;
+    height: auto;
+    filter: drop-shadow(0 0 10px rgba(240, 208, 96, 0.2));
+}
+
+.photo-upload-group {
+    flex: 0 0 160px;
+    margin-bottom: 0;
+}
+
+/* Photo Upload */
+.photo-dropzone {
+    width: 160px;
+    height: 160px;
+    border: 2px dashed rgba(240, 208, 96, 0.3);
+    border-radius: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(240, 208, 96, 0.02);
+    position: relative;
+    overflow: hidden;
+}
+
+.photo-dropzone:hover, .photo-dropzone.dragover {
+    border-color: var(--gold-primary);
+    background: rgba(240, 208, 96, 0.08);
+}
+
+.photo-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.upload-icon {
+    width: 40px;
+    height: 40px;
+    color: var(--gold-secondary);
+}
+
+.upload-text {
+    font-size: 15px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.photo-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 2;
+}
+
+.hidden-input {
+    display: none;
+}
+
+/* Submit Button */
+.submit-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--gold-secondary), var(--gold-primary));
+    color: #111;
+    border: none;
+    padding: 18px;
+    border-radius: 14px;
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(240, 208, 96, 0.2);
+}
+
+.btn-text {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-icon {
+    width: 22px;
+    height: 22px;
+}
+
+.submit-btn:active {
+    transform: scale(0.98);
+}
+
+.submit-btn:hover {
+    box-shadow: 0 15px 30px rgba(240, 208, 96, 0.4);
+    transform: translateY(-2px);
+}
+
+.submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Loader */
+.loader {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(0,0,0,0.1);
+    border-radius: 50%;
+    border-top-color: #111;
+    animation: spin 1s linear infinite;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    opacity: 1;
+    transition: opacity 0.4s ease;
+}
+
+.modal.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.modal-content {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 40px 30px;
+    text-align: center;
+    max-width: 420px;
+    width: 100%;
+    transform: scale(1);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+.close-modal:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.modal.hidden .modal-content {
+    transform: scale(0.9);
+}
+
+.success-icon {
+    color: var(--success);
+    margin-bottom: 25px;
+    display: inline-block;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 20px;
+    border-radius: 50%;
+}
+
+.modal-content h2 {
+    color: var(--gold-primary);
+    margin-bottom: 15px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+}
+
+.modal-content p {
+    color: var(--text-muted);
+    margin-bottom: 30px;
+    line-height: 1.6;
+    font-size: 15px;
+}
+
+.telegram-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: #0088cc;
+    color: white;
+    text-decoration: none;
+    padding: 16px 24px;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 16px;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.telegram-btn:hover {
+    background: #0099e6;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 136, 204, 0.3);
+}
+
+/* Utilities */
+.hidden {
+    display: none !important;
+}
+
+/* Animations */
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Mobile Adjustments */
+@media (max-width: 480px) {
+    .container {
+        padding: 10px;
+    }
+
+    .form-container {
+        padding: 25px 15px;
+        border-radius: 20px;
+    }
+
+    .top-section {
+        flex-direction: row;
+        gap: 15px;
+    }
+
+    .photo-upload-group {
+        flex: 0 0 160px;
+    }
+
+    .photo-dropzone {
+        width: 160px;
+        height: 160px;
+    }
+
+    .logo-group .logo {
+        width: 100px;
+    }
+
+    .passport-group {
+        flex-direction: column;
+    }
+
+    .passport-series {
+        flex: none;
+        width: 100%;
+    }
+}

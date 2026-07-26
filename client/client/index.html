@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Havas Futbol Ligasi - Bosh Sahifa</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Model Viewer for 3D Models -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+
+    <!-- Preload 3D Model so it doesn't appear late -->
+    <link rel="preload" href="assets/models/soccer_ball.glb" as="fetch" crossorigin="anonymous">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/main.css">
+    
+    <title>Havas Futbol Ligasi - O'zbekistonning eng katta havaskorlar ligasi</title>
+</head>
+<body>
+    
+    <!-- Floating particles background -->
+    <div class="particles" id="particles"></div>
+
+    <!-- 3D Models Background -->
+    <div class="models-bg-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; z-index: 0;">
+        <!-- Top Left Model -->
+        <div class="model-wrap-1 slide-out">
+            <model-viewer 
+                class="model-bg-1"
+                src="assets/models/soccer_ball.glb" 
+                auto-rotate 
+                rotation-per-second="5deg" 
+                environment-image="neutral" 
+                exposure="1.1" 
+                camera-orbit="45deg 55deg 105%">
+            </model-viewer>
+        </div>
+        
+        <!-- Center Right Model -->
+        <div class="model-wrap-2 slide-out">
+            <model-viewer 
+                class="model-bg-2"
+                src="assets/models/soccer_ball.glb" 
+                auto-rotate 
+                rotation-per-second="-4deg" 
+                environment-image="neutral" 
+                exposure="1.1" 
+                camera-orbit="120deg 60deg 105%">
+            </model-viewer>
+        </div>
+
+        <!-- Bottom Left Small Model -->
+        <div class="model-wrap-3 slide-out">
+            <model-viewer 
+                class="model-bg-3"
+                src="assets/models/soccer_ball.glb" 
+                auto-rotate 
+                rotation-per-second="7deg" 
+                environment-image="neutral" 
+                exposure="1.1" 
+                camera-orbit="-45deg 70deg 105%">
+            </model-viewer>
+        </div>
+    </div>
+
+    <div class="site-container" style="z-index: 1; position: relative;">
+        <div class="hero">
+            <h1>Havas Futbol Ligasi</h1>
+            <p>O'zbekistonning eng katta va qiziqarli havaskorlar futbol ligasi. O'z jamoangiz bilan chempionlik sari qadam tashlang yoki yakkaxon sifatida o'zingizga yangi jamoa toping!</p>
+            
+            <div class="hero-btns">
+                <a href="apply.html" class="btn-large btn-primary">
+                    <i data-lucide="user-plus"></i> Ro'yxatdan o'tish
+                </a>
+                <a href="teams.html" class="btn-large btn-secondary">
+                    <i data-lucide="shield"></i> Jamoalarni ko'rish
+                </a>
+                <a href="matches.html" class="btn-large btn-secondary">
+                    <i data-lucide="calendar"></i> O'yinlar jadvali
+                </a>
+            </div>
+        </div>
+
+        <!-- SO'NGGI O'YIN NATIJALARI SECTION -->
+        <div class="recent-results-section">
+            <div class="results-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="activity" style="color: var(--gold-primary); width: 22px; height: 22px;"></i>
+                    <h2>SO'NGGI O'YIN NATIJALARI</h2>
+                </div>
+                <a href="matches.html">
+                    Barchasi <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+                </a>
+            </div>
+
+            <div id="recentMatchesList" style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Card 1 -->
+                <div class="home-match-card">
+                    <div class="home-match-card-header">
+                        <span class="league-title">7x7 liga</span>
+                        <span class="round-title">1-tur</span>
+                    </div>
+                    <div class="home-match-teams-row">
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="FC SAIFEINU" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">FC SAIFEINU</span>
+                        </div>
+                        <div class="home-score-pill">1 - 1</div>
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="FC CHEKHOV" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">FC CHEKHOV</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="home-match-card">
+                    <div class="home-match-card-header">
+                        <span class="league-title">7x7 liga</span>
+                        <span class="round-title">1-tur</span>
+                    </div>
+                    <div class="home-match-teams-row">
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="extrait parfume" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">extrait parfume</span>
+                        </div>
+                        <div class="home-score-pill">1 - 14</div>
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="Hayot bank" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">Hayot bank</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="home-match-card">
+                    <div class="home-match-card-header">
+                        <span class="league-title">7x7 liga</span>
+                        <span class="round-title">1-tur</span>
+                    </div>
+                    <div class="home-match-teams-row">
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="CHORSU" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">CHORSU</span>
+                        </div>
+                        <div class="home-score-pill">6 - 2</div>
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="Healthy way FC" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">Healthy way FC</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="home-match-card">
+                    <div class="home-match-card-header">
+                        <span class="league-title">7x7 liga</span>
+                        <span class="round-title">1-tur</span>
+                    </div>
+                    <div class="home-match-teams-row">
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="T-Spartak" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">T-Spartak</span>
+                        </div>
+                        <div class="home-score-pill">2 - 4</div>
+                        <div class="home-team-col">
+                            <img src="images/logo.png" alt="FC QURUVCHI" class="home-team-logo" onerror="this.src='images/logo.png'">
+                            <span class="home-team-name">FC QURUVCHI</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-content" style="align-items: center;">
+            <div style="display: flex; flex-direction: column; gap: 20px; text-align: center;">
+                
+                <!-- Row 1: Phone and Social Icons -->
+                <div style="display: flex; align-items: center; justify-content: center; gap: 25px; flex-wrap: wrap;">
+                    
+                    <!-- Phone -->
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 18px;">
+                        <i data-lucide="phone" style="width: 22px; height: 22px; color: #94a3b8;"></i>
+                        <a href="tel:+998903580899" style="color: #e2e8f0; text-decoration: none; font-weight: 500; transition: color 0.3s;" onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='#e2e8f0'">+998 90 358 08 99</a>
+                    </div>
+
+                    <!-- Separator line (hidden on very small screens) -->
+                    <div style="width: 1px; height: 24px; background: rgba(255,255,255,0.15);" class="hide-mobile"></div>
+
+                    <!-- Social Icons (No text) -->
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <a href="https://t.me/havasliga" target="_blank" style="color: #e2e8f0; transition: color 0.3s;" onmouseover="this.style.color='#3b82f6';" onmouseout="this.style.color='#e2e8f0';">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                            </svg>
+                        </a>
+                        <a href="https://www.instagram.com/havas_football/" target="_blank" style="color: #e2e8f0; transition: color 0.3s;" onmouseover="this.style.color='#ec4899';" onmouseout="this.style.color='#e2e8f0';">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                            </svg>
+                        </a>
+                    </div>
+
+                </div>
+
+                <!-- Row 2: Founded Year -->
+                <div style="color: #94a3b8; font-size: 15px; margin-top: -5px;">
+                    tashkil topgan sana - 2023
+                </div>
+
+            </div>
+        </div>
+    </footer>
+    <!-- Scripts -->
+    <script>
+        lucide.createIcons();
+        
+        // 3D Models Entrance Animation
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait 1 second for everything to settle before sliding in
+            setTimeout(() => {
+                const w1 = document.querySelector('.model-wrap-1');
+                const w2 = document.querySelector('.model-wrap-2');
+                const w3 = document.querySelector('.model-wrap-3');
+                
+                if(w1) w1.classList.remove('slide-out');
+                if(w2) w2.classList.remove('slide-out');
+                if(w3) w3.classList.remove('slide-out');
+            }, 1000);
+        });
+
+        // 3D Models Exit Animation
+        document.addEventListener('DOMContentLoaded', () => {
+            const links = document.querySelectorAll('a');
+            links.forEach(link => {
+                // Only animate for internal links
+                if (link.hostname === window.location.hostname && link.target !== '_blank' && !link.href.includes('tel:')) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const targetUrl = link.href;
+                        
+                        // Add slide out class to wrappers instead of model-viewers directly
+                        const w1 = document.querySelector('.model-wrap-1');
+                        const w2 = document.querySelector('.model-wrap-2');
+                        const w3 = document.querySelector('.model-wrap-3');
+                        
+                        if(w1) w1.classList.add('slide-out');
+                        if(w2) w2.classList.add('slide-out');
+                        if(w3) w3.classList.add('slide-out');
+                        
+                        // Wait for animation then navigate
+                        setTimeout(() => {
+                            window.location.href = targetUrl;
+                        }, 500);
+                    });
+                }
+            });
+        });
+    </script>
+    <script src="js/layout.js"></script>
+
+    <!-- Supabase JS & Dynamic Recent Matches -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script>
+        async function fetchRecentMatchesHome() {
+            if (typeof db === 'undefined') return;
+            try {
+                const { data, error } = await db
+                    .from('matches')
+                    .select(`
+                        *,
+                        home_team:home_team_id (name, logo_url),
+                        away_team:away_team_id (name, logo_url)
+                    `)
+                    .order('match_date', { ascending: false })
+                    .limit(5);
+
+                if (error || !data || data.length === 0) return;
+
+                const list = document.getElementById('recentMatchesList');
+                if (!list) return;
+
+                list.innerHTML = data.map(m => {
+                    const homeName = m.home_team?.name || 'Uy jamoasi';
+                    const awayName = m.away_team?.name || 'Mehmon jamoa';
+                    const homeLogo = m.home_team?.logo_url || 'images/logo.png';
+                    const awayLogo = m.away_team?.logo_url || 'images/logo.png';
+                    const score = (m.status === 'finished' || m.home_score !== null) ? `${m.home_score || 0} - ${m.away_score || 0}` : 'VS';
+                    const roundText = m.round ? `${m.round}-tur` : '1-tur';
+                    const leagueText = m.league || '7x7 liga';
+
+                    return `
+                        <div class="home-match-card" onclick="location.href='match-details.html?id=${m.id}'" style="cursor: pointer;">
+                            <div class="home-match-card-header">
+                                <span class="league-title">${leagueText}</span>
+                                <span class="round-title">${roundText}</span>
+                            </div>
+                            <div class="home-match-teams-row">
+                                <div class="home-team-col">
+                                    <img src="${homeLogo}" alt="${homeName}" class="home-team-logo" onerror="this.src='images/logo.png'">
+                                    <span class="home-team-name">${homeName}</span>
+                                </div>
+                                <div class="home-score-pill">${score}</div>
+                                <div class="home-team-col">
+                                    <img src="${awayLogo}" alt="${awayName}" class="home-team-logo" onerror="this.src='images/logo.png'">
+                                    <span class="home-team-name">${awayName}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error('Home matches fetch error:', e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', fetchRecentMatchesHome);
+    </script>
+</body>
+</html>

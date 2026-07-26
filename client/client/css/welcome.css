@@ -1,0 +1,65 @@
+/* Welcome Screen */
+#welcome-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #000000 30%, #302400 80%, #D4AF37 140%);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: opacity 0.5s ease-out;
+}
+
+#welcome-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.welcome-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.welcome-text {
+    font-family: 'Outfit', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: #D4AF37; /* Match logo gold color */
+    text-transform: uppercase;
+    letter-spacing: 8px;
+    white-space: nowrap;
+    display: flex;
+    text-shadow: 0px 4px 15px rgba(212, 175, 55, 0.4);
+}
+
+.welcome-letter {
+    display: inline-block;
+    opacity: 0;
+    transform: translateX(30px);
+    animation: letterFlyIn 0.4s ease-out forwards;
+}
+
+@keyframes letterFlyIn {
+    0% {
+        opacity: 0;
+        transform: translateX(40px) scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@media (max-width: 768px) {
+    .welcome-text {
+        font-size: 2.2rem;
+        letter-spacing: 4px;
+    }
+}

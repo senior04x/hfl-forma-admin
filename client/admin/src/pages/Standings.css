@@ -1,0 +1,480 @@
+.standings-page {
+  padding: 24px;
+  background-color: #0f172a;
+  min-height: 100vh;
+  color: #fff;
+}
+
+.standings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.standings-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.btn-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-download:hover {
+  background: #2563eb;
+}
+
+.btn-download:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cards-btn {
+  background: linear-gradient(135deg, #eab308 0%, #ef4444 100%) !important;
+  color: white !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+}
+
+.cards-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.filters-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  background: #1e293b;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-group label {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.filter-group select {
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.admin-table-container {
+  background: #1e293b;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.admin-table th {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 14px;
+  color: #f1f5f9;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.team-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.team-info img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.penalty-input {
+  width: 60px;
+  padding: 6px 10px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-right: 8px;
+}
+
+.btn-save-penalty {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-save-penalty:hover {
+  background: #3b82f6;
+}
+
+/* ============================================================ */
+/* EXPORT CANVAS TEMPLATE STYLES */
+/* ============================================================ */
+.export-wrapper {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  width: 1080px;
+  height: 1080px; /* Exact 1:1 format like Instagram */
+  background: #fff;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
+
+
+
+.export-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: white;
+  position: relative;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+/* Dynamic Background Themes */
+.theme-export-Super {
+  background: linear-gradient(180deg, #b91c1c 0%, #ea580c 50%, #f59e0b 100%);
+}
+.theme-export-Pro {
+  background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);
+}
+.theme-export-3-liga {
+  background: linear-gradient(180deg, #4c1d95 0%, #7c3aed 50%, #a78bfa 100%);
+}
+.theme-export-Europa {
+  background: linear-gradient(180deg, #a16207 0%, #eab308 50%, #fde047 100%);
+}
+.theme-export-Chempion {
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+}
+
+/* Darker Navy Gradient for 7x7 Liga (No harsh bright white) */
+.theme-export-7x7 {
+  background: linear-gradient(180deg, #062354 0%, #0d3b80 50%, #162b4c 100%);
+  color: white;
+}
+
+.export-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 40px 50px 20px 50px;
+}
+
+.export-logo-left {
+  display: flex;
+  flex-direction: column;
+}
+.export-logo-left h2 {
+  font-size: 32px;
+  font-style: italic;
+  font-weight: 900;
+  margin: 0;
+  line-height: 1;
+  font-family: 'Outfit', sans-serif;
+}
+.export-logo-left span {
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.export-logo-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.export-logo-right img {
+  height: 40px;
+}
+.export-logo-right span {
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+/* Main Grid Layout for Export */
+.export-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 20px 50px 30px 50px;
+  flex: 1;
+  gap: 20px;
+}
+
+/* Table Area */
+.export-table-container {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  color: white;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.export-table-header {
+  display: flex;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  font-weight: 800;
+  font-size: 18px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+.export-col-hash { width: 40px; text-align: center; }
+.export-col-team { flex: 1; margin-left: 10px; }
+.export-col-stat { width: 50px; text-align: center; }
+
+.export-table-row {
+  display: flex;
+  padding: 12px 15px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 18px;
+  font-weight: 700;
+}
+.export-table-row:last-child { border-bottom: none; }
+.export-table-row .team-img {
+  width: 30px; height: 30px; border-radius: 50%; margin-right: 15px; object-fit: cover;
+}
+
+/* Right Column (Results & Stats) */
+.export-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.export-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  color: white;
+  overflow: hidden;
+}
+
+.export-card-title {
+  text-align: center;
+  padding: 10px 14px;
+  font-size: 15px;
+  font-weight: 800;
+  color: white;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.export-results-title {
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.export-result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 700;
+  font-size: 13px;
+  background: transparent;
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+.export-result-row:last-child { border-bottom: none; margin-bottom: 0; }
+.export-result-team { display: flex; align-items: center; gap: 8px; flex: 1; }
+.export-result-team.away { flex-direction: row-reverse; }
+.export-result-team img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.export-result-score { font-size: 16px; padding: 0 10px; font-weight: 900; }
+
+.export-stats-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  font-weight: 700;
+}
+.export-stats-row:last-child { border-bottom: none; }
+.export-stats-row .stat-img {
+  width: 26px; height: 26px; border-radius: 50%; margin-right: 10px; object-fit: cover;
+}
+
+/* ============================================================ */
+/* CARDS EXPORT TEMPLATE GLASSMORPHISM STYLES */
+/* ============================================================ */
+.cards-export-title-banner {
+  text-align: center;
+  margin: 5px 50px 10px 50px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.cards-glass-card {
+  background: rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.export-card-title.yellow-title {
+  background: rgba(234, 179, 8, 0.25);
+  color: #fef08a;
+  border-bottom: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+.export-card-title.red-title {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border-bottom: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.card-player-row {
+  padding: 10px 14px;
+}
+
+.card-badge {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.card-badge.yellow-badge {
+  background: rgba(234, 179, 8, 0.3);
+  color: #fef08a;
+  border: 1px solid rgba(234, 179, 8, 0.5);
+}
+
+.card-badge.red-badge {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.cards-empty {
+  padding: 30px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+/* Footer Tag */
+.export-footer-tag {
+  position: absolute;
+  bottom: 30px;
+  left: 50px;
+  font-size: 36px;
+  font-weight: 900;
+  font-family: 'Outfit', sans-serif;
+  color: white;
+}
+
+/* Responsive Layout for Mobile */
+@media (max-width: 768px) {
+  .standings-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  .standings-header h1 {
+    font-size: 20px;
+  }
+  .standings-header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  .btn-download {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
+  }
+  .filters-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .filter-group {
+    width: 100%;
+  }
+  .filter-group input,
+  .filter-group select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .admin-table-container {
+    overflow-x: auto;
+  }
+}

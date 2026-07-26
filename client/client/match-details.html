@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="uz" translate="no">
+<head>
+    <meta name="google" content="notranslate">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Havas Futbol Ligasi - O'yin Tafsilotlari</title>
+    <meta name="description" content="Havas Futbol Ligasidagi o'yinlarning to'liq tafsilotlari, gollar, kartochkalar va tarkiblar.">
+    <meta name="keywords" content="o'yin tafsiloti, match details, gollar, natijalar, havas liga o'yinlari">
+    <meta property="og:title" content="Havas Futbol Ligasi - O'yin Tafsilotlari">
+    <meta property="og:description" content="O'yin tafsilotlari, qiziqarli lahzalar va gollar bilan tanishing.">
+    <meta property="og:image" content="https://havasliga.uz/images/logo.png">
+    <meta property="og:url" content="https://havasliga.uz/match-details.html">
+    <meta property="og:type" content="website">
+    
+    <!-- Favicon & PWA -->
+    <link rel="icon" type="image/png" href="images/app-icon-rounded.png">
+    <link rel="apple-touch-icon" href="images/app-icon-rounded.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="HFL">
+    <meta name="theme-color" content="#ffffff">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/main.css">
+    
+    <style>
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+        }
+
+        /* Header */
+        .match-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .back-btn:hover {
+            color: var(--gold-primary);
+        }
+        .header-score-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            gap: 15px;
+        }
+        .header-team-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--glass-border);
+            background: #111;
+        }
+        .header-score {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--gold-primary);
+            font-family: 'Outfit', sans-serif;
+            text-shadow: 0 0 10px var(--gold-glow);
+        }
+        @media (max-width: 500px) {
+            .match-header {
+                flex-direction: column;
+                position: relative;
+                padding-top: 30px;
+                gap: 10px;
+            }
+            .back-btn {
+                position: absolute;
+                top: 0;
+                left: 0;
+                font-size: 14px;
+            }
+            .match-header > div:last-child {
+                display: none;
+            }
+            .header-score-area {
+                gap: 10px;
+                width: 100%;
+            }
+            .header-team-logo {
+                width: 30px;
+                height: 30px;
+            }
+            .header-score {
+                font-size: 20px;
+            }
+            .header-team-abbr {
+                font-size: 14px !important;
+            }
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 10px 30px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+            backdrop-filter: blur(10px);
+        }
+        .tab-btn:hover {
+            border-color: var(--gold-primary);
+            color: var(--gold-primary);
+        }
+        .tab-btn.active {
+            background: rgba(240, 208, 96, 0.15); /* Semi-transparent gold */
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            color: var(--gold-primary);
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 15px var(--gold-glow);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Overview (Obzor) */
+        .status-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: 15px 20px;
+            margin-bottom: 20px;
+        }
+        .status-title {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: var(--gold-primary);
+        }
+        .status-score {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            margin-top: 10px;
+        }
+        .timeline-item {
+            display: flex;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .timeline-left {
+            width: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        .timeline-line {
+            position: absolute;
+            top: 30px;
+            bottom: -15px;
+            width: 1px;
+            background: var(--glass-border);
+        }
+        .timeline-item:last-child .timeline-line {
+            display: none;
+        }
+        .timeline-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--bg-dark);
+            border: 1px solid var(--gold-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 5px;
+            z-index: 1;
+            box-shadow: 0 0 10px var(--gold-glow);
+        }
+        .timeline-minute {
+            font-weight: 700;
+            font-size: 13px;
+        }
+        
+        .timeline-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-left: 10px;
+        }
+        .timeline-info h4 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+            font-family: 'Inter';
+            color: var(--gold-primary);
+        }
+        .timeline-info p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+        .timeline-info span {
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 400;
+        }
+        .team-mini-logo {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--glass-border);
+        }
+
+        /* Sostavy (Lineups) */
+        .team-selector {
+            display: flex;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            overflow: hidden;
+            padding: 5px;
+            gap: 5px;
+        }
+        .team-select-btn {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .team-select-btn.active {
+            background: rgba(240, 208, 96, 0.15);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            color: var(--gold-primary);
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 15px var(--gold-glow);
+        }
+        .team-select-logo {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+        }
+
+        /* Pitch */
+        .pitch-container {
+            width: 100%;
+            aspect-ratio: 3/4;
+            background: #4ade80; /* Grass green */
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-radius: 8px;
+            border: 2px solid white;
+            position: relative;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        /* Pitch markings */
+        .pitch-center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            border: 2px solid white;
+            border-radius: 50%;
+        }
+        .pitch-center-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: white;
+            transform: translateY(-50%);
+        }
+        .pitch-penalty-top {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 20%;
+            border: 2px solid white;
+            border-top: none;
+        }
+        .pitch-penalty-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 20%;
+            border: 2px solid white;
+            border-bottom: none;
+        }
+        
+        /* Players on Pitch (Dynamic grid) */
+        .formation-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+        .formation-row {
+            display: flex;
+            justify-content: space-evenly;
+            width: 100%;
+        }
+        .player-marker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .shirt {
+            width: 35px;
+            height: 35px;
+            background: #ef4444; /* Default red */
+            clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 60%, 80% 60%, 80% 100%, 20% 100%, 20% 60%, 0% 60%, 0% 20%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 14px;
+            position: relative;
+        }
+        .shirt-event {
+            position: absolute;
+            top: -10px;
+            right: -15px;
+            background: white;
+            color: black;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            font-weight: 700;
+            border: 1px solid #ccc;
+        }
+        .player-name-pitch {
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            margin-top: 2px;
+            text-align: center;
+            width: 60px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Player List */
+        .players-header {
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-accent));
+            color: #000;
+            padding: 12px 20px;
+            font-weight: 700;
+            border-top-left-radius: var(--border-radius);
+            border-top-right-radius: var(--border-radius);
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: 0.5px;
+        }
+        .player-list-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--glass-border);
+            border-right: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .player-list-item:last-child {
+            border-bottom-left-radius: var(--border-radius);
+            border-bottom-right-radius: var(--border-radius);
+        }
+        .player-list-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: var(--bg-dark);
+            border: 2px solid var(--glass-border);
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .player-list-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .player-list-info {
+            flex: 1;
+        }
+        .player-list-name {
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+        .player-number {
+            color: var(--gold-primary);
+        }
+        .player-position {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        .player-list-events {
+            display: flex;
+            gap: 10px;
+        }
+        .event-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .event-badge i {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Skeleton Loader */
+        .skeleton {
+            animation: skeleton-loading 1.5s infinite linear;
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+            background-size: 200% 100%;
+            border-radius: 4px;
+        }
+
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Floating particles background -->
+    <div class="particles" id="particles"></div>
+    
+    <!-- Navbar injected here -->
+    <div id="navbar"></div>
+
+    <div class="site-container">
+        
+        <!-- Match Header -->
+        <div class="match-header">
+            <a href="matches.html" class="back-btn" id="backBtn">
+                <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i> Orqaga
+            </a>
+            <div class="header-score-area" id="headerScoreArea">
+                <!-- JS orqali to'ldiriladi -->
+            </div>
+            <div style="width: 80px;"></div> <!-- To balance flex layout -->
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="obzor">Obzor</button>
+            <button class="tab-btn" data-tab="sostavy">Sostavlar</button>
+        </div>
+
+        <!-- Loading Skeleton (Obzor) -->
+        <div id="loading" style="padding-top: 10px;">
+            <div class="status-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100px;">
+                <div class="skeleton" style="width: 150px; height: 20px; border-radius: 6px; margin-bottom: 10px;"></div>
+                <div class="skeleton" style="width: 250px; height: 30px; border-radius: 8px;"></div>
+            </div>
+
+            <div class="timeline" style="margin-top: 30px;">
+                <script>
+                    for(let i=0; i<4; i++) {
+                        document.write(`
+                            <div class="timeline-item">
+                                <div class="timeline-left">
+                                    <div class="timeline-line"></div>
+                                    <div class="timeline-icon skeleton" style="border: none; box-shadow: none;"></div>
+                                    <div class="skeleton" style="width: 20px; height: 14px; margin-top: 5px;"></div>
+                                </div>
+                                <div class="timeline-card">
+                                    <div class="timeline-info" style="width: 100%;">
+                                        <div class="skeleton" style="width: 80px; height: 16px; margin-bottom: 8px; border-radius: 4px;"></div>
+                                        <div class="skeleton" style="width: 150px; height: 14px; border-radius: 4px;"></div>
+                                    </div>
+                                    <div class="team-mini-logo skeleton" style="border: none;"></div>
+                                </div>
+                            </div>
+                        `);
+                    }
+                </script>
+            </div>
+        </div>
+
+    <div id="content" style="display: none;">
+        
+        <!-- Obzor Tab -->
+        <div id="obzor" class="tab-content active">
+            
+            <div class="status-card" id="matchStatusCard">
+                <!-- Injected via JS -->
+            </div>
+
+            <div class="timeline" id="matchTimeline">
+                <!-- Injected via JS -->
+            </div>
+            
+        </div>
+
+        <!-- Sostavy Tab -->
+        <div id="sostavy" class="tab-content">
+            
+            <div class="team-selector" id="teamSelector">
+                <button class="team-select-btn active" id="homeTeamSelectBtn">
+                    <img src="images/logo.png" class="team-select-logo" id="homeSelectLogo" alt="Home">
+                    <span id="homeSelectName">Jamoa A</span>
+                </button>
+                <button class="team-select-btn" id="awayTeamSelectBtn">
+                    <img src="images/logo.png" class="team-select-logo" id="awaySelectLogo" alt="Away">
+                    <span id="awaySelectName">Jamoa B</span>
+                </button>
+            </div>
+
+            <div class="pitch-container">
+                <div class="pitch-center-circle"></div>
+                <div class="pitch-center-line"></div>
+                <div class="pitch-penalty-top"></div>
+                <div class="pitch-penalty-bottom"></div>
+                
+                <!-- Dynamic players will be placed here -->
+                <div class="formation-layer" id="formationLayer">
+                </div>
+            </div>
+
+            <div class="players-list-container">
+                <div class="players-header">O'yinchilar</div>
+                <div id="playersList">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+        </div>
+
+    </div> <!-- End of site-container -->
+
+    <!-- Scripts -->
+    <script src="js/layout.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/match-details.js"></script>
+</body>
+</html>

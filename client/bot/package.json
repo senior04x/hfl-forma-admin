@@ -1,0 +1,17 @@
+{
+  "name": "hfl-telegram-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot for checking Havas Futbol Ligasi application status",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "express": "^5.2.1",
+    "node-telegram-bot-api": "^0.64.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

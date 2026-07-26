@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="uz" translate="no">
+<head>
+    <meta name="google" content="notranslate">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Havas Futbol Ligasi - Zayavka Qoldirish</title>
+    <meta name="description" content="Havas Futbol Ligasida yakkaxon o'yinchi sifatida qatnashish uchun zayavka qoldiring va jamoa toping.">
+    <meta name="keywords" content="yakkaxon o'yinchi, zayavka qoldirish, jamoa topish, havas liga, futbolchi ro'yxati">
+    <meta property="og:title" content="Havas Futbol Ligasi - Zayavka Qoldirish">
+    <meta property="og:description" content="Yakkaxon o'yinchi sifatida zayavka qoldiring va Havas Futbol Ligasida ishtirok eting.">
+    <meta property="og:image" content="https://havasliga.uz/images/logo.png">
+    <meta property="og:url" content="https://havasliga.uz/apply-individual.html">
+    <meta property="og:type" content="website">
+    
+    <!-- Favicon & PWA -->
+    <link rel="icon" type="image/png" href="images/app-icon-rounded.png">
+    <link rel="apple-touch-icon" href="images/app-icon-rounded.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="HFL">
+    <meta name="theme-color" content="#ffffff">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/main.css">
+    
+    <!-- Cropper.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+</head>
+<body>
+    
+    <!-- Floating particles background -->
+    <div class="particles" id="particles"></div>
+
+    <div class="container">
+        <!-- Registration Form -->
+        <main class="form-container">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <a href="apply-team.html" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 20px; color: white; text-decoration: none; font-weight: 500; font-size: 14px; border: 1px solid rgba(255,255,255,0.2); transition: all 0.3s;">
+                    <i data-lucide="users" style="width: 18px; height: 18px;"></i> Jamoani ro'yxatdan o'tkazish
+                </a>
+            </div>
+            
+            <form id="registrationForm">
+                <div class="top-section" style="justify-content: center;">
+                    <!-- Photo Upload -->
+                    <div class="form-group photo-upload-group" style="text-align: center;">
+                        <label class="form-label" style="justify-content: center; margin-bottom: 15px;">
+                            <i data-lucide="camera" class="label-icon"></i> 1x1 Rasm
+                        </label>
+                        <div class="photo-dropzone" id="photoDropzone" style="margin: 0 auto;">
+                            <div class="photo-placeholder" id="photoPlaceholder">
+                                <i data-lucide="image-plus" class="upload-icon" style="margin-bottom: 5px;"></i>
+                                <span class="upload-text" style="font-size: 13px;">Yuklash</span>
+                            </div>
+                            <img id="photoPreview" class="photo-preview hidden" alt="Rasm preview">
+                            <input type="file" id="photoInput" accept="image/jpeg, image/png, image/webp" class="hidden-input">
+                        </div>
+                    </div>
+                </div>
+
+            <!-- Tournament Selection -->
+            <div class="form-group">
+                <label class="form-label" for="tournamentSelect">
+                    <i data-lucide="trophy" class="label-icon"></i> Turnir (Liga)
+                </label>
+                <div class="input-wrapper">
+                    <select id="tournamentSelect" class="form-control" required style="appearance: auto; padding-right: 15px;">
+                        <option value="" disabled selected>Turnirni tanlang</option>
+                        <option value="Super liga">Super liga</option>
+                        <option value="Pro liga">Pro liga</option>
+                        <option value="3-liga">3-liga</option>
+                        <option value="7x7 liga">7x7 liga</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Team Selection -->
+            <div class="form-group">
+                <label class="form-label" for="teamSelect">
+                    <i data-lucide="shield" class="label-icon"></i> Jamoa
+                </label>
+                <div class="input-wrapper" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <select id="teamSelect" class="form-control" required disabled style="appearance: auto; padding-right: 15px; flex: 1; min-width: 200px;">
+                        <option value="" disabled selected>Avval turnirni tanlang</option>
+                        <!-- Teams will be loaded here dynamically -->
+                    </select>
+                    <button type="button" id="viewTeamBtn" class="btn-secondary" style="padding: 0 20px; border-radius: var(--border-radius); display: none; align-items: center; justify-content: center; gap: 5px; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; cursor: pointer; height: 50px;">
+                        <i data-lucide="external-link" style="width: 16px; height: 16px;"></i> Ko'rish
+                    </button>
+                </div>
+            </div>
+
+            <!-- First Name -->
+            <div class="form-group">
+                <label class="form-label" for="firstName">
+                    <i data-lucide="user" class="label-icon"></i> Ismingiz
+                </label>
+                <div class="input-wrapper">
+                    <input type="text" id="firstName" class="form-control" placeholder="Masalan: Alisher" required>
+                </div>
+            </div>
+
+            <!-- Last Name -->
+            <div class="form-group">
+                <label class="form-label" for="lastName">
+                    <i data-lucide="user" class="label-icon"></i> Familiyangiz
+                </label>
+                <div class="input-wrapper">
+                    <input type="text" id="lastName" class="form-control" placeholder="Masalan: Karimov" required>
+                </div>
+            </div>
+
+            <!-- Father Name -->
+            <div class="form-group">
+                <label class="form-label" for="fatherName">
+                    <i data-lucide="users" class="label-icon"></i> Otangizning ismi
+                </label>
+                <div class="input-wrapper">
+                    <input type="text" id="fatherName" class="form-control" placeholder="Masalan: Bahodirovich" required>
+                </div>
+            </div>
+
+            <!-- Birth Date -->
+            <div class="form-group">
+                <label class="form-label" for="birthDate">
+                    <i data-lucide="calendar" class="label-icon"></i> Tug'ilgan sana (ixtiyoriy)
+                </label>
+                <div class="input-wrapper">
+                    <input type="text" id="birthDate" class="form-control" placeholder="01.04.1990">
+                </div>
+            </div>
+
+            <!-- Position -->
+            <div class="form-group">
+                <label class="form-label" for="playerPosition">
+                    <i data-lucide="crosshair" class="label-icon"></i> Amplua (ixtiyoriy)
+                </label>
+                <div class="input-wrapper">
+                    <select id="playerPosition" class="form-control" style="appearance: auto; padding-right: 15px;">
+                        <option value="">Tanlang...</option>
+                        <option value="Darvozabon">Darvozabon</option>
+                        <option value="Himoyachi">Himoyachi</option>
+                        <option value="Yarim himoyachi">Yarim himoyachi</option>
+                        <option value="Hujumchi">Hujumchi</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Player Number -->
+            <div class="form-group">
+                <label class="form-label" for="playerNumber">
+                    <i data-lucide="hash" class="label-icon"></i> O'yinchi raqami (ixtiyoriy)
+                </label>
+                <div class="input-wrapper">
+                    <input type="number" id="playerNumber" class="form-control" placeholder="Masalan: 20" min="1" max="99">
+                </div>
+            </div>
+
+            <!-- Passport -->
+            <div class="form-group">
+                <label class="form-label">
+                    <i data-lucide="credit-card" class="label-icon"></i> Pasport seriya va raqami (ixtiyoriy)
+                </label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="passportSeries" class="form-control" placeholder="AA" maxlength="2" style="width: 80px; text-transform: uppercase;" autocomplete="off">
+                    <input type="tel" id="passportNumber" class="form-control" placeholder="1234567" maxlength="7" pattern="[0-9]*" inputmode="numeric" style="flex: 1;" autocomplete="off">
+                </div>
+            </div>
+
+            <!-- Phone -->
+            <div class="form-group">
+                <label class="form-label" for="phone">
+                    <i data-lucide="phone" class="label-icon"></i> Telefon raqamingiz (ixtiyoriy)
+                </label>
+                <div class="phone-group">
+                    <span class="phone-prefix">+998</span>
+                    <input type="tel" id="phone" class="form-control" placeholder="90 123 45 67" maxlength="12">
+                </div>
+            </div>
+
+            <!-- Comment / Experience -->
+            <div class="form-group">
+                <label class="form-label" for="comment">
+                    <i data-lucide="message-square-text" class="label-icon"></i> Izoh (ixtiyoriy)
+                </label>
+                <textarea id="comment" class="form-control textarea" rows="4" placeholder="Avval qayerda o'ynaganingiz va qaysi komandada o'ynamoqchisiz shu haqida batafsil yozing..."></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <span class="btn-text">
+                    <i data-lucide="check-circle-2" class="btn-icon"></i> YUBORISH
+                </span>
+                <span class="loader hidden"></span>
+            </button>
+        </form>
+        
+        <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--glass-border);">
+            <p style="font-size: 12px; color: #64748b; line-height: 1.4;">
+                <i data-lucide="shield-check" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px; color: var(--gold-primary);"></i>
+                Barcha ma'lumotlaringiz xavfsiz tarzda adminga yo'naltiriladi
+            </p>
+        </div>
+
+        <!-- Cropper Modal -->
+        <div id="cropperModal" class="modal hidden" style="z-index: 10000;">
+            <div class="modal-content" style="max-width: 500px; padding: 20px;">
+                <h3 style="margin-bottom: 15px; font-family: 'Outfit', sans-serif;">Rasmni qirqish</h3>
+                <div class="img-container" style="max-height: 400px; margin-bottom: 15px; background: #000; border-radius: 8px; overflow: hidden;">
+                    <img id="cropperImage" src="" style="max-width: 100%; display: block;">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" id="cancelCropBtn" style="padding: 10px 20px; border-radius: 8px; border: 1px solid var(--glass-border); background: transparent; color: white; cursor: pointer; transition: 0.3s;">Bekor qilish</button>
+                    <button type="button" id="confirmCropBtn" class="submit-btn" style="padding: 10px 20px; width: auto; margin-top: 0;">Qirqish</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="successModal" class="modal hidden">
+            <div class="modal-content" style="position: relative;">
+                <button type="button" onclick="window.location.href = 'apply.html'" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: rgba(255,255,255,0.7); cursor: pointer; padding: 5px; transition: color 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">
+                    <i data-lucide="x" size="24"></i>
+                </button>
+                <div class="success-icon">
+                    <i data-lucide="party-popper" size="64"></i>
+                </div>
+                <h2>Zayavkangiz qabul qilindi!</h2>
+                <p>Zayavkangiz holatini tekshirish uchun quyidagi tugmani bosib, Telegram botimizga o'ting.</p>
+                <a href="#" id="telegramBotBtn" class="telegram-btn">
+                    <i data-lucide="send" class="btn-icon"></i>
+                    Botga o'tish
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script>lucide.createIcons();</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
