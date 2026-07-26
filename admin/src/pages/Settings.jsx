@@ -190,6 +190,22 @@ const Settings = () => {
         setAllCollabs([]);
         setIncomingCollabs([]);
       }
+
+      // Merge own leagues and accepted collab leagues
+      const acceptedCollabs = (collabs || []).filter(c => c.status === 'accepted');
+      const collabLeagues = acceptedCollabs
+        .map(c => c.league)
+        .filter(l => l && l.organization_id !== orgId);
+
+      const allLeaguesMap = new Map();
+      (ownLeagues || []).forEach(l => allLeaguesMap.set(l.id, { ...l, isOwn: true }));
+      collabLeagues.forEach(l => {
+        if (!allLeaguesMap.has(l.id)) {
+          allLeaguesMap.set(l.id, { ...l, isOwn: false, isCollab: true });
+        }
+      });
+
+      setLeagues(Array.from(allLeaguesMap.values()));
     } catch (err) {
       console.error('Error fetching leagues/collabs:', err);
     }
@@ -624,6 +640,7 @@ const Settings = () => {
                             <div>
                               <h4 className="league-title">{l.name}</h4>
                               {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
+                              {l.isCollab && <span className="junior-badge" style={{ background: 'rgba(0, 255, 102, 0.15)', color: '#00ff66', marginLeft: '6px' }}>CO-HOST</span>}
                             </div>
                           </div>
 
@@ -650,20 +667,24 @@ const Settings = () => {
                             >
                               <Send size={13} /> {partnerOrg ? 'Collab (Faol)' : 'Collab'}
                             </button>
-                            <button
-                              className="btn-league-action btn-league-edit"
-                              onClick={() => startEditLeague(l)}
-                              title="Liga ma'lumotlarini tahrirlash"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              className="btn-league-action btn-league-delete"
-                              onClick={() => handleDeleteLeague(l)}
-                              title="Liganı o'chirish"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {l.isOwn !== false && (
+                              <>
+                                <button
+                                  className="btn-league-action btn-league-edit"
+                                  onClick={() => startEditLeague(l)}
+                                  title="Liga ma'lumotlarini tahrirlash"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                                <button
+                                  className="btn-league-action btn-league-delete"
+                                  onClick={() => handleDeleteLeague(l)}
+                                  title="Liganı o'chirish"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       );
