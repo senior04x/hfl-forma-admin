@@ -399,11 +399,11 @@ const Settings = () => {
                   <strong>{collab.sender_org?.name}</strong> tashkiloti <span>"{collab.league?.name}"</span> ligasini birgalikda (co-host) olib borishni taklif qilmoqda.
                 </div>
                 <div className="collab-incoming-actions">
-                  <button className="btn-accept" onClick={() => handleRespondCollab(collab.id, 'accepted')}>
-                    <Check size={14} /> Qabul qilish
+                  <button className="btn-accept" onClick={() => handleRespondCollab(collab.id, 'accepted')} title="Qabul qilish">
+                    <Check size={18} color="#0b0e17" />
                   </button>
-                  <button className="btn-reject" onClick={() => handleRespondCollab(collab.id, 'rejected')}>
-                    <X size={14} /> Rad etish
+                  <button className="btn-reject" onClick={() => handleRespondCollab(collab.id, 'rejected')} title="Rad etish">
+                    <X size={18} color="#ffffff" />
                   </button>
                 </div>
               </div>
