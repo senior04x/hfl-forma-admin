@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { Upload, Trash2, CheckCircle, Star, Award, Sparkles } from 'lucide-react';
+import { Upload, Trash2, CheckCircle, Star, Award, Sparkles, ChevronDown } from 'lucide-react';
 import './Sponsors.css';
 
 export default function Sponsors() {
@@ -13,6 +13,8 @@ export default function Sponsors() {
   const [mainSponsor, setMainSponsorState] = useState(null);
 
   const [leagues, setLeagues] = useState([]);
+  const [showLeagueSettings, setShowLeagueSettings] = useState(false);
+  const [showSponsorsSection, setShowSponsorsSection] = useState(false);
 
   useEffect(() => {
     fetchSponsors();
@@ -281,130 +283,197 @@ export default function Sponsors() {
         </div>
       </div>
       
-      <div className="sponsors-content">
-        {/* League Sponsors Toggles Section */}
+      <div className="sponsors-content" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* League Sponsors Toggles Section (Collapsible - Default Closed) */}
         {leagues.length > 0 && (
-          <div style={{ marginBottom: '30px', background: 'rgba(255, 255, 255, 0.03)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <Sparkles size={22} style={{ color: '#00ff66' }} />
-              <h2 style={{ color: '#ffffff', fontSize: '18px', fontWeight: '800', margin: 0 }}>Ligalarda Homiy Ko'rinishi Sozlamasi</h2>
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', margin: '0 0 20px 0', lineHeight: '1.5' }}>
-              ⭐ <b>Bosh Homiy</b> har doim barcha ligalar shablonlarida (yuqori o'ng burchakda) ko'rinaveradi.<br />
-              👇 Quyidagi ligalar ro'yxatidan pastki <b>qolgan homiylar stripini</b> ko'rsatish yoki yashirishni tanlang:
-            </p>
+          <div style={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', overflow: 'hidden' }}>
+            <button 
+              type="button"
+              onClick={() => setShowLeagueSettings(!showLeagueSettings)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'space-between',
+                padding: '16px 24px',
+                background: showLeagueSettings ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
+                border: 'none',
+                color: '#ffffff',
+                fontWeight: '800',
+                fontSize: '15px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Sparkles size={22} style={{ color: '#00ff66' }} />
+                <span>Ligalarda Homiy Ko'rinishi Sozlamalari</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', opacity: 0.6, color: showLeagueSettings ? '#00ff66' : '#ffffff' }}>
+                  {showLeagueSettings ? 'Yopish' : 'Ochish'}
+                </span>
+                <ChevronDown size={20} style={{ transform: showLeagueSettings ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', color: showLeagueSettings ? '#00ff66' : '#ffffff' }} />
+              </div>
+            </button>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
-              {leagues.map(league => {
-                const isShow = league.show_sponsors !== false;
-                return (
-                  <div 
-                    key={league.id} 
-                    onClick={() => toggleLeagueSponsors(league)}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justify: 'space-between', 
-                      padding: '14px 18px', 
-                      borderRadius: '12px', 
-                      background: isShow ? 'rgba(0, 255, 102, 0.08)' : 'rgba(255, 255, 255, 0.03)', 
-                      border: isShow ? '1px solid rgba(0, 255, 102, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      boxShadow: isShow ? '0 0 15px rgba(0, 255, 102, 0.1)' : 'none'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      {league.logo_url && (
-                        <img src={league.logo_url} alt={league.name} style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-                      )}
-                      <span style={{ color: '#ffffff', fontWeight: '700', fontSize: '15px' }}>{league.name}</span>
-                    </div>
+            {showLeagueSettings && (
+              <div style={{ padding: '24px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', margin: '0 0 20px 0', lineHeight: '1.5' }}>
+                  ⭐ <b>Bosh Homiy</b> har doim barcha ligalar shablonlarida (yuqori o'ng burchakda) ko'rinaveradi.<br />
+                  👇 Quyidagi ligalar ro'yxatidan pastki <b>qolgan homiylar stripini</b> ko'rsatish yoki yashirishni tanlang:
+                </p>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: isShow ? '#00ff66' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {isShow ? 'YONIQLIK' : 'O\'CHIQ'}
-                      </span>
-                      <input 
-                        type="checkbox" 
-                        checked={isShow} 
-                        onChange={() => {}} 
-                        style={{ width: '20px', height: '20px', accentColor: '#00ff66', cursor: 'pointer' }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+                  {leagues.map(league => {
+                    const isShow = league.show_sponsors !== false;
+                    return (
+                      <div 
+                        key={league.id} 
+                        onClick={() => toggleLeagueSponsors(league)}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justify: 'space-between', 
+                          padding: '14px 18px', 
+                          borderRadius: '12px', 
+                          background: isShow ? 'rgba(0, 255, 102, 0.08)' : 'rgba(255, 255, 255, 0.03)', 
+                          border: isShow ? '1px solid rgba(0, 255, 102, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isShow ? '0 0 15px rgba(0, 255, 102, 0.1)' : 'none'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          {league.logo_url && (
+                            <img src={league.logo_url} alt={league.name} style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+                          )}
+                          <span style={{ color: '#ffffff', fontWeight: '700', fontSize: '15px' }}>{league.name}</span>
+                        </div>
 
-        <div className="upload-section-page">
-          <label className={`upload-btn-page ${uploading ? 'disabled' : ''}`}>
-            {uploading ? <><span className="btn-spinner"></span> Yuklanmoqda...</> : <><Upload size={18} /> Yangi homiy logotipini qo'shish</>}
-            <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} hidden />
-          </label>
-        </div>
-
-        {loading ? (
-          <div className="sponsors-grid-page">
-            {[1, 2, 3, 4, 5, 6].map(idx => (
-              <div key={idx} className="skeleton-pulse" style={{ height: '200px' }}></div>
-            ))}
-          </div>
-        ) : (
-          <div className="sponsors-grid-page">
-            {sponsors.map(sponsor => {
-              const isMain = mainSponsor?.id === sponsor.id;
-              const isSelected = selectedSponsors.some(s => s.id === sponsor.id);
-
-              return (
-                <div 
-                  key={sponsor.id} 
-                  className={`sponsor-card-page ${isMain ? 'main-sponsor' : isSelected ? 'selected' : ''}`}
-                  onClick={() => toggleSelectSponsor(sponsor)}
-                >
-                  {isMain && (
-                    <div className="main-sponsor-badge">
-                      <Star size={12} fill="#000" /> BOSH HOMIY
-                    </div>
-                  )}
-
-                  <div className="sponsor-img-container-page">
-                    <img src={sponsor.logo_url} alt={sponsor.name || "Sponsor"} />
-                  </div>
-
-                  <div className="sponsor-actions-footer">
-                    <button 
-                      type="button"
-                      className="btn-toggle-main" 
-                      onClick={(e) => handleSetMainSponsor(sponsor, e)}
-                      title={isMain ? "Bosh homiylikdan chiqarish" : "Tashkilot bosh homiysi qilib belgilash"}
-                    >
-                      <Star size={14} fill={isMain ? "#fef08a" : "none"} /> {isMain ? "Bosh Homiy" : "Bosh Homiy qilish"}
-                    </button>
-                    <button 
-                      type="button"
-                      className="sponsor-delete-btn-page" 
-                      onClick={(e) => handleDelete(e, sponsor.id, sponsor.logo_url)}
-                      disabled={deletingId === sponsor.id}
-                      title="O'chirish"
-                    >
-                      {deletingId === sponsor.id ? <span className="btn-spinner"></span> : <Trash2 size={16} />}
-                    </button>
-                  </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: '800', color: isShow ? '#00ff66' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {isShow ? 'YONIQLIK' : 'O\'CHIQ'}
+                          </span>
+                          <input 
+                            type="checkbox" 
+                            checked={isShow} 
+                            onChange={() => {}} 
+                            style={{ width: '20px', height: '20px', accentColor: '#00ff66', cursor: 'pointer' }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-
-            {sponsors.length === 0 && (
-              <div className="empty-state-page">
-                <Sparkles size={32} style={{ marginBottom: '12px', color: '#00ff66' }} />
-                <p>Hali bu tashkilot uchun homiylar kiritilmagan. Yuqoridagi tugma orqali yangi homiy yuklang.</p>
               </div>
             )}
           </div>
         )}
+
+        {/* Sponsor Logos & Image Upload Section (Collapsible - Default Closed) */}
+        <div style={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', overflow: 'hidden' }}>
+          <button 
+            type="button"
+            onClick={() => setShowSponsorsSection(!showSponsorsSection)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'space-between',
+              padding: '16px 24px',
+              background: showSponsorsSection ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
+              border: 'none',
+              color: '#ffffff',
+              fontWeight: '800',
+              fontSize: '15px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Upload size={22} style={{ color: '#00ff66' }} />
+              <span>Homiylar Rasmlari va Yangi Homiy Yuklash ({sponsors.length} ta homiy)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '13px', opacity: 0.6, color: showSponsorsSection ? '#00ff66' : '#ffffff' }}>
+                {showSponsorsSection ? 'Yopish' : 'Ochish'}
+              </span>
+              <ChevronDown size={20} style={{ transform: showSponsorsSection ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', color: showSponsorsSection ? '#00ff66' : '#ffffff' }} />
+            </div>
+          </button>
+
+          {showSponsorsSection && (
+            <div style={{ padding: '24px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <div className="upload-section-page" style={{ marginBottom: '24px' }}>
+                <label className={`upload-btn-page ${uploading ? 'disabled' : ''}`}>
+                  {uploading ? <><span className="btn-spinner"></span> Yuklanmoqda...</> : <><Upload size={18} /> Yangi homiy logotipini qo'shish</>}
+                  <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} hidden />
+                </label>
+              </div>
+
+              {loading ? (
+                <div className="sponsors-grid-page">
+                  {[1, 2, 3, 4, 5, 6].map(idx => (
+                    <div key={idx} className="skeleton-pulse" style={{ height: '200px' }}></div>
+                  ))}
+                </div>
+              ) : (
+                <div className="sponsors-grid-page">
+                  {sponsors.map(sponsor => {
+                    const isMain = mainSponsor?.id === sponsor.id;
+                    const isSelected = selectedSponsors.some(s => s.id === sponsor.id);
+
+                    return (
+                      <div 
+                        key={sponsor.id} 
+                        className={`sponsor-card-page ${isMain ? 'main-sponsor' : isSelected ? 'selected' : ''}`}
+                        onClick={() => toggleSelectSponsor(sponsor)}
+                      >
+                        {isMain && (
+                          <div className="main-sponsor-badge">
+                            <Star size={12} fill="#000" /> BOSH HOMIY
+                          </div>
+                        )}
+
+                        <div className="sponsor-img-container-page">
+                          <img src={sponsor.logo_url} alt={sponsor.name || "Sponsor"} />
+                        </div>
+
+                        <div className="sponsor-actions-footer">
+                          <button 
+                            type="button"
+                            className="btn-toggle-main" 
+                            onClick={(e) => handleSetMainSponsor(sponsor, e)}
+                            title={isMain ? "Bosh homiylikdan chiqarish" : "Tashkilot bosh homiysi qilib belgilash"}
+                          >
+                            <Star size={14} fill={isMain ? "#fef08a" : "none"} /> {isMain ? "Bosh Homiy" : "Bosh Homiy qilish"}
+                          </button>
+                          <button 
+                            type="button"
+                            className="sponsor-delete-btn-page" 
+                            onClick={(e) => handleDelete(e, sponsor.id, sponsor.logo_url)}
+                            disabled={deletingId === sponsor.id}
+                            title="O'chirish"
+                          >
+                            {deletingId === sponsor.id ? <span className="btn-spinner"></span> : <Trash2 size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {sponsors.length === 0 && (
+                    <div className="empty-state-page">
+                      <Sparkles size={32} style={{ marginBottom: '12px', color: '#00ff66' }} />
+                      <p>Hali bu tashkilot uchun homiylar kiritilmagan. Yuqoridagi tugma orqali yangi homiy yuklang.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

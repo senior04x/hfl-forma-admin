@@ -1087,73 +1087,110 @@ const Schedule = () => {
           </div>
         )}
 
-        {/* 1x1 Poster Banner Section */}
-        <div className="poster-banner-section">
-          {/* Left: 1x1 Poster Image Box */}
-          <div className="poster-preview-square">
-            {scheduleBanner ? (
-              <img src={scheduleBanner} alt="1x1 Schedule Banner" className="poster-img-1x1" />
-            ) : (
-              <div className="poster-placeholder-1x1">
-                <ImageIcon size={32} />
-                <span>1x1 Orqa Fon</span>
-                <span className="sub-tag">({exportLeague || 'Tanlanmagan'})</span>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Actions */}
-          <div className="poster-action-buttons">
-            <button className="btn-download-poster" onClick={handleExport} disabled={isExporting}>
-              {isExporting ? (
-                <><span className="btn-spinner"></span> <span>Yuklanmoqda...</span></>
-              ) : (
-                <><Download size={18} /> <span>Rasmni Yuklab Olish</span></>
-              )}
-            </button>
-            <div className="poster-sub-buttons">
-              <button className="btn-banner-action btn-upload" onClick={() => bannerFileInputRef.current?.click()} disabled={uploadingBanner}>
-                <Upload size={15} /> <span>{scheduleBanner ? 'Boshqa rasm yuklash' : 'Rasm yuklash'}</span>
-              </button>
-              {scheduleBanner && (
-                <button className="btn-banner-action btn-delete" onClick={handleDeleteBanner}>
-                  <Trash2 size={15} /> <span>O'chirish</span>
-                </button>
-              )}
+        {/* Collapsible 1x1 Poster & 16:9 YouTube Background Section */}
+        <div style={{ marginTop: '16px', borderRadius: '14px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.08)', overflow: 'hidden' }}>
+          <button 
+            type="button"
+            onClick={() => setShowBannerControls(!showBannerControls)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'space-between',
+              padding: '14px 20px',
+              background: showBannerControls ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
+              border: 'none',
+              color: '#ffffff',
+              fontWeight: '800',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <ImageIcon size={18} style={{ color: '#00ff66' }} />
+              <span>Fon Rasmlari va Shablon Boshqaruvi (1x1 va 16:9 YouTube)</span>
             </div>
-            <input ref={bannerFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBannerFileSelect} />
-          </div>
-        </div>
-
-        {/* YouTube Shablon 16:9 Background Control Section */}
-        <div className="poster-banner-section" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-          {/* Left: 16:9 Preview Square/Rectangle */}
-          <div className="poster-preview-square" style={{ width: '220px', height: '124px', aspectRatio: '16/9' }}>
-            {ytBanner ? (
-              <img src={ytBanner} alt="16:9 YouTube Banner" className="poster-img-1x1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <div className="poster-placeholder-1x1">
-                <Video size={28} />
-                <span style={{ fontSize: '12px' }}>YouTube Shablon Fon (16:9)</span>
-                <span className="sub-tag">({exportLeague || 'Tanlanmagan'})</span>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Upload & Delete Actions */}
-          <div className="poster-action-buttons" style={{ justifyContent: 'center' }}>
-            <div className="poster-sub-buttons" style={{ flexDirection: 'column', gap: '8px' }}>
-              <button className="btn-banner-action btn-upload" onClick={() => ytFileInputRef.current?.click()} disabled={uploadingYtBanner}>
-                <Upload size={15} /> <span>{ytBanner ? 'YouTube Shablon fonini almashtirish (16:9)' : 'YouTube Shablon Fon yuklash (16:9)'}</span>
-              </button>
-              {ytBanner && (
-                <button className="btn-banner-action btn-delete" onClick={handleDeleteYtBanner}>
-                  <Trash2 size={15} /> <span>Fonni o'chirish</span>
-                </button>
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '12px', opacity: 0.6, color: showBannerControls ? '#00ff66' : '#ffffff' }}>
+                {showBannerControls ? 'Yopish' : 'Ochish'}
+              </span>
+              <ChevronDown size={18} style={{ transform: showBannerControls ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', color: showBannerControls ? '#00ff66' : '#ffffff' }} />
             </div>
-            <input ref={ytFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleYtFileSelect} />
-          </div>
+          </button>
+
+          {showBannerControls && (
+            <div style={{ padding: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* 1x1 Poster Banner Section */}
+              <div className="poster-banner-section">
+                {/* Left: 1x1 Poster Image Box */}
+                <div className="poster-preview-square">
+                  {scheduleBanner ? (
+                    <img src={scheduleBanner} alt="1x1 Schedule Banner" className="poster-img-1x1" />
+                  ) : (
+                    <div className="poster-placeholder-1x1">
+                      <ImageIcon size={32} />
+                      <span>1x1 Orqa Fon</span>
+                      <span className="sub-tag">({exportLeague || 'Tanlanmagan'})</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Actions */}
+                <div className="poster-action-buttons">
+                  <button className="btn-download-poster" onClick={handleExport} disabled={isExporting}>
+                    {isExporting ? (
+                      <><span className="btn-spinner"></span> <span>Yuklanmoqda...</span></>
+                    ) : (
+                      <><Download size={18} /> <span>Rasmni Yuklab Olish</span></>
+                    )}
+                  </button>
+                  <div className="poster-sub-buttons">
+                    <button className="btn-banner-action btn-upload" onClick={() => bannerFileInputRef.current?.click()} disabled={uploadingBanner}>
+                      <Upload size={15} /> <span>{scheduleBanner ? 'Boshqa rasm yuklash' : 'Rasm yuklash'}</span>
+                    </button>
+                    {scheduleBanner && (
+                      <button className="btn-banner-action btn-delete" onClick={handleDeleteBanner}>
+                        <Trash2 size={15} /> <span>O'chirish</span>
+                      </button>
+                    )}
+                  </div>
+                  <input ref={bannerFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBannerFileSelect} />
+                </div>
+              </div>
+
+              {/* YouTube Shablon 16:9 Background Control Section */}
+              <div className="poster-banner-section" style={{ paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                {/* Left: 16:9 Preview Square/Rectangle */}
+                <div className="poster-preview-square" style={{ width: '220px', height: '124px', aspectRatio: '16/9' }}>
+                  {ytBanner ? (
+                    <img src={ytBanner} alt="16:9 YouTube Banner" className="poster-img-1x1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div className="poster-placeholder-1x1">
+                      <Video size={28} />
+                      <span style={{ fontSize: '12px' }}>YouTube Shablon Fon (16:9)</span>
+                      <span className="sub-tag">({exportLeague || 'Tanlanmagan'})</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Upload & Delete Actions */}
+                <div className="poster-action-buttons" style={{ justifyContent: 'center' }}>
+                  <div className="poster-sub-buttons" style={{ flexDirection: 'column', gap: '8px' }}>
+                    <button className="btn-banner-action btn-upload" onClick={() => ytFileInputRef.current?.click()} disabled={uploadingYtBanner}>
+                      <Upload size={15} /> <span>{ytBanner ? 'YouTube Shablon fonini almashtirish (16:9)' : 'YouTube Shablon Fon yuklash (16:9)'}</span>
+                    </button>
+                    {ytBanner && (
+                      <button className="btn-banner-action btn-delete" onClick={handleDeleteYtBanner}>
+                        <Trash2 size={15} /> <span>Fonni o'chirish</span>
+                      </button>
+                    )}
+                  </div>
+                  <input ref={ytFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleYtFileSelect} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
