@@ -8,15 +8,6 @@ import html2canvas from 'html2canvas';
 import ImageCropperModal from '../components/ImageCropperModal';
 import './Schedule.css';
 
-const DEFAULT_LEAGUE_LOGOS = {
-  'Super liga': '/super-liga.PNG',
-  'Pro liga': '/Pro-liga.PNG',
-  '3-liga': '/3-liga.PNG',
-  'Europa ligasi': '/europen-liga.PNG',
-  'Chempionlar ligasi': '/chemp-liga.PNG',
-  '7x7 liga': '/7x7-liga.PNG'
-};
-
 const Schedule = () => {
   const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
@@ -40,7 +31,6 @@ const Schedule = () => {
   const [exportLeague, setExportLeague] = useState('');
   const [exportRound, setExportRound] = useState('');
   const [isExporting, setIsExporting] = useState(false);
-  const [selectedSponsors, setSelectedSponsors] = useState([]);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const exportRef = useRef(null);
 
@@ -51,206 +41,6 @@ const Schedule = () => {
 
   useEffect(() => {
     loadLeaguesAndData();
-    try {
-      const saved = localStorage.getItem('hfl_selectedSponsors');
-      if (saved) setSelectedSponsors(JSON.parse(saved));
-    } catch (e) {}
-  }, [orgId]);
-
-  const loadLeaguesAndData = async () => {
-    setLoading(true);
-    try {
-      const fetchedLeagues = await getActiveOrgLeagues(orgId);
-      setActiveLeagues(fetchedLeagues);
-      if (fetchedLeagues.length > 0) {
-        setExportLeague(fetchedLeagues[0].name);
-      }
-      await Promise.all([
-        fetchTeams(fetchedLeagues),
-        fetchMatches(fetchedLeagues)
-      ]);
-    } catch (err) {
-      console.error('Error loading schedule:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!exportLeague || !activeLeagues.length) return;
-    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
-    if (!currentLeagueObj) return;
-
-    const dbUrl = currentLeagueObj.schedule_banner_url || currentLeagueObj.banner_url;
-    if (dbUrl) {
-      setScheduleBanner(dbUrl);
-    } else {
-      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
-      const savedLocal = localStorage.getItem(localKey);
-      setScheduleBanner(savedLocal || '');
-    }
-  }, [exportLeague, activeLeagues, orgId]);
-
-  useEffect(() => {
-    const leagueMatches = matches.filter(m => m.league === exportLeague && m.round);
-    if (leagueMatches.length > 0) {
-      const maxR = Math.max(...leagueMatches.map(m => Number(m.round)));
-      setExportRound(maxR.toString());
-    } else {
-      setExportRound('');
-    }
-  }, [matches, exportLeague]);
-
-  const handleBannerFileSelect = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCropperRawImage(reader.result);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const handleCroppedBannerSave = async (croppedBlob) => {
-    if (!croppedBlob) return;
-    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
-    if (!currentLeagueObj) return;
-
-    setUploadingBanner(true);
-    try {
-      const publicUrl = await new Promise((res) => {
-        const reader = new FileReader();
-        reader.onloadend = () => res(reader.result);
-        reader.readAsDataURL(croppedBlob);
-      });
-
-      setScheduleBanner(publicUrl);
-      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
-      localStorage.setItem(localKey, publicUrl);
-
-      try {
-        await supabase
-          .from('leagues')
-          .update({ schedule_banner_url: publicUrl })
-          .eq('id', currentLeagueObj.id);
-      } catch (e) {}
-
-    } catch (err) {
-      console.error('Error saving schedule banner:', err);
-    } finally {
-      setUploadingBanner(false);
-      setCropperRawImage(null);
-    }
-  };
-
-  const handleDeleteBanner = async () => {
-    const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
-    if (!currentLeagueObj) return;
-    if (!window.confirm(`"${exportLeague}" ligasi uchun 1x1 orqa fon rasmini o'chirmoqchimisiz?`)) return;
-
-    setScheduleBanner('');
-    const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
-    localStorage.removeItem(localKey);
-
-    try {
-      await supabase
-        .from('leagues')
-        .update({ schedule_banner_url: null })
-        .eq('id', currentLeagueObj.id);
-    } catch (e) {}
-  };
-
-  const handleExport = async () => {
-    if (!exportRef.current || isExporting) return;
-    if (!exportLeague || !exportRound) {
-      alert("Iltimos eksport qilish uchun liga va turni tanlang.");
-      return;
-    }
-    setIsExporting(true);
-    try {
-      const canvas = await html2canvas(exportRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: null
-      });
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `jadval_${exportLeague}_${exportRound}_tur.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      console.error(err);
-      alert("Xatolik yuz berdi");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const fetchTeams = async (leaguesList = activeLeagues) => {
-    let query = supabase.from('teams').select('id, name, logo_url, league').eq('status', 'approved');
-    query = applyOrgAndCollabFilter(query, orgId, leaguesList);
-    const { data } = await query;
-    if (data) setTeams(data);
-  };
-
-  const fetchMatches = async (leaguesList = activeLeagues) => {
-    let query = supabase
-      .from('matches')
-      .select(`
-        *,
-        home_team:home_team_id (id, name, logo_url),
-        away_team:away_team_id (id, name, logo_url)
-      `)
-      .order('match_date', { ascending: true })
-      .order('match_time', { ascending: true });
-
-    query = applyOrgAndCollabFilter(query, orgId, leaguesList);
-
-    const { data } = await query;
-    if (data) setMatches(data);
-  };
-
-  const handleOpenModal = () => {
-    setSelectedLeague('');
-    setHomeTeamId('');
-    setAwayTeamId('');
-    setMatchDate('');
-    setMatchTime('');
-    setLocation('');
-    setStadiumName('');
-    setYoutubeLink('');
-    setMatchRound('');
-    setIsModalOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!homeTeamId || !awayTeamId || !matchDate || !matchTime || !location) {
-      alert("Iltimos, barcha majburiy maydonlarni to'ldiring.");
-      return;
-    }
-    if (homeTeamId === awayTeamId) {
-      alert("Mezbon va mehmon jamoalar har xil bo'lishi kerak.");
-      return;
-const [exportLeague, setExportLeague] = useState('');
-  const [exportRound, setExportRound] = useState('');
-  const [isExporting, setIsExporting] = useState(false);
-  const [selectedSponsors, setSelectedSponsors] = useState([]);
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
-  const exportRef = useRef(null);
-
-  const [scheduleBanner, setScheduleBanner] = useState('');
-  const [cropperRawImage, setCropperRawImage] = useState(null);
-  const [uploadingBanner, setUploadingBanner] = useState(false);
-  const bannerFileInputRef = useRef(null);
-  const [filterStatus, setFilterStatus] = useState('all');
-
-  useEffect(() => {
-    loadLeaguesAndData();
-    try {
-      const saved = localStorage.getItem('hfl_selectedSponsors');
-      if (saved) setSelectedSponsors(JSON.parse(saved));
-    } catch (e) {}
   }, [orgId]);
 
   const loadLeaguesAndData = async () => {
@@ -317,11 +107,9 @@ const [exportLeague, setExportLeague] = useState('');
     try {
       setScheduleBanner(croppedDataUrl);
 
-      // Save to localStorage per org & league
       const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj.id}`;
       localStorage.setItem(localKey, croppedDataUrl);
 
-      // Try update in Supabase leagues table if column exists
       try {
         await supabase
           .from('leagues')
