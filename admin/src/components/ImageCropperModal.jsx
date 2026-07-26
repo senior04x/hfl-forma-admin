@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Crop, Check, X, ZoomIn, ZoomOut } from 'lucide-react';
 import './ImageCropperModal.css';
 
@@ -144,7 +145,7 @@ const ImageCropperModal = ({
 
   if (!isOpen || !src) return null;
 
-  return (
+  return createPortal(
     <div className="cropper-modal-overlay" onClick={handleClose}>
       <div className="cropper-modal" onClick={e => e.stopPropagation()}>
         <div className="cropper-header">
@@ -206,7 +207,8 @@ const ImageCropperModal = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
