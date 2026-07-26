@@ -15,7 +15,8 @@ import {
   Shield,
   ChevronDown,
   Zap,
-  Bell
+  Bell,
+  Trash2
 } from 'lucide-react';
 import './Transfers.css';
 
@@ -232,6 +233,23 @@ const Transfers = () => {
     }
   };
 
+  const handleDeleteTransfer = async (transferId) => {
+    if (!window.confirm("Haqiqatan ham ushbu transfer so'rovini o'chirib tashlamoqchimisiz?")) return;
+    try {
+      const { error } = await supabase
+        .from('transfers')
+        .delete()
+        .eq('id', transferId);
+        
+      if (error) throw error;
+      
+      fetchTransfers();
+    } catch (err) {
+      console.error('Error deleting transfer:', err);
+      alert('O\'chirishda xatolik yuz berdi');
+    }
+  };
+
   const handleOpenEditModal = (transfer) => {
     setEditingTransfer(transfer);
     setEditForm({
@@ -440,13 +458,22 @@ const Transfers = () => {
                   {transfer.status === 'pending' && <Clock size={12} />}
                   {transfer.status === 'approved' ? 'Tasdiqlangan' : transfer.status === 'rejected' ? 'Rad etilgan' : 'Kutilmoqda'}
                 </span>
-                <button 
-                  className="card-edit-btn" 
-                  onClick={() => handleOpenEditModal(transfer)} 
-                  title="Transferni tahrirlash"
-                >
-                  <Pencil size={14} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button 
+                    className="card-edit-btn" 
+                    onClick={() => handleOpenEditModal(transfer)} 
+                    title="Transferni tahrirlash"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button 
+                    className="card-edit-btn card-delete-btn" 
+                    onClick={() => handleDeleteTransfer(transfer.id)} 
+                    title="Transferni o'chirish"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
               
               <div className="card-top">
