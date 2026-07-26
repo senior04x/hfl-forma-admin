@@ -11,6 +11,9 @@ async function getCroppedImg(imageSrc, pixelCrop) {
   canvas.height = 500;
   const ctx = canvas.getContext('2d');
 
+  // Clear background so transparent PNG images maintain transparency
+  ctx.clearRect(0, 0, 500, 500);
+
   ctx.drawImage(
     image,
     pixelCrop.x,
@@ -20,7 +23,7 @@ async function getCroppedImg(imageSrc, pixelCrop) {
     0, 0, 500, 500
   );
 
-  return canvas.toDataURL('image/jpeg', 0.85);
+  return canvas.toDataURL('image/png');
 }
 
 function createImage(url) {

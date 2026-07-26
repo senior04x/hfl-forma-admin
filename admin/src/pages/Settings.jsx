@@ -48,10 +48,10 @@ const Settings = () => {
     try {
       const response = await fetch(croppedBase64);
       const blob = await response.blob();
-      const fileName = `org_logo_${orgId}_${Date.now()}.jpg`;
+      const fileName = `org_logo_${orgId}_${Date.now()}.png`;
 
       const { error } = await supabase.storage.from('player-photos').upload(fileName, blob, {
-        contentType: 'image/jpeg',
+        contentType: 'image/png',
         upsert: true
       });
       if (error) throw error;
@@ -94,10 +94,10 @@ const Settings = () => {
     try {
       const response = await fetch(croppedBase64);
       const blob = await response.blob();
-      const fileName = `league_logo_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+      const fileName = `league_logo_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
 
       const { error } = await supabase.storage.from('player-photos').upload(fileName, blob, {
-        contentType: 'image/jpeg',
+        contentType: 'image/png',
         upsert: true
       });
       if (error) throw error;
