@@ -19,20 +19,26 @@ export default function Sponsors() {
   const fetchSponsors = async () => {
     setLoading(true);
     try {
-      // Fetch sponsors for current org or global
-      let query = supabase
-        .from('sponsors')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let loadedSponsors = [];
 
-      if (orgId) {
-        query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
+      // 1. Try fetching with organization_id filter
+      try {
+        let query = supabase.from('sponsors').select('*').order('created_at', { ascending: false });
+        if (orgId) {
+          query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
+        }
+        const { data, error } = await query;
+        if (!error && data) {
+          loadedSponsors = data;
+        } else {
+          throw error;
+        }
+      } catch (err) {
+        // Fallback if organization_id column doesn't exist yet in Supabase
+        const { data } = await supabase.from('sponsors').select('*').order('created_at', { ascending: false });
+        loadedSponsors = data || [];
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
       
-      const loadedSponsors = data || [];
       setSponsors(loadedSponsors);
 
       // Restore main sponsor
@@ -84,14 +90,26 @@ export default function Sponsors() {
 
       const publicUrl = publicUrlData.publicUrl;
 
-      const { data: insertData, error: insertError } = await supabase
-        .from('sponsors')
-        .insert([
-          { name: file.name, logo_url: publicUrl, organization_id: orgId, is_main: false }
-        ])
-        .select();
-
-      if (insertError) throw insertError;
+      let insertData = null;
+      try {
+        const { data, error } = await supabase
+          .from('sponsors')
+          .insert([
+            { name: file.name, logo_url: publicUrl, organization_id: orgId, is_main: false }
+          ])
+          .select();
+        if (error) throw error;
+        insertData = data;
+      } catch (e) {
+        // Fallback insert without organization_id/is_main columns if DB not migrated yet
+        const { data } = await supabase
+          .from('sponsors')
+          .insert([
+            { name: file.name, logo_url: publicUrl }
+          ])
+          .select();
+        insertData = data;
+      }
 
       if (insertData && insertData.length > 0) {
         setSponsors([insertData[0], ...sponsors]);
@@ -117,17 +135,13 @@ export default function Sponsors() {
       localStorage.removeItem(`hfl_main_sponsor_${orgId}`);
     }
 
-    // Update in Supabase database
+    // Try updating DB columns if available
     try {
-      // 1. Reset all is_main for this org
       await supabase.from('sponsors').update({ is_main: false }).eq('organization_id', orgId);
       if (targetMain) {
-        // 2. Set target sponsor is_main = true
         await supabase.from('sponsors').update({ is_main: true }).eq('id', targetMain.id);
       }
-    } catch (e) {
-      console.error("Main sponsor DB sync error:", e);
-    }
+    } catch (e) {}
   };
 
   const toggleSelectSponsor = (sponsor) => {

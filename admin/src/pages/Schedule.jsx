@@ -50,15 +50,17 @@ const Schedule = () => {
       const saved = localStorage.getItem(`hfl_main_sponsor_${orgId}`);
       if (saved) setMainSponsor(JSON.parse(saved));
 
-      let query = supabase.from('sponsors').select('*').eq('is_main', true);
-      if (orgId) {
-        query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
-      }
-      const { data } = await query.limit(1);
-      if (data && data.length > 0) {
-        setMainSponsor(data[0]);
-        localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(data[0]));
-      }
+      try {
+        let query = supabase.from('sponsors').select('*').eq('is_main', true);
+        if (orgId) {
+          query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
+        }
+        const { data } = await query.limit(1);
+        if (data && data.length > 0) {
+          setMainSponsor(data[0]);
+          localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(data[0]));
+        }
+      } catch (e) {}
     } catch (e) {
       console.error(e);
     }
