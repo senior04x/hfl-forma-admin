@@ -3,10 +3,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const teamsGrid = document.getElementById('teamsGrid');
 
     try {
+        if (typeof window.resolveOrg === 'function') {
+            await window.resolveOrg();
+        }
+        const currentOrgId = (window.currentOrg && window.currentOrg.id) ? window.currentOrg.id : 1;
+
         // Fetch approved teams from Supabase
         const { data, error } = await db
             .from('teams')
-            .select('id, name, logo_url, league')
+            .select('id, name, logo_url, league, organization_id')
+            .eq('organization_id', currentOrgId)
             .in('status', ['approved', 'partially_approved'])
             .order('created_at', { ascending: false });
 
