@@ -38,6 +38,20 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     }
   }, [player.team_id, teams]);
 
+  const [formData, setFormData] = useState({
+    first_name: player.first_name || '',
+    last_name: player.last_name || '',
+    father_name: player.father_name || '',
+    phone: player.phone || '',
+    passport_series: player.passport_series || '',
+    passport_number: player.passport_number || '',
+    birth_date: player.birth_date || '',
+    position: player.position || '',
+    player_number: player.player_number || '',
+    photo_url: player.photo_url || '',
+    team_id: player.team_id || ''
+  });
+
   useEffect(() => {
     setFormData({
       first_name: player.first_name || '',
