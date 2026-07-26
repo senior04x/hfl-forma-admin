@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
 import { Crop, Check, X, ZoomIn, ZoomOut } from 'lucide-react';
 import './ImageCropperModal.css';
@@ -7,12 +7,12 @@ import './ImageCropperModal.css';
 async function getCroppedImg(imageSrc, pixelCrop) {
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
-  canvas.width = 500;
-  canvas.height = 500;
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
   const ctx = canvas.getContext('2d');
 
   // Clear background so transparent PNG images maintain transparency
-  ctx.clearRect(0, 0, 500, 500);
+  ctx.clearRect(0, 0, pixelCrop.width, pixelCrop.height);
 
   ctx.drawImage(
     image,
@@ -20,7 +20,10 @@ async function getCroppedImg(imageSrc, pixelCrop) {
     pixelCrop.y,
     pixelCrop.width,
     pixelCrop.height,
-    0, 0, 500, 500
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
   );
 
   return canvas.toDataURL('image/png');
@@ -44,11 +47,18 @@ const ImageCropperModal = ({
   onCropComplete,
   imageSrc: propImageSrc,
   initialImageSrc,
-  title = "Rasmni 1:1 Formatda Qirqish"
+  title = "Rasmni Qirqish",
+  aspect: propAspect = 1,
+  showAspectSelector = false
 }) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [aspect, setAspect] = useState(propAspect);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+  useEffect(() => {
+    setAspect(propAspect);
+  }, [propAspect]);
 
   const handleClose = onClose || onCancel || (() => {});
   const handleSave = onSave || onCropComplete || (() => {});
@@ -84,12 +94,38 @@ const ImageCropperModal = ({
         </div>
 
         <div className="cropper-body">
+          {showAspectSelector && (
+            <div className="cropper-aspect-row">
+              <button 
+                type="button" 
+                className={`aspect-btn ${aspect === 16 / 9 ? 'active' : ''}`}
+                onClick={() => setAspect(16 / 9)}
+              >
+                16:9 (Uzun)
+              </button>
+              <button 
+                type="button" 
+                className={`aspect-btn ${aspect === 1 ? 'active' : ''}`}
+                onClick={() => setAspect(1)}
+              >
+                1:1 (Kvadrat)
+              </button>
+              <button 
+                type="button" 
+                className={`aspect-btn ${aspect === null || aspect === undefined ? 'active' : ''}`}
+                onClick={() => setAspect(undefined)}
+              >
+                Erkin (Free)
+              </button>
+            </div>
+          )}
+
           <div className="cropper-image-container">
             <Cropper
               image={src}
               crop={crop}
               zoom={zoom}
-              aspect={1}
+              aspect={aspect}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropCompleteHandler}

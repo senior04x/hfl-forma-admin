@@ -459,7 +459,7 @@ const Settings = () => {
                     }}
                   >
                     <Crop size={15} />
-                    <span>{uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Almashtirish' : 'Logo tanlash (1:1)')}</span>
+                    <span>{uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Almashtirish' : 'Logo tanlash (16:9 / Erkin)')}</span>
                   </button>
 
                   <input
@@ -722,7 +722,9 @@ const Settings = () => {
           imageSrc={leagueCropperRawImage}
           onClose={() => setLeagueCropperRawImage(null)}
           onSave={handleLeagueCroppedSave}
-          title="Liga Logotipini 1:1 Qirqish"
+          title="Liga Logotipini Qirqish"
+          aspect={16 / 9}
+          showAspectSelector={true}
         />
       )}
     </div>
