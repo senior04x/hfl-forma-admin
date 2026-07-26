@@ -982,24 +982,15 @@ const Schedule = () => {
 
                   {/* VS / Score Badge */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <div style={{ background: 'linear-gradient(135deg, #00ff66 0%, #00cc52 100%)', color: '#050910', padding: '10px 24px', borderRadius: '16px', fontSize: '32px', fontWeight: '900', fontStyle: 'italic', letterSpacing: '2px', boxShadow: '0 0 25px rgba(0, 255, 102, 0.5)' }}>
+                    <div style={{ background: 'linear-gradient(135deg, #00ff66 0%, #00cc52 100%)', color: '#050910', padding: '10px 24px', borderRadius: '16px', fontSize: '34px', fontWeight: '900', fontStyle: 'italic', letterSpacing: '2px', boxShadow: '0 0 25px rgba(0, 255, 102, 0.5)' }}>
                       {(selectedMatchForYtExport.status === 'finished' || selectedMatchForYtExport.home_score > 0 || selectedMatchForYtExport.away_score > 0)
                         ? `${selectedMatchForYtExport.home_score || 0} : ${selectedMatchForYtExport.away_score || 0}`
                         : 'VS'}
                     </div>
                     {selectedMatchForYtExport.round && (
-                      <span style={{ color: '#00ff66', fontSize: '16px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      <span style={{ color: '#00ff66', fontSize: '22px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
                         {selectedMatchForYtExport.round}-TUR
                       </span>
-                    )}
-                    <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px', fontWeight: '600', display: 'flex', gap: '12px', marginTop: '4px' }}>
-                      <span>📅 {selectedMatchForYtExport.match_date}</span>
-                      <span>⏰ {selectedMatchForYtExport.match_time?.substring(0, 5)}</span>
-                    </div>
-                    {selectedMatchForYtExport.location && (
-                      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: '500' }}>
-                        📍 {selectedMatchForYtExport.location}
-                      </div>
                     )}
                   </div>
 
