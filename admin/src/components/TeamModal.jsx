@@ -188,22 +188,9 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
       };
 
       if (formData.captain_phone !== undefined) updateData.captain_phone = formData.captain_phone;
-      if (formData.captain_name !== undefined) updateData.captain_name = formData.captain_name;
-      if (formData.region !== undefined) updateData.region = formData.region;
 
       const { error } = await supabase.from('teams').update(updateData).eq('id', team.id);
-      if (error) {
-        console.warn('First update attempt failed, trying fallback without optional columns:', error);
-        const fallbackData = {
-          name: formData.name,
-          logo_url: formData.logo_url,
-          league: finalLeagueStr
-        };
-        if (formData.captain_phone !== undefined) fallbackData.captain_phone = formData.captain_phone;
-
-        const { error: fallbackError } = await supabase.from('teams').update(fallbackData).eq('id', team.id);
-        if (fallbackError) throw fallbackError;
-      }
+      if (error) throw error;
 
       onRefresh();
       setCurrentMode('view');

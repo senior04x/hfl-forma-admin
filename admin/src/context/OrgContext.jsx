@@ -34,40 +34,43 @@ export const OrgProvider = ({ children }) => {
         return;
       }
 
-      // admin_users jadvalidan admin ma'lumotlarini olish
+      // 1. Get role and orgId from user_metadata or admin_users
+      const metaRole = user.user_metadata?.role;
+      const metaOrgId = user.user_metadata?.organization_id;
+
+      // 2. Fetch admin_users record if available
       const { data: adminData } = await supabase
         .from('admin_users')
-        .select('*, organizations(*)')
+        .select('*')
         .eq('id', user.id)
         .maybeSingle();
 
-      if (adminData) {
-        setAdminRole(adminData.role);
-        const orgObj = adminData.organizations || {};
-        const targetOrgId = adminData.organization_id || 1;
+      const effectiveRole = adminData?.role || metaRole || (user.email === 'azamat@havas.uz' ? 'super_admin' : 'org_admin');
+      const effectiveOrgId = adminData?.organization_id || metaOrgId || 1;
 
-        if (adminData.role === 'super_admin') {
-          // Super admin — fetch target org details
-          const { data: targetOrg } = await supabase.from('organizations').select('*').eq('id', targetOrgId).single();
-          setCurrentOrg(targetOrg || { id: 1, name: 'Havas Futbol Ligasi', logo_url: null });
-        } else {
-          // Org admin
-          setCurrentOrg({
-            id: orgObj.id || targetOrgId,
-            name: orgObj.name || 'Tashkilot',
-            logo_url: orgObj.logo_url || null
-          });
-        }
+      setAdminRole(effectiveRole);
+
+      // 3. Fetch organization details
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', effectiveOrgId)
+        .maybeSingle();
+
+      if (orgData) {
+        setCurrentOrg(orgData);
       } else {
-        // Fallback for primary admin
-        const { data: defaultOrg } = await supabase.from('organizations').select('*').eq('id', 1).single();
-        setAdminRole('super_admin');
-        setCurrentOrg(defaultOrg || { id: 1, name: 'Havas Futbol Ligasi', logo_url: null });
+        if (effectiveRole === 'super_admin') {
+          const { data: mainOrg } = await supabase.from('organizations').select('*').eq('id', 1).maybeSingle();
+          setCurrentOrg(mainOrg || { id: 1, name: 'Havas Futbol Ligasi', logo_url: null });
+        } else {
+          setCurrentOrg({ id: effectiveOrgId, name: user.email ? user.email.split('@')[0] : 'Tashkilot', logo_url: null });
+        }
       }
     } catch (err) {
       console.error('OrgContext load error:', err);
-      setAdminRole('super_admin');
-      setCurrentOrg({ id: 1, name: 'Havas Futbol Ligasi', logo_url: null });
+      setAdminRole('org_admin');
+      setCurrentOrg(null);
     } finally {
       setLoading(false);
     }
