@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert, Building2, Pencil, Trash2, Save, Crop } from 'lucide-react';
+import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert, Building2, Pencil, Trash2, Save, Crop, Upload } from 'lucide-react';
 import ImageCropperModal from '../components/ImageCropperModal';
 import './Settings.css';
 
@@ -19,9 +19,8 @@ const Settings = () => {
   const [orgCropperRawImage, setOrgCropperRawImage] = useState(null);
   const [uploadingOrgLogo, setUploadingOrgLogo] = useState(false);
 
-  // League Logo Cropper
+  // League Logo Direct Upload
   const leagueFileInputRef = useRef(null);
-  const [leagueCropperRawImage, setLeagueCropperRawImage] = useState(null);
   const [uploadingLeagueLogo, setUploadingLeagueLogo] = useState(false);
 
   useEffect(() => {
@@ -76,38 +75,31 @@ const Settings = () => {
     }
   };
 
-  const handleLeagueFileSelect = (e) => {
+  const handleLeagueFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setLeagueCropperRawImage(reader.result);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
 
-  const handleLeagueCroppedSave = async (croppedBase64) => {
     setUploadingLeagueLogo(true);
-    setLeagueCropperRawImage(null);
     try {
-      const response = await fetch(croppedBase64);
-      const blob = await response.blob();
-      const fileName = `league_logo_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
+      const fileExt = file.name.split('.').pop() || 'png';
+      const fileName = `league_logo_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      const { error } = await supabase.storage.from('player-photos').upload(fileName, blob, {
-        contentType: 'image/png',
+      const { error } = await supabase.storage.from('player-photos').upload(fileName, file, {
+        contentType: file.type || 'image/png',
         upsert: true
       });
+
       if (error) throw error;
 
       const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
       setLeagueLogo(data.publicUrl);
+      setMessage({ type: 'success', text: 'Liga logotipi muvaffaqiyatli yuklandi!' });
     } catch (err) {
       console.error('League logo upload error:', err);
       setMessage({ type: 'error', text: 'Liga logotipini yuklashda xatolik: ' + (err.message || '') });
     } finally {
       setUploadingLeagueLogo(false);
+      e.target.value = '';
     }
   };
 
@@ -588,12 +580,12 @@ const Settings = () => {
                     />
                   </div>
 
-                  {/* League Logo Crop Upload */}
+                  {/* League Logo Direct Upload (PNG / Transparent) */}
                   <div className="settings-form-group flex-2">
                     <label>Liga Logosi</label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
                       {leagueLogo && (
-                        <img src={leagueLogo} alt="League Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                        <img src={leagueLogo} alt="League Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }} />
                       )}
                       <button
                         type="button"
@@ -613,8 +605,8 @@ const Settings = () => {
                           gap: '6px'
                         }}
                       >
-                        <Crop size={15} />
-                        <span>{uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Almashtirish' : 'Logo tanlash (16:9 / Erkin)')}</span>
+                        <Upload size={15} />
+                        <span>{uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Almashtirish' : 'Logo yuklash (PNG / Transparent)')}</span>
                       </button>
 
                       <input
@@ -884,18 +876,7 @@ const Settings = () => {
         />
       )}
 
-      {/* League Logo Cropper Modal */}
-      {leagueCropperRawImage && (
-        <ImageCropperModal
-          isOpen={!!leagueCropperRawImage}
-          imageSrc={leagueCropperRawImage}
-          onClose={() => setLeagueCropperRawImage(null)}
-          onSave={handleLeagueCroppedSave}
-          title="Liga Logotipini Qirqish"
-          aspect={16 / 9}
-          showAspectSelector={true}
-        />
-      )}
+
 
       {/* Collab Disconnect Confirmation Modal */}
       {collabToDisconnect && (
