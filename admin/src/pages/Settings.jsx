@@ -128,7 +128,7 @@ const Settings = () => {
   const [targetOrgId, setTargetOrgId] = useState('');
   const [sendingCollab, setSendingCollab] = useState(false);
   const [incomingCollabs, setIncomingCollabs] = useState([]);
-  const [allCollabs, setAllCollabs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchUserData();
@@ -144,6 +144,7 @@ const Settings = () => {
   };
 
   const fetchLeaguesAndOrgs = async () => {
+    setLoading(true);
     try {
       const { data: ownLeagues } = await supabase
         .from('leagues')
@@ -179,6 +180,8 @@ const Settings = () => {
       }
     } catch (err) {
       console.error('Error fetching leagues/collabs:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -382,293 +385,316 @@ const Settings = () => {
         </div>
       )}
 
-      {/* Incoming Collab Requests Banner */}
-      {incomingCollabs.filter(c => c.status === 'pending').length > 0 && (
-        <div className="collab-incoming-banner">
-          <div className="collab-incoming-header">
-            <Users size={20} />
-            <div>
-              <h3>Yangi Sheriklik (Collab) Takliflari</h3>
-              <p>Boshqa tashkilotlar sizga ligani birga olib borish taklifini yuborgan:</p>
+      {loading ? (
+        <div className="settings-skeleton-container">
+          <div className="settings-card full-width skeleton-card">
+            <div className="skeleton-box card-title"></div>
+            <div className="skeleton-form">
+              <div className="skeleton-box input-field"></div>
+              <div className="skeleton-box input-field"></div>
+            </div>
+            <div className="skeleton-leagues-title"></div>
+            <div className="skeleton-leagues-grid">
+              <div className="skeleton-box league-item"></div>
+              <div className="skeleton-box league-item"></div>
+              <div className="skeleton-box league-item"></div>
             </div>
           </div>
-          <div className="collab-incoming-list">
-            {incomingCollabs.filter(c => c.status === 'pending').map(collab => (
-              <div key={collab.id} className="collab-incoming-item">
-                <div className="collab-incoming-info">
-                  <strong>{collab.sender_org?.name}</strong> tashkiloti <span>"{collab.league?.name}"</span> ligasini birgalikda (co-host) olib borishni taklif qilmoqda.
-                </div>
-                <div className="collab-incoming-actions">
-                  <button className="btn-accept" onClick={() => handleRespondCollab(collab.id, 'accepted')} title="Qabul qilish">
-                    <Check size={18} color="#0b0e17" />
-                  </button>
-                  <button className="btn-reject" onClick={() => handleRespondCollab(collab.id, 'rejected')} title="Rad etish">
-                    <X size={18} color="#ffffff" />
-                  </button>
-                </div>
-              </div>
-            ))}
+
+          <div className="settings-grid">
+            <div className="settings-card skeleton-card">
+              <div className="skeleton-box card-title"></div>
+              <div className="skeleton-box logo-square"></div>
+              <div className="skeleton-box input-field"></div>
+            </div>
+            <div className="settings-card skeleton-card">
+              <div className="skeleton-box card-title"></div>
+              <div className="skeleton-box input-field"></div>
+              <div className="skeleton-box input-field"></div>
+            </div>
           </div>
         </div>
-      )}
-
-      <div className="settings-grid">
-        {/* Dynamic League Management Card */}
-        <div className="settings-card full-width">
-          <div className="settings-card-header">
-            <Trophy size={20} />
-            <h2>Tashkilot Ligalari Boshqaruvi</h2>
-          </div>
-
-          <form onSubmit={handleSaveLeague} className="create-league-form">
-            <div className="form-row">
-              <div className="settings-form-group flex-2">
-                <label>{editingLeague ? 'Liga Nominı Tahrirlash' : 'Yangi Liga Nomi'}</label>
-                <input
-                  type="text"
-                  placeholder="Masalan: Farg'ona Super Liga"
-                  value={leagueName}
-                  onChange={e => setLeagueName(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* League Logo Crop Upload */}
-              <div className="settings-form-group flex-2">
-                <label>Liga Logosi</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
-                  {leagueLogo && (
-                    <img src={leagueLogo} alt="League Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }} />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => leagueFileInputRef.current?.click()}
-                    disabled={uploadingLeagueLogo}
-                    style={{
-                      padding: '9px 14px',
-                      background: 'rgba(0, 170, 255, 0.12)',
-                      border: '1px solid rgba(0, 170, 255, 0.3)',
-                      color: '#00aaff',
-                      borderRadius: '10px',
-                      fontWeight: '600',
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <Crop size={15} />
-                    <span>{uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Almashtirish' : 'Logo tanlash (16:9 / Erkin)')}</span>
-                  </button>
-
-                  <input
-                    ref={leagueFileInputRef}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={handleLeagueFileSelect}
-                  />
+      ) : (
+        <>
+          {/* Incoming Collab Requests Banner */}
+          {incomingCollabs.filter(c => c.status === 'pending').length > 0 && (
+            <div className="collab-incoming-banner">
+              <div className="collab-incoming-header">
+                <Users size={20} />
+                <div>
+                  <h3>Yangi Sheriklik (Collab) Takliflari</h3>
+                  <p>Boshqa tashkilotlar sizga ligani birga olib borish taklifini yuborgan:</p>
                 </div>
               </div>
+              <div className="collab-incoming-list">
+                {incomingCollabs.filter(c => c.status === 'pending').map(collab => (
+                  <div key={collab.id} className="collab-incoming-item">
+                    <div className="collab-incoming-info">
+                      <strong>{collab.sender_org?.name}</strong> tashkiloti <span>"{collab.league?.name}"</span> ligasini birgalikda (co-host) olib borishni taklif qilmoqda.
+                    </div>
+                    <div className="collab-incoming-actions">
+                      <button className="btn-accept" onClick={() => handleRespondCollab(collab.id, 'accepted')} title="Qabul qilish">
+                        <Check size={18} color="#0b0e17" />
+                      </button>
+                      <button className="btn-reject" onClick={() => handleRespondCollab(collab.id, 'rejected')} title="Rad etish">
+                        <X size={18} color="#ffffff" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-                <button type="submit" className="settings-btn settings-btn-primary add-league-btn" disabled={creatingLeague}>
-                  {editingLeague ? <Save size={16} /> : <Plus size={16} />}
-                  <span>{creatingLeague ? 'Saqlanmoqda...' : (editingLeague ? 'Saqlash' : 'Liga qo\'shish')}</span>
-                </button>
-                {editingLeague && (
-                  <button type="button" className="settings-btn" onClick={cancelEditLeague}>
-                    Bekor qilish
-                  </button>
+          <div className="settings-grid">
+            {/* Dynamic League Management Card */}
+            <div className="settings-card full-width">
+              <div className="settings-card-header">
+                <Trophy size={20} />
+                <h2>Tashkilot Ligalari Boshqaruvi</h2>
+              </div>
+
+              <form onSubmit={handleSaveLeague} className="create-league-form">
+                <div className="form-row">
+                  <div className="settings-form-group flex-2">
+                    <label>{editingLeague ? 'Liga Nominı Tahrirlash' : 'Yangi Liga Nomi'}</label>
+                    <input
+                      type="text"
+                      placeholder="Masalan: Farg'ona Super Liga"
+                      value={leagueName}
+                      onChange={e => setLeagueName(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  {/* League Logo Crop Upload */}
+                  <div className="settings-form-group flex-2">
+                    <label>Liga Logosi</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                      {leagueLogo && (
+                        <img src={leagueLogo} alt="League Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => leagueFileInputRef.current?.click()}
+                        disabled={uploadingLeagueLogo}
+                        style={{
+                          padding: '9px 14px',
+                          background: 'rgba(0, 170, 255, 0.12)',
+                          border: '1px solid rgba(0, 170, 255, 0.3)',
+                          color: '#00aaff',
+                          borderRadius: '10px',
+                          fontWeight: '600',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Crop size={15} />
+                        <span>{uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Almashtirish' : 'Logo tanlash (16:9 / Erkin)')}</span>
+                      </button>
+
+                      <input
+                        ref={leagueFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={handleLeagueFileSelect}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                    <button type="submit" className="settings-btn settings-btn-primary add-league-btn" disabled={creatingLeague}>
+                      {editingLeague ? <Save size={16} /> : <Plus size={16} />}
+                      <span>{creatingLeague ? 'Saqlanmoqda...' : (editingLeague ? 'Saqlash' : 'Liga qo\'shish')}</span>
+                    </button>
+                    {editingLeague && (
+                      <button type="button" className="settings-btn" onClick={cancelEditLeague}>
+                        Bekor qilish
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </form>
+
+              {/* Current Leagues List */}
+              <div className="leagues-list-container">
+                <h3>Mavjud Ligalar ({leagues.length})</h3>
+                {leagues.length === 0 ? (
+                  <p className="no-data-text">Hali ligalar qo'shilmagan.</p>
+                ) : (
+                  <div className="leagues-grid">
+                    {leagues.map(l => {
+                      const activeCollab = (allCollabs || []).find(c => c.league_id === l.id && c.status === 'accepted');
+                      const partnerOrg = activeCollab 
+                        ? (activeCollab.sender_org_id === orgId ? activeCollab.receiver_org : activeCollab.sender_org)
+                        : null;
+
+                      return (
+                        <div key={l.id} className={`league-card ${editingLeague?.id === l.id ? 'editing' : ''}`}>
+                          <div className="league-card-header">
+                            <div className="league-icon">
+                              {l.logo_url ? <img src={l.logo_url} alt={l.name} /> : <Trophy size={20} />}
+                            </div>
+                            <div>
+                              <h4 className="league-title">{l.name}</h4>
+                              {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
+                            </div>
+                          </div>
+
+                          {partnerOrg && (
+                            <div className="league-collab-partner-badge">
+                              <div className="partner-logo-box">
+                                {partnerOrg.logo_url ? (
+                                  <img src={partnerOrg.logo_url} alt={partnerOrg.name} />
+                                ) : (
+                                  <Building2 size={12} />
+                                )}
+                              </div>
+                              <span className="partner-text">
+                                Sherik: <strong>{partnerOrg.name}</strong>
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="league-card-actions">
+                            <button
+                              className={`btn-collab ${partnerOrg ? 'active-collab' : ''}`}
+                              onClick={() => setSelectedLeagueForCollab(l)}
+                              title="Boshqa tashkilotga sheriklik taklifi yuborish"
+                            >
+                              <Send size={13} /> {partnerOrg ? 'Collab (Faol)' : 'Collab'}
+                            </button>
+                            <button
+                              className="btn-league-action btn-league-edit"
+                              onClick={() => startEditLeague(l)}
+                              title="Liga ma'lumotlarini tahrirlash"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              className="btn-league-action btn-league-delete"
+                              onClick={() => handleDeleteLeague(l)}
+                              title="Liganı o'chirish"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </div>
-          </form>
 
-          {/* Current Leagues List */}
-          <div className="leagues-list-container">
-            <h3>Mavjud Ligalar ({leagues.length})</h3>
-            {leagues.length === 0 ? (
-              <p className="no-data-text">Hali ligalar qo'shilmagan.</p>
-            ) : (
-              <div className="leagues-grid">
-                {leagues.map(l => {
-                  const activeCollab = allCollabs.find(c => c.league_id === l.id && c.status === 'accepted');
-                  const partnerOrg = activeCollab 
-                    ? (activeCollab.sender_org_id === orgId ? activeCollab.receiver_org : activeCollab.sender_org)
-                    : null;
-
-                  return (
-                    <div key={l.id} className={`league-card ${editingLeague?.id === l.id ? 'editing' : ''}`}>
-                      <div className="league-card-header">
-                        <div className="league-icon">
-                          {l.logo_url ? <img src={l.logo_url} alt={l.name} /> : <Trophy size={20} />}
-                        </div>
-                        <div>
-                          <h4 className="league-title">{l.name}</h4>
-                          {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
-                        </div>
-                      </div>
-
-                      {partnerOrg && (
-                        <div className="league-collab-partner-badge">
-                          <div className="partner-logo-box">
-                            {partnerOrg.logo_url ? (
-                              <img src={partnerOrg.logo_url} alt={partnerOrg.name} />
-                            ) : (
-                              <Building2 size={12} />
-                            )}
-                          </div>
-                          <span className="partner-text">
-                            Sherik: <strong>{partnerOrg.name}</strong>
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="league-card-actions">
-                        <button
-                          className={`btn-collab ${partnerOrg ? 'active-collab' : ''}`}
-                          onClick={() => setSelectedLeagueForCollab(l)}
-                          title="Boshqa tashkilotga sheriklik taklifi yuborish"
-                        >
-                          <Send size={13} /> {partnerOrg ? 'Collab (Faol)' : 'Collab'}
-                        </button>
-                        <button
-                          className="btn-league-action btn-league-edit"
-                          onClick={() => startEditLeague(l)}
-                          title="Liga ma'lumotlarini tahrirlash"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          className="btn-league-action btn-league-delete"
-                          onClick={() => handleDeleteLeague(l)}
-                          title="Liganı o'chirish"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+            {/* Organization Logo Card */}
+            <div className="settings-card">
+              <div className="settings-card-header">
+                <Building2 size={20} />
+                <h2>Tashkilot Logotipi</h2>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Organization Logo Card */}
-        <div className="settings-card">
-          <div className="settings-card-header">
-            <Building2 size={20} />
-            <h2>Tashkilot Logotipi</h2>
-          </div>
-          <div className="settings-org-logo-preview">
-            {orgLogo ? (
-              <img src={orgLogo} alt={currentOrg?.name} />
-            ) : (
-              <div className="no-logo-placeholder">
-                <Building2 size={32} />
-                <span>Logo yo'q</span>
+              <div className="settings-org-logo-preview">
+                {orgLogo ? (
+                  <img src={orgLogo} alt={currentOrg?.name} />
+                ) : (
+                  <div className="no-logo-placeholder">
+                    <Building2 size={24} />
+                    <span>Logo yo'q</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => orgFileInputRef.current?.click()}
+                  disabled={uploadingOrgLogo}
+                  style={{
+                    padding: '10px 18px',
+                    background: 'rgba(0, 255, 102, 0.12)',
+                    border: '1px solid rgba(0, 255, 102, 0.3)',
+                    color: '#00ff66',
+                    borderRadius: '10px',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Crop size={16} />
+                  <span>{uploadingOrgLogo ? 'Yuklanmoqda...' : (orgLogo ? 'Logotipni Almashtirish' : 'Logo Yuklash va Qirqish')}</span>
+                </button>
 
-          <div style={{ marginTop: '16px' }}>
-            <button
-              type="button"
-              onClick={() => orgFileInputRef.current?.click()}
-              disabled={uploadingOrgLogo}
-              style={{
-                width: '100%',
-                padding: '11px 18px',
-                background: 'rgba(0, 170, 255, 0.12)',
-                border: '1px solid rgba(0, 170, 255, 0.3)',
-                color: '#00aaff',
-                borderRadius: '10px',
-                fontWeight: '600',
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <Crop size={16} />
-              <span>{uploadingOrgLogo ? 'Yuklanmoqda...' : (orgLogo ? 'Logotipni almashtirish va 1:1 qirqish' : 'Logotip yuklash va 1:1 qirqish')}</span>
-            </button>
+                <input
+                  ref={orgFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleOrgFileSelect}
+                />
+              </div>
+            </div>
 
-            <input
-              ref={orgFileInputRef}
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleOrgFileSelect}
-            />
-          </div>
-        </div>
+            {/* Account Settings */}
+            <div className="settings-card">
+              <div className="settings-card-header">
+                <Mail size={20} />
+                <h2>Hisob Sozlamalari</h2>
+              </div>
+              <form onSubmit={handleUpdateEmail} className="settings-form">
+                <div className="settings-form-group">
+                  <label>Email Manzili</label>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={e => setNewEmail(e.target.value)}
+                    placeholder="yangi@email.com"
+                    required
+                  />
+                </div>
+                <button type="submit" className="settings-btn settings-btn-primary" disabled={loading || newEmail === userEmail}>
+                  Emailni Saqlash
+                </button>
+              </form>
 
-        {/* Profile Info Card */}
-        <div className="settings-card">
-          <div className="settings-card-header">
-            <Mail size={20} />
-            <h2>Admin Email Ma'lumotlari</h2>
-          </div>
-          <form onSubmit={handleUpdateEmail}>
-            <div className="settings-form-group">
-              <label>Joriy Email</label>
-              <input type="email" value={userEmail} disabled style={{ opacity: 0.6 }} />
-            </div>
-            <div className="settings-form-group">
-              <label>Yangi Email</label>
-              <input
-                type="email"
-                placeholder="yangi@email.com"
-                value={newEmail}
-                onChange={e => setNewEmail(e.target.value)}
-                required
-              />
-            </div>
-            <button type="submit" className="settings-btn settings-btn-primary" disabled={loading || newEmail === userEmail}>
-              Emailni yangilash
-            </button>
-          </form>
-        </div>
+              <div className="settings-divider"></div>
 
-        {/* Password Card */}
-        <div className="settings-card">
-          <div className="settings-card-header">
-            <KeyRound size={20} />
-            <h2>Parolni almashtirish</h2>
+              <div className="settings-card-header" style={{ marginBottom: '16px', border: 'none', padding: 0 }}>
+                <KeyRound size={20} />
+                <h2>Parolni O'zgartirish</h2>
+              </div>
+              <form onSubmit={handleUpdatePassword} className="settings-form">
+                <div className="settings-form-group">
+                  <label>Yangi Parol</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="Kamida 6 ta belgi"
+                  />
+                </div>
+                <div className="settings-form-group">
+                  <label>Parolni Tasdiqlang</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="Parolni qayta kiriting"
+                  />
+                </div>
+                <button type="submit" className="settings-btn settings-btn-primary" disabled={loading || !newPassword}>
+                  Parolni Saqlash
+                </button>
+              </form>
+            </div>
           </div>
-          <form onSubmit={handleUpdatePassword}>
-            <div className="settings-form-group">
-              <label>Yangi Parol</label>
-              <input
-                type="password"
-                placeholder="Kamida 6 belgi"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="settings-form-group">
-              <label>Parolni takrorlang</label>
-              <input
-                type="password"
-                placeholder="Yangi parolni takrorlang"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-            <button type="submit" className="settings-btn settings-btn-primary" disabled={loading}>
-              Parolni saqlash
-            </button>
-          </form>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Collab Request Modal */}
       {selectedLeagueForCollab && (

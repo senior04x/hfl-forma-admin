@@ -631,3 +631,82 @@
     width: 100%;
   }
 }
+
+/* Settings Skeleton Loading */
+.settings-skeleton-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeleton-box {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.04) 75%);
+  background-size: 200% 100%;
+  animation: settingsShimmer 1.5s infinite linear;
+  border-radius: 10px;
+}
+
+@keyframes settingsShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-box.card-title {
+  width: 180px;
+  height: 20px;
+  margin-bottom: 8px;
+}
+
+.skeleton-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .skeleton-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+.skeleton-box.input-field {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.skeleton-leagues-title {
+  width: 120px;
+  height: 14px;
+  margin-top: 10px;
+  margin-bottom: 4px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.04) 75%);
+  background-size: 200% 100%;
+  animation: settingsShimmer 1.5s infinite linear;
+  border-radius: 6px;
+}
+
+.skeleton-leagues-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.skeleton-box.league-item {
+  height: 80px;
+  border-radius: 14px;
+}
+
+.skeleton-box.logo-square {
+  width: 90px;
+  height: 90px;
+  border-radius: 16px;
+  margin: 0 auto;
+}
