@@ -365,28 +365,54 @@ export default function Standings() {
   };
 
   const handleSaveCroppedBg = async (croppedDataUrl) => {
+    if (!croppedDataUrl) return;
     const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
     if (!currentLeagueObj) return;
 
+    setCropperRawImage(null);
     try {
-      // 1. Save individually per organization & league in local storage
+      // 1. Immediately show preview & save to localStorage
       const storageKey = `hfl_export_bg_${orgId}_${selectedLeague}`;
       try {
         localStorage.setItem(storageKey, croppedDataUrl);
       } catch (e) {}
 
-      // 2. If org owns the league, sync to Supabase table
-      if (currentLeagueObj.organization_id === orgId) {
-        await supabase
-          .from('leagues')
-          .update({ export_bg_url: croppedDataUrl })
-          .eq('id', currentLeagueObj.id)
-          .catch(() => {});
+      setActiveLeagues(prev => prev.map(l => l.name === selectedLeague ? { ...l, export_bg_url: croppedDataUrl } : l));
+
+      // 2. Upload to Supabase Storage bucket for clean publicUrl and permanent persistence
+      let publicUrl = croppedDataUrl;
+      try {
+        const response = await fetch(croppedDataUrl);
+        const blob = await response.blob();
+        const fileName = `league_bg_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+
+        const { error: uploadErr } = await supabase.storage.from('player-photos').upload(fileName, blob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+        if (!uploadErr) {
+          const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
+          if (data?.publicUrl) {
+            publicUrl = data.publicUrl;
+            try {
+              localStorage.setItem(storageKey, publicUrl);
+            } catch (e) {}
+          }
+        }
+      } catch (uploadException) {
+        console.warn('Storage upload fallback:', uploadException);
       }
 
-      // 3. Update local state for current org view
-      setActiveLeagues(prev => prev.map(l => l.name === selectedLeague ? { ...l, export_bg_url: croppedDataUrl } : l));
-      setIsCropperOpen(false);
+      // 3. Update leagues table with clean publicUrl (no 400 payload errors)
+      const { error: updateErr } = await supabase
+        .from('leagues')
+        .update({ export_bg_url: publicUrl })
+        .eq('id', currentLeagueObj.id);
+
+      if (updateErr) {
+        console.warn('Leagues table update notice:', updateErr);
+      }
 
       if (pendingExportType) {
         executeExport(pendingExportType);
