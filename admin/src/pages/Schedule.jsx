@@ -458,12 +458,12 @@ const Schedule = () => {
             })
             .map(match => (
             <div key={match.id} className="match-card glassmorphic-card">
-              <div style={{ display: 'flex', gap: '6px', position: 'absolute', top: '12px', right: '12px', zIndex: 5 }}>
-                <button className="edit-match-btn" onClick={() => handleEditMatch(match)} title="Tahrirlash" style={{ background: 'rgba(0, 170, 255, 0.15)', border: '1px solid rgba(0, 170, 255, 0.3)', color: '#00aaff', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                  <Pencil size={14} />
+              <div className="match-card-actions">
+                <button className="edit-match-btn" onClick={() => handleEditMatch(match)} title="Tahrirlash">
+                  <Pencil size={15} />
                 </button>
-                <button className="delete-match-btn" onClick={() => handleDelete(match.id)} title="O'chirish" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                  <Trash2 size={14} />
+                <button className="delete-match-btn" onClick={() => handleDelete(match.id)} title="O'chirish">
+                  <Trash2 size={15} />
                 </button>
               </div>
               <div className="match-badges-container">

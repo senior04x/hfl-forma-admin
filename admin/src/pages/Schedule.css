@@ -393,22 +393,47 @@
   border-color: rgba(0, 255, 102, 0.4);
 }
 
-.delete-match-btn {
+.match-card-actions {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  background: rgba(255, 59, 48, 0.12);
-  border: 1px solid rgba(255, 59, 48, 0.3);
-  color: #ff3b30;
-  width: 28px;
-  height: 28px;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.edit-match-btn,
+.delete-match-btn {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
-  z-index: 2;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.edit-match-btn {
+  background: rgba(0, 170, 255, 0.15);
+  border: 1px solid rgba(0, 170, 255, 0.3);
+  color: #00aaff;
+}
+
+.edit-match-btn:hover {
+  background: #00aaff;
+  color: #ffffff;
+}
+
+.delete-match-btn {
+  background: rgba(255, 59, 48, 0.15);
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  color: #ff3b30;
 }
 
 .delete-match-btn:hover {
