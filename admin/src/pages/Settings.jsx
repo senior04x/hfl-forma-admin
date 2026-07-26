@@ -385,66 +385,52 @@ const Settings = () => {
         </div>
       )}
 
+      {/* Incoming Collab Requests Banner with Skeleton */}
       {loading ? (
-        <div className="settings-skeleton-container">
-          <div className="settings-card full-width skeleton-card">
-            <div className="skeleton-box card-title"></div>
-            <div className="skeleton-form">
-              <div className="skeleton-box input-field"></div>
-              <div className="skeleton-box input-field"></div>
-            </div>
-            <div className="skeleton-leagues-title"></div>
-            <div className="skeleton-leagues-grid">
-              <div className="skeleton-box league-item"></div>
-              <div className="skeleton-box league-item"></div>
-              <div className="skeleton-box league-item"></div>
+        <div className="collab-incoming-banner collab-skeleton-banner">
+          <div className="collab-incoming-header">
+            <Users size={20} />
+            <div style={{ flex: 1 }}>
+              <div className="skeleton-box title" style={{ width: '180px', height: '18px', marginBottom: '6px' }}></div>
+              <div className="skeleton-box subtitle" style={{ width: '260px', height: '12px' }}></div>
             </div>
           </div>
-
-          <div className="settings-grid">
-            <div className="settings-card skeleton-card">
-              <div className="skeleton-box card-title"></div>
-              <div className="skeleton-box logo-square"></div>
-              <div className="skeleton-box input-field"></div>
-            </div>
-            <div className="settings-card skeleton-card">
-              <div className="skeleton-box card-title"></div>
-              <div className="skeleton-box input-field"></div>
-              <div className="skeleton-box input-field"></div>
+          <div className="collab-incoming-item" style={{ opacity: 0.75 }}>
+            <div className="skeleton-box input-field" style={{ height: '18px', width: '70%' }}></div>
+            <div className="collab-incoming-actions" style={{ gap: '10px' }}>
+              <div className="skeleton-box" style={{ width: '44px', height: '44px', borderRadius: '12px' }}></div>
+              <div className="skeleton-box" style={{ width: '44px', height: '44px', borderRadius: '12px' }}></div>
             </div>
           </div>
         </div>
-      ) : (
-        <>
-          {/* Incoming Collab Requests Banner */}
-          {incomingCollabs.filter(c => c.status === 'pending').length > 0 && (
-            <div className="collab-incoming-banner">
-              <div className="collab-incoming-header">
-                <Users size={20} />
-                <div>
-                  <h3>Yangi Sheriklik (Collab) Takliflari</h3>
-                  <p>Boshqa tashkilotlar sizga ligani birga olib borish taklifini yuborgan:</p>
+      ) : incomingCollabs.filter(c => c.status === 'pending').length > 0 ? (
+        <div className="collab-incoming-banner">
+          <div className="collab-incoming-header">
+            <Users size={20} />
+            <div>
+              <h3>Yangi Sheriklik (Collab) Takliflari</h3>
+              <p>Boshqa tashkilotlar sizga ligani birga olib borish taklifini yuborgan:</p>
+            </div>
+          </div>
+          <div className="collab-incoming-list">
+            {incomingCollabs.filter(c => c.status === 'pending').map(collab => (
+              <div key={collab.id} className="collab-incoming-item">
+                <div className="collab-incoming-info">
+                  <strong>{collab.sender_org?.name}</strong> tashkiloti <span>"{collab.league?.name}"</span> ligasini birgalikda (co-host) olib borishni taklif qilmoqda.
+                </div>
+                <div className="collab-incoming-actions">
+                  <button className="btn-accept" onClick={() => handleRespondCollab(collab.id, 'accepted')} title="Qabul qilish">
+                    <Check size={18} color="#0b0e17" />
+                  </button>
+                  <button className="btn-reject" onClick={() => handleRespondCollab(collab.id, 'rejected')} title="Rad etish">
+                    <X size={18} color="#ffffff" />
+                  </button>
                 </div>
               </div>
-              <div className="collab-incoming-list">
-                {incomingCollabs.filter(c => c.status === 'pending').map(collab => (
-                  <div key={collab.id} className="collab-incoming-item">
-                    <div className="collab-incoming-info">
-                      <strong>{collab.sender_org?.name}</strong> tashkiloti <span>"{collab.league?.name}"</span> ligasini birgalikda (co-host) olib borishni taklif qilmoqda.
-                    </div>
-                    <div className="collab-incoming-actions">
-                      <button className="btn-accept" onClick={() => handleRespondCollab(collab.id, 'accepted')} title="Qabul qilish">
-                        <Check size={18} color="#0b0e17" />
-                      </button>
-                      <button className="btn-reject" onClick={() => handleRespondCollab(collab.id, 'rejected')} title="Rad etish">
-                        <X size={18} color="#ffffff" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
+        </div>
+      ) : null}
 
           <div className="settings-grid">
             {/* Dynamic League Management Card */}
@@ -693,8 +679,7 @@ const Settings = () => {
               </form>
             </div>
           </div>
-        </>
-      )}
+        </div>
 
       {/* Collab Request Modal */}
       {selectedLeagueForCollab && (
