@@ -173,9 +173,8 @@ const Schedule = () => {
       if (data.access_token) {
         saveYtTokens(data);
         fetchYtChannelInfo(data.access_token);
-        alert('✅ YouTube Kanali Muvaffaqiyatli Ulandi!');
       } else {
-        alert('YouTube bog\'lanishda xatolik: ' + (data.error_description || data.error || ''));
+        console.error('YouTube bog\'lanishda xatolik:', data);
       }
     } catch (err) {
       console.error('Error exchanging code:', err);
@@ -848,7 +847,7 @@ const Schedule = () => {
           {ytChannelInfo ? (
             <div className="yt-connected-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 59, 48, 0.15)', border: '1px solid rgba(255, 59, 48, 0.4)', padding: '8px 14px', borderRadius: '10px', color: '#ff4d4d', fontSize: '13px', fontWeight: '700' }}>
               {ytChannelInfo.thumbnail && <img src={ytChannelInfo.thumbnail} alt="" style={{ width: '22px', height: '22px', borderRadius: '50%' }} />}
-              <span>🔴 {ytChannelInfo.title}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Video size={14} color="#ff4d4d" /> {ytChannelInfo.title}</span>
               <button onClick={handleDisconnectYouTube} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '12px', marginLeft: '6px' }} title="Uzish">✕</button>
             </div>
           ) : (
@@ -874,7 +873,7 @@ const Schedule = () => {
           <div className="filter-active-status-badge">
             {filterStatus === 'all' && 'Barcha o\'yinlar'}
             {filterStatus === 'scheduled' && 'Rejalashtirilgan'}
-            {filterStatus === 'live' && '🔴 Jonli (Live)'}
+            {filterStatus === 'live' && 'Jonli (Live)'}
             {filterStatus === 'finished' && 'Yakunlangan'}
           </div>
         </div>
@@ -1182,7 +1181,7 @@ const Schedule = () => {
                   style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#ff0000' }}
                 />
                 <label htmlFor="auto_yt_live_checkbox" style={{ margin: 0, cursor: 'pointer', fontWeight: '700', color: '#ff4d4d', fontSize: '13px' }}>
-                  🔴 YouTube'da avtomatik Jonli Efir ochish va 16:9 oblojka yuklash
+                  YouTube'da avtomatik Jonli Efir ochish va 16:9 oblojka yuklash
                 </label>
               </div>
             )}
