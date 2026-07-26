@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { 
@@ -12,14 +12,18 @@ import {
   Layers, 
   Save, 
   User, 
-  Shield 
+  Shield,
+  ChevronDown,
+  Zap,
+  Bell
 } from 'lucide-react';
 import './Transfers.css';
 
 const Transfers = () => {
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('pending'); // pending, approved, rejected, all
+  const [filter, setFilter] = useState('pending');
+  const [filterOpen, setFilterOpen] = useState(false);
   const [editingTransfer, setEditingTransfer] = useState(null);
   const [editForm, setEditForm] = useState({
     player_name: '',
@@ -29,16 +33,135 @@ const Transfers = () => {
     new_team_name: ''
   });
   const [savingEdit, setSavingEdit] = useState(false);
-  const { orgId } = useOrg();
+  const { orgId, currentOrg } = useOrg();
+  
+  // Transfer Window State
+  const [transferWindowOpen, setTransferWindowOpen] = useState(false);
+  const [windowLoading, setWindowLoading] = useState(true);
+  const [windowToggling, setWindowToggling] = useState(false);
+  
+  const filterRef = useRef(null);
 
   useEffect(() => {
     fetchTransfers();
+    fetchTransferWindowStatus();
   }, [orgId]);
+
+  // Close filter dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const fetchTransferWindowStatus = async () => {
+    setWindowLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('transfer_window_open')
+        .eq('id', orgId)
+        .single();
+      
+      if (!error && data) {
+        setTransferWindowOpen(!!data.transfer_window_open);
+      }
+    } catch (err) {
+      console.error('Error fetching transfer window status:', err);
+    } finally {
+      setWindowLoading(false);
+    }
+  };
+
+  const handleToggleTransferWindow = async () => {
+    if (windowToggling) return;
+    setWindowToggling(true);
+    const newState = !transferWindowOpen;
+    
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({ transfer_window_open: newState })
+        .eq('id', orgId);
+      
+      if (error) throw error;
+      
+      setTransferWindowOpen(newState);
+      
+      // Send push notifications when window opens
+      if (newState) {
+        sendTransferWindowNotification();
+      }
+    } catch (err) {
+      console.error('Error toggling transfer window:', err);
+      alert('Transfer oynasini o\'zgartirishda xatolik yuz berdi');
+    } finally {
+      setWindowToggling(false);
+    }
+  };
+
+  const sendTransferWindowNotification = async () => {
+    try {
+      // Get all teams in this organization
+      const { data: orgTeams } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('organization_id', orgId);
+      
+      if (!orgTeams || orgTeams.length === 0) return;
+      
+      const teamIds = orgTeams.map(t => t.id);
+      
+      // Get all players in these teams who have push tokens
+      const { data: players } = await supabase
+        .from('applications')
+        .select('expo_push_token')
+        .in('team_id', teamIds)
+        .not('expo_push_token', 'is', null);
+      
+      if (!players || players.length === 0) return;
+      
+      const tokens = players
+        .map(p => p.expo_push_token)
+        .filter(t => t && t.startsWith('ExponentPushToken'));
+      
+      if (tokens.length === 0) return;
+      
+      // Send via Expo Push API
+      const messages = tokens.map(token => ({
+        to: token,
+        sound: 'default',
+        title: '🔄 Transfer oynasi ochildi!',
+        body: `${currentOrg?.name || 'Tashkilot'} uchun transfer oynasi ochildi. Boshqa jamoaga o'tish so'rovini yuborishingiz mumkin.`,
+        data: { type: 'transfer_window_opened' }
+      }));
+      
+      // Send in batches of 100
+      for (let i = 0; i < messages.length; i += 100) {
+        const batch = messages.slice(i, i + 100);
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(batch)
+        }).catch(err => console.warn('Push send error:', err));
+      }
+      
+      console.log(`Sent transfer window notifications to ${tokens.length} players`);
+    } catch (err) {
+      console.warn('Notification send error:', err);
+    }
+  };
 
   const fetchTransfers = async () => {
     setLoading(true);
     try {
-      // Fetch organization teams to match transfers by team ID
       const { data: orgTeams } = await supabase
         .from('teams')
         .select('id')
@@ -163,6 +286,15 @@ const Transfers = () => {
   const approvedCount = transfers.filter(t => t.status === 'approved').length;
   const rejectedCount = transfers.filter(t => t.status === 'rejected').length;
 
+  const filterOptions = [
+    { key: 'pending', label: 'Kutilmoqda', icon: <Clock size={15} />, count: pendingCount, color: '#f59e0b' },
+    { key: 'approved', label: 'Tasdiqlangan', icon: <CheckCircle2 size={15} />, count: approvedCount, color: '#00ff66' },
+    { key: 'rejected', label: 'Rad etilgan', icon: <XCircle size={15} />, count: rejectedCount, color: '#ef4444' },
+    { key: 'all', label: 'Barchasi', icon: <Layers size={15} />, count: transfers.length, color: '#8b5cf6' }
+  ];
+
+  const activeFilter = filterOptions.find(f => f.key === filter);
+
   return (
     <div className="transfers-page">
       <div className="page-header">
@@ -175,45 +307,96 @@ const Transfers = () => {
             <p className="header-subtitle">Jamoalar o'rtasidagi o'yinchilar o'tish so'rovlari</p>
           </div>
         </div>
-        
-        {/* Custom Segmented Filter */}
-        <div className="transfer-filter-segmented">
-          <button 
-            className={`filter-tab ${filter === 'pending' ? 'active' : ''}`} 
-            onClick={() => setFilter('pending')}
-          >
-            <Clock size={16} />
-            <span>Kutilayotgan</span>
-            {pendingCount > 0 && <span className="tab-badge pending">{pendingCount}</span>}
-          </button>
+      </div>
 
+      {/* Transfer Window Toggle Card */}
+      <div className={`transfer-window-card ${transferWindowOpen ? 'open' : 'closed'}`}>
+        <div className="tw-card-content">
+          <div className="tw-info">
+            <div className={`tw-icon-wrap ${transferWindowOpen ? 'active' : ''}`}>
+              <Zap size={22} />
+            </div>
+            <div className="tw-text">
+              <h3>Transfer Oynasi</h3>
+              <p>{transferWindowOpen 
+                ? "Transfer oynasi ochiq — o'yinchilar so'rov yuborishi mumkin" 
+                : "Transfer oynasi yopiq — o'yinchilar so'rov yuborolmaydi"
+              }</p>
+            </div>
+          </div>
+          
           <button 
-            className={`filter-tab ${filter === 'approved' ? 'active' : ''}`} 
-            onClick={() => setFilter('approved')}
+            className={`tw-toggle-btn ${transferWindowOpen ? 'on' : 'off'} ${windowToggling ? 'toggling' : ''}`}
+            onClick={handleToggleTransferWindow}
+            disabled={windowToggling || windowLoading}
           >
-            <CheckCircle2 size={16} />
-            <span>Tasdiqlangan</span>
-            {approvedCount > 0 && <span className="tab-badge approved">{approvedCount}</span>}
-          </button>
-
-          <button 
-            className={`filter-tab ${filter === 'rejected' ? 'active' : ''}`} 
-            onClick={() => setFilter('rejected')}
-          >
-            <XCircle size={16} />
-            <span>Rad etilgan</span>
-            {rejectedCount > 0 && <span className="tab-badge rejected">{rejectedCount}</span>}
-          </button>
-
-          <button 
-            className={`filter-tab ${filter === 'all' ? 'active' : ''}`} 
-            onClick={() => setFilter('all')}
-          >
-            <Layers size={16} />
-            <span>Barchasi</span>
-            <span className="tab-badge total">{transfers.length}</span>
+            <div className="tw-toggle-track">
+              <div className="tw-toggle-thumb">
+                {windowToggling ? (
+                  <div className="tw-toggle-spinner"></div>
+                ) : transferWindowOpen ? (
+                  <Check size={14} />
+                ) : (
+                  <X size={14} />
+                )}
+              </div>
+            </div>
+            <span className="tw-toggle-label">
+              {windowLoading ? 'Yuklanmoqda...' : windowToggling ? "O'zgartirilmoqda..." : transferWindowOpen ? 'OCHIQ' : 'YOPIQ'}
+            </span>
           </button>
         </div>
+        
+        {transferWindowOpen && (
+          <div className="tw-notification-bar">
+            <Bell size={14} />
+            <span>O'yinchilarga transfer oynasi ochilganligi haqida bildirishnoma yuborildi</span>
+          </div>
+        )}
+      </div>
+
+      {/* Collapsible Filter Dropdown */}
+      <div className="filter-dropdown-container" ref={filterRef}>
+        <button 
+          className={`filter-dropdown-trigger ${filterOpen ? 'open' : ''}`}
+          onClick={() => setFilterOpen(!filterOpen)}
+        >
+          <div className="filter-trigger-left">
+            <span className="filter-active-dot" style={{ background: activeFilter?.color }}></span>
+            {activeFilter?.icon}
+            <span className="filter-trigger-label">{activeFilter?.label}</span>
+            {activeFilter?.count > 0 && (
+              <span className="filter-trigger-badge" style={{ background: `${activeFilter?.color}22`, color: activeFilter?.color }}>
+                {activeFilter?.count}
+              </span>
+            )}
+          </div>
+          <ChevronDown size={18} className={`filter-chevron ${filterOpen ? 'rotated' : ''}`} />
+        </button>
+        
+        {filterOpen && (
+          <div className="filter-dropdown-menu">
+            {filterOptions.map(opt => (
+              <button
+                key={opt.key}
+                className={`filter-dropdown-item ${filter === opt.key ? 'active' : ''}`}
+                onClick={() => {
+                  setFilter(opt.key);
+                  setFilterOpen(false);
+                }}
+              >
+                <div className="filter-item-left">
+                  <span className="filter-item-dot" style={{ background: opt.color }}></span>
+                  {opt.icon}
+                  <span>{opt.label}</span>
+                </div>
+                <span className="filter-item-count" style={{ background: `${opt.color}18`, color: opt.color }}>
+                  {opt.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Loading Skeleton */}
@@ -250,7 +433,6 @@ const Transfers = () => {
           {filteredTransfers.map(transfer => (
             <div className={`transfer-card ${transfer.status}`} key={transfer.id}>
               
-              {/* Card Action Header */}
               <div className="card-action-bar">
                 <span className={`status-pill ${transfer.status}`}>
                   {transfer.status === 'approved' && <CheckCircle2 size={12} />}
@@ -258,8 +440,6 @@ const Transfers = () => {
                   {transfer.status === 'pending' && <Clock size={12} />}
                   {transfer.status === 'approved' ? 'Tasdiqlangan' : transfer.status === 'rejected' ? 'Rad etilgan' : 'Kutilmoqda'}
                 </span>
-
-                {/* Edit Button in Corner */}
                 <button 
                   className="card-edit-btn" 
                   onClick={() => handleOpenEditModal(transfer)} 
