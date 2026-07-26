@@ -818,6 +818,9 @@ export default function Standings() {
             </div>
 
             {(() => {
+              const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+              const isShowSponsors = currentLeagueObj ? (currentLeagueObj.show_sponsors !== false) : (localStorage.getItem('hfl_league_show_sponsors_' + selectedLeague) !== 'false');
+              if (!isShowSponsors) return null;
               const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
               if (selectedLeague === '7x7 liga' || secondarySponsors.length === 0) return null;
               return (
@@ -978,6 +981,9 @@ export default function Standings() {
             </div>
 
             {(() => {
+              const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+              const isShowSponsors = currentLeagueObj ? (currentLeagueObj.show_sponsors !== false) : (localStorage.getItem('hfl_league_show_sponsors_' + selectedLeague) !== 'false');
+              if (!isShowSponsors) return null;
               const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
               if (selectedLeague === '7x7 liga' || secondarySponsors.length === 0) return null;
               return (

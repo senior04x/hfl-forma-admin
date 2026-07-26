@@ -12,9 +12,55 @@ export default function Sponsors() {
   const [selectedSponsors, setSelectedSponsors] = useState([]);
   const [mainSponsor, setMainSponsorState] = useState(null);
 
+  const [leagues, setLeagues] = useState([]);
+
   useEffect(() => {
     fetchSponsors();
+    fetchLeagues();
   }, [orgId]);
+
+  const fetchLeagues = async () => {
+    try {
+      let query = supabase.from('leagues').select('*').order('created_at', { ascending: true });
+      if (orgId) {
+        query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
+      }
+      const { data, error } = await query;
+      if (!error && data) {
+        const processed = data.map(l => {
+          let showSponsorsVal = l.show_sponsors;
+          if (showSponsorsVal === undefined || showSponsorsVal === null) {
+            const savedLocal = localStorage.getItem(`hfl_league_show_sponsors_${l.id}`) || localStorage.getItem(`hfl_league_show_sponsors_${l.name}`);
+            showSponsorsVal = savedLocal !== 'false';
+          }
+          return {
+            ...l,
+            show_sponsors: showSponsorsVal !== false
+          };
+        });
+        setLeagues(processed);
+      }
+    } catch (e) {
+      console.error('Error fetching leagues in Sponsors:', e);
+    }
+  };
+
+  const toggleLeagueSponsors = async (league) => {
+    const nextVal = !league.show_sponsors;
+    setLeagues(prev => prev.map(l => l.id === league.id ? { ...l, show_sponsors: nextVal } : l));
+
+    try {
+      localStorage.setItem(`hfl_league_show_sponsors_${league.id}`, String(nextVal));
+      localStorage.setItem(`hfl_league_show_sponsors_${league.name}`, String(nextVal));
+
+      await supabase
+        .from('leagues')
+        .update({ show_sponsors: nextVal })
+        .eq('id', league.id);
+    } catch (e) {
+      console.error('Error toggling league sponsors:', e);
+    }
+  };
 
   const fetchSponsors = async () => {
     setLoading(true);
@@ -236,6 +282,63 @@ export default function Sponsors() {
       </div>
       
       <div className="sponsors-content">
+        {/* League Sponsors Toggles Section */}
+        {leagues.length > 0 && (
+          <div style={{ marginBottom: '30px', background: 'rgba(255, 255, 255, 0.03)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <Sparkles size={22} style={{ color: '#00ff66' }} />
+              <h2 style={{ color: '#ffffff', fontSize: '18px', fontWeight: '800', margin: 0 }}>Ligalarda Homiy Ko'rinishi Sozlamasi</h2>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', margin: '0 0 20px 0', lineHeight: '1.5' }}>
+              ⭐ <b>Bosh Homiy</b> har doim barcha ligalar shablonlarida (yuqori o'ng burchakda) ko'rinaveradi.<br />
+              👇 Quyidagi ligalar ro'yxatidan pastki <b>qolgan homiylar stripini</b> ko'rsatish yoki yashirishni tanlang:
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+              {leagues.map(league => {
+                const isShow = league.show_sponsors !== false;
+                return (
+                  <div 
+                    key={league.id} 
+                    onClick={() => toggleLeagueSponsors(league)}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justify: 'space-between', 
+                      padding: '14px 18px', 
+                      borderRadius: '12px', 
+                      background: isShow ? 'rgba(0, 255, 102, 0.08)' : 'rgba(255, 255, 255, 0.03)', 
+                      border: isShow ? '1px solid rgba(0, 255, 102, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      boxShadow: isShow ? '0 0 15px rgba(0, 255, 102, 0.1)' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {league.logo_url && (
+                        <img src={league.logo_url} alt={league.name} style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+                      )}
+                      <span style={{ color: '#ffffff', fontWeight: '700', fontSize: '15px' }}>{league.name}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: isShow ? '#00ff66' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {isShow ? 'YONIQLIK' : 'O\'CHIQ'}
+                      </span>
+                      <input 
+                        type="checkbox" 
+                        checked={isShow} 
+                        onChange={() => {}} 
+                        style={{ width: '20px', height: '20px', accentColor: '#00ff66', cursor: 'pointer' }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="upload-section-page">
           <label className={`upload-btn-page ${uploading ? 'disabled' : ''}`}>
             {uploading ? <><span className="btn-spinner"></span> Yuklanmoqda...</> : <><Upload size={18} /> Yangi homiy logotipini qo'shish</>}

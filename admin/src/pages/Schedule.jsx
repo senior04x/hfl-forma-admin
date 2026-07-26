@@ -1207,15 +1207,6 @@ const Schedule = () => {
 
                 <div className="match-footer-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <button 
-                      className="yt-download-match-btn" 
-                      onClick={() => handleExportYtThumbnail(match)} 
-                      disabled={exportingMatchId === match.id}
-                      title="YouTube Shablon Rasmini Yuklab Olish (16:9)"
-                    >
-                      {exportingMatchId === match.id ? <span className="btn-spinner"></span> : <Download size={15} />}
-                    </button>
-
                     {match.youtube_link ? (
                       <a 
                         href={match.youtube_link} 
@@ -1518,6 +1509,10 @@ const Schedule = () => {
 
               {/* Footer Secondary Sponsors Banner */}
               {(() => {
+                const targetLeagueName = selectedMatchForYtExport?.league || exportLeague;
+                const currentLeagueObj = activeLeagues.find(l => l.name === targetLeagueName);
+                const isShowSponsors = currentLeagueObj ? (currentLeagueObj.show_sponsors !== false) : true;
+                if (!isShowSponsors) return null;
                 const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
                 if (secondarySponsors.length === 0) return null;
                 return (
