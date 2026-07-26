@@ -635,16 +635,22 @@ const Schedule = () => {
       try { localStorage.setItem(localKey, publicUrl); } catch (e) {}
 
       // Update Supabase DB leagues table
-      let { error: dbErr } = await supabase
-        .from('leagues')
-        .update({ schedule_banner_url: publicUrl, export_bg_url: publicUrl })
-        .or(`id.eq.${currentLeagueObj.id},name.eq.${currentLeagueObj.name}`);
+      let updateQuery = supabase.from('leagues').update({ schedule_banner_url: publicUrl, export_bg_url: publicUrl });
+      if (currentLeagueObj.id) {
+        updateQuery = updateQuery.eq('id', currentLeagueObj.id);
+      } else {
+        updateQuery = updateQuery.eq('name', currentLeagueObj.name);
+      }
+      let { error: dbErr } = await updateQuery;
 
       if (dbErr) {
-        await supabase
-          .from('leagues')
-          .update({ export_bg_url: publicUrl })
-          .or(`id.eq.${currentLeagueObj.id},name.eq.${currentLeagueObj.name}`);
+        let fallbackQuery = supabase.from('leagues').update({ export_bg_url: publicUrl });
+        if (currentLeagueObj.id) {
+          fallbackQuery = fallbackQuery.eq('id', currentLeagueObj.id);
+        } else {
+          fallbackQuery = fallbackQuery.eq('name', currentLeagueObj.name);
+        }
+        await fallbackQuery;
       }
 
       setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj.id || l.name === currentLeagueObj.name) ? { ...l, schedule_banner_url: publicUrl, export_bg_url: publicUrl } : l));
@@ -689,16 +695,22 @@ const Schedule = () => {
       const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj.id || currentLeagueObj.name}`;
       try { localStorage.setItem(localKey, publicUrl); } catch (e) {}
 
-      let { error: dbErr } = await supabase
-        .from('leagues')
-        .update({ yt_banner_url: publicUrl, banner_url: publicUrl })
-        .or(`id.eq.${currentLeagueObj.id},name.eq.${currentLeagueObj.name}`);
+      let updateQuery = supabase.from('leagues').update({ yt_banner_url: publicUrl, banner_url: publicUrl });
+      if (currentLeagueObj.id) {
+        updateQuery = updateQuery.eq('id', currentLeagueObj.id);
+      } else {
+        updateQuery = updateQuery.eq('name', currentLeagueObj.name);
+      }
+      let { error: dbErr } = await updateQuery;
 
       if (dbErr) {
-        await supabase
-          .from('leagues')
-          .update({ banner_url: publicUrl })
-          .or(`id.eq.${currentLeagueObj.id},name.eq.${currentLeagueObj.name}`);
+        let fallbackQuery = supabase.from('leagues').update({ banner_url: publicUrl });
+        if (currentLeagueObj.id) {
+          fallbackQuery = fallbackQuery.eq('id', currentLeagueObj.id);
+        } else {
+          fallbackQuery = fallbackQuery.eq('name', currentLeagueObj.name);
+        }
+        await fallbackQuery;
       }
 
       setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj.id || l.name === currentLeagueObj.name) ? { ...l, yt_banner_url: publicUrl, banner_url: publicUrl } : l));
@@ -720,10 +732,11 @@ const Schedule = () => {
     localStorage.removeItem(localKey);
 
     try {
-      await supabase
-        .from('leagues')
-        .update({ schedule_banner_url: null })
-        .eq('id', currentLeagueObj.id);
+      if (currentLeagueObj.id) {
+        await supabase.from('leagues').update({ schedule_banner_url: null, export_bg_url: null }).eq('id', currentLeagueObj.id);
+      } else {
+        await supabase.from('leagues').update({ schedule_banner_url: null, export_bg_url: null }).eq('name', currentLeagueObj.name);
+      }
     } catch (e) {}
   };
 
@@ -737,10 +750,11 @@ const Schedule = () => {
     localStorage.removeItem(localKey);
 
     try {
-      await supabase
-        .from('leagues')
-        .update({ yt_banner_url: null })
-        .eq('id', currentLeagueObj.id);
+      if (currentLeagueObj.id) {
+        await supabase.from('leagues').update({ yt_banner_url: null, banner_url: null }).eq('id', currentLeagueObj.id);
+      } else {
+        await supabase.from('leagues').update({ yt_banner_url: null, banner_url: null }).eq('name', currentLeagueObj.name);
+      }
     } catch (e) {}
   };
 
