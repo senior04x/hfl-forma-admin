@@ -49,6 +49,280 @@ const Schedule = () => {
   const [selectedMatchForYtExport, setSelectedMatchForYtExport] = useState(null);
   const [exportingMatchId, setExportingMatchId] = useState(null);
 
+  // YouTube OAuth & Live API Integration
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
+
+  const [ytChannelInfo, setYtChannelInfo] = useState(null);
+  const [ytLoading, setYtLoading] = useState(false);
+  const [autoCreateYtLive, setAutoCreateYtLive] = useState(false);
+
+  const getYtTokensKey = () => `hfl_yt_tokens_${orgId || 'default'}`;
+
+  const saveYtTokens = (tokens) => {
+    try {
+      const expiresAt = Date.now() + (tokens.expires_in || 3600) * 1000;
+      const dataToSave = { ...tokens, expires_at: expiresAt };
+      localStorage.setItem(getYtTokensKey(), JSON.stringify(dataToSave));
+    } catch (e) {}
+  };
+
+  const getYtTokens = () => {
+    try {
+      const raw = localStorage.getItem(getYtTokensKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  };
+
+  const getValidAccessToken = async () => {
+    const tokens = getYtTokens();
+    if (!tokens || !tokens.refresh_token) return null;
+
+    if (tokens.access_token && tokens.expires_at && Date.now() < tokens.expires_at - 60000) {
+      return tokens.access_token;
+    }
+
+    try {
+      const redirectUri = window.location.origin + window.location.pathname;
+      const response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: GOOGLE_CLIENT_ID,
+          client_secret: GOOGLE_CLIENT_SECRET,
+          refresh_token: tokens.refresh_token,
+          grant_type: 'refresh_token'
+        })
+      });
+      const data = await response.json();
+      if (data.access_token) {
+        const updated = {
+          ...tokens,
+          access_token: data.access_token,
+          expires_at: Date.now() + (data.expires_in || 3600) * 1000
+        };
+        saveYtTokens(updated);
+        return data.access_token;
+      }
+    } catch (err) {
+      console.error('Error refreshing YT access token:', err);
+    }
+    return tokens?.access_token || null;
+  };
+
+  const fetchYtChannelInfo = async (token) => {
+    try {
+      const accessToken = token || await getValidAccessToken();
+      if (!accessToken) return;
+
+      const res = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      const data = await res.json();
+      if (data.items && data.items.length > 0) {
+        const ch = data.items[0].snippet;
+        setYtChannelInfo({
+          title: ch.title,
+          thumbnail: ch.thumbnails?.default?.url || ''
+        });
+      }
+    } catch (e) {
+      console.error('Error fetching YT channel info:', e);
+    }
+  };
+
+  const handleConnectYouTube = () => {
+    const redirectUri = window.location.origin + window.location.pathname;
+    const scopes = [
+      'https://www.googleapis.com/auth/youtube',
+      'https://www.googleapis.com/auth/youtube.force-ssl',
+      'https://www.googleapis.com/auth/youtube.upload'
+    ].join(' ');
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(GOOGLE_CLIENT_ID)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=code` +
+      `&scope=${encodeURIComponent(scopes)}` +
+      `&access_type=offline` +
+      `&prompt=consent`;
+
+    window.location.href = authUrl;
+  };
+
+  const handleDisconnectYouTube = () => {
+    try { localStorage.removeItem(getYtTokensKey()); } catch (e) {}
+    setYtChannelInfo(null);
+  };
+
+  const exchangeCodeForTokens = async (code) => {
+    try {
+      const redirectUri = window.location.origin + window.location.pathname;
+      const response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code: code,
+          client_id: GOOGLE_CLIENT_ID,
+          client_secret: GOOGLE_CLIENT_SECRET,
+          redirect_uri: redirectUri,
+          grant_type: 'authorization_code'
+        })
+      });
+      const data = await response.json();
+      if (data.access_token) {
+        saveYtTokens(data);
+        fetchYtChannelInfo(data.access_token);
+        alert('✅ YouTube Kanali Muvaffaqiyatli Ulandi!');
+      } else {
+        alert('YouTube bog\'lanishda xatolik: ' + (data.error_description || data.error || ''));
+      }
+    } catch (err) {
+      console.error('Error exchanging code:', err);
+    }
+  };
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+      exchangeCodeForTokens(code);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+      fetchYtChannelInfo();
+    }
+  }, [orgId]);
+
+  const createYouTubeLiveStream = async (matchObj, autoThumbnail = true) => {
+    const accessToken = await getValidAccessToken();
+    if (!accessToken) {
+      alert("YouTube kanali bog'lanmagan. Iltimos, avval tepadagi 'YouTube Ulash' tugmasini bosing.");
+      return null;
+    }
+
+    setYtLoading(true);
+    try {
+      setSelectedMatchForYtExport(matchObj);
+
+      let startTime;
+      try {
+        startTime = new Date(`${matchObj.match_date}T${matchObj.match_time}:00`).toISOString();
+      } catch (e) {
+        startTime = new Date().toISOString();
+      }
+
+      const homeTeamObj = teams.find(t => t.id === matchObj.home_team_id) || matchObj.home_team;
+      const awayTeamObj = teams.find(t => t.id === matchObj.away_team_id) || matchObj.away_team;
+      const fullMatchObj = {
+        ...matchObj,
+        home_team: homeTeamObj,
+        away_team: awayTeamObj
+      };
+      setSelectedMatchForYtExport(fullMatchObj);
+
+      const title = `${homeTeamObj?.name || 'Home'} vs ${awayTeamObj?.name || 'Away'} | ${matchObj.league || 'HFL'} ${matchObj.round ? matchObj.round + '-Tur' : ''}`;
+      const description = `${matchObj.league || 'HFL'} ${matchObj.round ? matchObj.round + '-Tur' : ''} o'yini: ${homeTeamObj?.name} vs ${awayTeamObj?.name}.\nSana: ${matchObj.match_date}\nVaqt: ${matchObj.match_time}\nMaydon: ${matchObj.location || '1-maydon'}\nHFL Live Stream.`;
+
+      // 1. Create Broadcast
+      const bRes = await fetch('https://www.googleapis.com/youtube/v3/liveBroadcasts?part=snippet,status,contentDetails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          snippet: {
+            title: title,
+            description: description,
+            scheduledStartTime: startTime
+          },
+          status: {
+            privacyStatus: 'public',
+            selfDeclaredMadeForKids: false
+          },
+          contentDetails: {
+            enableAutoStart: true,
+            enableDvr: true,
+            recordFromStart: true
+          }
+        })
+      });
+
+      const bData = await bRes.json();
+      if (!bData.id) {
+        throw new Error(bData.error?.message || 'YouTube Broadcast yaratib bo\'lmadi');
+      }
+
+      const broadcastId = bData.id;
+      const liveUrl = `https://youtube.com/live/${broadcastId}`;
+
+      // 2. Create Stream for RTMP Key
+      try {
+        const sRes = await fetch('https://www.googleapis.com/youtube/v3/liveStreams?part=snippet,cdn', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            snippet: { title: `${title} Stream` },
+            cdn: { ingestionType: 'rtmp', resolution: '1080p', frameRate: '60fps' }
+          })
+        });
+        const sData = await sRes.json();
+        if (sData.id) {
+          await fetch(`https://www.googleapis.com/youtube/v3/liveBroadcasts/bind?id=${broadcastId}&part=id,snippet,contentDetails,status&streamId=${sData.id}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Stream bind notice:', e);
+      }
+
+      // 3. Render 16:9 Thumbnail and Upload to YouTube
+      if (autoThumbnail && exportYtRef.current) {
+        await new Promise(r => setTimeout(r, 600));
+        const canvas = await html2canvas(exportYtRef.current, {
+          scale: 1,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#0b0f19',
+          width: 1280,
+          height: 720
+        });
+
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+        if (blob) {
+          await fetch(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?youtubeId=${broadcastId}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'image/jpeg'
+            },
+            body: blob
+          });
+        }
+      }
+
+      // 4. Update youtube_link in Supabase DB
+      await supabase.from('matches').update({ youtube_link: liveUrl }).eq('id', matchObj.id);
+      setMatches(prev => prev.map(m => m.id === matchObj.id ? { ...m, youtube_link: liveUrl } : m));
+
+      alert(`✅ YouTube Jonli Efir Ochildi va 16:9 Oblojka Yuklandi!\n\nLink: ${liveUrl}`);
+      return liveUrl;
+    } catch (err) {
+      console.error('Error creating YT stream:', err);
+      alert('YouTube Live xatosi: ' + (err.message || ''));
+      return null;
+    } finally {
+      setYtLoading(false);
+    }
+  };
+
   const [mainSponsor, setMainSponsor] = useState(null);
   const [selectedSponsors, setSelectedSponsors] = useState([]);
 
@@ -570,9 +844,22 @@ const Schedule = () => {
           <h1>O'yinlar Jadvali</h1>
           <p>{currentOrg?.name} ({exportLeague || 'Barcha ligalar'})</p>
         </div>
-        <button className="btn-add-match" onClick={handleOpenModal}>
-          <Plus size={18} /> O'yin qo'shish
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {ytChannelInfo ? (
+            <div className="yt-connected-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 59, 48, 0.15)', border: '1px solid rgba(255, 59, 48, 0.4)', padding: '8px 14px', borderRadius: '10px', color: '#ff4d4d', fontSize: '13px', fontWeight: '700' }}>
+              {ytChannelInfo.thumbnail && <img src={ytChannelInfo.thumbnail} alt="" style={{ width: '22px', height: '22px', borderRadius: '50%' }} />}
+              <span>🔴 {ytChannelInfo.title}</span>
+              <button onClick={handleDisconnectYouTube} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '12px', marginLeft: '6px' }} title="Uzish">✕</button>
+            </div>
+          ) : (
+            <button className="btn-yt-connect" onClick={handleConnectYouTube} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #ff0000 0%, #cc0000 100%)', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 0, 0, 0.4)', transition: 'all 0.2s' }}>
+              <Video size={16} /> YouTube Kanalni Ulash
+            </button>
+          )}
+          <button className="btn-add-match" onClick={handleOpenModal}>
+            <Plus size={18} /> O'yin qo'shish
+          </button>
+        </div>
       </div>
 
       {/* Modern Filter & 1x1 Poster Banner Control Card */}
@@ -730,6 +1017,17 @@ const Schedule = () => {
             .map(match => (
             <div key={match.id} className="match-card glassmorphic-card">
               <div className="match-card-actions">
+                {ytChannelInfo && (
+                  <button 
+                    className="yt-live-create-btn"
+                    onClick={() => createYouTubeLiveStream(match, true)}
+                    disabled={ytLoading}
+                    title="YouTube'da Jonli Efir Ochish va 16:9 Oblojkani Avtomatik Yuklash"
+                    style={{ background: 'rgba(255, 0, 0, 0.15)', border: '1px solid rgba(255, 0, 0, 0.4)', color: '#ff4d4d', borderRadius: '8px', padding: '4px 8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '800' }}
+                  >
+                    <Video size={13} /> {ytLoading ? 'Ochilmoqda...' : 'Live Yaratish'}
+                  </button>
+                )}
                 <button 
                   className="yt-download-match-btn" 
                   onClick={() => handleExportYtThumbnail(match)} 
@@ -873,6 +1171,21 @@ const Schedule = () => {
                 ⚠️ Qoldirilgan o'yin (Eksport rasmida ajratilib eng pastda ko'rsatiladi)
               </label>
             </div>
+
+            {ytChannelInfo && (
+              <div className="form-group checkbox-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', background: 'rgba(255, 0, 0, 0.1)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255, 0, 0, 0.3)' }}>
+                <input 
+                  type="checkbox" 
+                  id="auto_yt_live_checkbox"
+                  checked={autoCreateYtLive} 
+                  onChange={(e) => setAutoCreateYtLive(e.target.checked)} 
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#ff0000' }}
+                />
+                <label htmlFor="auto_yt_live_checkbox" style={{ margin: 0, cursor: 'pointer', fontWeight: '700', color: '#ff4d4d', fontSize: '13px' }}>
+                  🔴 YouTube'da avtomatik Jonli Efir ochish va 16:9 oblojka yuklash
+                </label>
+              </div>
+            )}
 
             <div className="modal-actions">
               <button className="btn-cancel" onClick={() => setIsModalOpen(false)}>Bekor qilish</button>
