@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert, Building2, Pencil, Trash2, Save } from 'lucide-react';
+import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert, Building2, Pencil, Trash2, Save, Crop } from 'lucide-react';
+import ImageCropperModal from '../components/ImageCropperModal';
 import './Settings.css';
 
 const Settings = () => {
@@ -14,30 +15,100 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
+  // Org Logo Cropper
+  const orgFileInputRef = useRef(null);
+  const [orgCropperRawImage, setOrgCropperRawImage] = useState(null);
+  const [uploadingOrgLogo, setUploadingOrgLogo] = useState(false);
+
+  // League Logo Cropper
+  const leagueFileInputRef = useRef(null);
+  const [leagueCropperRawImage, setLeagueCropperRawImage] = useState(null);
+  const [uploadingLeagueLogo, setUploadingLeagueLogo] = useState(false);
+
   useEffect(() => {
     if (currentOrg) {
       setOrgLogo(currentOrg.logo_url || '');
     }
   }, [currentOrg]);
 
-  const handleUpdateOrgLogo = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage({ type: '', text: '' });
-    try {
-      const { error } = await supabase
-        .from('organizations')
-        .update({ logo_url: orgLogo.trim() || null })
-        .eq('id', orgId);
+  const handleOrgFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setOrgCropperRawImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
+  const handleOrgCroppedSave = async (croppedBase64) => {
+    setUploadingOrgLogo(true);
+    setOrgCropperRawImage(null);
+    try {
+      const response = await fetch(croppedBase64);
+      const blob = await response.blob();
+      const fileName = `org_logo_${orgId}_${Date.now()}.jpg`;
+
+      const { error } = await supabase.storage.from('player-photos').upload(fileName, blob, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
       if (error) throw error;
 
-      updateCurrentOrg({ logo_url: orgLogo.trim() || null });
+      const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
+      const publicUrl = data.publicUrl;
+
+      const { error: dbErr } = await supabase
+        .from('organizations')
+        .update({ logo_url: publicUrl })
+        .eq('id', orgId);
+
+      if (dbErr) throw dbErr;
+
+      setOrgLogo(publicUrl);
+      updateCurrentOrg({ logo_url: publicUrl });
       setMessage({ type: 'success', text: 'Tashkilot logotipi muvaffaqiyatli saqlandi!' });
     } catch (err) {
-      setMessage({ type: 'error', text: 'Xatolik: ' + err.message });
+      console.error('Org logo upload error:', err);
+      setMessage({ type: 'error', text: 'Logotip yuklashda xatolik: ' + (err.message || '') });
     } finally {
-      setLoading(false);
+      setUploadingOrgLogo(false);
+    }
+  };
+
+  const handleLeagueFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setLeagueCropperRawImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleLeagueCroppedSave = async (croppedBase64) => {
+    setUploadingLeagueLogo(true);
+    setLeagueCropperRawImage(null);
+    try {
+      const response = await fetch(croppedBase64);
+      const blob = await response.blob();
+      const fileName = `league_logo_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+
+      const { error } = await supabase.storage.from('player-photos').upload(fileName, blob, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+      if (error) throw error;
+
+      const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
+      setLeagueLogo(data.publicUrl);
+    } catch (err) {
+      console.error('League logo upload error:', err);
+      setMessage({ type: 'error', text: 'Liga logotipini yuklashda xatolik: ' + (err.message || '') });
+    } finally {
+      setUploadingLeagueLogo(false);
     }
   };
 
@@ -73,7 +144,6 @@ const Settings = () => {
 
   const fetchLeaguesAndOrgs = async () => {
     try {
-      // 1. Fetch own created leagues
       const { data: ownLeagues } = await supabase
         .from('leagues')
         .select('*')
@@ -82,14 +152,12 @@ const Settings = () => {
 
       setLeagues(ownLeagues || []);
 
-      // 2. Fetch other organizations (for collab target selector)
       const { data: orgs } = await supabase
         .from('organizations')
         .select('id, name, slug, logo_url')
         .neq('id', orgId);
       setOtherOrgs(orgs || []);
 
-      // 3. Fetch incoming collab requests
       const { data: collabs } = await supabase
         .from('league_collabs')
         .select(`
@@ -129,7 +197,6 @@ const Settings = () => {
 
     try {
       if (editingLeague) {
-        // Tahrirlash rejimi
         const oldName = editingLeague.name;
         const newName = leagueName.trim();
 
@@ -144,7 +211,6 @@ const Settings = () => {
 
         if (error) throw error;
 
-        // Liga nomi o'zgargan bo'lsa, bog'liq jadval ma'lumotlarini ham yangilaymiz
         if (oldName !== newName) {
           await supabase.from('teams').update({ league: newName }).eq('league', oldName).eq('organization_id', orgId);
           await supabase.from('matches').update({ league: newName }).eq('league', oldName).eq('organization_id', orgId);
@@ -154,7 +220,6 @@ const Settings = () => {
         setMessage({ type: 'success', text: 'Liga ma\'lumotlari muvaffaqiyatli yangilandi!' });
         cancelEditLeague();
       } else {
-        // Yangi liga yaratish rejimi
         const { error } = await supabase.from('leagues').insert({
           name: leagueName.trim(),
           logo_url: leagueLogo.trim() || null,
@@ -183,9 +248,7 @@ const Settings = () => {
     }
     setMessage({ type: '', text: '' });
     try {
-      // 1. Delete associated collab records
       await supabase.from('league_collabs').delete().eq('league_id', league.id);
-      // 2. Delete league itself
       const { error } = await supabase.from('leagues').delete().eq('id', league.id);
       if (error) throw error;
 
@@ -361,15 +424,46 @@ const Settings = () => {
                   required
                 />
               </div>
+
+              {/* League Logo Crop Upload */}
               <div className="settings-form-group flex-2">
-                <label>Liga Logosi URL (ixtiyoriy)</label>
-                <input
-                  type="text"
-                  placeholder="https://example.com/league-logo.png"
-                  value={leagueLogo}
-                  onChange={e => setLeagueLogo(e.target.value)}
-                />
+                <label>Liga Logosi</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                  {leagueLogo && (
+                    <img src={leagueLogo} alt="League Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => leagueFileInputRef.current?.click()}
+                    disabled={uploadingLeagueLogo}
+                    style={{
+                      padding: '9px 14px',
+                      background: 'rgba(0, 170, 255, 0.12)',
+                      border: '1px solid rgba(0, 170, 255, 0.3)',
+                      color: '#00aaff',
+                      borderRadius: '10px',
+                      fontWeight: '600',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Crop size={15} />
+                    <span>{uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Almashtirish' : 'Logo tanlash (1:1)')}</span>
+                  </button>
+
+                  <input
+                    ref={leagueFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleLeagueFileSelect}
+                  />
+                </div>
               </div>
+
               <div className="settings-form-group checkbox-group">
                 <label className="checkbox-label">
                   <input
@@ -380,6 +474,7 @@ const Settings = () => {
                   <span>Junior (U-14)</span>
                 </label>
               </div>
+
               <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
                 <button type="submit" className="settings-btn settings-btn-primary add-league-btn" disabled={creatingLeague}>
                   {editingLeague ? <Save size={16} /> : <Plus size={16} />}
@@ -448,55 +543,80 @@ const Settings = () => {
             <Building2 size={20} />
             <h2>Tashkilot Logotipi</h2>
           </div>
-          <form onSubmit={handleUpdateOrgLogo}>
-            <div className="settings-org-logo-preview">
-              {orgLogo ? (
-                <img src={orgLogo} alt={currentOrg?.name} />
-              ) : (
-                <div className="no-logo-placeholder">
-                  <Building2 size={32} />
-                  <span>Logo yo'q</span>
-                </div>
-              )}
-            </div>
-            <div className="settings-form-group">
-              <label>Logo URL (Rasm Havolasi)</label>
-              <input
-                type="text"
-                placeholder="https://example.com/logo.png"
-                value={orgLogo}
-                onChange={e => setOrgLogo(e.target.value)}
-              />
-            </div>
-            <button type="submit" className="settings-btn settings-btn-primary" disabled={loading}>
-              Logotipni saqlash
+          <div className="settings-org-logo-preview">
+            {orgLogo ? (
+              <img src={orgLogo} alt={currentOrg?.name} />
+            ) : (
+              <div className="no-logo-placeholder">
+                <Building2 size={32} />
+                <span>Logo yo'q</span>
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <button
+              type="button"
+              onClick={() => orgFileInputRef.current?.click()}
+              disabled={uploadingOrgLogo}
+              style={{
+                width: '100%',
+                padding: '11px 18px',
+                background: 'rgba(0, 170, 255, 0.12)',
+                border: '1px solid rgba(0, 170, 255, 0.3)',
+                color: '#00aaff',
+                borderRadius: '10px',
+                fontWeight: '600',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <Crop size={16} />
+              <span>{uploadingOrgLogo ? 'Yuklanmoqda...' : (orgLogo ? 'Logotipni almashtirish va 1:1 qirqish' : 'Logotip yuklash va 1:1 qirqish')}</span>
             </button>
-          </form>
+
+            <input
+              ref={orgFileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleOrgFileSelect}
+            />
+          </div>
         </div>
 
         {/* Profile Info Card */}
         <div className="settings-card">
           <div className="settings-card-header">
             <Mail size={20} />
-            <h2>Email manzili</h2>
+            <h2>Admin Email Ma'lumotlari</h2>
           </div>
           <form onSubmit={handleUpdateEmail}>
             <div className="settings-form-group">
-              <label>Hozirgi Email</label>
+              <label>Joriy Email</label>
+              <input type="email" value={userEmail} disabled style={{ opacity: 0.6 }} />
+            </div>
+            <div className="settings-form-group">
+              <label>Yangi Email</label>
               <input
                 type="email"
+                placeholder="yangi@email.com"
                 value={newEmail}
                 onChange={e => setNewEmail(e.target.value)}
                 required
               />
             </div>
-            <button type="submit" className="settings-btn" disabled={loading || newEmail === userEmail}>
+            <button type="submit" className="settings-btn settings-btn-primary" disabled={loading || newEmail === userEmail}>
               Emailni yangilash
             </button>
           </form>
         </div>
 
-        {/* Change Password Card */}
+        {/* Password Card */}
         <div className="settings-card">
           <div className="settings-card-header">
             <KeyRound size={20} />
@@ -562,6 +682,28 @@ const Settings = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Org Logo Cropper Modal */}
+      {orgCropperRawImage && (
+        <ImageCropperModal
+          isOpen={!!orgCropperRawImage}
+          imageSrc={orgCropperRawImage}
+          onClose={() => setOrgCropperRawImage(null)}
+          onSave={handleOrgCroppedSave}
+          title="Tashkilot Logotipini 1:1 Qirqish"
+        />
+      )}
+
+      {/* League Logo Cropper Modal */}
+      {leagueCropperRawImage && (
+        <ImageCropperModal
+          isOpen={!!leagueCropperRawImage}
+          imageSrc={leagueCropperRawImage}
+          onClose={() => setLeagueCropperRawImage(null)}
+          onSave={handleLeagueCroppedSave}
+          title="Liga Logotipini 1:1 Qirqish"
+        />
       )}
     </div>
   );

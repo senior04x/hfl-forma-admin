@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase, supabaseAdmin } from '../supabaseClient';
-import { Building2, Plus, Pencil, Trash2, X, Check, Globe, Mail, Lock, Eye, EyeOff, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Building2, Plus, Pencil, Trash2, X, Check, Globe, Mail, Lock, Eye, EyeOff, ShieldAlert, AlertTriangle, Crop } from 'lucide-react';
+import ImageCropperModal from '../components/ImageCropperModal';
 import './Organizations.css';
 
 const generateRandomCode = (length = 8) => {
@@ -21,6 +22,11 @@ const Organizations = () => {
   const [stats, setStats] = useState({});
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Cropper states
+  const fileInputRef = useRef(null);
+  const [cropperRawImage, setCropperRawImage] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingOrg, setDeletingOrg] = useState(null);
@@ -87,6 +93,41 @@ const Organizations = () => {
       name: val,
       slug: editingOrg ? prev.slug : generateSlug(val)
     }));
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperRawImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCroppedSave = async (croppedBase64) => {
+    setUploadingImage(true);
+    setCropperRawImage(null);
+    try {
+      const response = await fetch(croppedBase64);
+      const blob = await response.blob();
+      const fileName = `org_logo_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+
+      const { error } = await supabase.storage.from('player-photos').upload(fileName, blob, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+      if (error) throw error;
+
+      const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
+      setFormData(prev => ({ ...prev, logo_url: data.publicUrl }));
+    } catch (err) {
+      console.error('Logo upload error:', err);
+      alert('Rasm yuklashda xatolik yuz berdi: ' + (err.message || ''));
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSave = async () => {
@@ -301,14 +342,60 @@ const Organizations = () => {
                   placeholder="masalan: fergana-league"
                 />
               </div>
+
+              {/* Logo Crop Upload Picker */}
               <div className="org-form-group">
-                <label>Logo URL (ixtiyoriy)</label>
-                <input
-                  type="text"
-                  value={formData.logo_url}
-                  onChange={e => setFormData(prev => ({ ...prev, logo_url: e.target.value }))}
-                  placeholder="https://example.com/logo.png"
-                />
+                <label>Tashkilot logotipi</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '6px' }}>
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    flexShrink: 0
+                  }}>
+                    {formData.logo_url ? (
+                      <img src={formData.logo_url} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <Building2 size={24} style={{ color: 'rgba(255,255,255,0.4)' }} />
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    style={{
+                      padding: '10px 16px',
+                      background: 'rgba(0, 170, 255, 0.12)',
+                      border: '1px solid rgba(0, 170, 255, 0.3)',
+                      color: '#00aaff',
+                      borderRadius: '10px',
+                      fontWeight: '600',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <Crop size={16} />
+                    <span>{uploadingImage ? 'Yuklanmoqda...' : (formData.logo_url ? 'Logotipni almashtirish' : 'Logotip tanlash (1:1)')}</span>
+                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleFileSelect}
+                  />
+                </div>
               </div>
 
               {!editingOrg && (
@@ -356,6 +443,17 @@ const Organizations = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Image Cropper Modal */}
+      {cropperRawImage && (
+        <ImageCropperModal
+          isOpen={!!cropperRawImage}
+          imageSrc={cropperRawImage}
+          onClose={() => setCropperRawImage(null)}
+          onSave={handleCroppedSave}
+          title="Tashkilot Logotipini 1:1 Qirqish"
+        />
       )}
 
       {/* Security Confirmation Delete Modal */}
