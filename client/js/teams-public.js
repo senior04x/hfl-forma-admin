@@ -60,6 +60,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else if (lowerLeague.includes('chempion')) {
                     badgeClass = 'badge-champions';
                     displayText = 'LIGA CHEMP';
+                } else if (lowerLeague.includes('7x7')) {
+                    badgeClass = 'badge-7x7';
+                    displayText = '7x7 LIGA';
                 }
                 
                 // We use relative positioning for multiple badges in a container
@@ -142,6 +145,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if(el) el.style.opacity = '1';
                         } else if (selectedValue.includes('Chempion')) {
                             const el = document.getElementById('bgThemeChampions');
+                            if(el) el.style.opacity = '1';
+                        } else if (selectedValue.includes('7x7')) {
+                            const el = document.getElementById('bgTheme7x7');
                             if(el) el.style.opacity = '1';
                         }
 
