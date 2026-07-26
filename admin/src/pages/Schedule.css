@@ -421,15 +421,15 @@
 }
 
 .yt-download-match-btn {
-  background: rgba(255, 0, 0, 0.15);
-  border: 1px solid rgba(255, 0, 0, 0.35);
-  color: #ff4d4d;
+  background: rgba(0, 255, 102, 0.15);
+  border: 1px solid rgba(0, 255, 102, 0.35);
+  color: #00ff66;
 }
 
 .yt-download-match-btn:hover {
-  background: #ff0000;
-  color: #ffffff;
-  box-shadow: 0 0 12px rgba(255, 0, 0, 0.45);
+  background: #00ff66;
+  color: #0b0e17;
+  box-shadow: 0 0 12px rgba(0, 255, 102, 0.45);
 }
 
 .edit-match-btn {

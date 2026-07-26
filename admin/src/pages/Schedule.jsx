@@ -599,7 +599,7 @@ const Schedule = () => {
                   disabled={exportingMatchId === match.id}
                   title="YouTube Shablon Rasmini Yuklab Olish (16:9)"
                 >
-                  {exportingMatchId === match.id ? <span className="btn-spinner"></span> : <Video size={15} />}
+                  {exportingMatchId === match.id ? <span className="btn-spinner"></span> : <Download size={15} />}
                 </button>
                 <button className="edit-match-btn" onClick={() => handleEditMatch(match)} title="Tahrirlash">
                   <Pencil size={15} />
