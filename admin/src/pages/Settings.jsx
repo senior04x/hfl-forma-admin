@@ -131,9 +131,22 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchUserData();
-    fetchLeaguesAndOrgs();
+    loadAllSettingsData();
   }, [orgId]);
+
+  const loadAllSettingsData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchUserData(),
+        fetchLeaguesAndOrgs()
+      ]);
+    } catch (err) {
+      console.error('Error loading settings:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchUserData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -144,7 +157,6 @@ const Settings = () => {
   };
 
   const fetchLeaguesAndOrgs = async () => {
-    setLoading(true);
     try {
       const { data: ownLeagues } = await supabase
         .from('leagues')
@@ -180,8 +192,6 @@ const Settings = () => {
       }
     } catch (err) {
       console.error('Error fetching leagues/collabs:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -385,52 +395,156 @@ const Settings = () => {
         </div>
       )}
 
-      {/* Incoming Collab Requests Banner with Skeleton */}
       {loading ? (
-        <div className="collab-incoming-banner collab-skeleton-banner">
-          <div className="collab-incoming-header">
-            <Users size={20} />
-            <div style={{ flex: 1 }}>
-              <div className="skeleton-box title" style={{ width: '180px', height: '18px', marginBottom: '6px' }}></div>
-              <div className="skeleton-box subtitle" style={{ width: '260px', height: '12px' }}></div>
+        <>
+          {/* Collab Banner Skeleton */}
+          <div className="collab-incoming-banner">
+            <div className="collab-incoming-header">
+              <div className="skeleton-box" style={{ width: '20px', height: '20px', borderRadius: '4px' }}></div>
+              <div style={{ flex: 1 }}>
+                <div className="skeleton-box" style={{ width: '200px', height: '18px', marginBottom: '6px' }}></div>
+                <div className="skeleton-box" style={{ width: '280px', height: '12px' }}></div>
+              </div>
+            </div>
+            <div className="collab-incoming-item">
+              <div className="skeleton-box" style={{ height: '16px', width: '65%' }}></div>
+              <div className="collab-incoming-actions">
+                <div className="skeleton-box" style={{ width: '44px', height: '44px', borderRadius: '12px' }}></div>
+                <div className="skeleton-box" style={{ width: '44px', height: '44px', borderRadius: '12px' }}></div>
+              </div>
             </div>
           </div>
-          <div className="collab-incoming-item" style={{ opacity: 0.75 }}>
-            <div className="skeleton-box input-field" style={{ height: '18px', width: '70%' }}></div>
-            <div className="collab-incoming-actions" style={{ gap: '10px' }}>
-              <div className="skeleton-box" style={{ width: '44px', height: '44px', borderRadius: '12px' }}></div>
-              <div className="skeleton-box" style={{ width: '44px', height: '44px', borderRadius: '12px' }}></div>
-            </div>
-          </div>
-        </div>
-      ) : incomingCollabs.filter(c => c.status === 'pending').length > 0 ? (
-        <div className="collab-incoming-banner">
-          <div className="collab-incoming-header">
-            <Users size={20} />
-            <div>
-              <h3>Yangi Sheriklik (Collab) Takliflari</h3>
-              <p>Boshqa tashkilotlar sizga ligani birga olib borish taklifini yuborgan:</p>
-            </div>
-          </div>
-          <div className="collab-incoming-list">
-            {incomingCollabs.filter(c => c.status === 'pending').map(collab => (
-              <div key={collab.id} className="collab-incoming-item">
-                <div className="collab-incoming-info">
-                  <strong>{collab.sender_org?.name}</strong> tashkiloti <span>"{collab.league?.name}"</span> ligasini birgalikda (co-host) olib borishni taklif qilmoqda.
-                </div>
-                <div className="collab-incoming-actions">
-                  <button className="btn-accept" onClick={() => handleRespondCollab(collab.id, 'accepted')} title="Qabul qilish">
-                    <Check size={18} color="#0b0e17" />
-                  </button>
-                  <button className="btn-reject" onClick={() => handleRespondCollab(collab.id, 'rejected')} title="Rad etish">
-                    <X size={18} color="#ffffff" />
-                  </button>
+
+          {/* Settings Grid Skeleton (1:1 identical to real cards) */}
+          <div className="settings-grid">
+            <div className="settings-card full-width">
+              <div className="settings-card-header">
+                <div className="skeleton-box" style={{ width: '20px', height: '20px', borderRadius: '4px' }}></div>
+                <div className="skeleton-box" style={{ width: '220px', height: '20px' }}></div>
+              </div>
+
+              <div className="create-league-form">
+                <div className="form-row">
+                  <div className="settings-form-group flex-2">
+                    <div className="skeleton-box" style={{ width: '120px', height: '14px', marginBottom: '8px' }}></div>
+                    <div className="skeleton-box" style={{ width: '100%', height: '42px', borderRadius: '10px' }}></div>
+                  </div>
+                  <div className="settings-form-group flex-2">
+                    <div className="skeleton-box" style={{ width: '90px', height: '14px', marginBottom: '8px' }}></div>
+                    <div className="skeleton-box" style={{ width: '160px', height: '38px', borderRadius: '10px' }}></div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                    <div className="skeleton-box" style={{ width: '120px', height: '42px', borderRadius: '10px' }}></div>
+                  </div>
                 </div>
               </div>
-            ))}
+
+              <div className="leagues-list-container">
+                <div className="skeleton-box" style={{ width: '140px', height: '14px', marginBottom: '14px' }}></div>
+                <div className="leagues-grid">
+                  <div className="league-card">
+                    <div className="league-card-header">
+                      <div className="skeleton-box" style={{ width: '36px', height: '36px', borderRadius: '50%' }}></div>
+                      <div className="skeleton-box" style={{ width: '110px', height: '16px' }}></div>
+                    </div>
+                    <div className="league-card-actions">
+                      <div className="skeleton-box" style={{ width: '65px', height: '32px', borderRadius: '8px' }}></div>
+                      <div className="skeleton-box" style={{ width: '32px', height: '32px', borderRadius: '8px' }}></div>
+                      <div className="skeleton-box" style={{ width: '32px', height: '32px', borderRadius: '8px' }}></div>
+                    </div>
+                  </div>
+                  <div className="league-card">
+                    <div className="league-card-header">
+                      <div className="skeleton-box" style={{ width: '36px', height: '36px', borderRadius: '50%' }}></div>
+                      <div className="skeleton-box" style={{ width: '130px', height: '16px' }}></div>
+                    </div>
+                    <div className="league-card-actions">
+                      <div className="skeleton-box" style={{ width: '65px', height: '32px', borderRadius: '8px' }}></div>
+                      <div className="skeleton-box" style={{ width: '32px', height: '32px', borderRadius: '8px' }}></div>
+                      <div className="skeleton-box" style={{ width: '32px', height: '32px', borderRadius: '8px' }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-card">
+              <div className="settings-card-header">
+                <div className="skeleton-box" style={{ width: '20px', height: '20px', borderRadius: '4px' }}></div>
+                <div className="skeleton-box" style={{ width: '160px', height: '20px' }}></div>
+              </div>
+              <div className="settings-org-logo-preview">
+                <div className="skeleton-box" style={{ width: '90px', height: '90px', borderRadius: '16px' }}></div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div className="skeleton-box" style={{ width: '180px', height: '42px', borderRadius: '10px' }}></div>
+              </div>
+            </div>
+
+            <div className="settings-card">
+              <div className="settings-card-header">
+                <div className="skeleton-box" style={{ width: '20px', height: '20px', borderRadius: '4px' }}></div>
+                <div className="skeleton-box" style={{ width: '150px', height: '20px' }}></div>
+              </div>
+              <div className="settings-form">
+                <div className="settings-form-group">
+                  <div className="skeleton-box" style={{ width: '100px', height: '14px', marginBottom: '8px' }}></div>
+                  <div className="skeleton-box" style={{ width: '100%', height: '42px', borderRadius: '10px' }}></div>
+                </div>
+                <div className="skeleton-box" style={{ width: '130px', height: '40px', borderRadius: '10px', marginTop: '12px' }}></div>
+              </div>
+
+              <div className="settings-divider"></div>
+
+              <div className="settings-card-header" style={{ border: 'none', padding: '0', marginBottom: '16px' }}>
+                <div className="skeleton-box" style={{ width: '20px', height: '20px', borderRadius: '4px' }}></div>
+                <div className="skeleton-box" style={{ width: '160px', height: '20px' }}></div>
+              </div>
+              <div className="settings-form">
+                <div className="settings-form-group">
+                  <div className="skeleton-box" style={{ width: '90px', height: '14px', marginBottom: '8px' }}></div>
+                  <div className="skeleton-box" style={{ width: '100%', height: '42px', borderRadius: '10px' }}></div>
+                </div>
+                <div className="settings-form-group">
+                  <div className="skeleton-box" style={{ width: '110px', height: '14px', marginBottom: '8px' }}></div>
+                  <div className="skeleton-box" style={{ width: '100%', height: '42px', borderRadius: '10px' }}></div>
+                </div>
+                <div className="skeleton-box" style={{ width: '130px', height: '40px', borderRadius: '10px', marginTop: '12px' }}></div>
+              </div>
+            </div>
           </div>
-        </div>
-      ) : null}
+        </>
+      ) : (
+        <>
+          {/* Incoming Collab Requests Banner */}
+          {incomingCollabs.filter(c => c.status === 'pending').length > 0 && (
+            <div className="collab-incoming-banner">
+              <div className="collab-incoming-header">
+                <Users size={20} />
+                <div>
+                  <h3>Yangi Sheriklik (Collab) Takliflari</h3>
+                  <p>Boshqa tashkilotlar sizga ligani birga olib borish taklifini yuborgan:</p>
+                </div>
+              </div>
+              <div className="collab-incoming-list">
+                {incomingCollabs.filter(c => c.status === 'pending').map(collab => (
+                  <div key={collab.id} className="collab-incoming-item">
+                    <div className="collab-incoming-info">
+                      <strong>{collab.sender_org?.name}</strong> tashkiloti <span>"{collab.league?.name}"</span> ligasini birgalikda (co-host) olib borishni taklif qilmoqda.
+                    </div>
+                    <div className="collab-incoming-actions">
+                      <button className="btn-accept" onClick={() => handleRespondCollab(collab.id, 'accepted')} title="Qabul qilish">
+                        <Check size={18} color="#0b0e17" />
+                      </button>
+                      <button className="btn-reject" onClick={() => handleRespondCollab(collab.id, 'rejected')} title="Rad etish">
+                        <X size={18} color="#ffffff" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="settings-grid">
             {/* Dynamic League Management Card */}
@@ -679,6 +793,8 @@ const Settings = () => {
               </form>
             </div>
           </div>
+        </>
+      )}
 
       {/* Collab Request Modal */}
       {selectedLeagueForCollab && (
