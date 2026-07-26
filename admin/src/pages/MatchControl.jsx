@@ -193,7 +193,15 @@ const MatchControl = () => {
 
     setUpdatingYtThumb(true);
     try {
-      const { data: leagueData } = await supabase.from('leagues').select('*').eq('name', finishedMatchObj.league).maybeSingle();
+      let leagueData = null;
+      if (finishedMatchObj.league) {
+        const { data } = await supabase.from('leagues').select('*').ilike('name', finishedMatchObj.league).maybeSingle();
+        leagueData = data;
+        if (!leagueData) {
+          const { data: fallback } = await supabase.from('leagues').select('*').eq('name', finishedMatchObj.league).maybeSingle();
+          leagueData = fallback;
+        }
+      }
       const { data: orgData } = await supabase.from('organizations').select('*').eq('id', targetOrgId).maybeSingle();
       
       let loadedSponsors = [];

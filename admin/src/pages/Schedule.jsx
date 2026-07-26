@@ -1506,7 +1506,7 @@ const Schedule = () => {
       {/* HIDDEN YOUTUBE THUMBNAIL 16:9 EXPORT TEMPLATE */}
       <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
         {(() => {
-          const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+          const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
           const isCollab = currentLeagueObj?.isCollab;
 
           return (
@@ -1634,7 +1634,7 @@ const Schedule = () => {
 
       <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
         {(() => {
-          const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+          const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
           const isCollab = currentLeagueObj?.isCollab;
 
           return (

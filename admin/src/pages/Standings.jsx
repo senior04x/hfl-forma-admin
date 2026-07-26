@@ -667,7 +667,7 @@ export default function Standings() {
       {/* HIDDEN EXPORT TEMPLATE */}
       <div style={{ position: 'fixed', left: '-9999px', top: 0, opacity: 1, pointerEvents: 'none', zIndex: -100 }}>
         {(() => {
-          const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+          const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
           const isCollab = currentLeagueObj?.isCollab;
 
           return (
@@ -818,7 +818,7 @@ export default function Standings() {
             </div>
 
             {(() => {
-              const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+              const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
               const isShowSponsors = currentLeagueObj ? (currentLeagueObj.show_sponsors !== false) : (localStorage.getItem('hfl_league_show_sponsors_' + selectedLeague) !== 'false');
               if (!isShowSponsors) return null;
               const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
@@ -861,7 +861,7 @@ export default function Standings() {
       {/* 2. CARDS EXPORT TEMPLATE (YELLOW & RED CARDS GLASSMORPHISM DESIGN) */}
       <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
         {(() => {
-          const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+          const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
           const isCollab = currentLeagueObj?.isCollab;
 
           return (
@@ -981,7 +981,7 @@ export default function Standings() {
             </div>
 
             {(() => {
-              const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+              const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
               const isShowSponsors = currentLeagueObj ? (currentLeagueObj.show_sponsors !== false) : (localStorage.getItem('hfl_league_show_sponsors_' + selectedLeague) !== 'false');
               if (!isShowSponsors) return null;
               const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
