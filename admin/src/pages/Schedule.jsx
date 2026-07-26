@@ -52,40 +52,55 @@ const Schedule = () => {
   const [selectedSponsors, setSelectedSponsors] = useState([]);
 
   useEffect(() => {
-    fetchMainSponsor();
-    fetchSelectedSponsors();
+    fetchSponsorsData();
     loadLeaguesAndData();
   }, [orgId]);
 
-  const fetchSelectedSponsors = async () => {
+  const fetchSponsorsData = async () => {
     try {
-      const savedSelected = localStorage.getItem(`hfl_selectedSponsors_${orgId}`);
-      if (savedSelected) {
-        setSelectedSponsors(JSON.parse(savedSelected));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const fetchMainSponsor = async () => {
-    try {
-      const saved = localStorage.getItem(`hfl_main_sponsor_${orgId}`);
-      if (saved) setMainSponsor(JSON.parse(saved));
-
+      let loadedSponsors = [];
       try {
-        let query = supabase.from('sponsors').select('*').eq('is_main', true);
+        let query = supabase.from('sponsors').select('*').order('created_at', { ascending: false });
         if (orgId) {
           query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
         }
-        const { data } = await query.limit(1);
-        if (data && data.length > 0) {
-          setMainSponsor(data[0]);
-          localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(data[0]));
+        const { data, error } = await query;
+        if (!error && data) {
+          loadedSponsors = data;
+        }
+      } catch (err) {
+        const { data } = await supabase.from('sponsors').select('*').order('created_at', { ascending: false });
+        loadedSponsors = data || [];
+      }
+
+      // 1. Main sponsor
+      const mainFromDb = loadedSponsors.find(s => s.is_main === true);
+      if (mainFromDb) {
+        setMainSponsor(mainFromDb);
+        try { localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(mainFromDb)); } catch (e) {}
+      } else {
+        try {
+          const savedMain = localStorage.getItem(`hfl_main_sponsor_${orgId}`);
+          if (savedMain) setMainSponsor(JSON.parse(savedMain));
+        } catch (e) {}
+      }
+
+      // 2. Selected secondary sponsors
+      let selectedList = [];
+      try {
+        const savedSelected = localStorage.getItem(`hfl_selectedSponsors_${orgId}`);
+        if (savedSelected) {
+          selectedList = JSON.parse(savedSelected);
         }
       } catch (e) {}
+
+      if (!selectedList || selectedList.length === 0) {
+        selectedList = loadedSponsors.filter(s => !s.is_main);
+      }
+
+      setSelectedSponsors(selectedList);
     } catch (e) {
-      console.error(e);
+      console.error('Error fetching sponsors data:', e);
     }
   };
 
@@ -988,18 +1003,22 @@ const Schedule = () => {
               </div>
 
               {/* Bottom Selected Secondary Sponsors Banner */}
-              {selectedSponsors.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '20px', marginBottom: '15px' }}>
-                  {selectedSponsors.map((s, idx) => (
-                    <React.Fragment key={s.id || idx}>
-                      <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
-                      {idx < selectedSponsors.length - 1 && (
-                        <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
-              )}
+              {(() => {
+                const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
+                if (secondarySponsors.length === 0) return null;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '20px', marginBottom: '15px' }}>
+                    {secondarySponsors.map((s, idx) => (
+                      <React.Fragment key={s.id || idx}>
+                        <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                        {idx < secondarySponsors.length - 1 && (
+                          <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}
