@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Download, Save, ShieldAlert, Crop, Image as ImageIcon, Upload, Sparkles, AlertCircle, X, Check, Trophy } from 'lucide-react';
+import { Download, Save, ShieldAlert, Crop, Image as ImageIcon, Upload, Sparkles, AlertCircle, X, Check, Trophy, Trash2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import ImageCropperModal from '../components/ImageCropperModal';
 import './Standings.css';
@@ -394,13 +394,19 @@ export default function Standings() {
 
   const displayRound = selectedRound || '1';
 
-  // Background theme mapping for export
-  let exportThemeClass = 'theme-export-Super';
-  if (selectedLeague.includes('Pro')) exportThemeClass = 'theme-export-Pro';
-  else if (selectedLeague.includes('3-liga') || selectedLeague.includes('3 liga')) exportThemeClass = 'theme-export-3-liga';
-  else if (selectedLeague.includes('Europa')) exportThemeClass = 'theme-export-Europa';
-  else if (selectedLeague.includes('Chempion')) exportThemeClass = 'theme-export-Chempion';
-  else if (selectedLeague.includes('7x7')) exportThemeClass = 'theme-export-7x7';
+  const currentLeagueObj = activeLeagues.find(l => l.name === selectedLeague);
+  const currentLeagueBg = currentLeagueObj?.export_bg_url || getLeagueBgForOrg(orgId, selectedLeague);
+
+  const handleDeleteLeagueBg = () => {
+    if (!window.confirm(`"${selectedLeague}" ligasi uchun saqlangan 1:1 fon rasmini o'chirmoqchimisiz?`)) return;
+    try {
+      localStorage.removeItem(`hfl_export_bg_${orgId}_${selectedLeague}`);
+      const updatedLeagues = activeLeagues.map(l => l.name === selectedLeague ? { ...l, export_bg_url: null } : l);
+      setActiveLeagues(updatedLeagues);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   if (loading) {
     return (
@@ -458,34 +464,76 @@ export default function Standings() {
           <Trophy size={26} className="standings-title-icon" />
           <h1>Turnir Jadvali va Export</h1>
         </div>
-        <div className="standings-header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button className="btn-download bg-upload-btn" onClick={() => setIsCropperOpen(true)} title="1:1 formatda liga uchun fon rasmi yuklash va qirqish">
-            <Crop size={18} /> <span>1:1 Fon Rasmi</span>
-          </button>
-          <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting}>
-            <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish'}</span>
-          </button>
-          <button className="btn-download cards-btn" onClick={() => handleExportWithCheck('cards')} disabled={isExportingCards}>
-            <ShieldAlert size={18} /> <span>{isExportingCards ? 'Yuklanmoqda...' : 'Kartochkalarni yuklab olish'}</span>
-          </button>
-        </div>
       </div>
 
-      <div className="filters-row">
-        <div className="filter-group">
-          <label>Liga</label>
-          <select value={selectedLeague} onChange={(e) => setSelectedLeague(e.target.value)}>
-            {activeLeagues.map(l => (
-              <option key={l.id} value={l.name}>{l.name}</option>
-            ))}
-            {activeLeagues.length === 0 && <option value="">Hali ligalar yo'q</option>}
-          </select>
+      {/* 1x1 Poster Preview Box & Action Buttons below it (matches Schedule / O'yinlar page design) */}
+      <div className="schedule-filter-banner-card">
+        <div className="filter-header-bar">
+          <div className="filter-title-group">
+            <Trophy size={18} className="filter-icon" />
+            <span>Eksport va Fon Rasmi Boshqaruvi ({selectedLeague})</span>
+          </div>
         </div>
-        <div className="filter-group">
-          <label>Tur</label>
-          <select value={selectedRound} onChange={(e) => setSelectedRound(e.target.value)}>
-            {roundOptions.map(r => <option key={r} value={r}>{r}-tur</option>)}
-          </select>
+
+        <div className="filter-expanded-content" style={{ marginTop: '16px' }}>
+          <div className="filter-row">
+            <div className="filter-field">
+              <label>Liga tanlang</label>
+              <div className="custom-select-wrapper">
+                <select value={selectedLeague} onChange={(e) => setSelectedLeague(e.target.value)}>
+                  {activeLeagues.map(l => (
+                    <option key={l.id} value={l.name}>{l.name} {l.isCollab ? '(Co-Host)' : ''}</option>
+                  ))}
+                  {activeLeagues.length === 0 && <option value="">Hali ligalar yo'q</option>}
+                </select>
+              </div>
+            </div>
+            <div className="filter-field">
+              <label>Tur</label>
+              <div className="custom-select-wrapper">
+                <select value={selectedRound} onChange={(e) => setSelectedRound(e.target.value)}>
+                  {roundOptions.map(r => <option key={r} value={r}>{r}-tur</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 1x1 Poster Image Box & Buttons directly below */}
+        <div className="poster-banner-section" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
+          <div className="poster-preview-square" style={{ width: '220px', height: '220px' }}>
+            {currentLeagueBg ? (
+              <img src={currentLeagueBg} alt="1x1 Export Background" className="poster-img-1x1" />
+            ) : (
+              <div className="poster-placeholder-1x1">
+                <ImageIcon size={36} />
+                <span>1x1 Orqa Fon</span>
+                <span className="sub-tag">({selectedLeague || 'Tanlanmagan'})</span>
+              </div>
+            )}
+          </div>
+
+          <div className="poster-action-buttons" style={{ width: '100%', maxWidth: '480px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px', width: '100%', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
+                <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish'}</span>
+              </button>
+              <button className="btn-download cards-btn" onClick={() => handleExportWithCheck('cards')} disabled={isExportingCards} style={{ flex: 1, minWidth: '180px' }}>
+                <ShieldAlert size={18} /> <span>{isExportingCards ? 'Yuklanmoqda...' : 'Kartochkalarni yuklab olish'}</span>
+              </button>
+            </div>
+
+            <div className="poster-sub-buttons" style={{ width: '100%', display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
+              <button className="btn-banner-action btn-upload" onClick={() => setIsCropperOpen(true)}>
+                <Crop size={15} /> <span>{currentLeagueBg ? 'Boshqa rasm yuklash (1:1)' : '1:1 Fon Rasm yuklash'}</span>
+              </button>
+              {currentLeagueBg && (
+                <button className="btn-banner-action btn-delete" onClick={handleDeleteLeagueBg}>
+                  <Trash2 size={15} /> <span>Fonni o'chirish</span>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
