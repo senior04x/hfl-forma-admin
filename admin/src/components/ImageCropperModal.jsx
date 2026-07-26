@@ -1,48 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import Cropper from 'react-easy-crop';
+import React, { useState, useEffect, useRef } from 'react';
 import { Crop, Check, X, ZoomIn, ZoomOut } from 'lucide-react';
 import './ImageCropperModal.css';
-
-// Rasmni canvas orqali qirqish
-async function getCroppedImg(imageSrc, pixelCrop) {
-  const image = await createImage(imageSrc);
-  const canvas = document.createElement('canvas');
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
-  const ctx = canvas.getContext('2d');
-
-  // Clear background so transparent PNG images maintain transparency
-  ctx.clearRect(0, 0, pixelCrop.width, pixelCrop.height);
-
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    pixelCrop.width,
-    pixelCrop.height
-  );
-
-  return canvas.toDataURL('image/png');
-}
-
-function createImage(url) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    if (url && !url.startsWith('data:')) {
-      img.crossOrigin = 'anonymous';
-    }
-    img.onload = () => resolve(img);
-    img.onerror = (err) => {
-      console.error('Image load error in cropper:', err);
-      reject(err);
-    };
-    img.src = url;
-  });
-}
 
 const ImageCropperModal = ({
   isOpen = true,
@@ -52,35 +10,136 @@ const ImageCropperModal = ({
   onCropComplete,
   imageSrc: propImageSrc,
   initialImageSrc,
-  title = "Rasmni Qirqish",
-  aspect: propAspect = 1,
-  showAspectSelector = false
+  title = "Rasmni Qirqish (1:1)"
 }) => {
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [aspect, setAspect] = useState(propAspect);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-
-  useEffect(() => {
-    setAspect(propAspect);
-  }, [propAspect]);
-
   const handleClose = onClose || onCancel || (() => {});
   const handleSave = onSave || onCropComplete || (() => {});
   const src = propImageSrc || initialImageSrc;
 
-  const onCropCompleteHandler = useCallback((_, croppedPixels) => {
-    setCroppedAreaPixels(croppedPixels);
-  }, []);
+  const canvasRef = useRef(null);
+  const [imageObj, setImageObj] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  const handleCropAndSave = async () => {
-    if (!croppedAreaPixels || !src) return;
-    try {
-      const croppedDataUrl = await getCroppedImg(src, croppedAreaPixels);
-      handleSave(croppedDataUrl);
-    } catch (e) {
-      console.error('Crop error:', e);
+  // Load image
+  useEffect(() => {
+    if (!src) return;
+    const img = new Image();
+    if (!src.startsWith('data:')) {
+      img.crossOrigin = 'anonymous';
     }
+    img.onload = () => {
+      setImageObj(img);
+      setZoom(1);
+      setOffset({ x: 0, y: 0 });
+    };
+    img.onerror = (err) => {
+      console.error("Cropper image load error:", err);
+    };
+    img.src = src;
+  }, [src]);
+
+  // Draw image on preview canvas
+  useEffect(() => {
+    if (!imageObj || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const size = 320; // viewport square size
+
+    canvas.width = size;
+    canvas.height = size;
+
+    ctx.fillStyle = '#0b1221';
+    ctx.fillRect(0, 0, size, size);
+
+    // Calculate scaling to cover 320x320
+    const minDim = Math.min(imageObj.width, imageObj.height);
+    const baseScale = size / minDim;
+    const currentScale = baseScale * zoom;
+
+    const drawW = imageObj.width * currentScale;
+    const drawH = imageObj.height * currentScale;
+
+    const drawX = (size - drawW) / 2 + offset.x;
+    const drawY = (size - drawH) / 2 + offset.y;
+
+    ctx.drawImage(imageObj, drawX, drawY, drawW, drawH);
+  }, [imageObj, zoom, offset]);
+
+  // Mouse Drag handlers
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    setOffset({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Touch Drag handlers
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      setDragStart({ x: e.touches[0].clientX - offset.x, y: e.touches[0].clientY - offset.y });
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    setOffset({
+      x: e.touches[0].clientX - dragStart.x,
+      y: e.touches[0].clientY - dragStart.y
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleCropAndSave = () => {
+    if (!imageObj) return;
+
+    // Create high-res 500x500 cropped output canvas
+    const exportSize = 500;
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = exportSize;
+    outCanvas.height = exportSize;
+    const ctx = outCanvas.getContext('2d');
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, exportSize, exportSize);
+
+    const size = 320;
+    const minDim = Math.min(imageObj.width, imageObj.height);
+    const baseScale = size / minDim;
+    const currentScale = baseScale * zoom;
+
+    const drawW = imageObj.width * currentScale;
+    const drawH = imageObj.height * currentScale;
+    const drawX = (size - drawW) / 2 + offset.x;
+    const drawY = (size - drawH) / 2 + offset.y;
+
+    const scaleFactor = exportSize / size;
+    ctx.drawImage(
+      imageObj,
+      drawX * scaleFactor,
+      drawY * scaleFactor,
+      drawW * scaleFactor,
+      drawH * scaleFactor
+    );
+
+    const croppedBase64 = outCanvas.toDataURL('image/jpeg', 0.9);
+    handleSave(croppedBase64);
   };
 
   if (!isOpen || !src) return null;
@@ -99,64 +158,40 @@ const ImageCropperModal = ({
         </div>
 
         <div className="cropper-body">
-          {showAspectSelector && (
-            <div className="cropper-aspect-row">
-              <button 
-                type="button" 
-                className={`aspect-btn ${aspect === 16 / 9 ? 'active' : ''}`}
-                onClick={() => setAspect(16 / 9)}
-              >
-                16:9 (Uzun)
-              </button>
-              <button 
-                type="button" 
-                className={`aspect-btn ${aspect === 1 ? 'active' : ''}`}
-                onClick={() => setAspect(1)}
-              >
-                1:1 (Kvadrat)
-              </button>
-              <button 
-                type="button" 
-                className={`aspect-btn ${aspect === null || aspect === undefined ? 'active' : ''}`}
-                onClick={() => setAspect(undefined)}
-              >
-                Erkin (Free)
-              </button>
+          <div 
+            className="cropper-canvas-wrapper"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+          >
+            <canvas ref={canvasRef} className="cropper-canvas" />
+            <div className="cropper-grid-overlay">
+              <div className="grid-line horizontal h1"></div>
+              <div className="grid-line horizontal h2"></div>
+              <div className="grid-line vertical v1"></div>
+              <div className="grid-line vertical v2"></div>
             </div>
-          )}
-
-          <div className="cropper-image-container">
-            <Cropper
-              image={src}
-              crop={crop}
-              zoom={zoom}
-              aspect={aspect}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={onCropCompleteHandler}
-              cropShape="rect"
-              showGrid={true}
-              style={{
-                containerStyle: { width: '100%', height: '100%', borderRadius: '10px' },
-                cropAreaStyle: { border: '2.5px solid #00aaff' },
-              }}
-            />
           </div>
 
           <div className="cropper-actions-row">
-            <button type="button" onClick={() => setZoom(z => Math.max(1, z - 0.2))} className="cropper-action-btn">
+            <button type="button" onClick={() => setZoom(z => Math.max(0.8, z - 0.15))} className="cropper-action-btn">
               <ZoomOut size={16} /> Kichiklashtirish
             </button>
             <input
               type="range"
-              min={1}
+              min={0.8}
               max={3}
               step={0.05}
               value={zoom}
               onChange={e => setZoom(Number(e.target.value))}
               className="cropper-zoom-slider"
             />
-            <button type="button" onClick={() => setZoom(z => Math.min(3, z + 0.2))} className="cropper-action-btn">
+            <button type="button" onClick={() => setZoom(z => Math.min(3, z + 0.15))} className="cropper-action-btn">
               <ZoomIn size={16} /> Kattalashtirish
             </button>
           </div>
