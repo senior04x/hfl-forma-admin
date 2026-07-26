@@ -40,7 +40,10 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2 className="login-subtitle">Futbolni avtomatlashtirish biz bilan oson</h2>
+        <h2 className="login-subtitle">
+          <span>Futbolni avtomatlashtirish</span>
+          <span className="login-subtitle-line2">biz bilan oson</span>
+        </h2>
         
         <form onSubmit={handleLogin}>
           <div className="form-group">

@@ -6,9 +6,11 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
   width: 100vw;
   margin: 0;
+  padding: 16px;
+  box-sizing: border-box;
   font-family: 'Inter', sans-serif;
 }
 
@@ -16,7 +18,7 @@
   background: #141922;
   border: 1px solid rgba(0, 255, 102, 0.2);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 255, 102, 0.05);
-  padding: 40px;
+  padding: 36px 32px;
   border-radius: 20px;
   width: 100%;
   max-width: 420px;
@@ -28,11 +30,23 @@
   font-family: 'Outfit', sans-serif;
   font-size: 18px;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.35;
   color: #00ff66;
   margin-top: 0;
   margin-bottom: 28px;
   letter-spacing: 0.2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.login-subtitle-line2 {
+  display: block;
+  font-size: 17px;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
 }
 
 .login-card .form-group {
@@ -111,4 +125,24 @@
   margin-top: 18px;
   font-size: 13px;
   font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    padding: 16px;
+  }
+  
+  .login-card {
+    padding: 28px 20px;
+    border-radius: 16px;
+  }
+
+  .login-subtitle {
+    font-size: 16px;
+    margin-bottom: 22px;
+  }
+
+  .login-subtitle-line2 {
+    font-size: 15px;
+  }
 }
