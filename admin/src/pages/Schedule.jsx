@@ -413,12 +413,37 @@ const Schedule = () => {
     query = applyOrgAndCollabFilter(query, orgId, leaguesList);
 
     const { data } = await query;
-    if (data) setMatches(data);
+    if (data) {
+      // Merge is_postponed from localStorage if DB column not available
+      let postponedMap = {};
+      try {
+        postponedMap = JSON.parse(localStorage.getItem(`hfl_postponed_${orgId}`) || '{}');
+      } catch (e) {}
+
+      const merged = data.map(m => ({
+        ...m,
+        is_postponed: m.is_postponed != null ? m.is_postponed : !!postponedMap[m.id]
+      }));
+      setMatches(merged);
+    }
   };
 
   const handleTogglePostponed = async (match, isPostponedVal) => {
     setMatches(prev => prev.map(m => m.id === match.id ? { ...m, is_postponed: isPostponedVal } : m));
 
+    // Save to localStorage immediately for cross-device fallback
+    try {
+      const key = `hfl_postponed_${orgId}`;
+      const saved = JSON.parse(localStorage.getItem(key) || '{}');
+      if (isPostponedVal) {
+        saved[match.id] = true;
+      } else {
+        delete saved[match.id];
+      }
+      localStorage.setItem(key, JSON.stringify(saved));
+    } catch (e) {}
+
+    // Save to Supabase DB
     try {
       const { error } = await supabase
         .from('matches')
@@ -426,7 +451,7 @@ const Schedule = () => {
         .eq('id', match.id);
 
       if (error) {
-        console.warn('is_postponed update notice:', error);
+        console.warn('is_postponed DB update notice:', error);
       }
     } catch (err) {
       console.error('Error toggling is_postponed:', err);
@@ -744,7 +769,6 @@ const Schedule = () => {
                     checked={!!match.is_postponed} 
                     onChange={(e) => handleTogglePostponed(match, e.target.checked)} 
                   />
-                  <span>{match.is_postponed ? "⚠️ Qoldirilgan o'yin" : "Qoldirilgan"}</span>
                 </label>
               </div>
               <button className="btn-manage-match" onClick={() => navigate('/match/' + match.id)}>⚙️ Boshqarish</button>
