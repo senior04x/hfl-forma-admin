@@ -1317,17 +1317,35 @@ const Schedule = () => {
               />
             </div>
 
-            <div className="form-group checkbox-group" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginTop: '12px', background: 'rgba(255, 59, 48, 0.12)', padding: '10px 16px', borderRadius: '10px', border: '1px solid rgba(255, 59, 48, 0.3)', width: 'fit-content' }}>
+            <div 
+              onClick={() => setIsPostponed(!isPostponed)}
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'row',
+                alignItems: 'center', 
+                gap: '10px', 
+                marginTop: '14px', 
+                marginBottom: '10px',
+                background: isPostponed ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 255, 255, 0.05)', 
+                padding: '10px 16px', 
+                borderRadius: '10px', 
+                border: isPostponed ? '1px solid rgba(255, 59, 48, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)', 
+                cursor: 'pointer',
+                userSelect: 'none',
+                width: 'fit-content'
+              }}
+            >
               <input 
                 type="checkbox" 
                 id="is_postponed_checkbox"
                 checked={isPostponed} 
                 onChange={(e) => setIsPostponed(e.target.checked)} 
-                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#ff3b30' }}
+                onClick={(e) => e.stopPropagation()}
+                style={{ width: '18px', height: '18px', margin: 0, padding: 0, cursor: 'pointer', accentColor: '#ff3b30' }}
               />
-              <label htmlFor="is_postponed_checkbox" style={{ margin: 0, cursor: 'pointer', fontWeight: '700', color: isPostponed ? '#ff4d4d' : '#ffffff', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
+              <span style={{ cursor: 'pointer', fontWeight: '700', color: isPostponed ? '#ff4d4d' : '#ffffff', fontSize: '14px', whiteSpace: 'nowrap', display: 'inline-block' }}>
                 Qoldirilgan o'yin
-              </label>
+              </span>
             </div>
 
             <div className="modal-actions">
