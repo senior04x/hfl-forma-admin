@@ -57,9 +57,36 @@ export default function Standings() {
     e.target.value = '';
   };
 
+  const [mainSponsor, setMainSponsor] = useState(null);
+
+  useEffect(() => {
+    fetchMainSponsor();
+  }, [orgId]);
+
+  const fetchMainSponsor = async () => {
+    try {
+      const saved = localStorage.getItem(`hfl_main_sponsor_${orgId}`);
+      if (saved) setMainSponsor(JSON.parse(saved));
+
+      let query = supabase.from('sponsors').select('*').eq('is_main', true);
+      if (orgId) {
+        query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
+      }
+      const { data } = await query.limit(1);
+      if (data && data.length > 0) {
+        setMainSponsor(data[0]);
+        localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(data[0]));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const mainSponsorLogo = mainSponsor?.logo_url || '/Joma-logo.png';
+
   const [selectedSponsors, setSelectedSponsors] = useState(() => {
     try {
-      const saved = localStorage.getItem('hfl_selectedSponsors');
+      const saved = localStorage.getItem(`hfl_selectedSponsors_${orgId}`);
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return [];
@@ -679,7 +706,7 @@ export default function Standings() {
                   </div>
 
                   <div className="export-logo-right" style={{ width: '220px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
-                    <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
+                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
                   </div>
                 </div>
 
@@ -864,7 +891,7 @@ export default function Standings() {
                   </div>
 
                   <div className="export-logo-right" style={{ width: '220px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
-                    <img src="/Joma-logo.png" alt="Joma" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
+                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
                   </div>
                 </div>
 

@@ -38,10 +38,33 @@ const Schedule = () => {
   const [cropperRawImage, setCropperRawImage] = useState(null);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const bannerFileInputRef = useRef(null);
+  const [mainSponsor, setMainSponsor] = useState(null);
 
   useEffect(() => {
+    fetchMainSponsor();
     loadLeaguesAndData();
   }, [orgId]);
+
+  const fetchMainSponsor = async () => {
+    try {
+      const saved = localStorage.getItem(`hfl_main_sponsor_${orgId}`);
+      if (saved) setMainSponsor(JSON.parse(saved));
+
+      let query = supabase.from('sponsors').select('*').eq('is_main', true);
+      if (orgId) {
+        query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
+      }
+      const { data } = await query.limit(1);
+      if (data && data.length > 0) {
+        setMainSponsor(data[0]);
+        localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(data[0]));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const mainSponsorLogo = mainSponsor?.logo_url || '/Joma-logo.png';
 
   const loadLeaguesAndData = async () => {
     setLoading(true);
@@ -442,19 +465,53 @@ const Schedule = () => {
       )}
 
       <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
-        <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
-          <div className="sch-export-body">
-            {matches.filter(m => m.league === exportLeague && m.round == exportRound).map(match => (
-              <div key={match.id} className="sch-match-row">
-                <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                <div style={{ color: '#fff', fontSize: '20px', fontWeight: '800', textAlign: 'center' }}>{match.home_team?.name}</div>
-                <div className="sch-time-container"><div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div><div className="sch-time-box">{match.match_time?.substring(0, 5)}</div></div>
-                <div style={{ color: '#fff', fontSize: '20px', fontWeight: '800', textAlign: 'center' }}>{match.away_team?.name}</div>
-                <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+        {(() => {
+          const currentLeagueObj = activeLeagues.find(l => l.name === exportLeague);
+          const isCollab = currentLeagueObj?.isCollab;
+
+          return (
+            <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', padding: '40px 50px', boxSizing: 'border-box' }}>
+              {/* Header */}
+              <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', width: '100%' }}>
+                <div className="export-logo-left" style={{ width: 'auto', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                  {isCollab ? (
+                    <>
+                      <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '90px', objectFit: 'contain' }} />
+                      <img src="/x.png" crossOrigin="anonymous" style={{ height: '18px', objectFit: 'contain', opacity: 0.7 }} />
+                      <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain' }} />
+                    </>
+                  ) : (
+                    <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain' }} />
+                  )}
+                </div>
+
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  {currentLeagueObj?.logo_url ? (
+                    <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ height: '110px', maxWidth: '380px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                  ) : (
+                    <h2 style={{ color: '#fff', fontSize: '32px', fontWeight: '900', textTransform: 'uppercase' }}>{exportLeague} {exportRound ? `(${exportRound}-TUR)` : ''}</h2>
+                  )}
+                </div>
+
+                <div className="export-logo-right" style={{ width: '220px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
+                  <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain' }} />
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
+
+              <div className="sch-export-body" style={{ flex: 1 }}>
+                {matches.filter(m => m.league === exportLeague && m.round == exportRound).map(match => (
+                  <div key={match.id} className="sch-match-row">
+                    <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                    <div style={{ color: '#fff', fontSize: '20px', fontWeight: '800', textAlign: 'center' }}>{match.home_team?.name}</div>
+                    <div className="sch-time-container"><div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div><div className="sch-time-box">{match.match_time?.substring(0, 5)}</div></div>
+                    <div style={{ color: '#fff', fontSize: '20px', fontWeight: '800', textAlign: 'center' }}>{match.away_team?.name}</div>
+                    <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
