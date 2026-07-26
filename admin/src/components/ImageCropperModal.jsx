@@ -29,9 +29,12 @@ const ImageCropperModal = ({
   const viewWidth = aspect > 1 ? 440 : 320;
   const viewHeight = Math.round(viewWidth / aspect);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   // Load image
   useEffect(() => {
     if (!src) return;
+    setIsSaving(false);
     const img = new Image();
     if (!src.startsWith('data:')) {
       img.crossOrigin = 'anonymous';
@@ -112,41 +115,48 @@ const ImageCropperModal = ({
     setIsDragging(false);
   };
 
-  const handleCropAndSave = () => {
-    if (!imageObj) return;
+  const handleCropAndSave = async () => {
+    if (!imageObj || isSaving) return;
 
-    // Create high-res export output canvas
-    const exportWidth = aspect > 1 ? 1280 : 800;
-    const exportHeight = Math.round(exportWidth / aspect);
-    const outCanvas = document.createElement('canvas');
-    outCanvas.width = exportWidth;
-    outCanvas.height = exportHeight;
-    const ctx = outCanvas.getContext('2d');
+    setIsSaving(true);
+    try {
+      // Create high-res export output canvas
+      const exportWidth = aspect > 1 ? 1280 : 800;
+      const exportHeight = Math.round(exportWidth / aspect);
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = exportWidth;
+      outCanvas.height = exportHeight;
+      const ctx = outCanvas.getContext('2d');
 
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, exportWidth, exportHeight);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, exportWidth, exportHeight);
 
-    const scaleX = viewWidth / imageObj.width;
-    const scaleY = viewHeight / imageObj.height;
-    const baseScale = Math.max(scaleX, scaleY);
-    const currentScale = baseScale * zoom;
+      const scaleX = viewWidth / imageObj.width;
+      const scaleY = viewHeight / imageObj.height;
+      const baseScale = Math.max(scaleX, scaleY);
+      const currentScale = baseScale * zoom;
 
-    const drawW = imageObj.width * currentScale;
-    const drawH = imageObj.height * currentScale;
-    const drawX = (viewWidth - drawW) / 2 + offset.x;
-    const drawY = (viewHeight - drawH) / 2 + offset.y;
+      const drawW = imageObj.width * currentScale;
+      const drawH = imageObj.height * currentScale;
+      const drawX = (viewWidth - drawW) / 2 + offset.x;
+      const drawY = (viewHeight - drawH) / 2 + offset.y;
 
-    const scaleFactor = exportWidth / viewWidth;
-    ctx.drawImage(
-      imageObj,
-      drawX * scaleFactor,
-      drawY * scaleFactor,
-      drawW * scaleFactor,
-      drawH * scaleFactor
-    );
+      const scaleFactor = exportWidth / viewWidth;
+      ctx.drawImage(
+        imageObj,
+        drawX * scaleFactor,
+        drawY * scaleFactor,
+        drawW * scaleFactor,
+        drawH * scaleFactor
+      );
 
-    const croppedBase64 = outCanvas.toDataURL('image/png');
-    handleSave(croppedBase64);
+      const croppedBase64 = outCanvas.toDataURL('image/png');
+      await handleSave(croppedBase64);
+    } catch (err) {
+      console.error("Error cropping image:", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!isOpen || !src) return null;
@@ -159,7 +169,7 @@ const ImageCropperModal = ({
             <Crop size={20} />
             <h2>{title}</h2>
           </div>
-          <button type="button" className="cropper-close-btn" onClick={handleClose}>
+          <button type="button" className="cropper-close-btn" onClick={handleClose} disabled={isSaving}>
             <X size={18} />
           </button>
         </div>
@@ -211,11 +221,21 @@ const ImageCropperModal = ({
         </div>
 
         <div className="cropper-footer">
-          <button type="button" className="cropper-cancel-btn" onClick={handleClose}>
+          <button type="button" className="cropper-cancel-btn" onClick={handleClose} disabled={isSaving}>
             Bekor qilish
           </button>
-          <button type="button" className="cropper-save-btn" onClick={handleCropAndSave}>
-            <Check size={18} /> Qirqish va Saqlash
+          <button type="button" className="cropper-save-btn" onClick={handleCropAndSave} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <span className="btn-spinner"></span>
+                <span>Saqlanmoqda...</span>
+              </>
+            ) : (
+              <>
+                <Check size={18} />
+                <span>Qirqish va Saqlash</span>
+              </>
+            )}
           </button>
         </div>
       </div>

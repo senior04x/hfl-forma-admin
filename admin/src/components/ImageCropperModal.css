@@ -356,8 +356,24 @@
 }
 
 .cropper-save-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.65;
   cursor: not-allowed;
+}
+
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: cropperSpin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes cropperSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Zoom slider */
