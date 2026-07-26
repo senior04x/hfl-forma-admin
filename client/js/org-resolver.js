@@ -1,35 +1,53 @@
 /**
  * org-resolver.js
- * URL'dan ?org=slug parametrini o'qib, Supabase'dan tashkilotni aniqlaydi.
+ * URL'dan ?org=slug parametrini yoki URL path'dan (masalan /llf/apply-team) tashkilot slug'ini aniqlaydi.
  * Global o'zgaruvchilar: window.currentOrg, window.orgLeagues, window.orgSlug
- * 
- * Barcha apply sahifalari bu scriptni supabase.js dan keyin yuklaydi.
  */
 
 (function () {
-  // Defaults
   const DEFAULT_ORG_ID = 1;
   const DEFAULT_ORG_NAME = 'Havas Futbol Ligasi';
 
-  // Parse ?org= from URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const orgSlug = urlParams.get('org') || '';
+  const RESERVED_PATHS = new Set([
+    '', 'index', 'index.html', 'teams', 'teams.html', 'matches', 'matches.html',
+    'standings', 'standings.html', 'apply', 'apply.html', 'apply-team', 'apply-team.html',
+    'apply-individual', 'apply-individual.html', 'team-details', 'team-details.html',
+    'match-details', 'match-details.html', 'css', 'js', 'images', 'assets', 'api',
+    'favicon.svg', 'robots.txt', 'sitemap.xml', 'manifest.json'
+  ]);
+
+  function detectOrgSlug() {
+    // 1. Query parameter: ?org=slug
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryOrg = urlParams.get('org');
+    if (queryOrg && queryOrg.trim()) {
+      return queryOrg.trim().toLowerCase();
+    }
+
+    // 2. Path segment: /slug/page or /slug
+    const pathSegments = window.location.pathname.split('/').filter(Boolean);
+    if (pathSegments.length > 0) {
+      const firstSegment = pathSegments[0].toLowerCase();
+      if (!RESERVED_PATHS.has(firstSegment)) {
+        return firstSegment;
+      }
+    }
+
+    return '';
+  }
+
+  const orgSlug = detectOrgSlug();
 
   window.orgSlug = orgSlug;
   window.currentOrg = null;
   window.orgLeagues = [];
   window.orgReady = false;
 
-  /**
-   * Resolves the organization from slug.
-   * Returns a promise that resolves when org data is ready.
-   */
   window.resolveOrg = async function () {
     try {
       let org = null;
 
       if (orgSlug) {
-        // Fetch org by slug
         const { data, error } = await db
           .from('organizations')
           .select('*')
@@ -41,7 +59,6 @@
         }
       }
 
-      // Fallback to default org
       if (!org) {
         const { data, error } = await db
           .from('organizations')
@@ -58,7 +75,6 @@
 
       window.currentOrg = org;
 
-      // Fetch leagues for this organization
       const { data: leagues } = await db
         .from('leagues')
         .select('id, name, logo_url, is_junior, organization_id')
@@ -68,7 +84,6 @@
       window.orgLeagues = leagues || [];
       window.orgReady = true;
 
-      // Dispatch custom event so pages can react
       window.dispatchEvent(new CustomEvent('orgResolved', { detail: { org, leagues: window.orgLeagues } }));
 
       return { org, leagues: window.orgLeagues };
@@ -83,13 +98,18 @@
   };
 
   /**
-   * Helper: builds URL preserving ?org= parameter
+   * Helper: builds URL preserving org slug (either as path /slug/page or ?org=slug)
    */
   window.buildOrgUrl = function (path) {
-    if (orgSlug) {
-      const separator = path.includes('?') ? '&' : '?';
-      return path + separator + 'org=' + encodeURIComponent(orgSlug);
+    if (!orgSlug) return path;
+
+    // Clean page name from path (e.g., 'apply-team.html' -> 'apply-team', 'index.html' -> '')
+    let page = path.split('?')[0].replace('.html', '').replace(/^\//, '');
+    const queryStr = path.includes('?') ? '?' + path.split('?')[1] : '';
+
+    if (page === 'index' || page === '') {
+      return '/' + orgSlug + queryStr;
     }
-    return path;
+    return '/' + orgSlug + '/' + page + queryStr;
   };
 })();

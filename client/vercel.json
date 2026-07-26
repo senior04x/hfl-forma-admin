@@ -5,5 +5,16 @@
     "sizes": [256, 384, 640, 750, 828, 1080, 1200, 1920],
     "domains": ["xzzyhfyazwohdqqbjiiy.supabase.co"],
     "minimumCacheTTL": 86400
-  }
+  },
+  "rewrites": [
+    { "source": "/:org/apply-team", "destination": "/apply-team.html" },
+    { "source": "/:org/apply-individual", "destination": "/apply-individual.html" },
+    { "source": "/:org/apply", "destination": "/apply.html" },
+    { "source": "/:org/teams", "destination": "/teams.html" },
+    { "source": "/:org/team-details", "destination": "/team-details.html" },
+    { "source": "/:org/matches", "destination": "/matches.html" },
+    { "source": "/:org/match-details", "destination": "/match-details.html" },
+    { "source": "/:org/standings", "destination": "/standings.html" },
+    { "source": "/:org", "destination": "/index.html" }
+  ]
 }
