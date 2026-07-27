@@ -6,8 +6,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const urlParams = new URLSearchParams(window.location.search);
         const orgParam = urlParams.get('org');
-        return orgParam ? `${path}?org=${encodeURIComponent(orgParam)}` : path;
+        if (!orgParam) return path;
+        const separator = path.includes('?') ? '&' : '?';
+        return `${path}${separator}org=${encodeURIComponent(orgParam)}`;
     }
+    window.getUrl = getUrl;
 
     const homeUrl = getUrl('index.html');
     const teamsUrl = getUrl('teams.html');
@@ -316,8 +319,9 @@ function initNavbarSearch() {
                     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:18px;">
                         ${sec.list.map(x => {
                             const team = x.item;
+                            const teamUrl = window.getUrl ? window.getUrl(`team-details.html?id=${team.id}`) : `team-details.html?id=${team.id}`;
                             return `
-                            <div class="screen-search-card" onclick="window.location.href='team-details.html?id=${team.id}'" style="background:rgba(18,20,29,0.75); backdrop-filter:blur(15px); border:1px solid rgba(255,255,255,0.12); border-radius:24px; padding:20px; cursor:pointer; transition:all 0.3s; display:flex; flex-direction:column; justify-content:space-between; gap:16px;">
+                            <div class="screen-search-card" onclick="window.location.href='${teamUrl}'" style="background:rgba(18,20,29,0.75); backdrop-filter:blur(15px); border:1px solid rgba(255,255,255,0.12); border-radius:24px; padding:20px; cursor:pointer; transition:all 0.3s; display:flex; flex-direction:column; justify-content:space-between; gap:16px;">
                                 <div style="display:flex; align-items:center; gap:16px;">
                                     <div style="width:60px; height:60px; border-radius:18px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; padding:6px;">
                                         ${team.logo_url ? `<img src="${team.logo_url}" style="width:100%; height:100%; object-fit:contain;">` : `<i data-lucide="shield" style="width:28px; height:28px; color:#60A5FA;"></i>`}
@@ -349,7 +353,7 @@ function initNavbarSearch() {
                             const team = x.team;
                             const displayName = p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Futbolchi';
                             const displayNum = p.player_number || p.number;
-                            const targetUrl = `player-details.html?id=${p.id}`;
+                            const targetUrl = window.getUrl ? window.getUrl(`player-details.html?id=${p.id}`) : `player-details.html?id=${p.id}`;
 
                             return `
                             <div class="screen-search-card" onclick="window.location.href='${targetUrl}'" style="background:rgba(18,20,29,0.75); backdrop-filter:blur(15px); border:1px solid rgba(255,255,255,0.12); border-radius:24px; padding:20px; cursor:pointer; transition:all 0.3s; display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
@@ -382,8 +386,9 @@ function initNavbarSearch() {
                     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:18px;">
                         ${sec.list.map(x => {
                             const l = x.item;
+                            const leagueUrl = window.getUrl ? window.getUrl('standings.html') : 'standings.html';
                             return `
-                            <div class="screen-search-card" onclick="window.location.href='standings.html'" style="background:rgba(18,20,29,0.75); backdrop-filter:blur(15px); border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:18px; cursor:pointer; transition:all 0.3s; display:flex; align-items:center; gap:14px;">
+                            <div class="screen-search-card" onclick="window.location.href='${leagueUrl}'" style="background:rgba(18,20,29,0.75); backdrop-filter:blur(15px); border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:18px; cursor:pointer; transition:all 0.3s; display:flex; align-items:center; gap:14px;">
                                 <div style="width:48px; height:48px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center;">
                                     <i data-lucide="trophy" style="width:24px; height:24px; color:#00FF66;"></i>
                                 </div>

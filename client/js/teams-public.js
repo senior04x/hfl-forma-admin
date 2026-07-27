@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             teamsList.forEach(team => {
                 const card = document.createElement('a');
-                card.href = `team-details.html?id=${team.id}`;
+                card.href = window.getUrl ? window.getUrl(`team-details.html?id=${team.id}`) : `team-details.html?id=${team.id}`;
                 card.className = 'team-card-public';
                 card.onclick = () => {
                     localStorage.setItem('selectedTeamId', team.id);

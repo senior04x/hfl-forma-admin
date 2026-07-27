@@ -12,6 +12,7 @@
     '', 'index', 'index.html', 'teams', 'teams.html', 'matches', 'matches.html',
     'standings', 'standings.html', 'apply', 'apply.html', 'apply-team', 'apply-team.html',
     'apply-individual', 'apply-individual.html', 'team-details', 'team-details.html',
+    'player-details', 'player-details.html',
     'match-details', 'match-details.html', 'css', 'js', 'images', 'assets', 'api',
     'favicon.svg', 'robots.txt', 'sitemap.xml', 'manifest.json'
   ]);

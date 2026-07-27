@@ -17,7 +17,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (!teamId) {
-        window.location.href = 'teams.html';
+        const teamsUrl = window.getUrl ? window.getUrl('teams.html') : 'teams.html';
+        window.location.href = teamsUrl;
         return;
     }
 
@@ -37,7 +38,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             throw new Error("Jamoa topilmadi yoki tasdiqlanmagan");
         }
 
-        // Temporary fallback: return original url to fix broken images
         function optimizeImage(url) {
             return url;
         }
@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             tdLeagues.innerHTML = badgesHTML;
         }
 
-        // Fetch Approved Players (NO passport info in select!)
+        // Fetch Approved Players
         const { data: playersData, error: playersError } = await db
             .from('applications')
             .select('id, first_name, last_name, photo_url, player_number, position, birth_date')
@@ -113,7 +113,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Click to navigate to player profile page
             card.addEventListener('click', () => {
-                window.location.href = `player-details.html?id=${player.id}`;
+                const playerUrl = window.getUrl ? window.getUrl(`player-details.html?id=${player.id}`) : `player-details.html?id=${player.id}`;
+                window.location.href = playerUrl;
             });
 
             playersGrid.appendChild(card);
@@ -121,6 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (err) {
         console.error("Xatolik:", err);
-        loadingEl.innerHTML = '<p style="color: var(--error);">Xatolik yuz berdi yoki jamoa topilmadi.</p><a href="teams.html" style="color: var(--gold-primary); text-decoration: underline;">Ortga qaytish</a>';
+        const teamsUrl = window.getUrl ? window.getUrl('teams.html') : 'teams.html';
+        loadingEl.innerHTML = `<p style="color: var(--error);">Xatolik yuz berdi yoki jamoa topilmadi.</p><a href="${teamsUrl}" style="color: var(--gold-primary); text-decoration: underline;">Ortga qaytish</a>`;
     }
 });

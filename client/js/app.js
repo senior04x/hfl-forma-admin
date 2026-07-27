@@ -112,7 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (viewTeamBtn) {
             viewTeamBtn.addEventListener('click', () => {
                 if (teamSelect.value) {
-                    window.location.href = `team-details.html?id=${teamSelect.value}&from=individual`;
+                    const teamUrl = window.getUrl ? window.getUrl(`team-details.html?id=${teamSelect.value}&from=individual`) : `team-details.html?id=${teamSelect.value}&from=individual`;
+                    window.location.href = teamUrl;
                 }
             });
         }

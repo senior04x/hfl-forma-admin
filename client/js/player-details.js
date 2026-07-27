@@ -88,7 +88,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Click to go to team page
             document.getElementById('teamHeaderLink').addEventListener('click', () => {
-                window.location.href = `team-details.html?id=${teamData.id}`;
+                const teamUrl = window.getUrl ? window.getUrl(`team-details.html?id=${teamData.id}`) : `team-details.html?id=${teamData.id}`;
+                window.location.href = teamUrl;
             });
 
             // Fetch teammates
@@ -106,9 +107,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const tmPhoto = tm.photo_url || 'https://via.placeholder.com/80x80?text=%E2%9A%BD';
                     const tmPos = tm.position || 'Futbolchi';
                     const tmNum = tm.player_number || tm.number || '';
+                    const tmUrl = window.getUrl ? window.getUrl(`player-details.html?id=${tm.id}`) : `player-details.html?id=${tm.id}`;
 
                     return `
-                        <div class="teammate-card" onclick="window.location.href='player-details.html?id=${tm.id}'">
+                        <div class="teammate-card" onclick="window.location.href='${tmUrl}'">
                             <img class="teammate-photo" src="${tmPhoto}" alt="${tmName}" onerror="this.onerror=null; this.src='https://via.placeholder.com/80x80?text=%E2%9A%BD'">
                             <div class="teammate-name">${tmName}</div>
                             <div class="teammate-pos">${tmPos} ${tmNum ? '#' + tmNum : ''}</div>
