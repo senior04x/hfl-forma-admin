@@ -2,19 +2,36 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
+    { "source": "/js/:path*", "destination": "/js/:path*" },
+    { "source": "/css/:path*", "destination": "/css/:path*" },
+    { "source": "/images/:path*", "destination": "/images/:path*" },
+    { "source": "/assets/:path*", "destination": "/assets/:path*" },
+
+    { "source": "/teams", "destination": "/teams.html" },
+    { "source": "/team-details", "destination": "/team-details.html" },
+    { "source": "/player-details", "destination": "/player-details.html" },
+    { "source": "/matches", "destination": "/matches.html" },
+    { "source": "/match-details", "destination": "/match-details.html" },
+    { "source": "/standings", "destination": "/standings.html" },
+    { "source": "/apply", "destination": "/apply.html" },
+    { "source": "/apply-team", "destination": "/apply-team.html" },
+    { "source": "/apply-individual", "destination": "/apply-individual.html" },
+
     { "source": "/:org/js/:path*", "destination": "/js/:path*" },
     { "source": "/:org/css/:path*", "destination": "/css/:path*" },
     { "source": "/:org/images/:path*", "destination": "/images/:path*" },
     { "source": "/:org/assets/:path*", "destination": "/assets/:path*" },
-    { "source": "/:org/apply-team", "destination": "/apply-team.html" },
-    { "source": "/:org/apply-individual", "destination": "/apply-individual.html" },
-    { "source": "/:org/apply", "destination": "/apply.html" },
+
     { "source": "/:org/teams", "destination": "/teams.html" },
     { "source": "/:org/team-details", "destination": "/team-details.html" },
     { "source": "/:org/player-details", "destination": "/player-details.html" },
     { "source": "/:org/matches", "destination": "/matches.html" },
     { "source": "/:org/match-details", "destination": "/match-details.html" },
     { "source": "/:org/standings", "destination": "/standings.html" },
+    { "source": "/:org/apply", "destination": "/apply.html" },
+    { "source": "/:org/apply-team", "destination": "/apply-team.html" },
+    { "source": "/:org/apply-individual", "destination": "/apply-individual.html" },
+
     { "source": "/:org", "destination": "/index.html" }
   ],
   "images": {
