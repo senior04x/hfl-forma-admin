@@ -72,6 +72,16 @@ export default function ProfileUpdates() {
     }
   };
 
+  const updateTicketStatus = async (id, statusVal) => {
+    let { error } = await supabase.from('applications').update({ status: statusVal }).eq('id', id);
+    if (error && (error.message.includes('valid_status') || error.code === '23514')) {
+      const upperVal = statusVal.toUpperCase();
+      const retryRes = await supabase.from('applications').update({ status: upperVal }).eq('id', id);
+      error = retryRes.error;
+    }
+    return error;
+  };
+
   // Approve Request: Update existing player ONLY & mark request as processed
   const handleApprove = async (reqItem) => {
     setProcessingId(reqItem.id);
@@ -131,7 +141,7 @@ export default function ProfileUpdates() {
         }
       }
 
-      const { error: ticketErr } = await supabase.from('applications').update({ status: 'approved' }).eq('id', reqItem.id);
+      const ticketErr = await updateTicketStatus(reqItem.id, 'approved');
       if (ticketErr) {
         console.error('Error approving request:', ticketErr);
         alert('Arizani tasdiqlashda xatolik: ' + ticketErr.message);
@@ -151,7 +161,7 @@ export default function ProfileUpdates() {
   const handleReject = async (reqItem) => {
     setProcessingId(reqItem.id);
     try {
-      const { error } = await supabase.from('applications').update({ status: 'rejected' }).eq('id', reqItem.id);
+      const error = await updateTicketStatus(reqItem.id, 'rejected');
       if (error) {
         alert('Arizani rad etishda xatolik: ' + error.message);
         return;
