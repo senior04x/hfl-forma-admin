@@ -9,6 +9,7 @@ const Settings = () => {
   const { currentOrg, orgId, adminRole, updateCurrentOrg } = useOrg();
   const [userEmail, setUserEmail] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [orgLogo, setOrgLogo] = useState('');
@@ -369,6 +370,10 @@ const Settings = () => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
 
+    if (!oldPassword) {
+      setMessage({ type: 'error', text: 'Eski parolingizni kiriting!' });
+      return;
+    }
     if (!newPassword) {
       setMessage({ type: 'error', text: 'Yangi parolni kiriting!' });
       return;
@@ -384,13 +389,31 @@ const Settings = () => {
 
     setLoading(true);
     try {
+      // 1. Check old password correctness
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.email) {
+        const { error: verifyErr } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: oldPassword,
+        });
+
+        if (verifyErr) {
+          setMessage({ type: 'error', text: 'Eski parol noto\'g\'ri kiritildi!' });
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 2. Set new password
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
+
       setMessage({ type: 'success', text: 'Parolingiz muvaffaqiyatli almashtirildi!' });
+      setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setMessage({ type: 'error', text: 'Xato: ' + err.message });
+      setMessage({ type: 'error', text: 'Xato: ' + (err.message || '') });
     } finally {
       setLoading(false);
     }
@@ -686,13 +709,21 @@ const Settings = () => {
                       return (
                         <div key={l.id} className={`league-card ${editingLeague?.id === l.id ? 'editing' : ''}`}>
                           <div className="league-card-header">
-                            <div className="league-icon">
-                              {l.logo_url ? <img src={l.logo_url} alt={l.name} /> : <Trophy size={20} />}
+                            <div className="league-icon-unconstrained">
+                              {l.logo_url ? (
+                                <img src={l.logo_url} alt={l.name} className="league-free-logo" />
+                              ) : (
+                                <div className="league-placeholder-icon">
+                                  <Trophy size={28} />
+                                </div>
+                              )}
                             </div>
-                            <div>
+                            <div className="league-info-centered">
                               <h4 className="league-title">{l.name}</h4>
-                              {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
-                              {!isOwner && <span className="junior-badge" style={{ background: 'rgba(0, 255, 102, 0.15)', color: '#00ff66', marginLeft: '6px' }}>SHERIKLIK (CO-HOST)</span>}
+                              <div className="league-badges-wrap">
+                                {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
+                                {!isOwner && <span className="junior-badge" style={{ background: 'rgba(0, 255, 102, 0.15)', color: '#00ff66' }}>SHERIKLIK (CO-HOST)</span>}
+                              </div>
                             </div>
                           </div>
 
@@ -840,12 +871,23 @@ const Settings = () => {
               </div>
               <form onSubmit={handleUpdatePassword} className="settings-form">
                 <div className="settings-form-group">
+                  <label>Eski Parol</label>
+                  <input
+                    type="password"
+                    value={oldPassword}
+                    onChange={e => setOldPassword(e.target.value)}
+                    placeholder="Hozirgi parolingizni kiriting"
+                    required
+                  />
+                </div>
+                <div className="settings-form-group">
                   <label>Yangi Parol</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
                     placeholder="Kamida 6 ta belgi"
+                    required
                   />
                 </div>
                 <div className="settings-form-group">
@@ -854,10 +896,11 @@ const Settings = () => {
                     type="password"
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
-                    placeholder="Parolni qayta kiriting"
+                    placeholder="Yangi parolni qayta kiriting"
+                    required
                   />
                 </div>
-                <button type="submit" className="settings-btn settings-btn-primary" disabled={loading || !newPassword}>
+                <button type="submit" className="settings-btn settings-btn-primary" disabled={loading || !oldPassword || !newPassword}>
                   Parolni Saqlash
                 </button>
               </form>
