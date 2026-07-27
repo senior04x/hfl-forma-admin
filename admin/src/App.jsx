@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Schedule from './pages/Schedule';
 import Standings from './pages/Standings';
@@ -28,6 +29,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/transfers" element={<Transfers />} />
