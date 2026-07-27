@@ -88,17 +88,13 @@ export default function Sponsors() {
           .select('*')
           .eq('organization_id', orgId)
           .order('created_at', { ascending: false });
-        if (orgSponsors && orgSponsors.length > 0) {
-          loadedSponsors = orgSponsors;
-        }
-      }
-
-      if (loadedSponsors.length === 0) {
-        let query = supabase.from('sponsors').select('*').order('created_at', { ascending: false });
-        if (orgId) {
-          query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
-        }
-        const { data } = await query;
+        loadedSponsors = orgSponsors || [];
+      } else {
+        const { data } = await supabase
+          .from('sponsors')
+          .select('*')
+          .is('organization_id', null)
+          .order('created_at', { ascending: false });
         loadedSponsors = data || [];
       }
 
