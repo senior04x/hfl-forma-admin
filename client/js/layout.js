@@ -330,7 +330,7 @@ function initNavbarSearch() {
                             const team = x.team;
                             const displayName = p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Futbolchi';
                             const displayNum = p.player_number || p.number;
-                            const targetUrl = p.team_id ? `team-details.html?id=${p.team_id}` : 'teams.html';
+                            const targetUrl = `player-details.html?id=${p.id}`;
 
                             return `
                             <div class="screen-search-card" onclick="window.location.href='${targetUrl}'" style="background:rgba(18,20,29,0.75); backdrop-filter:blur(15px); border:1px solid rgba(255,255,255,0.12); border-radius:24px; padding:20px; cursor:pointer; transition:all 0.3s; display:flex; flex-direction:column; justify-content:space-between; gap:14px;">

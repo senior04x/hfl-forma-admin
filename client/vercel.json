@@ -11,6 +11,7 @@
     { "source": "/:org/apply", "destination": "/apply.html" },
     { "source": "/:org/teams", "destination": "/teams.html" },
     { "source": "/:org/team-details", "destination": "/team-details.html" },
+    { "source": "/:org/player-details", "destination": "/player-details.html" },
     { "source": "/:org/matches", "destination": "/matches.html" },
     { "source": "/:org/match-details", "destination": "/match-details.html" },
     { "source": "/:org/standings", "destination": "/standings.html" },
