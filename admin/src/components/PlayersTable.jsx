@@ -81,11 +81,13 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
           .map(t => t.id)
       );
 
-      let filtered = (data || []).filter(app => 
-        app.organization_id === orgId || 
-        (app.team_id && validTeamIds.has(app.team_id)) ||
-        (!orgId)
-      );
+      let filtered = (data || [])
+        .filter(app => !app.comment || !app.comment.includes('[PROFILE_UPDATE]'))
+        .filter(app => 
+          app.organization_id === orgId || 
+          (app.team_id && validTeamIds.has(app.team_id)) ||
+          (!orgId)
+        );
 
       // 1. Status Filter
       if (filter !== 'all') {

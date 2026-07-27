@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { Check, X, User, Shield, Phone, AlertCircle, RefreshCw, Layers } from 'lucide-react';
+import { Check, X, ArrowRight, RefreshCw, AlertCircle, Phone, User, Shield } from 'lucide-react';
 
 export default function ProfileUpdates() {
   const { orgId } = useOrg();
@@ -53,13 +53,13 @@ export default function ProfileUpdates() {
     }
   };
 
+  // Approve Request: Update existing player ONLY & mark request as processed (No duplicate new member)
   const handleApprove = async (reqItem) => {
     setProcessingId(reqItem.id);
     try {
       const targetPlayerId = reqItem.payload?.playerId;
       const newData = reqItem.payload?.newData || {};
 
-      // 1. Update target player record if exists
       if (targetPlayerId) {
         const updatePayload = {
           first_name: newData.firstName || reqItem.first_name,
@@ -68,14 +68,31 @@ export default function ProfileUpdates() {
           phone: newData.phone || reqItem.phone,
           position: newData.position || reqItem.position,
           player_number: newData.playerNumber ? Number(newData.playerNumber) : reqItem.player_number,
-          photo_url: newData.photoUrl || reqItem.photo_url
+          photo_url: newData.photoUrl || reqItem.photo_url,
+          passport_series: newData.passportSeries || undefined,
+          passport_number: newData.passportNumber || undefined,
+          citizenship: newData.citizenship || undefined,
+          height: newData.height || undefined,
+          weight: newData.weight || undefined,
+          birth_date: newData.birthDate || undefined
         };
+
+        // Remove undefined keys
+        Object.keys(updatePayload).forEach(key => updatePayload[key] === undefined && delete updatePayload[key]);
+
+        // If instagram username present, store in comment or instagram_username column
+        if (newData.instagramUsername || newData.instagramUrl) {
+          const instaUrl = newData.instagramUrl || `https://www.instagram.com/${newData.instagramUsername}/`;
+          updatePayload.comment = `[INSTAGRAM:${instaUrl}]`;
+          updatePayload.instagram_username = newData.instagramUsername || undefined;
+          updatePayload.instagram_url = instaUrl;
+        }
 
         await supabase.from('applications').update(updatePayload).eq('id', targetPlayerId);
       }
 
-      // 2. Mark update request as approved
-      await supabase.from('applications').update({ status: 'approved' }).eq('id', reqItem.id);
+      // Mark the update request application itself as approved_update (NOT new player application)
+      await supabase.from('applications').update({ status: 'approved_update' }).eq('id', reqItem.id);
 
       fetchProfileUpdateRequests();
     } catch (err) {
@@ -88,7 +105,7 @@ export default function ProfileUpdates() {
   const handleReject = async (reqItem) => {
     setProcessingId(reqItem.id);
     try {
-      await supabase.from('applications').update({ status: 'rejected' }).eq('id', reqItem.id);
+      await supabase.from('applications').update({ status: 'rejected_update' }).eq('id', reqItem.id);
       fetchProfileUpdateRequests();
     } catch (err) {
       console.error('Error rejecting request:', err);
@@ -103,15 +120,15 @@ export default function ProfileUpdates() {
   });
 
   return (
-    <div style={{ padding: '24px', color: '#ffffff' }}>
+    <div style={{ padding: '16px', color: '#ffffff', maxWidth: '1000px', margin: '0 auto' }}>
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Ma'lumotlar Almashinuvi Bo'yicha Arizalar
+          <h1 style={{ fontSize: '20px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Ma'lumotlar Almashinuvi Arizalari
           </h1>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-            O'yinchilar va jamoalarning ma'lumotlarini qayta ko'rib chiqish hamda yangilash arizalari
+          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+            O'yinchilarning ma'lumotlarini tahrirlash so'rovlari
           </p>
         </div>
 
@@ -120,33 +137,35 @@ export default function ProfileUpdates() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            padding: '10px 18px',
+            gap: '6px',
+            padding: '8px 14px',
             background: 'rgba(0, 255, 102, 0.1)',
             border: '1px solid rgba(0, 255, 102, 0.3)',
             color: '#00ff66',
-            borderRadius: '12px',
+            borderRadius: '10px',
             fontWeight: '700',
+            fontSize: '12px',
             cursor: 'pointer'
           }}
         >
-          <RefreshCw size={16} /> Qayta Yangilash
+          <RefreshCw size={14} /> Qayta Yangilash
         </button>
       </div>
 
       {/* TABS */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
         <button
           onClick={() => setActiveTab('players')}
           style={{
-            padding: '10px 20px',
+            flex: 1,
+            padding: '10px 14px',
             borderRadius: '12px',
             fontWeight: '800',
-            fontSize: '13px',
+            fontSize: '12px',
             textTransform: 'uppercase',
             border: 'none',
             cursor: 'pointer',
-            background: activeTab === 'players' ? '#00ff66' : 'rgba(255,255,255,0.05)',
+            background: activeTab === 'players' ? '#00ff66' : 'rgba(255,255,255,0.06)',
             color: activeTab === 'players' ? '#000000' : '#ffffff'
           }}
         >
@@ -155,14 +174,15 @@ export default function ProfileUpdates() {
         <button
           onClick={() => setActiveTab('teams')}
           style={{
-            padding: '10px 20px',
+            flex: 1,
+            padding: '10px 14px',
             borderRadius: '12px',
             fontWeight: '800',
-            fontSize: '13px',
+            fontSize: '12px',
             textTransform: 'uppercase',
             border: 'none',
             cursor: 'pointer',
-            background: activeTab === 'teams' ? '#00ff66' : 'rgba(255,255,255,0.05)',
+            background: activeTab === 'teams' ? '#00ff66' : 'rgba(255,255,255,0.06)',
             color: activeTab === 'teams' ? '#000000' : '#ffffff'
           }}
         >
@@ -172,110 +192,178 @@ export default function ProfileUpdates() {
 
       {/* LIST */}
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
           Arizalar yuklanmoqda...
         </div>
       ) : filteredRequests.length === 0 ? (
-        <div style={{ padding: '60px', textAlign: 'center', background: '#0b0f19', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <AlertCircle size={40} style={{ color: 'rgba(255,255,255,0.3)', marginBottom: '12px' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: '800' }}>Hozircha arizalar mavjud emas</h3>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
-            O'yinchilar yoki jamoalar tomonidan yuborilgan yangilash arizalari ushbu bo'limda ko'rinadi.
+        <div style={{ padding: '40px 20px', textAlign: 'center', background: '#0c101c', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <AlertCircle size={36} style={{ color: 'rgba(255,255,255,0.3)', marginBottom: '10px' }} />
+          <h3 style={{ fontSize: '14px', fontWeight: '800' }}>Arizalar topilmadi</h3>
+          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
+            Hozircha ma'lumotlarni almashtirish bo'yicha arizalar mavjud emas.
           </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {filteredRequests.map(req => {
             const oldData = req.payload?.oldData || {};
             const newData = req.payload?.newData || {};
             const isPending = req.status === 'pending' || !req.status;
+            const isApproved = req.status === 'approved' || req.status === 'approved_update';
+            const isRejected = req.status === 'rejected' || req.status === 'rejected_update';
+
+            const oldPhoto = oldData.photoUrl || req.photo_url || '';
+            const newPhoto = newData.photoUrl || oldPhoto;
 
             return (
               <div
                 key={req.id}
                 style={{
-                  background: '#0b0f19',
+                  background: '#0c101c',
                   border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '20px',
-                  padding: '20px',
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.4)'
+                  borderRadius: '16px',
+                  padding: '16px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '900', color: '#00ff66', background: 'rgba(0,255,102,0.1)', padding: '4px 10px', borderRadius: '8px' }}>
-                      # {req.id}
+                {/* CARD TOP INFO */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '900', color: '#00ff66', background: 'rgba(0,255,102,0.1)', padding: '3px 8px', borderRadius: '6px' }}>
+                      ID: {req.id}
                     </span>
-                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
                       {new Date(req.created_at).toLocaleString('uz-UZ')}
                     </span>
                   </div>
 
                   <span
                     style={{
-                      fontSize: '11px',
+                      fontSize: '10px',
                       fontWeight: '800',
                       textTransform: 'uppercase',
-                      padding: '4px 12px',
-                      borderRadius: '8px',
-                      background: req.status === 'approved' ? 'rgba(16, 185, 129, 0.2)' : req.status === 'rejected' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                      color: req.status === 'approved' ? '#10B981' : req.status === 'rejected' ? '#EF4444' : '#F59E0B'
+                      padding: '3px 10px',
+                      borderRadius: '6px',
+                      background: isApproved ? 'rgba(16, 185, 129, 0.2)' : isRejected ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                      color: isApproved ? '#10B981' : isRejected ? '#EF4444' : '#F59E0B'
                     }}
                   >
-                    {req.status === 'approved' ? 'Tasdiqlangan' : req.status === 'rejected' ? 'Rad Etilgan' : 'Kutilmoqda'}
+                    {isApproved ? 'Tasdiqlangan' : isRejected ? 'Rad Etilgan' : 'Kutilmoqda'}
                   </span>
                 </div>
 
-                {/* SIDE BY SIDE COMPARISON */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                  {/* ESKI MA'LUMOT */}
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <h4 style={{ fontSize: '12px', fontWeight: '900', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: '12px' }}>
-                      🔴 ESKI MA'LUMOTLAR
-                    </h4>
+                {/* ROW BY ROW PARALLEL COMPARISON (DESKTOP & MOBILE RESPONSIVE) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  
+                  {/* PHOTO COMPARISON ROW */}
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {oldPhoto ? (
+                        <img src={oldPhoto} alt="Eski" style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)' }} />
+                      ) : (
+                        <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Yo'q</div>
+                      )}
+                      <div>
+                        <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', display: 'block', fontWeight: '800' }}>ESKI RASM</span>
+                      </div>
+                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-                      <div><span style={{ color: 'rgba(255,255,255,0.5)' }}>Ism-Familiya:</span> {oldData.firstName || req.first_name} {oldData.lastName || req.last_name}</div>
-                      <div><span style={{ color: 'rgba(255,255,255,0.5)' }}>Otasining ismi:</span> {oldData.fatherName || req.father_name || '—'}</div>
-                      <div><span style={{ color: 'rgba(255,255,255,0.5)' }}>Telefon:</span> {oldData.phone || req.phone || '—'}</div>
-                      <div><span style={{ color: 'rgba(255,255,255,0.5)' }}>Pozitsiya:</span> {oldData.position || req.position || '—'}</div>
-                      <div><span style={{ color: 'rgba(255,255,255,0.5)' }}>Forma Nomer:</span> #{oldData.playerNumber || req.player_number || '0'}</div>
+                    <ArrowRight size={18} color="#00ff66" />
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div>
+                        <span style={{ fontSize: '10px', color: '#00ff66', display: 'block', fontWeight: '800', textAlign: 'right' }}>YANGI RASM</span>
+                      </div>
+                      {newPhoto ? (
+                        <img src={newPhoto} alt="Yangi" style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover', border: '2px solid #00ff66' }} />
+                      ) : (
+                        <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: 'rgba(0,255,102,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#00ff66' }}>Bir xil</div>
+                      )}
                     </div>
                   </div>
 
-                  {/* YANGI MA'LUMOT */}
-                  <div style={{ background: 'rgba(0,255,102,0.05)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(0,255,102,0.2)' }}>
-                    <h4 style={{ fontSize: '12px', fontWeight: '900', color: '#00ff66', textTransform: 'uppercase', marginBottom: '12px' }}>
-                      🟢 YANGI MA'LUMOTLAR (ARIZA)
-                    </h4>
+                  {/* FIELD COMPARISONS */}
+                  <DiffRow
+                    label="Ism-Familiya"
+                    oldVal={`${oldData.firstName || req.first_name || ''} ${oldData.lastName || req.last_name || ''}`}
+                    newVal={`${newData.firstName || req.first_name || ''} ${newData.lastName || req.last_name || ''}`}
+                  />
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-                      <div><span style={{ color: 'rgba(255,255,255,0.5)' }}>Ism-Familiya:</span> <strong style={{ color: '#00ff66' }}>{newData.firstName || req.first_name} {newData.lastName || req.last_name}</strong></div>
-                      <div><span style={{ color: 'rgba(255,255,255,0.5)' }}>Otasining ismi:</span> <strong style={{ color: '#00ff66' }}>{newData.fatherName || req.father_name || '—'}</strong></div>
-                      <div><span style={{ color: 'rgba(255,255,255,0.5)' }}>Telefon:</span> <strong style={{ color: '#00ff66' }}>{newData.phone || req.phone || '—'}</strong></div>
-                      <div><span style={{ color: 'rgba(255,255,255,0.5)' }}>Pozitsiya:</span> <strong style={{ color: '#00ff66' }}>{newData.position || req.position || '—'}</strong></div>
-                      <div><span style={{ color: 'rgba(255,255,255,0.5)' }}>Forma Nomer:</span> <strong style={{ color: '#00ff66' }}>#{newData.playerNumber || req.player_number || '0'}</strong></div>
-                    </div>
-                  </div>
+                  <DiffRow
+                    label="Otasining Ismi"
+                    oldVal={oldData.fatherName || req.father_name || '—'}
+                    newVal={newData.fatherName || req.father_name || '—'}
+                  />
+
+                  <DiffRow
+                    label="Telefon Raqami"
+                    oldVal={oldData.phone || req.phone || '—'}
+                    newVal={newData.phone || req.phone || '—'}
+                  />
+
+                  <DiffRow
+                    label="Pasport Seriya / Raqam"
+                    oldVal={`${oldData.passportSeries || req.passport_series || ''} ${oldData.passportNumber || req.passport_number || ''}`.trim() || '—'}
+                    newVal={`${newData.passportSeries || req.passport_series || ''} ${newData.passportNumber || req.passport_number || ''}`.trim() || '—'}
+                  />
+
+                  <DiffRow
+                    label="Pozitsiya"
+                    oldVal={oldData.position || req.position || '—'}
+                    newVal={newData.position || req.position || '—'}
+                  />
+
+                  <DiffRow
+                    label="Forma Raqami"
+                    oldVal={`#${oldData.playerNumber || req.player_number || '0'}`}
+                    newVal={`#${newData.playerNumber || req.player_number || '0'}`}
+                  />
+
+                  {(newData.citizenship || oldData.citizenship) && (
+                    <DiffRow
+                      label="Millati"
+                      oldVal={oldData.citizenship || '—'}
+                      newVal={newData.citizenship || '—'}
+                    />
+                  )}
+
+                  {(newData.height || oldData.height || newData.weight || oldData.weight) && (
+                    <DiffRow
+                      label="Bo'yi / Vazni"
+                      oldVal={`${oldData.height ? `${oldData.height} sm` : '—'} / ${oldData.weight ? `${oldData.weight} kg` : '—'}`}
+                      newVal={`${newData.height ? `${newData.height} sm` : '—'} / ${newData.weight ? `${newData.weight} kg` : '—'}`}
+                    />
+                  )}
+
+                  {(newData.birthDate || oldData.birthDate) && (
+                    <DiffRow
+                      label="Tug'ilgan Sana"
+                      oldVal={oldData.birthDate || '—'}
+                      newVal={newData.birthDate || '—'}
+                    />
+                  )}
+
                 </div>
 
                 {/* ACTION BUTTONS */}
                 {isPending && (
-                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
                     <button
                       onClick={() => handleReject(req)}
                       disabled={processingId === req.id}
                       style={{
-                        padding: '10px 20px',
+                        flex: 1,
+                        padding: '12px',
                         background: 'rgba(239, 68, 68, 0.15)',
                         border: '1px solid rgba(239, 68, 68, 0.4)',
                         color: '#EF4444',
                         borderRadius: '12px',
                         fontWeight: '800',
-                        fontSize: '13px',
+                        fontSize: '12px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         gap: '6px'
                       }}
                     >
@@ -286,16 +374,18 @@ export default function ProfileUpdates() {
                       onClick={() => handleApprove(req)}
                       disabled={processingId === req.id}
                       style={{
-                        padding: '10px 24px',
+                        flex: 2,
+                        padding: '12px',
                         background: '#00ff66',
                         border: 'none',
                         color: '#000000',
                         borderRadius: '12px',
                         fontWeight: '900',
-                        fontSize: '13px',
+                        fontSize: '12px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         gap: '6px'
                       }}
                     >
@@ -308,6 +398,37 @@ export default function ProfileUpdates() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// Clean horizontal row-by-row diff comparison (No Emojis, Perfect Mobile Responsiveness)
+function DiffRow({ label, oldVal, newVal }) {
+  const isChanged = String(oldVal).trim() !== String(newVal).trim();
+
+  return (
+    <div style={{
+      background: isChanged ? 'rgba(0, 255, 102, 0.04)' : 'rgba(255, 255, 255, 0.02)',
+      border: isChanged ? '1px solid rgba(0, 255, 102, 0.15)' : '1px solid rgba(255, 255, 255, 0.04)',
+      padding: '8px 12px',
+      borderRadius: '10px',
+      fontSize: '12px'
+    }}>
+      <div style={{ fontSize: '10px', fontWeight: '800', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>
+        {label}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <div style={{ flex: 1, color: isChanged ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.8)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {oldVal || '—'}
+        </div>
+
+        <ArrowRight size={14} color={isChanged ? '#00ff66' : 'rgba(255,255,255,0.2)'} style={{ flexShrink: 0 }} />
+
+        <div style={{ flex: 1, textAlign: 'right', color: isChanged ? '#00ff66' : 'rgba(255,255,255,0.8)', fontWeight: isChanged ? '900' : '500', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {newVal || '—'}
+        </div>
+      </div>
     </div>
   );
 }

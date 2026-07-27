@@ -38,6 +38,15 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     }
   }, [player.team_id, teams]);
 
+  const getInstaUsername = (p) => {
+    if (p.instagram_username) return p.instagram_username;
+    if (p.comment) {
+      const match = p.comment.match(/\[INSTAGRAM:https?:\/\/[^/]+\/([^/\]]+)/);
+      if (match?.[1]) return match[1];
+    }
+    return '';
+  };
+
   const [formData, setFormData] = useState({
     first_name: player.first_name || '',
     last_name: player.last_name || '',
@@ -49,7 +58,11 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     position: player.position || '',
     player_number: player.player_number || '',
     photo_url: player.photo_url || '',
-    team_id: player.team_id || ''
+    team_id: player.team_id || '',
+    instagram_username: getInstaUsername(player),
+    citizenship: player.citizenship || '',
+    height: player.height || '',
+    weight: player.weight || ''
   });
 
   useEffect(() => {
@@ -64,7 +77,11 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
       position: player.position || '',
       player_number: player.player_number || '',
       photo_url: player.photo_url || '',
-      team_id: player.team_id || ''
+      team_id: player.team_id || '',
+      instagram_username: getInstaUsername(player),
+      citizenship: player.citizenship || '',
+      height: player.height || '',
+      weight: player.weight || ''
     });
   }, [player]);
 
@@ -185,7 +202,25 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
                 </div>
                 <div className="detail-item">
                   <span className="label">Raqam</span>
-                  <span className="value">{player.player_number || '—'}</span>
+                  <span className="value">#{player.player_number || '—'}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Instagram</span>
+                  <span className="value" style={{ color: '#E1306C', fontWeight: '800' }}>
+                    {getInstaUsername(player) ? `@${getInstaUsername(player)}` : '—'}
+                  </span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Millati</span>
+                  <span className="value">{player.citizenship || '—'}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Bo'yi</span>
+                  <span className="value">{player.height ? `${player.height} SM` : '—'}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Vazni</span>
+                  <span className="value">{player.weight ? `${player.weight} KG` : '—'}</span>
                 </div>
               </div>
 
