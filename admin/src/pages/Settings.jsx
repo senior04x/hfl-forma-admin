@@ -26,6 +26,70 @@ const Settings = () => {
   const leagueInputRef = useRef(null);
   const [uploadingLeagueLogo, setUploadingLeagueLogo] = useState(false);
 
+  const [brandColors, setBrandColors] = useState(['#00FF66', '#10B981']);
+  const [savingBrandColors, setSavingBrandColors] = useState(false);
+
+  useEffect(() => {
+    fetchBrandColors();
+  }, [orgId, currentOrg]);
+
+  const fetchBrandColors = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const metaColors = user?.user_metadata?.brand_colors;
+      if (Array.isArray(metaColors) && metaColors.length > 0) {
+        setBrandColors(metaColors);
+      } else if (currentOrg?.brand_colors && Array.isArray(currentOrg.brand_colors)) {
+        setBrandColors(currentOrg.brand_colors);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAddBrandColor = () => {
+    setBrandColors(prev => [...prev, '#3B82F6']);
+  };
+
+  const handleUpdateBrandColor = (index, val) => {
+    const updated = [...brandColors];
+    updated[index] = val;
+    setBrandColors(updated);
+  };
+
+  const handleRemoveBrandColor = (index) => {
+    if (brandColors.length <= 1) return;
+    setBrandColors(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleSaveBrandColors = async (e) => {
+    e.preventDefault();
+    setSavingBrandColors(true);
+    try {
+      const { error: authErr } = await supabase.auth.updateUser({
+        data: { brand_colors: brandColors }
+      });
+      if (authErr) console.warn('Auth user metadata update warning:', authErr);
+
+      await supabase.from('organizations').update({ brand_colors: brandColors }).eq('id', orgId);
+
+      const primaryColor = brandColors[0] || '#00FF66';
+      const gradientCSS = brandColors.length > 1
+        ? `linear-gradient(135deg, ${brandColors.join(', ')})`
+        : primaryColor;
+
+      document.documentElement.style.setProperty('--org-primary', primaryColor);
+      document.documentElement.style.setProperty('--org-gradient', gradientCSS);
+
+      setMessage({ type: 'success', text: 'Tashkilot brand ranglari va gradient muvaffaqiyatli saqlandi!' });
+    } catch (err) {
+      console.error('Error saving brand colors:', err);
+      setMessage({ type: 'error', text: 'Saqlashda xatolik: ' + (err.message || '') });
+    } finally {
+      setSavingBrandColors(false);
+    }
+  };
+
   useEffect(() => {
     if (currentOrg) {
       setOrgLogo(currentOrg.logo_url || '');
@@ -838,6 +902,118 @@ const Settings = () => {
                   style={{ display: 'none' }}
                   onChange={handleOrgFileSelect}
                 />
+              </div>
+            </div>
+
+            {/* Brand Colors & Gradient Picker */}
+            <div className="settings-card shadow-xl" style={{ marginTop: '20px' }}>
+              <div className="settings-card-header">
+                <Building2 size={20} />
+                <h2>Tashkilot Brand Ranglari & Gradient</h2>
+              </div>
+
+              <div style={{ padding: '12px 0' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>
+                  Canli Gradient Prevyusi (Forma Sayti)
+                </label>
+                <div
+                  style={{
+                    background: brandColors.length > 1 ? `linear-gradient(135deg, ${brandColors.join(', ')})` : brandColors[0] || '#00FF66',
+                    height: '90px',
+                    borderRadius: '16px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                    transition: 'all 0.3s'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', background: 'rgba(0,0,0,0.4)', padding: '4px 10px', borderRadius: '8px' }}>
+                      {currentOrg?.name || 'Tashkilot Sayti'}
+                    </span>
+                    <span style={{ fontSize: '10px', fontFamily: 'monospace', background: 'rgba(0,0,0,0.4)', padding: '2px 8px', borderRadius: '4px' }}>
+                      {brandColors.length} ta rang
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', fontFamily: 'monospace', color: 'rgba(255,255,255,0.9)', background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: '6px' }}>
+                      {brandColors.length > 1 ? `linear-gradient(135deg, ${brandColors.join(', ')})` : brandColors[0]}
+                    </span>
+                    <button type="button" style={{ padding: '4px 12px', background: '#ffffff', color: '#000000', fontWeight: '900', fontSize: '10px', textTransform: 'uppercase', borderRadius: '6px', border: 'none' }}>
+                      Tugma Namunasi
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>
+                    Ranglar Ro'yxati
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddBrandColor}
+                    style={{
+                      padding: '6px 12px',
+                      background: 'rgba(0,255,102,0.1)',
+                      border: '1px solid rgba(0,255,102,0.3)',
+                      color: '#00ff66',
+                      borderRadius: '10px',
+                      fontWeight: '700',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Plus size={14} /> Rang Qo'shish
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginBottom: '16px' }}>
+                  {brandColors.map((colorHex, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}>
+                      <input
+                        type="color"
+                        value={colorHex}
+                        onChange={e => handleUpdateBrandColor(idx, e.target.value)}
+                        style={{ width: '30px', height: '30px', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
+                      />
+                      <input
+                        type="text"
+                        value={colorHex}
+                        onChange={e => handleUpdateBrandColor(idx, e.target.value)}
+                        style={{ flex: 1, background: 'transparent', border: 'none', color: '#ffffff', fontFamily: 'monospace', fontSize: '12px', textTransform: 'uppercase', outline: 'none', width: '60px' }}
+                      />
+                      {brandColors.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBrandColor(idx)}
+                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                          title="Rangni o'chirish"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleSaveBrandColors}
+                  disabled={savingBrandColors}
+                  className="settings-btn settings-btn-primary"
+                  style={{ width: '100%' }}
+                >
+                  <Save size={16} />
+                  <span>{savingBrandColors ? 'Saqlanmoqda...' : 'Ranglarni Saqlash'}</span>
+                </button>
               </div>
             </div>
 
