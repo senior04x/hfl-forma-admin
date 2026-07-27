@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { X, Trash2, Save, Eye, Crop } from 'lucide-react';
+import { X, Trash2, Save, Eye, Crop, Instagram } from 'lucide-react';
 import ImageCropperModal from './ImageCropperModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import './Modal.css';
@@ -141,13 +141,28 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.from('applications').update(formData).eq('id', player.id);
+      const cleanInsta = (formData.instagram_username || '').trim().replace(/^@/, '').replace(/[^a-zA-Z0-9._]/g, '');
+      const instaUrl = cleanInsta ? `https://www.instagram.com/${cleanInsta}/` : null;
+
+      const payload = {
+        ...formData,
+        instagram_username: cleanInsta || null,
+        instagram_url: instaUrl
+      };
+
+      if (instaUrl) {
+        const currentComment = player.comment || '';
+        const cleanComment = currentComment.replace(/\[INSTAGRAM:[^\]]+\]/g, '').trim();
+        payload.comment = `${cleanComment} [INSTAGRAM:${instaUrl}]`.trim();
+      }
+
+      const { error } = await supabase.from('applications').update(payload).eq('id', player.id);
       if (error) throw error;
       onRefresh();
       setCurrentMode('view');
     } catch (error) {
       console.error(error);
-      alert('Xatolik yuz berdi');
+      alert('Xatolik yuz berdi: ' + (error.message || ''));
     } finally {
       setLoading(false);
     }
@@ -330,6 +345,33 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>
+                </div>
+                <div className="form-group">
+                  <label>Millati</label>
+                  <input name="citizenship" value={formData.citizenship} onChange={handleChange} placeholder="O'zbekiston" />
+                </div>
+                <div className="form-group">
+                  <label>Bo'yi (SM)</label>
+                  <input type="number" name="height" value={formData.height} onChange={handleChange} placeholder="178" />
+                </div>
+                <div className="form-group">
+                  <label>Vazni (KG)</label>
+                  <input type="number" name="weight" value={formData.weight} onChange={handleChange} placeholder="72" />
+                </div>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#E1306C', fontWeight: '800' }}>
+                    <Instagram size={16} /> Instagram Username
+                  </label>
+                  <input 
+                    name="instagram_username" 
+                    value={formData.instagram_username} 
+                    onChange={handleChange} 
+                    placeholder="omankulofff" 
+                    style={{ borderColor: 'rgba(225, 48, 108, 0.4)' }}
+                  />
+                  <small style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '4px', display: 'block' }}>
+                    Faqat usernamening o'zini kiritasiz (masalan: omankulofff). Tizim avtomatik https://www.instagram.com/omankulofff/ deb saqlaydi.
+                  </small>
                 </div>
               </div>
 
