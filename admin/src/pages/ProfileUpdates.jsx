@@ -39,6 +39,7 @@ export default function ProfileUpdates() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
+  const [showOnlyChanged, setShowOnlyChanged] = useState(false);
 
   useEffect(() => {
     fetchProfileUpdateRequests();
@@ -63,10 +64,19 @@ export default function ProfileUpdates() {
       const parsedList = (data || []).map(item => {
         let parsedPayload = null;
         try {
-          const jsonStr = item.comment.replace('[PROFILE_UPDATE]', '').trim();
-          parsedPayload = JSON.parse(jsonStr);
+          if (item.comment && item.comment.includes('[PROFILE_UPDATE]')) {
+            const parts = item.comment.split('[PROFILE_UPDATE]');
+            let jsonStr = parts[1] || '';
+            // Strip trailing tags like [INSTAGRAM:...] or [METADATA:...]
+            jsonStr = jsonStr
+              .replace(/\[INSTAGRAM:[^\]]+\]/g, '')
+              .replace(/\[METADATA:[^\]]+\]/g, '')
+              .trim();
+
+            parsedPayload = JSON.parse(jsonStr);
+          }
         } catch (e) {
-          console.warn('Failed to parse profile update payload:', e);
+          console.warn('Failed to parse profile update payload:', e, item.comment);
         }
 
         return {
@@ -244,42 +254,67 @@ export default function ProfileUpdates() {
         </button>
       </div>
 
-      {/* TABS */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <button
-          onClick={() => setActiveTab('players')}
-          style={{
-            flex: 1,
-            padding: '10px 14px',
-            borderRadius: '12px',
-            fontWeight: '800',
-            fontSize: '12px',
-            textTransform: 'uppercase',
-            border: 'none',
-            cursor: 'pointer',
-            background: activeTab === 'players' ? '#00ff66' : 'rgba(255,255,255,0.06)',
-            color: activeTab === 'players' ? '#000000' : '#ffffff'
-          }}
-        >
-          O'yinchilar Arizalari
-        </button>
-        <button
-          onClick={() => setActiveTab('teams')}
-          style={{
-            flex: 1,
-            padding: '10px 14px',
-            borderRadius: '12px',
-            fontWeight: '800',
-            fontSize: '12px',
-            textTransform: 'uppercase',
-            border: 'none',
-            cursor: 'pointer',
-            background: activeTab === 'teams' ? '#00ff66' : 'rgba(255,255,255,0.06)',
-            color: activeTab === 'teams' ? '#000000' : '#ffffff'
-          }}
-        >
-          Jamoalar Arizalari
-        </button>
+      {/* TABS & FILTER */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '10px', flex: 1, minWidth: '240px' }}>
+          <button
+            onClick={() => setActiveTab('players')}
+            style={{
+              flex: 1,
+              padding: '10px 14px',
+              borderRadius: '12px',
+              fontWeight: '800',
+              fontSize: '12px',
+              textTransform: 'uppercase',
+              border: 'none',
+              cursor: 'pointer',
+              background: activeTab === 'players' ? '#00ff66' : 'rgba(255,255,255,0.06)',
+              color: activeTab === 'players' ? '#000000' : '#ffffff'
+            }}
+          >
+            O'yinchilar Arizalari
+          </button>
+          <button
+            onClick={() => setActiveTab('teams')}
+            style={{
+              flex: 1,
+              padding: '10px 14px',
+              borderRadius: '12px',
+              fontWeight: '800',
+              fontSize: '12px',
+              textTransform: 'uppercase',
+              border: 'none',
+              cursor: 'pointer',
+              background: activeTab === 'teams' ? '#00ff66' : 'rgba(255,255,255,0.06)',
+              color: activeTab === 'teams' ? '#000000' : '#ffffff'
+            }}
+          >
+            Jamoalar Arizalari
+          </button>
+        </div>
+
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: '700',
+          color: showOnlyChanged ? '#00ff66' : 'rgba(255,255,255,0.7)',
+          background: showOnlyChanged ? 'rgba(0, 255, 102, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+          padding: '9px 14px',
+          borderRadius: '12px',
+          border: showOnlyChanged ? '1px solid rgba(0, 255, 102, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+          userSelect: 'none'
+        }}>
+          <input
+            type="checkbox"
+            checked={showOnlyChanged}
+            onChange={(e) => setShowOnlyChanged(e.target.checked)}
+            style={{ accentColor: '#00ff66', cursor: 'pointer', width: '15px', height: '15px' }}
+          />
+          Faqat O'zgargan Ma'lumotlarni Ko'rsatish
+        </label>
       </div>
 
       {/* LIST */}
@@ -307,22 +342,47 @@ export default function ProfileUpdates() {
             const oldPhoto = oldData.photoUrl || req.photo_url || '';
             const newPhoto = newData.photoUrl || oldPhoto;
 
-            const oldInsta = getInstaUser(oldData.instagramUsername) || getInstaUser(oldData.instagram_username) || getInstaUser(oldData.instagramUrl) || extractInstaFromComment(req.comment);
-            const newInsta = getInstaUser(newData.instagramUsername) || getInstaUser(newData.instagram_username) || getInstaUser(newData.instagramUrl) || extractInstaFromComment(req.comment);
-
             const commentMeta = extractMetaFromComment(req.comment);
 
-            const oldCitizenship = oldData.citizenship || req.citizenship || commentMeta.citizenship || '';
+            const oldFirstName = oldData.firstName || oldData.first_name || '';
+            const oldLastName = oldData.lastName || oldData.last_name || '';
+            const oldName = `${oldFirstName} ${oldLastName}`.trim() || '—';
+
+            const newFirstName = newData.firstName || req.first_name || '';
+            const newLastName = newData.lastName || req.last_name || '';
+            const newName = `${newFirstName} ${newLastName}`.trim() || '—';
+
+            const oldFatherName = oldData.fatherName || oldData.father_name || '—';
+            const newFatherName = newData.fatherName || req.father_name || '—';
+
+            const oldPhone = oldData.phone || '—';
+            const newPhone = newData.phone || req.phone || '—';
+
+            const oldPassport = `${oldData.passportSeries || oldData.passport_series || ''} ${oldData.passportNumber || oldData.passport_number || ''}`.trim() || '—';
+            const newPassport = `${newData.passportSeries || req.passport_series || ''} ${newData.passportNumber || req.passport_number || ''}`.trim() || '—';
+
+            const oldPosition = oldData.position || '—';
+            const newPosition = newData.position || req.position || '—';
+
+            const oldPlayerNumber = oldData.playerNumber ? `#${oldData.playerNumber}` : (oldData.player_number ? `#${oldData.player_number}` : '—');
+            const newPlayerNumber = newData.playerNumber ? `#${newData.playerNumber}` : (req.player_number ? `#${req.player_number}` : '—');
+
+            const oldCitizenship = oldData.citizenship || commentMeta.citizenship || '—';
             const newCitizenship = newData.citizenship || oldCitizenship;
 
-            const oldHeight = oldData.height || req.height || commentMeta.height || '';
+            const oldHeight = oldData.height || commentMeta.height || '';
+            const oldWeight = oldData.weight || commentMeta.weight || '';
+            const oldHW = (oldHeight || oldWeight) ? `${oldHeight ? `${oldHeight} SM` : '—'} / ${oldWeight ? `${oldWeight} KG` : '—'}` : '— / —';
+
             const newHeight = newData.height || oldHeight;
-
-            const oldWeight = oldData.weight || req.weight || commentMeta.weight || '';
             const newWeight = newData.weight || oldWeight;
+            const newHW = (newHeight || newWeight) ? `${newHeight ? `${newHeight} SM` : '—'} / ${newWeight ? `${newWeight} KG` : '—'}` : '— / —';
 
-            const oldBirthDate = oldData.birthDate || oldData.birth_date || req.birth_date || '';
-            const newBirthDate = newData.birthDate || newData.birth_date || oldBirthDate;
+            const oldBirthDate = oldData.birthDate || oldData.birth_date || '—';
+            const newBirthDate = newData.birthDate || req.birth_date || '—';
+
+            const oldInsta = getInstaUser(oldData.instagramUsername) || getInstaUser(oldData.instagram_username) || getInstaUser(oldData.instagramUrl) || extractInstaFromComment(req.comment) || '—';
+            const newInsta = getInstaUser(newData.instagramUsername) || getInstaUser(newData.instagram_username) || getInstaUser(newData.instagramUrl) || extractInstaFromComment(req.comment) || '—';
 
             return (
               <div
@@ -387,65 +447,16 @@ export default function ProfileUpdates() {
                   </div>
 
                   {/* FIELD COMPARISONS */}
-                  <DiffRow
-                    label="Ism-Familiya"
-                    oldVal={`${oldData.firstName || req.first_name || ''} ${oldData.lastName || req.last_name || ''}`}
-                    newVal={`${newData.firstName || req.first_name || ''} ${newData.lastName || req.last_name || ''}`}
-                  />
-
-                  <DiffRow
-                    label="Otasining Ismi"
-                    oldVal={oldData.fatherName || req.father_name || '—'}
-                    newVal={newData.fatherName || req.father_name || '—'}
-                  />
-
-                  <DiffRow
-                    label="Telefon Raqami"
-                    oldVal={oldData.phone || req.phone || '—'}
-                    newVal={newData.phone || req.phone || '—'}
-                  />
-
-                  <DiffRow
-                    label="Pasport Seriya / Raqam"
-                    oldVal={`${oldData.passportSeries || req.passport_series || ''} ${oldData.passportNumber || req.passport_number || ''}`.trim() || '—'}
-                    newVal={`${newData.passportSeries || req.passport_series || ''} ${newData.passportNumber || req.passport_number || ''}`.trim() || '—'}
-                  />
-
-                  <DiffRow
-                    label="Pozitsiya"
-                    oldVal={oldData.position || req.position || '—'}
-                    newVal={newData.position || req.position || '—'}
-                  />
-
-                  <DiffRow
-                    label="Forma Raqami"
-                    oldVal={`#${oldData.playerNumber || req.player_number || '0'}`}
-                    newVal={`#${newData.playerNumber || req.player_number || '0'}`}
-                  />
-
-                  <DiffRow
-                    label="Millati"
-                    oldVal={oldCitizenship || '—'}
-                    newVal={newCitizenship || '—'}
-                  />
-
-                  <DiffRow
-                    label="Bo'yi / Vazni"
-                    oldVal={`${oldHeight ? `${oldHeight} SM` : '—'} / ${oldWeight ? `${oldWeight} KG` : '—'}`}
-                    newVal={`${newHeight ? `${newHeight} SM` : '—'} / ${newWeight ? `${newWeight} KG` : '—'}`}
-                  />
-
-                  <DiffRow
-                    label="Tug'ilgan Sana"
-                    oldVal={oldBirthDate || '—'}
-                    newVal={newBirthDate || '—'}
-                  />
-
-                  <DiffRow
-                    label="Instagram Username"
-                    oldVal={oldInsta ? `@${oldInsta}` : '—'}
-                    newVal={newInsta ? `@${newInsta}` : '—'}
-                  />
+                  <DiffRow label="Ism-Familiya" oldVal={oldName} newVal={newName} showOnlyChanged={showOnlyChanged} />
+                  <DiffRow label="Otasining Ismi" oldVal={oldFatherName} newVal={newFatherName} showOnlyChanged={showOnlyChanged} />
+                  <DiffRow label="Telefon Raqami" oldVal={oldPhone} newVal={newPhone} showOnlyChanged={showOnlyChanged} />
+                  <DiffRow label="Pasport Seriya / Raqam" oldVal={oldPassport} newVal={newPassport} showOnlyChanged={showOnlyChanged} />
+                  <DiffRow label="Pozitsiya" oldVal={oldPosition} newVal={newPosition} showOnlyChanged={showOnlyChanged} />
+                  <DiffRow label="Forma Raqami" oldVal={oldPlayerNumber} newVal={newPlayerNumber} showOnlyChanged={showOnlyChanged} />
+                  <DiffRow label="Millati" oldVal={oldCitizenship} newVal={newCitizenship} showOnlyChanged={showOnlyChanged} />
+                  <DiffRow label="Bo'yi / Vazni" oldVal={oldHW} newVal={newHW} showOnlyChanged={showOnlyChanged} />
+                  <DiffRow label="Tug'ilgan Sana" oldVal={oldBirthDate} newVal={newBirthDate} showOnlyChanged={showOnlyChanged} />
+                  <DiffRow label="Instagram Username" oldVal={oldInsta !== '—' ? `@${oldInsta}` : '—'} newVal={newInsta !== '—' ? `@${newInsta}` : '—'} showOnlyChanged={showOnlyChanged} />
 
                 </div>
 
@@ -539,30 +550,46 @@ export default function ProfileUpdates() {
   );
 }
 
-// Clean horizontal row-by-row diff comparison (No Emojis, Perfect Mobile Responsiveness)
-function DiffRow({ label, oldVal, newVal }) {
-  const isChanged = String(oldVal).trim() !== String(newVal).trim();
+// Clean horizontal row-by-row diff comparison with O'ZGARGAN badges
+function DiffRow({ label, oldVal, newVal, showOnlyChanged }) {
+  const cleanOld = String(oldVal || '').trim();
+  const cleanNew = String(newVal || '').trim();
+
+  const isChanged = cleanOld !== cleanNew && cleanOld !== '' && cleanNew !== '' && cleanOld !== '—' && cleanNew !== '—';
+
+  if (showOnlyChanged && !isChanged) return null;
 
   return (
     <div style={{
-      background: isChanged ? 'rgba(0, 255, 102, 0.04)' : 'rgba(255, 255, 255, 0.02)',
-      border: isChanged ? '1px solid rgba(0, 255, 102, 0.15)' : '1px solid rgba(255, 255, 255, 0.04)',
+      background: isChanged ? 'rgba(0, 255, 102, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+      border: isChanged ? '1px solid rgba(0, 255, 102, 0.3)' : '1px solid rgba(255, 255, 255, 0.04)',
       padding: '8px 12px',
       borderRadius: '10px',
       fontSize: '12px'
     }}>
-      <div style={{ fontSize: '10px', fontWeight: '800', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>
-        {label}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+        <span style={{ fontSize: '10px', fontWeight: '800', color: isChanged ? '#00ff66' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
+          {label}
+        </span>
+        {isChanged ? (
+          <span style={{ fontSize: '9px', fontWeight: '900', color: '#00ff66', background: 'rgba(0,255,102,0.15)', padding: '1px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+            O'ZGARGAN
+          </span>
+        ) : (
+          <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>
+            Bir xil
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-        <div style={{ flex: 1, color: isChanged ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.8)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ flex: 1, color: isChanged ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.5)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {oldVal || '—'}
         </div>
 
         <ArrowRight size={14} color={isChanged ? '#00ff66' : 'rgba(255,255,255,0.2)'} style={{ flexShrink: 0 }} />
 
-        <div style={{ flex: 1, textAlign: 'right', color: isChanged ? '#00ff66' : 'rgba(255,255,255,0.8)', fontWeight: isChanged ? '900' : '500', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ flex: 1, textAlign: 'right', color: isChanged ? '#00ff66' : 'rgba(255,255,255,0.7)', fontWeight: isChanged ? '900' : '400', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {newVal || '—'}
         </div>
       </div>
