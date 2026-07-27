@@ -292,7 +292,7 @@ function initNavbarSearch() {
                 html += `
                 <div>
                     <h3 style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; text-transform:uppercase; color:${sec.color}; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
-                        🛡️ Jamoalar (${sec.list.length})
+                        <i data-lucide="shield" style="width:18px; height:18px; color:${sec.color};"></i> Jamoalar (${sec.list.length})
                     </h3>
                     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:18px;">
                         ${sec.list.map(x => {
@@ -301,16 +301,16 @@ function initNavbarSearch() {
                             <div class="screen-search-card" onclick="window.location.href='team-details.html?id=${team.id}'" style="background:rgba(18,20,29,0.75); backdrop-filter:blur(15px); border:1px solid rgba(255,255,255,0.12); border-radius:24px; padding:20px; cursor:pointer; transition:all 0.3s; display:flex; flex-direction:column; justify-content:space-between; gap:16px;">
                                 <div style="display:flex; align-items:center; gap:16px;">
                                     <div style="width:60px; height:60px; border-radius:18px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; padding:6px;">
-                                        ${team.logo_url ? `<img src="${team.logo_url}" style="width:100%; height:100%; object-fit:contain;">` : `<span style="font-size:28px; color:#60A5FA;">🛡️</span>`}
+                                        ${team.logo_url ? `<img src="${team.logo_url}" style="width:100%; height:100%; object-fit:contain;">` : `<i data-lucide="shield" style="width:28px; height:28px; color:#60A5FA;"></i>`}
                                     </div>
                                     <div style="flex:1; min-width:0;">
                                         <div style="font-family:'Outfit',sans-serif; font-size:17px; font-weight:800; font-style:italic; text-transform:uppercase; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${team.name}</div>
-                                        ${team.captain_phone ? `<div style="font-size:11px; font-family:monospace; color:#94A3B8; margin-top:2px;">📞 ${team.captain_phone}</div>` : ''}
+                                        ${team.captain_phone ? `<div style="font-size:11px; font-family:monospace; color:#94A3B8; margin-top:2px;"><i data-lucide="phone" style="width:10px; height:10px; display:inline;"></i> ${team.captain_phone}</div>` : ''}
                                     </div>
                                 </div>
                                 <div style="padding-top:12px; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:8px; font-size:10px; font-weight:800;">
-                                    <span style="background:rgba(0,255,102,0.1); border:1px solid rgba(0,255,102,0.2); color:#00FF66; padding:4px 10px; border-radius:10px;">🏆 ${team.league || 'Liga'}</span>
-                                    <span style="background:rgba(192,132,252,0.1); border:1px solid rgba(192,132,252,0.2); color:#C084FC; padding:4px 10px; border-radius:10px;">👥 ${x.pCount} Futbolchi</span>
+                                    <span style="background:rgba(0,255,102,0.1); border:1px solid rgba(0,255,102,0.2); color:#00FF66; padding:4px 10px; border-radius:10px; display:flex; align-items:center; gap:4px;"><i data-lucide="trophy" style="width:10px; height:10px;"></i> ${team.league || 'Liga'}</span>
+                                    <span style="background:rgba(192,132,252,0.1); border:1px solid rgba(192,132,252,0.2); color:#C084FC; padding:4px 10px; border-radius:10px; display:flex; align-items:center; gap:4px;"><i data-lucide="users" style="width:10px; height:10px;"></i> ${x.pCount} Futbolchi</span>
                                 </div>
                             </div>`;
                         }).join('')}
@@ -322,7 +322,7 @@ function initNavbarSearch() {
                 html += `
                 <div>
                     <h3 style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; text-transform:uppercase; color:${sec.color}; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
-                        ⚽ Futbolchilar (${sec.list.length})
+                        <i data-lucide="dribbble" style="width:18px; height:18px; color:${sec.color};"></i> Futbolchilar (${sec.list.length})
                     </h3>
                     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:18px;">
                         ${sec.list.map(x => {
@@ -336,7 +336,7 @@ function initNavbarSearch() {
                             <div class="screen-search-card" onclick="window.location.href='${targetUrl}'" style="background:rgba(18,20,29,0.75); backdrop-filter:blur(15px); border:1px solid rgba(255,255,255,0.12); border-radius:24px; padding:20px; cursor:pointer; transition:all 0.3s; display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
                                 <div style="display:flex; align-items:center; gap:14px;">
                                     <div style="width:56px; height:56px; border-radius:16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
-                                        ${p.photo_url ? `<img src="${p.photo_url}" style="width:100%; height:100%; object-fit:cover;">` : `<span style="font-size:24px; color:#C084FC;">⚽</span>`}
+                                        ${p.photo_url ? `<img src="${p.photo_url}" style="width:100%; height:100%; object-fit:cover;">` : `<i data-lucide="user" style="width:24px; height:24px; color:#C084FC;"></i>`}
                                     </div>
                                     <div style="flex:1; min-width:0;">
                                         <div style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${displayName}</div>
@@ -345,8 +345,8 @@ function initNavbarSearch() {
                                     </div>
                                 </div>
                                 <div style="padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); display:flex; flex-wrap:wrap; gap:6px; font-size:10px; font-weight:800;">
-                                    <span style="background:rgba(0,255,102,0.1); border:1px solid rgba(0,255,102,0.2); color:#00FF66; padding:3px 8px; border-radius:8px;">🏆 ${team?.league || 'Liga'}</span>
-                                    <span style="background:rgba(96,165,250,0.1); border:1px solid rgba(96,165,250,0.2); color:#60A5FA; padding:3px 8px; border-radius:8px;">🛡️ ${team?.name || 'Jamoa mavjud emas'}</span>
+                                    <span style="background:rgba(0,255,102,0.1); border:1px solid rgba(0,255,102,0.2); color:#00FF66; padding:3px 8px; border-radius:8px; display:flex; align-items:center; gap:4px;"><i data-lucide="trophy" style="width:10px; height:10px;"></i> ${team?.league || 'Liga'}</span>
+                                    <span style="background:rgba(96,165,250,0.1); border:1px solid rgba(96,165,250,0.2); color:#60A5FA; padding:3px 8px; border-radius:8px; display:flex; align-items:center; gap:4px;"><i data-lucide="shield" style="width:10px; height:10px;"></i> ${team?.name || 'Jamoa mavjud emas'}</span>
                                 </div>
                             </div>`;
                         }).join('')}
@@ -358,7 +358,7 @@ function initNavbarSearch() {
                 html += `
                 <div>
                     <h3 style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; text-transform:uppercase; color:${sec.color}; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
-                        🏆 Ligalar (${sec.list.length})
+                        <i data-lucide="trophy" style="width:18px; height:18px; color:${sec.color};"></i> Ligalar (${sec.list.length})
                     </h3>
                     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:18px;">
                         ${sec.list.map(x => {
@@ -366,7 +366,7 @@ function initNavbarSearch() {
                             return `
                             <div class="screen-search-card" onclick="window.location.href='standings.html'" style="background:rgba(18,20,29,0.75); backdrop-filter:blur(15px); border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:18px; cursor:pointer; transition:all 0.3s; display:flex; align-items:center; gap:14px;">
                                 <div style="width:48px; height:48px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center;">
-                                    <span style="font-size:24px; color:#00FF66;">🏆</span>
+                                    <i data-lucide="trophy" style="width:24px; height:24px; color:#00FF66;"></i>
                                 </div>
                                 <div>
                                     <div style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:#fff;">${l.name}</div>
@@ -380,5 +380,7 @@ function initNavbarSearch() {
         });
 
         contentHolder.innerHTML = html;
+        // Re-render Lucide icons for dynamically injected content
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }

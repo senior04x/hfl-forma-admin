@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         document.getElementById('pFullName').textContent = fullName;
         document.getElementById('pNumberRing').textContent = `#${playerNum}`;
-        document.getElementById('pPositionBadge').innerHTML = `⚽ ${position}`;
+        document.getElementById('pPositionBadge').innerHTML = `<i data-lucide="dribbble" style="width:14px; height:14px;"></i> ${position}`;
 
         // Stats cards
         document.getElementById('pBirthDate').textContent = birthDate;
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             document.getElementById('teamName').textContent = teamData.name;
-            document.getElementById('teamLeague').textContent = `🏆 ${teamData.league || 'Liga'}`;
+            document.getElementById('teamLeague').innerHTML = `<i data-lucide="trophy" style="width:14px; height:14px; display:inline;"></i> ${teamData.league || 'Liga'}`;
 
             // Click to go to team page
             document.getElementById('teamHeaderLink').addEventListener('click', () => {
@@ -126,6 +126,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Show content
         loadingEl.classList.add('hidden');
         contentEl.classList.remove('hidden');
+
+        // Re-render Lucide icons for dynamically inserted content
+        if (typeof lucide !== 'undefined') lucide.createIcons();
 
     } catch (err) {
         console.error('Player details error:', err);

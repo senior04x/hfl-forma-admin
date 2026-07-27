@@ -103,8 +103,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             card.className = 'player-card-public';
             
             const pNumber = player.player_number ? player.player_number : '-';
-            const position = player.position ? player.position : '-';
-            const birth = player.birth_date ? player.birth_date : '-';
 
             card.innerHTML = `
                 <div class="player-number-badge">${pNumber}</div>
@@ -113,14 +111,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <p>${player.last_name}</p>
             `;
 
-            // Click to open modal
+            // Click to navigate to player profile page
             card.addEventListener('click', () => {
-                document.getElementById('pdPhoto').src = player.photo_url;
-                document.getElementById('pdName').textContent = `${player.first_name} ${player.last_name}`;
-                document.getElementById('pdNumber').textContent = `#${pNumber}`;
-                document.getElementById('pdPosition').textContent = position;
-                document.getElementById('pdBirth').textContent = birth;
-                document.getElementById('playerDetailModal').classList.remove('hidden');
+                window.location.href = `player-details.html?id=${player.id}`;
             });
 
             playersGrid.appendChild(card);
@@ -130,9 +123,4 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error("Xatolik:", err);
         loadingEl.innerHTML = '<p style="color: var(--error);">Xatolik yuz berdi yoki jamoa topilmadi.</p><a href="teams.html" style="color: var(--gold-primary); text-decoration: underline;">Ortga qaytish</a>';
     }
-
-    // Modal Close
-    document.getElementById('closePlayerModal').addEventListener('click', () => {
-        document.getElementById('playerDetailModal').classList.add('hidden');
-    });
 });
