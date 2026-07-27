@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, Eye, EyeOff, KeyRound, ArrowLeft, Send } from 'lucide-react';
+import { LogIn, Eye, EyeOff, KeyRound, ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import './Login.css';
 
@@ -178,7 +178,8 @@ const Login = () => {
 
             {resetSuccess && (
               <div className="success-msg">
-                ✅ Parolni tiklash havolasi elektron pochtangizga yuborildi! Pochtani tekshiring.
+                <CheckCircle2 size={15} style={{ color: '#00ff66', flexShrink: 0 }} />
+                <span>Parolni tiklash havolasi elektron pochtangizga yuborildi! Pochtani tekshiring.</span>
               </div>
             )}
 
