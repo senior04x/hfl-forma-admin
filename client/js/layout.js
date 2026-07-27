@@ -47,14 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <!-- FULL-SCREEN MAIN PAGE SEARCH RESULTS CONTAINER BELOW NAVBAR -->
         <div id="global-screen-search-results" class="global-screen-search-view hidden">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-                <div style="font-family:'Outfit',sans-serif; font-size:22px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#fff; display:flex; align-items:center; gap:10px;">
-                    <i data-lucide="search" style="color:#00FF66; width:24px; height:24px;"></i> Qidiruv Natijalari: "<span id="search-query-label" style="color:#00FF66;"></span>"
-                </div>
-                <button id="closeScreenSearchBtn" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; font-weight:700; padding:8px 16px; border-radius:12px; cursor:pointer;">
-                    Yopish ✕
-                </button>
-            </div>
             <div id="search-results-content-holder" style="display:flex; flex-direction:column; gap:32px;"></div>
         </div>
     `;
@@ -138,9 +130,7 @@ function initNavbarSearch() {
     const input = document.getElementById('globalNavSearchInput');
     const clearBtn = document.getElementById('globalNavSearchClear');
     const screenResultsView = document.getElementById('global-screen-search-results');
-    const queryLabel = document.getElementById('search-query-label');
     const contentHolder = document.getElementById('search-results-content-holder');
-    const closeBtn = document.getElementById('closeScreenSearchBtn');
 
     if (!input || !screenResultsView || !contentHolder) return;
 
@@ -190,9 +180,7 @@ function initNavbarSearch() {
         toggleMainContent(false);
     }
 
-    if (closeBtn) {
-        closeBtn.addEventListener('click', clearSearch);
-    }
+
 
     if (clearBtn) {
         clearBtn.addEventListener('click', clearSearch);
@@ -212,11 +200,28 @@ function initNavbarSearch() {
     });
 
     async function performSearch(query) {
-        queryLabel.textContent = query;
         screenResultsView.classList.remove('hidden');
         toggleMainContent(true);
 
-        contentHolder.innerHTML = `<div style="text-align:center; padding:40px; color:#94A3B8; font-weight:700;">Yuklanmoqda...</div>`;
+        // Skeleton loading cards
+        const skeletonHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:18px;">
+            ${Array(6).fill('').map(() => `
+            <div style="background:rgba(18,20,29,0.75); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:20px;">
+                <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
+                    <div class="skeleton-circle" style="width:56px; height:56px; border-radius:16px; flex-shrink:0;"></div>
+                    <div style="flex:1;">
+                        <div class="skeleton-line" style="width:70%; height:16px; margin-bottom:8px;"></div>
+                        <div class="skeleton-line" style="width:50%; height:12px;"></div>
+                    </div>
+                </div>
+                <div style="padding-top:12px; border-top:1px solid rgba(255,255,255,0.06); display:flex; gap:8px;">
+                    <div class="skeleton-line" style="width:70px; height:20px; border-radius:10px;"></div>
+                    <div class="skeleton-line" style="width:90px; height:20px; border-radius:10px;"></div>
+                </div>
+            </div>`).join('')}
+        </div>`;
+        contentHolder.innerHTML = skeletonHTML;
 
         const data = await loadSearchData();
         if (!data) return;
