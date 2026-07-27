@@ -53,11 +53,11 @@ export default function ProfileUpdates() {
     }
   };
 
-  // Approve Request: Update existing player ONLY & mark request as processed (No duplicate new member)
+  // Approve Request: Update existing player ONLY & mark request as processed
   const handleApprove = async (reqItem) => {
     setProcessingId(reqItem.id);
     try {
-      const targetPlayerId = reqItem.payload?.playerId;
+      const targetPlayerId = reqItem.payload?.playerId || reqItem.player_id;
       const newData = reqItem.payload?.newData || {};
 
       if (targetPlayerId) {
@@ -67,9 +67,13 @@ export default function ProfileUpdates() {
           weight: newData.weight || ''
         };
 
-        const instaUrl = newData.instagramUrl || (newData.instagramUsername ? `https://www.instagram.com/${newData.instagramUsername}/` : '');
+        const cleanInsta = (newData.instagramUsername || '').trim().replace(/^@/, '');
+        const instaUrl = newData.instagramUrl || (cleanInsta ? `https://www.instagram.com/${cleanInsta}/` : '');
 
-        const currentComment = reqItem.comment || '';
+        // Fetch existing comment of target player to preserve other data
+        const { data: targetPlayer } = await supabase.from('applications').select('comment').eq('id', targetPlayerId).maybeSingle();
+        const currentComment = targetPlayer?.comment || reqItem.comment || '';
+
         const cleanComment = currentComment
           .replace(/\[PROFILE_UPDATE\][\s\S]*/g, '')
           .replace(/\[METADATA:[^\]]+\]/g, '')
@@ -100,13 +104,26 @@ export default function ProfileUpdates() {
 
         Object.keys(updatePayload).forEach(key => updatePayload[key] === undefined && delete updatePayload[key]);
 
-        await supabase.from('applications').update(updatePayload).eq('id', targetPlayerId);
+        const { error: playerErr } = await supabase.from('applications').update(updatePayload).eq('id', targetPlayerId);
+        if (playerErr) {
+          console.error('Error updating player record:', playerErr);
+          alert('O\'yinchi ma\'lumotlarini yangilashda xatolik: ' + playerErr.message);
+          return;
+        }
       }
 
-      await supabase.from('applications').update({ status: 'approved_update' }).eq('id', reqItem.id);
+      const { error: ticketErr } = await supabase.from('applications').update({ status: 'approved_update' }).eq('id', reqItem.id);
+      if (ticketErr) {
+        console.error('Error approving request:', ticketErr);
+        alert('Arizani tasdiqlashda xatolik: ' + ticketErr.message);
+        return;
+      }
+
+      alert('Ariza muvaffaqiyatli tasdiqlandi va o\'yinchi ma\'lumotlari bazada yangilandi!');
       fetchProfileUpdateRequests();
     } catch (err) {
       console.error('Error approving request:', err);
+      alert('Xatolik yuz berdi: ' + err.message);
     } finally {
       setProcessingId(null);
     }
@@ -115,10 +132,16 @@ export default function ProfileUpdates() {
   const handleReject = async (reqItem) => {
     setProcessingId(reqItem.id);
     try {
-      await supabase.from('applications').update({ status: 'rejected_update' }).eq('id', reqItem.id);
+      const { error } = await supabase.from('applications').update({ status: 'rejected_update' }).eq('id', reqItem.id);
+      if (error) {
+        alert('Arizani rad etishda xatolik: ' + error.message);
+        return;
+      }
+      alert('Ariza rad etildi!');
       fetchProfileUpdateRequests();
     } catch (err) {
       console.error('Error rejecting request:', err);
+      alert('Xatolik yuz berdi: ' + err.message);
     } finally {
       setProcessingId(null);
     }
@@ -238,14 +261,9 @@ export default function ProfileUpdates() {
               >
                 {/* CARD TOP INFO */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: '900', color: '#00ff66', background: 'rgba(0,255,102,0.1)', padding: '3px 8px', borderRadius: '6px' }}>
-                      ID: {req.id}
-                    </span>
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
-                      {new Date(req.created_at).toLocaleString('uz-UZ')}
-                    </span>
-                  </div>
+                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                    {new Date(req.created_at).toLocaleString('uz-UZ')}
+                  </span>
 
                   <span
                     style={{
@@ -353,13 +371,26 @@ export default function ProfileUpdates() {
                     />
                   )}
 
+                  {(newData.instagramUsername || oldData.instagramUsername) && (
+                    <DiffRow
+                      label="Instagram Profil"
+                      oldVal={oldData.instagramUsername ? `@${oldData.instagramUsername}` : '—'}
+                      newVal={newData.instagramUsername ? `@${newData.instagramUsername}` : '—'}
+                    />
+                  )}
+
                 </div>
 
                 {/* ACTION BUTTONS */}
                 {isPending && (
                   <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
                     <button
-                      onClick={() => handleReject(req)}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleReject(req);
+                      }}
                       disabled={processingId === req.id}
                       style={{
                         flex: 1,
@@ -381,7 +412,12 @@ export default function ProfileUpdates() {
                     </button>
 
                     <button
-                      onClick={() => handleApprove(req)}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleApprove(req);
+                      }}
                       disabled={processingId === req.id}
                       style={{
                         flex: 2,
