@@ -3,6 +3,25 @@ import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { Check, X, ArrowRight, RefreshCw, AlertCircle, Phone, User, Shield } from 'lucide-react';
 
+const getInstaUser = (val) => {
+  if (!val) return '';
+  if (typeof val === 'string') {
+    const match = val.match(/instagram\.com\/([^\/\]]+)/);
+    if (match?.[1]) return match[1].replace(/^@/, '').trim();
+    return val.replace(/^@/, '').trim();
+  }
+  return '';
+};
+
+const extractInstaFromComment = (comment) => {
+  if (!comment) return '';
+  const match = comment.match(/\[INSTAGRAM:([^\]]+)\]/);
+  if (match?.[1]) {
+    return getInstaUser(match[1]);
+  }
+  return '';
+};
+
 export default function ProfileUpdates() {
   const { orgId } = useOrg();
   const [activeTab, setActiveTab] = useState('players');
@@ -248,6 +267,9 @@ export default function ProfileUpdates() {
             const oldPhoto = oldData.photoUrl || req.photo_url || '';
             const newPhoto = newData.photoUrl || oldPhoto;
 
+            const oldInsta = getInstaUser(oldData.instagramUsername) || getInstaUser(oldData.instagram_username) || getInstaUser(oldData.instagramUrl) || extractInstaFromComment(req.comment);
+            const newInsta = getInstaUser(newData.instagramUsername) || getInstaUser(newData.instagram_username) || getInstaUser(newData.instagramUrl) || extractInstaFromComment(req.comment);
+
             return (
               <div
                 key={req.id}
@@ -371,13 +393,11 @@ export default function ProfileUpdates() {
                     />
                   )}
 
-                  {(newData.instagramUsername || oldData.instagramUsername) && (
-                    <DiffRow
-                      label="Instagram Profil"
-                      oldVal={oldData.instagramUsername ? `@${oldData.instagramUsername}` : '—'}
-                      newVal={newData.instagramUsername ? `@${newData.instagramUsername}` : '—'}
-                    />
-                  )}
+                  <DiffRow
+                    label="Instagram Username"
+                    oldVal={oldInsta ? `@${oldInsta}` : '—'}
+                    newVal={newInsta ? `@${newInsta}` : '—'}
+                  />
 
                 </div>
 
