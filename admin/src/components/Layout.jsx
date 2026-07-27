@@ -1,6 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Calendar, Users, Menu, X, ArrowLeftRight, Building2, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
+import { 
+  Users, 
+  Calendar, 
+  LayoutDashboard, 
+  Settings as SettingsIcon, 
+  LogOut, 
+  Menu, 
+  X,
+  Building2,
+  ChevronDown,
+  ArrowLeftRight,
+  RefreshCw
+} from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import './Layout.css';
@@ -54,6 +66,7 @@ const Layout = () => {
   const menuItems = [
     { path: '/dashboard', label: 'Zayavkalar', icon: <Users size={20} /> },
     { path: '/transfers', label: 'Transferlar', icon: <ArrowLeftRight size={20} /> },
+    { path: '/profile-updates', label: "Ma'lumotlar almashinuvi", icon: <RefreshCw size={20} /> },
     { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> },
     { path: '/standings', label: 'Turnir jadvali', icon: <LayoutDashboard size={20} /> },
     { path: '/sponsors', label: 'Homiylar', icon: <Calendar size={20} /> },
