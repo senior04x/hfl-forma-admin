@@ -69,9 +69,7 @@ const Settings = () => {
       const { error: authErr } = await supabase.auth.updateUser({
         data: { brand_colors: brandColors }
       });
-      if (authErr) console.warn('Auth user metadata update warning:', authErr);
-
-      await supabase.from('organizations').update({ brand_colors: brandColors }).eq('id', orgId);
+      if (authErr) throw authErr;
 
       const primaryColor = brandColors[0] || '#00FF66';
       const gradientCSS = brandColors.length > 1
