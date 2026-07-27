@@ -1,9 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { X, Trash2, Save, Eye, Crop, Instagram } from 'lucide-react';
+import { X, Trash2, Save, Eye, Crop } from 'lucide-react';
 import ImageCropperModal from './ImageCropperModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import './Modal.css';
+
+const InstagramIcon = ({ size = 16, color = '#E1306C' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+  </svg>
+);
 
 const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   const [currentMode, setCurrentMode] = useState(mode);
@@ -360,7 +368,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
                 </div>
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#E1306C', fontWeight: '800' }}>
-                    <Instagram size={16} /> Instagram Username
+                    <InstagramIcon size={16} /> Instagram Username
                   </label>
                   <input 
                     name="instagram_username" 
