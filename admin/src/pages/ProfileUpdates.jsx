@@ -61,6 +61,29 @@ export default function ProfileUpdates() {
       const newData = reqItem.payload?.newData || {};
 
       if (targetPlayerId) {
+        const metaObj = {
+          citizenship: newData.citizenship || '',
+          height: newData.height || '',
+          weight: newData.weight || ''
+        };
+
+        const instaUrl = newData.instagramUrl || (newData.instagramUsername ? `https://www.instagram.com/${newData.instagramUsername}/` : '');
+
+        const currentComment = reqItem.comment || '';
+        const cleanComment = currentComment
+          .replace(/\[PROFILE_UPDATE\][\s\S]*/g, '')
+          .replace(/\[METADATA:[^\]]+\]/g, '')
+          .replace(/\[INSTAGRAM:[^\]]+\]/g, '')
+          .trim();
+
+        let updatedComment = cleanComment;
+        if (metaObj.citizenship || metaObj.height || metaObj.weight) {
+          updatedComment += ` [METADATA:${JSON.stringify(metaObj)}]`;
+        }
+        if (instaUrl) {
+          updatedComment += ` [INSTAGRAM:${instaUrl}]`;
+        }
+
         const updatePayload = {
           first_name: newData.firstName || reqItem.first_name,
           last_name: newData.lastName || reqItem.last_name,
@@ -71,29 +94,16 @@ export default function ProfileUpdates() {
           photo_url: newData.photoUrl || reqItem.photo_url,
           passport_series: newData.passportSeries || undefined,
           passport_number: newData.passportNumber || undefined,
-          citizenship: newData.citizenship || undefined,
-          height: newData.height || undefined,
-          weight: newData.weight || undefined,
-          birth_date: newData.birthDate || undefined
+          birth_date: newData.birthDate || undefined,
+          comment: updatedComment.trim()
         };
 
-        // Remove undefined keys
         Object.keys(updatePayload).forEach(key => updatePayload[key] === undefined && delete updatePayload[key]);
-
-        // If instagram username present, store in comment or instagram_username column
-        if (newData.instagramUsername || newData.instagramUrl) {
-          const instaUrl = newData.instagramUrl || `https://www.instagram.com/${newData.instagramUsername}/`;
-          updatePayload.comment = `[INSTAGRAM:${instaUrl}]`;
-          updatePayload.instagram_username = newData.instagramUsername || undefined;
-          updatePayload.instagram_url = instaUrl;
-        }
 
         await supabase.from('applications').update(updatePayload).eq('id', targetPlayerId);
       }
 
-      // Mark the update request application itself as approved_update (NOT new player application)
       await supabase.from('applications').update({ status: 'approved_update' }).eq('id', reqItem.id);
-
       fetchProfileUpdateRequests();
     } catch (err) {
       console.error('Error approving request:', err);

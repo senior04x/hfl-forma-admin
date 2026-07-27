@@ -46,14 +46,33 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     }
   }, [player.team_id, teams]);
 
-  const getInstaUsername = (p) => {
-    if (p.instagram_username) return p.instagram_username;
+  const extractPlayerMeta = (p) => {
+    let citizenship = p.citizenship || '';
+    let height = p.height || '';
+    let weight = p.weight || '';
+    let instaUser = p.instagram_username || '';
+
     if (p.comment) {
-      const match = p.comment.match(/\[INSTAGRAM:https?:\/\/[^/]+\/([^/\]]+)/);
-      if (match?.[1]) return match[1];
+      const metaMatch = p.comment.match(/\[METADATA:({[^\]]+})\]/);
+      if (metaMatch?.[1]) {
+        try {
+          const obj = JSON.parse(metaMatch[1]);
+          if (obj.citizenship) citizenship = obj.citizenship;
+          if (obj.height) height = obj.height;
+          if (obj.weight) weight = obj.weight;
+        } catch (e) {}
+      }
+
+      const instaMatch = p.comment.match(/\[INSTAGRAM:https?:\/\/[^/]+\/([^/\]]+)/);
+      if (instaMatch?.[1]) {
+        instaUser = instaMatch[1];
+      }
     }
-    return '';
+
+    return { citizenship, height, weight, instaUser };
   };
+
+  const initialMeta = extractPlayerMeta(player);
 
   const [formData, setFormData] = useState({
     first_name: player.first_name || '',
@@ -67,13 +86,14 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     player_number: player.player_number || '',
     photo_url: player.photo_url || '',
     team_id: player.team_id || '',
-    instagram_username: getInstaUsername(player),
-    citizenship: player.citizenship || '',
-    height: player.height || '',
-    weight: player.weight || ''
+    instagram_username: initialMeta.instaUser,
+    citizenship: initialMeta.citizenship,
+    height: initialMeta.height,
+    weight: initialMeta.weight
   });
 
   useEffect(() => {
+    const meta = extractPlayerMeta(player);
     setFormData({
       first_name: player.first_name || '',
       last_name: player.last_name || '',
@@ -86,10 +106,10 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
       player_number: player.player_number || '',
       photo_url: player.photo_url || '',
       team_id: player.team_id || '',
-      instagram_username: getInstaUsername(player),
-      citizenship: player.citizenship || '',
-      height: player.height || '',
-      weight: player.weight || ''
+      instagram_username: meta.instaUser,
+      citizenship: meta.citizenship,
+      height: meta.height,
+      weight: meta.weight
     });
   }, [player]);
 
@@ -152,19 +172,43 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
       const cleanInsta = (formData.instagram_username || '').trim().replace(/^@/, '').replace(/[^a-zA-Z0-9._]/g, '');
       const instaUrl = cleanInsta ? `https://www.instagram.com/${cleanInsta}/` : null;
 
-      const payload = {
-        ...formData,
-        instagram_username: cleanInsta || null,
-        instagram_url: instaUrl
+      const metaObj = {
+        citizenship: formData.citizenship || '',
+        height: formData.height || '',
+        weight: formData.weight || ''
       };
 
+      const currentComment = player.comment || '';
+      const cleanComment = currentComment
+        .replace(/\[METADATA:[^\]]+\]/g, '')
+        .replace(/\[INSTAGRAM:[^\]]+\]/g, '')
+        .trim();
+
+      let updatedComment = cleanComment;
+      if (metaObj.citizenship || metaObj.height || metaObj.weight) {
+        updatedComment += ` [METADATA:${JSON.stringify(metaObj)}]`;
+      }
       if (instaUrl) {
-        const currentComment = player.comment || '';
-        const cleanComment = currentComment.replace(/\[INSTAGRAM:[^\]]+\]/g, '').trim();
-        payload.comment = `${cleanComment} [INSTAGRAM:${instaUrl}]`.trim();
+        updatedComment += ` [INSTAGRAM:${instaUrl}]`;
       }
 
-      const { error } = await supabase.from('applications').update(payload).eq('id', player.id);
+      // ONLY update valid SQL columns to prevent 400 Bad Request error
+      const updatePayload = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        father_name: formData.father_name,
+        phone: formData.phone,
+        passport_series: formData.passport_series,
+        passport_number: formData.passport_number,
+        birth_date: formData.birth_date,
+        position: formData.position,
+        player_number: formData.player_number ? Number(formData.player_number) : null,
+        photo_url: formData.photo_url,
+        team_id: formData.team_id || null,
+        comment: updatedComment.trim()
+      };
+
+      const { error } = await supabase.from('applications').update(updatePayload).eq('id', player.id);
       if (error) throw error;
       onRefresh();
       setCurrentMode('view');
