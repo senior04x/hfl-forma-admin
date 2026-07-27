@@ -12,6 +12,7 @@ export const useOrg = () => {
 export const OrgProvider = ({ children }) => {
   const [currentOrg, setCurrentOrg] = useState(null);
   const [adminRole, setAdminRole] = useState(null); // 'super_admin' | 'org_admin'
+  const [brandColors, setBrandColors] = useState(['#00FF66', '#10B981']);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export const OrgProvider = ({ children }) => {
       // 1. Get role and orgId from user_metadata or admin_users
       const metaRole = user.user_metadata?.role;
       const metaOrgId = user.user_metadata?.organization_id;
+      const metaBrandColors = user.user_metadata?.brand_colors;
 
       // 2. Fetch admin_users record if available
       const { data: adminData } = await supabase
@@ -50,7 +52,7 @@ export const OrgProvider = ({ children }) => {
 
       setAdminRole(effectiveRole);
 
-      // Check if super_admin (or active admin) previously switched org saved in localStorage
+      // Check if super_admin previously switched org saved in localStorage
       const savedOrgId = localStorage.getItem('hfl_active_org_id');
       const effectiveOrgId = (effectiveRole === 'super_admin' && savedOrgId) ? Number(savedOrgId) : defaultOrgId;
 
@@ -76,6 +78,17 @@ export const OrgProvider = ({ children }) => {
           setCurrentOrg({ id: effectiveOrgId, name: user.email ? user.email.split('@')[0] : 'Tashkilot', logo_url: null });
         }
       }
+
+      const colors = metaBrandColors || orgData?.brand_colors || ['#00FF66', '#10B981'];
+      setBrandColors(colors);
+
+      const primaryColor = colors[0] || '#00FF66';
+      const gradientCSS = colors.length > 1
+        ? `linear-gradient(135deg, ${colors.join(', ')})`
+        : primaryColor;
+
+      document.documentElement.style.setProperty('--org-primary', primaryColor);
+      document.documentElement.style.setProperty('--org-gradient', gradientCSS);
     } catch (err) {
       console.error('OrgContext load error:', err);
       setAdminRole('org_admin');
@@ -104,9 +117,24 @@ export const OrgProvider = ({ children }) => {
 
   const isSuperAdmin = adminRole === 'super_admin';
   const orgId = currentOrg?.id || 1;
+  const primaryColor = brandColors[0] || '#00FF66';
+  const gradientCSS = brandColors.length > 1
+    ? `linear-gradient(135deg, ${brandColors.join(', ')})`
+    : primaryColor;
 
   return (
-    <OrgContext.Provider value={{ currentOrg, orgId, adminRole, isSuperAdmin, loading, switchOrg, updateCurrentOrg }}>
+    <OrgContext.Provider value={{
+      currentOrg,
+      orgId,
+      adminRole,
+      isSuperAdmin,
+      brandColors,
+      primaryColor,
+      gradientCSS,
+      loading,
+      switchOrg,
+      updateCurrentOrg
+    }}>
       {children}
     </OrgContext.Provider>
   );

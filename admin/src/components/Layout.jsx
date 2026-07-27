@@ -13,7 +13,7 @@ const Layout = () => {
   const [allOrgs, setAllOrgs] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentOrg, isSuperAdmin, switchOrg, loading: orgLoading } = useOrg();
+  const { currentOrg, isSuperAdmin, switchOrg, loading: orgLoading, gradientCSS } = useOrg();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -94,6 +94,7 @@ const Layout = () => {
 
       {/* Sidebar */}
       <aside className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}>
+        <div style={{ background: gradientCSS, height: '4px', width: '100%' }} />
         <div className="sidebar-header hide-mobile">
           {orgLoading ? (
             <div className="logo-skeleton"></div>
