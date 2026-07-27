@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionStorage.setItem('hfl_welcome_shown', 'true');
 
         // Split text into spans for letter-by-letter animation
-        const text = "HAVAS LIGA";
+        const text = "AMATORA";
         welcomeTextContainer.innerHTML = '';
         text.split('').forEach((char, index) => {
             const span = document.createElement('span');

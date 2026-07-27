@@ -32,6 +32,100 @@
     -webkit-text-fill-color: transparent;
     margin: 0;
 }
+
+/* Permanent Global Search in Navbar */
+.nav-search-container {
+    position: relative;
+    flex: 1;
+    max-width: 340px;
+    margin: 0 15px;
+}
+
+.nav-search-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 6px 14px;
+    transition: all 0.3s ease;
+}
+
+.nav-search-wrapper:focus-within {
+    border-color: #00FF66;
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 15px rgba(0, 255, 102, 0.25);
+}
+
+.nav-search-wrapper input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    font-size: 13px;
+    width: 100%;
+    margin-left: 8px;
+    font-family: 'Inter', sans-serif;
+}
+
+.nav-search-wrapper input::placeholder {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.search-clear-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+}
+
+.search-clear-btn:hover {
+    color: #fff;
+}
+
+.nav-search-results {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-width: 360px;
+    background: #0F121A;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.85);
+    max-height: 480px;
+    overflow-y: auto;
+    z-index: 9999;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.nav-search-results.hidden {
+    display: none !important;
+}
+
+.search-card-item {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.search-card-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(0, 255, 102, 0.4);
+    transform: translateY(-1px);
+}
 .nav-links {
     display: flex;
     gap: 25px;
