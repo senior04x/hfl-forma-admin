@@ -424,6 +424,73 @@ export default function Sponsors() {
 
           {showSponsorsSection && (
             <div style={{ padding: '24px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              {/* Main Sponsor Direct Select Bar */}
+              <div className="main-sponsor-quick-select-bar" style={{
+                background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(202, 138, 4, 0.05))',
+                border: '1.5px solid rgba(234, 179, 8, 0.4)',
+                borderRadius: '14px',
+                padding: '16px 20px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContract: 'space-between',
+                flexWrap: 'wrap',
+                gap: '16px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(234, 179, 8, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#eab308'
+                  }}>
+                    <Star size={24} fill="#eab308" />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: '0 0 2px 0', fontSize: '15px', color: '#fef08a', fontWeight: '800' }}>Tashkilot Bosh Homiysi</h3>
+                    <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)' }}>Yuqori o'ng burchakda turadigan asosiy homiyni tanlang:</p>
+                  </div>
+                </div>
+
+                <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <select 
+                    value={mainSponsor?.id || ''} 
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      if (!selectedId) {
+                        handleSetMainSponsor(mainSponsor); // toggle off
+                      } else {
+                        const target = sponsors.find(s => String(s.id) === String(selectedId));
+                        if (target) handleSetMainSponsor(target);
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      background: '#0b1221',
+                      border: '1px solid rgba(234, 179, 8, 0.5)',
+                      color: '#ffffff',
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="">-- Bosh homiy yo'q (Tanlanmagan) --</option>
+                    {sponsors.map(s => (
+                      <option key={s.id} value={s.id}>
+                        ⭐ {s.name || `Homiy #${s.id}`} {mainSponsor?.id === s.id ? '(Bosh Homiy)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="upload-section-page" style={{ marginBottom: '24px' }}>
                 <label className={`upload-btn-page ${uploading ? 'disabled' : ''}`}>
                   {uploading ? <><span className="btn-spinner"></span> Yuklanmoqda...</> : <><Upload size={18} /> Yangi homiy logotipini qo'shish</>}
@@ -434,7 +501,7 @@ export default function Sponsors() {
               {loading ? (
                 <div className="sponsors-grid-page">
                   {[1, 2, 3, 4, 5, 6].map(idx => (
-                    <div key={idx} className="skeleton-pulse" style={{ height: '220px' }}></div>
+                    <div key={idx} className="skeleton-pulse" style={{ height: '240px' }}></div>
                   ))}
                 </div>
               ) : (
@@ -447,7 +514,6 @@ export default function Sponsors() {
                       <div 
                         key={sponsor.id} 
                         className={`sponsor-card-page ${isMain ? 'main-sponsor' : isSelected ? 'selected' : 'inactive'}`}
-                        onClick={(e) => toggleSelectSponsor(sponsor, e)}
                       >
                         {isMain ? (
                           <div className="main-sponsor-badge">
@@ -463,18 +529,23 @@ export default function Sponsors() {
                           </div>
                         )}
 
-                        <div className="sponsor-img-container-page">
+                        <div className="sponsor-img-container-page" onClick={(e) => toggleSelectSponsor(sponsor, e)}>
                           <img src={sponsor.logo_url} alt={sponsor.name || "Sponsor"} />
+                        </div>
+
+                        <div className="sponsor-name-tag">
+                          {sponsor.name && !sponsor.name.startsWith('sponsor_') ? sponsor.name : 'Homiy logotipi'}
                         </div>
 
                         <div className="sponsor-actions-footer">
                           <button 
                             type="button"
-                            className="btn-toggle-main" 
+                            className={`btn-toggle-main ${isMain ? 'is-main' : ''}`}
                             onClick={(e) => handleSetMainSponsor(sponsor, e)}
                             title={isMain ? "Bosh homiylikdan chiqarish" : "Tashkilot bosh homiysi qilib belgilash"}
                           >
-                            <Star size={14} fill={isMain ? "#fef08a" : "none"} /> {isMain ? "Bosh Homiy" : "Bosh Homiy"}
+                            <Star size={14} fill={isMain ? "#000" : "#fef08a"} /> 
+                            {isMain ? "Bosh Homiy" : "Bosh Homiy Qilish"}
                           </button>
 
                           {!isMain && (
