@@ -235,12 +235,26 @@ function initNavbarSearch() {
                 const team = p.team_id ? teamMap.get(String(p.team_id)) : null;
                 const fullName = p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim();
                 const nameScore = getMatchScore(fullName, query);
-                const phoneScore = getMatchScore(p.phone || p.phone_number || '', query);
+                
+                const phone1 = p.phone || '';
+                const phone2 = p.phone_number || '';
+                const phoneScore = Math.max(getMatchScore(phone1, query), getMatchScore(phone2, query));
+
                 const posScore = getMatchScore(p.position || '', query);
                 const numScore = String(p.player_number || p.number || '') === query.trim() ? 700 : 0;
                 const teamScore = team ? getMatchScore(team.name, query) * 0.4 : 0;
 
-                const score = Math.max(nameScore, phoneScore, posScore, numScore, teamScore);
+                // Passport matching (series + number)
+                const pSeries = p.passport_series || '';
+                const pNum = p.passport_number || '';
+                const passportCombo1 = `${pSeries}${pNum}`;
+                const passportCombo2 = `${pSeries} ${pNum}`;
+                const passportScore1 = getMatchScore(passportCombo1, query);
+                const passportScore2 = getMatchScore(passportCombo2, query);
+                const passportScore3 = pNum ? getMatchScore(pNum, query) : 0;
+                const passportScore = Math.max(passportScore1, passportScore2, passportScore3);
+
+                const score = Math.max(nameScore, phoneScore, posScore, numScore, teamScore, passportScore);
                 return { item: p, team, score };
             })
             .filter(x => x.score > 0)
