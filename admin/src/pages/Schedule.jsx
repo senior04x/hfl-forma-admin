@@ -29,6 +29,7 @@ const Schedule = () => {
   const [youtubeLink, setYoutubeLink] = useState('');
   const [matchRound, setMatchRound] = useState('');
   const [isPostponed, setIsPostponed] = useState(false);
+  const [deletingMatchIds, setDeletingMatchIds] = useState([]);
 
   const [exportLeague, setExportLeague] = useState('');
   const [exportRound, setExportRound] = useState('');
@@ -1081,7 +1082,12 @@ const Schedule = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Rostdan ham ushbu o'yinni o'chirmoqchimisiz?")) {
+    if (deletingMatchIds.includes(id)) return;
+    if (!window.confirm("Rostdan ham ushbu o'yinni o'chirmoqchimisiz?")) return;
+
+    setDeletingMatchIds(prev => [...prev, id]);
+
+    try {
       const matchToDelete = matches.find(m => m.id === id);
 
       // Auto-delete live broadcast from YouTube API if youtube_link exists
@@ -1114,8 +1120,14 @@ const Schedule = () => {
 
       const { error } = await supabase.from('matches').delete().eq('id', id);
       if (!error) {
-        fetchMatches();
+        await fetchMatches();
+      } else {
+        alert("O'yinni o'chirishda xatolik: " + (error.message || ''));
       }
+    } catch (err) {
+      console.error('Error deleting match:', err);
+    } finally {
+      setDeletingMatchIds(prev => prev.filter(mId => mId !== id));
     }
   };
 
@@ -1337,94 +1349,103 @@ const Schedule = () => {
               if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
               return m.status === filterStatus;
             })
-            .map(match => (
-            <div key={match.id} className="match-card glassmorphic-card">
-              <div className="match-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '10px' }}>
-                <div className="match-badges-container" style={{ position: 'static', margin: 0 }}>
-                   <div className="match-league-badge">{match.league}</div>
-                   {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
-                </div>
-                <div className="match-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <button className="edit-match-btn" onClick={() => handleEditMatch(match)} title="Tahrirlash">
-                    <Pencil size={15} />
-                  </button>
-                  <button className="delete-match-btn" onClick={() => handleDelete(match.id)} title="O'chirish">
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="match-teams">
-                <div className="team"><img src={match.home_team?.logo_url || '/images/default-team.png'} alt="Home" className="team-logo" /><span>{match.home_team?.name}</span></div>
-                <div className="match-vs">{(match.status === 'finished' || match.home_score > 0 || match.away_score > 0) ? <>{match.home_score || 0} : {match.away_score || 0}</> : 'VS'}</div>
-                <div className="team"><img src={match.away_team?.logo_url || '/images/default-team.png'} alt="Away" className="team-logo" /><span>{match.away_team?.name}</span></div>
-              </div>
-
-              <div className="match-footer-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: '12px' }}>
-                <div className="match-details">
-                  <div className="detail-row"><Calendar size={14} /> <span>{match.match_date}</span></div>
-                  <div className="detail-row"><Clock size={14} /> <span>{match.match_time}</span></div>
-                  <div className="detail-row"><MapPin size={14} /> <span>{match.location}</span></div>
+            .map(match => {
+              const isDeleting = deletingMatchIds.includes(match.id);
+              return (
+              <div key={match.id} className={`match-card glassmorphic-card ${isDeleting ? 'deleting-card' : ''}`}>
+                <div className="match-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '10px' }}>
+                  <div className="match-badges-container" style={{ position: 'static', margin: 0 }}>
+                     <div className="match-league-badge">{match.league}</div>
+                     {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
+                  </div>
+                  <div className="match-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button className="edit-match-btn" onClick={() => handleEditMatch(match)} disabled={isDeleting} title="Tahrirlash">
+                      <Pencil size={15} />
+                    </button>
+                    <button className="delete-match-btn" onClick={() => handleDelete(match.id)} disabled={isDeleting} title="O'chirish">
+                      {isDeleting ? (
+                        <span className="btn-spinner delete-spinner"></span>
+                      ) : (
+                        <Trash2 size={15} />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="match-footer-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {match.youtube_link ? (
-                      <a 
-                        href={match.youtube_link} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="yt-watch-live-btn"
-                        title="YouTube'da Jonli Efirni Ko'rish"
-                        style={{ 
-                          display: 'inline-flex', 
-                          alignItems: 'center', 
-                          gap: '4px', 
-                          background: 'linear-gradient(135deg, #ff0000 0%, #cc0000 100%)', 
-                          color: '#ffffff', 
-                          padding: '6px 10px', 
-                          borderRadius: '8px', 
-                          fontSize: '11px', 
-                          fontWeight: '800', 
-                          textDecoration: 'none',
-                          boxShadow: '0 2px 10px rgba(255,0,0,0.35)'
-                        }}
-                      >
-                        <Video size={13} /> Jonli Ko'rish
-                      </a>
-                    ) : (
-                      ytChannelInfo && (
-                        <button 
-                          className="yt-live-create-btn"
-                          onClick={() => createYouTubeLiveStream(match, true)}
-                          disabled={ytLoading}
-                          title="YouTube'da Jonli Efir Ochish va 16:9 Oblojkani Avtomatik Yuklash"
-                          style={{ background: 'rgba(255, 0, 0, 0.15)', border: '1px solid rgba(255, 0, 0, 0.4)', color: '#ff4d4d', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '800' }}
-                        >
-                          <Video size={13} /> {ytLoading ? 'Ochilmoqda...' : 'Live Yaratish'}
-                        </button>
-                      )
-                    )}
+                <div className="match-teams">
+                  <div className="team"><img src={match.home_team?.logo_url || '/images/default-team.png'} alt="Home" className="team-logo" /><span>{match.home_team?.name}</span></div>
+                  <div className="match-vs">{(match.status === 'finished' || match.home_score > 0 || match.away_score > 0) ? <>{match.home_score || 0} : {match.away_score || 0}</> : 'VS'}</div>
+                  <div className="team"><img src={match.away_team?.logo_url || '/images/default-team.png'} alt="Away" className="team-logo" /><span>{match.away_team?.name}</span></div>
+                </div>
+
+                <div className="match-footer-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: '12px' }}>
+                  <div className="match-details">
+                    <div className="detail-row"><Calendar size={14} /> <span>{match.match_date}</span></div>
+                    <div className="detail-row"><Clock size={14} /> <span>{match.match_time}</span></div>
+                    <div className="detail-row"><MapPin size={14} /> <span>{match.location}</span></div>
                   </div>
 
-                  <label 
-                    className={`match-postponed-toggle ${match.is_postponed ? 'is-postponed' : ''}`}
-                    onClick={(e) => e.stopPropagation()}
-                    title="Qoldirilgan o'yin deb belgilash"
-                    style={{ margin: 0 }}
-                  >
-                    <input 
-                      type="checkbox" 
-                      checked={!!match.is_postponed} 
-                      onChange={(e) => handleTogglePostponed(match, e.target.checked)} 
-                    />
-                  </label>
-                </div>
-              </div>
+                  <div className="match-footer-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {match.youtube_link ? (
+                        <a 
+                          href={match.youtube_link} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="yt-watch-live-btn"
+                          title="YouTube'da Jonli Efirni Ko'rish"
+                          style={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            gap: '4px', 
+                            background: 'linear-gradient(135deg, #ff0000 0%, #cc0000 100%)', 
+                            color: '#ffffff', 
+                            padding: '6px 10px', 
+                            borderRadius: '8px', 
+                            fontSize: '11px', 
+                            fontWeight: '800', 
+                            textDecoration: 'none',
+                            boxShadow: '0 2px 10px rgba(255,0,0,0.35)',
+                            pointerEvents: isDeleting ? 'none' : 'auto'
+                          }}
+                        >
+                          <Video size={13} /> Jonli Ko'rish
+                        </a>
+                      ) : (
+                        ytChannelInfo && (
+                          <button 
+                            className="yt-live-create-btn"
+                            onClick={() => createYouTubeLiveStream(match, true)}
+                            disabled={ytLoading || isDeleting}
+                            title="YouTube'da Jonli Efir Ochish va 16:9 Oblojkani Avtomatik Yuklash"
+                            style={{ background: 'rgba(255, 0, 0, 0.15)', border: '1px solid rgba(255, 0, 0, 0.4)', color: '#ff4d4d', borderRadius: '8px', padding: '6px 10px', cursor: isDeleting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '800' }}
+                          >
+                            <Video size={13} /> {ytLoading ? 'Ochilmoqda...' : 'Live Yaratish'}
+                          </button>
+                        )
+                      )}
+                    </div>
 
-              <button className="btn-manage-match" onClick={() => navigate('/match/' + match.id)}>⚙️ Boshqarish</button>
-            </div>
-          ))}
+                    <label 
+                      className={`match-postponed-toggle ${match.is_postponed ? 'is-postponed' : ''}`}
+                      onClick={(e) => e.stopPropagation()}
+                      title="Qoldirilgan o'yin deb belgilash"
+                      style={{ margin: 0, opacity: isDeleting ? 0.5 : 1, pointerEvents: isDeleting ? 'none' : 'auto' }}
+                    >
+                      <input 
+                        type="checkbox" 
+                        checked={!!match.is_postponed} 
+                        disabled={isDeleting}
+                        onChange={(e) => handleTogglePostponed(match, e.target.checked)} 
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <button className="btn-manage-match" disabled={isDeleting} onClick={() => navigate('/match/' + match.id)}>⚙️ Boshqarish</button>
+              </div>
+            );
+            })}
           {matches.filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound)).length === 0 && (
             <div className="no-matches-box"><Calendar size={36} /><p>O'yinlar topilmadi.</p></div>
           )}
