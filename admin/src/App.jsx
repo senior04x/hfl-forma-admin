@@ -8,7 +8,6 @@ import Standings from './pages/Standings';
 import Sponsors from './pages/Sponsors';
 import MatchControl from './pages/MatchControl';
 import Transfers from './pages/Transfers';
-import Organizations from './pages/Organizations';
 import Settings from './pages/Settings';
 import ObsScoreboard from './pages/ObsScoreboard';
 import Layout from './components/Layout';
@@ -36,7 +35,6 @@ function App() {
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/standings" element={<Standings />} />
           <Route path="/sponsors" element={<Sponsors />} />
-          <Route path="/organizations" element={<Organizations />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="/match/:id" element={<MatchControl />} />

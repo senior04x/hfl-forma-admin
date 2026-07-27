@@ -45,7 +45,7 @@ export const OrgProvider = ({ children }) => {
         .eq('id', user.id)
         .maybeSingle();
 
-      const effectiveRole = adminData?.role || metaRole || (user.email === 'azamat@havas.uz' ? 'super_admin' : 'org_admin');
+      const effectiveRole = adminData?.role || metaRole || 'org_admin';
       const defaultOrgId = adminData?.organization_id || metaOrgId || 1;
 
       setAdminRole(effectiveRole);
