@@ -59,8 +59,7 @@ const ImageCropperModal = ({
     canvas.width = viewWidth;
     canvas.height = viewHeight;
 
-    ctx.fillStyle = '#0b1221';
-    ctx.fillRect(0, 0, viewWidth, viewHeight);
+    ctx.clearRect(0, 0, viewWidth, viewHeight);
 
     // Calculate scaling to cover viewport
     const scaleX = viewWidth / imageObj.width;
@@ -128,8 +127,7 @@ const ImageCropperModal = ({
       outCanvas.height = exportHeight;
       const ctx = outCanvas.getContext('2d');
 
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, exportWidth, exportHeight);
+      ctx.clearRect(0, 0, exportWidth, exportHeight);
 
       const scaleX = viewWidth / imageObj.width;
       const scaleY = viewHeight / imageObj.height;
