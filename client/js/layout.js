@@ -207,7 +207,7 @@ function initNavbarSearch() {
         const skeletonHTML = `
         <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:18px;">
             ${Array(6).fill('').map(() => `
-            <div style="background:rgba(18,20,29,0.75); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:20px;">
+            <div class="screen-search-card" style="background:rgba(18,20,29,0.75); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:20px;">
                 <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
                     <div class="skeleton-circle" style="width:56px; height:56px; border-radius:16px; flex-shrink:0;"></div>
                     <div style="flex:1;">
