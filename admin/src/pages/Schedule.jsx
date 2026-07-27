@@ -480,49 +480,49 @@ const Schedule = () => {
   const fetchSponsorsData = async () => {
     try {
       let loadedSponsors = [];
-      try {
+      if (orgId) {
+        const { data: orgSponsors } = await supabase
+          .from('sponsors')
+          .select('*')
+          .eq('organization_id', orgId)
+          .order('created_at', { ascending: false });
+        if (orgSponsors && orgSponsors.length > 0) {
+          loadedSponsors = orgSponsors;
+        }
+      }
+
+      if (loadedSponsors.length === 0) {
         let query = supabase.from('sponsors').select('*').order('created_at', { ascending: false });
         if (orgId) {
           query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
         }
-        const { data, error } = await query;
-        if (!error && data) {
-          loadedSponsors = data;
-        }
-      } catch (err) {
-        const { data } = await supabase.from('sponsors').select('*').order('created_at', { ascending: false });
+        const { data } = await query;
         loadedSponsors = data || [];
       }
 
-      setAllSponsors(loadedSponsors);
+      // Filter out system internal banner keys
+      const realSponsors = loadedSponsors.filter(s => 
+        s.name && 
+        !s.name.startsWith('SCHEDULE_BANNER_') && 
+        !s.name.startsWith('YT_BANNER_') && 
+        !s.name.startsWith('YT_OAUTH_TOKENS_')
+      );
+
+      setAllSponsors(realSponsors);
 
       // 1. Main sponsor
-      const mainFromDb = loadedSponsors.find(s => s.is_main === true);
+      const mainFromDb = realSponsors.find(s => s.is_main === true);
       if (mainFromDb) {
         setMainSponsor(mainFromDb);
         try { localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(mainFromDb)); } catch (e) {}
       } else {
-        try {
-          const savedMain = localStorage.getItem(`hfl_main_sponsor_${orgId}`);
-          if (savedMain) setMainSponsor(JSON.parse(savedMain));
-        } catch (e) {}
+        setMainSponsor(null);
       }
 
-      // 2. Selected secondary sponsors
-      let selectedList = [];
-      const selectedFromDb = loadedSponsors.filter(s => s.is_selected === true && !s.is_main);
-      if (selectedFromDb.length > 0) {
-        selectedList = selectedFromDb;
-      } else {
-        try {
-          const savedSelected = localStorage.getItem(`hfl_selectedSponsors_${orgId}`);
-          if (savedSelected) {
-            selectedList = JSON.parse(savedSelected);
-          }
-        } catch (e) {}
-      }
-
-      setSelectedSponsors(selectedList);
+      // 2. Selected secondary sponsors directly from DB
+      const selectedFromDb = realSponsors.filter(s => s.is_selected === true && !s.is_main);
+      setSelectedSponsors(selectedFromDb);
+      try { localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(selectedFromDb)); } catch (e) {}
     } catch (e) {
       console.error('Error fetching sponsors data:', e);
     }

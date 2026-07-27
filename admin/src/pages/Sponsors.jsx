@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { Upload, Trash2, CheckCircle, Star, Award, Sparkles, ChevronDown } from 'lucide-react';
+import { Upload, Trash2, Star, Award, Sparkles, ChevronDown, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 import './Sponsors.css';
 
 export default function Sponsors() {
@@ -14,7 +14,7 @@ export default function Sponsors() {
 
   const [leagues, setLeagues] = useState([]);
   const [showLeagueSettings, setShowLeagueSettings] = useState(false);
-  const [showSponsorsSection, setShowSponsorsSection] = useState(false);
+  const [showSponsorsSection, setShowSponsorsSection] = useState(true);
 
   useEffect(() => {
     fetchSponsors();
@@ -23,25 +23,38 @@ export default function Sponsors() {
 
   const fetchLeagues = async () => {
     try {
-      let query = supabase.from('leagues').select('*').order('created_at', { ascending: true });
+      let data = null;
       if (orgId) {
-        query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
+        const { data: orgLeagues } = await supabase
+          .from('leagues')
+          .select('*')
+          .eq('organization_id', orgId)
+          .order('created_at', { ascending: true });
+        if (orgLeagues && orgLeagues.length > 0) {
+          data = orgLeagues;
+        }
       }
-      const { data, error } = await query;
-      if (!error && data) {
-        const processed = data.map(l => {
-          let showSponsorsVal = l.show_sponsors;
-          if (showSponsorsVal === undefined || showSponsorsVal === null) {
-            const savedLocal = localStorage.getItem(`hfl_league_show_sponsors_${l.id}`) || localStorage.getItem(`hfl_league_show_sponsors_${l.name}`);
-            showSponsorsVal = savedLocal !== 'false';
-          }
-          return {
-            ...l,
-            show_sponsors: showSponsorsVal !== false
-          };
-        });
-        setLeagues(processed);
+      if (!data) {
+        let query = supabase.from('leagues').select('*').order('created_at', { ascending: true });
+        if (orgId) {
+          query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
+        }
+        const res = await query;
+        data = res.data || [];
       }
+
+      const processed = (data || []).map(l => {
+        let showSponsorsVal = l.show_sponsors;
+        if (showSponsorsVal === undefined || showSponsorsVal === null) {
+          const savedLocal = localStorage.getItem(`hfl_league_show_sponsors_${l.id}`) || localStorage.getItem(`hfl_league_show_sponsors_${l.name}`);
+          showSponsorsVal = savedLocal !== 'false';
+        }
+        return {
+          ...l,
+          show_sponsors: showSponsorsVal !== false
+        };
+      });
+      setLeagues(processed);
     } catch (e) {
       console.error('Error fetching leagues in Sponsors:', e);
     }
@@ -69,59 +82,50 @@ export default function Sponsors() {
     try {
       let loadedSponsors = [];
 
-      try {
+      if (orgId) {
+        const { data: orgSponsors } = await supabase
+          .from('sponsors')
+          .select('*')
+          .eq('organization_id', orgId)
+          .order('created_at', { ascending: false });
+        if (orgSponsors && orgSponsors.length > 0) {
+          loadedSponsors = orgSponsors;
+        }
+      }
+
+      if (loadedSponsors.length === 0) {
         let query = supabase.from('sponsors').select('*').order('created_at', { ascending: false });
         if (orgId) {
           query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
         }
-        const { data, error } = await query;
-        if (!error && data) {
-          loadedSponsors = data;
-        } else {
-          throw error;
-        }
-      } catch (err) {
-        const { data } = await supabase.from('sponsors').select('*').order('created_at', { ascending: false });
+        const { data } = await query;
         loadedSponsors = data || [];
       }
-      
-      setSponsors(loadedSponsors);
+
+      // Filter out system internal banner keys
+      const realSponsors = loadedSponsors.filter(s => 
+        s.name && 
+        !s.name.startsWith('SCHEDULE_BANNER_') && 
+        !s.name.startsWith('YT_BANNER_') && 
+        !s.name.startsWith('YT_OAUTH_TOKENS_')
+      );
+
+      setSponsors(realSponsors);
 
       // 1. Restore main sponsor directly from DB
-      const mainFromDb = loadedSponsors.find(s => s.is_main === true);
+      const mainFromDb = realSponsors.find(s => s.is_main === true);
       if (mainFromDb) {
         setMainSponsorState(mainFromDb);
         try { localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(mainFromDb)); } catch (e) {}
       } else {
-        try {
-          const savedMain = localStorage.getItem(`hfl_main_sponsor_${orgId}`);
-          if (savedMain) setMainSponsorState(JSON.parse(savedMain));
-          else setMainSponsorState(null);
-        } catch (e) {
-          setMainSponsorState(null);
-        }
+        setMainSponsorState(null);
+        try { localStorage.removeItem(`hfl_main_sponsor_${orgId}`); } catch (e) {}
       }
 
       // 2. Restore selected secondary sponsors directly from DB
-      const selectedFromDb = loadedSponsors.filter(s => s.is_selected === true && !s.is_main);
-      if (selectedFromDb.length > 0) {
-        setSelectedSponsors(selectedFromDb);
-        try { localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(selectedFromDb)); } catch (e) {}
-      } else {
-        try {
-          const savedSelected = localStorage.getItem(`hfl_selectedSponsors_${orgId}`);
-          if (savedSelected) {
-            setSelectedSponsors(JSON.parse(savedSelected));
-          } else {
-            // Default to all non-main sponsors
-            const nonMain = loadedSponsors.filter(s => !s.is_main);
-            setSelectedSponsors(nonMain);
-          }
-        } catch (e) {
-          const nonMain = loadedSponsors.filter(s => !s.is_main);
-          setSelectedSponsors(nonMain);
-        }
-      }
+      const selectedFromDb = realSponsors.filter(s => s.is_selected === true && !s.is_main);
+      setSelectedSponsors(selectedFromDb);
+      try { localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(selectedFromDb)); } catch (e) {}
 
     } catch (err) {
       console.error("Error fetching sponsors:", err);
@@ -166,15 +170,16 @@ export default function Sponsors() {
         const { data } = await supabase
           .from('sponsors')
           .insert([
-            { name: file.name, logo_url: publicUrl }
+            { name: file.name, logo_url: publicUrl, is_main: false, is_selected: true }
           ])
           .select();
         insertData = data;
       }
 
       if (insertData && insertData.length > 0) {
-        setSponsors([insertData[0], ...sponsors]);
-        setSelectedSponsors([insertData[0], ...selectedSponsors]);
+        const newSponsor = insertData[0];
+        setSponsors(prev => [newSponsor, ...prev]);
+        setSelectedSponsors(prev => [newSponsor, ...prev]);
       }
     } catch (err) {
       console.error("Error uploading sponsor:", err);
@@ -191,6 +196,15 @@ export default function Sponsors() {
     const targetMain = isCurrentMain ? null : sponsor;
 
     setMainSponsorState(targetMain);
+    
+    // Update local state
+    setSponsors(prev => prev.map(s => {
+      if (targetMain && s.id === targetMain.id) {
+        return { ...s, is_main: true, is_selected: false };
+      }
+      return { ...s, is_main: false };
+    }));
+
     if (targetMain) {
       try { localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(targetMain)); } catch (e) {}
       const filteredSelected = selectedSponsors.filter(s => s.id !== targetMain.id);
@@ -202,7 +216,7 @@ export default function Sponsors() {
 
     try {
       if (orgId) {
-        await supabase.from('sponsors').update({ is_main: false }).or(`organization_id.eq.${orgId},organization_id.is.null`);
+        await supabase.from('sponsors').update({ is_main: false }).eq('organization_id', orgId);
       } else {
         await supabase.from('sponsors').update({ is_main: false }).is('organization_id', null);
       }
@@ -215,17 +229,22 @@ export default function Sponsors() {
     }
   };
 
-  const toggleSelectSponsor = async (sponsor) => {
+  const toggleSelectSponsor = async (sponsor, e) => {
+    if (e) e.stopPropagation();
     if (mainSponsor?.id === sponsor.id) return;
 
-    const isSelected = selectedSponsors.some(s => s.id === sponsor.id);
-    const nextSelectedState = !isSelected;
+    const currentSelected = !!sponsor.is_selected;
+    const nextSelectedState = !currentSelected;
 
+    // Update local sponsors state
+    setSponsors(prev => prev.map(s => s.id === sponsor.id ? { ...s, is_selected: nextSelectedState } : s));
+
+    // Update selectedSponsors array
     let newSelected = [];
-    if (isSelected) {
-      newSelected = selectedSponsors.filter(s => s.id !== sponsor.id);
+    if (nextSelectedState) {
+      newSelected = [...selectedSponsors.filter(s => s.id !== sponsor.id), { ...sponsor, is_selected: true }];
     } else {
-      newSelected = [...selectedSponsors, sponsor];
+      newSelected = selectedSponsors.filter(s => s.id !== sponsor.id);
     }
     setSelectedSponsors(newSelected);
     try { localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(newSelected)); } catch (e) {}
@@ -253,7 +272,7 @@ export default function Sponsors() {
       const { error } = await supabase.from('sponsors').delete().eq('id', id);
       if (error) throw error;
       
-      setSponsors(sponsors.filter(s => s.id !== id));
+      setSponsors(prev => prev.filter(s => s.id !== id));
       
       if (mainSponsor?.id === id) {
         setMainSponsorState(null);
@@ -284,7 +303,7 @@ export default function Sponsors() {
       </div>
       
       <div className="sponsors-content" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* League Sponsors Toggles Section (Collapsible - Default Closed) */}
+        {/* League Sponsors Toggles Section */}
         {leagues.length > 0 && (
           <div style={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', overflow: 'hidden' }}>
             <button 
@@ -294,7 +313,7 @@ export default function Sponsors() {
                 width: '100%',
                 display: 'flex',
                 alignItems: 'center',
-                justify: 'space-between',
+                justifyContent: 'space-between',
                 padding: '16px 24px',
                 background: showLeagueSettings ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
                 border: 'none',
@@ -334,7 +353,7 @@ export default function Sponsors() {
                         style={{ 
                           display: 'flex', 
                           alignItems: 'center', 
-                          justify: 'space-between', 
+                          justifyContent: 'space-between', 
                           padding: '14px 18px', 
                           borderRadius: '12px', 
                           background: isShow ? 'rgba(0, 255, 102, 0.08)' : 'rgba(255, 255, 255, 0.03)', 
@@ -371,7 +390,7 @@ export default function Sponsors() {
           </div>
         )}
 
-        {/* Sponsor Logos & Image Upload Section (Collapsible - Default Closed) */}
+        {/* Sponsor Logos & Image Upload Section */}
         <div style={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', overflow: 'hidden' }}>
           <button 
             type="button"
@@ -380,7 +399,7 @@ export default function Sponsors() {
               width: '100%',
               display: 'flex',
               alignItems: 'center',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               padding: '16px 24px',
               background: showSponsorsSection ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
               border: 'none',
@@ -415,24 +434,32 @@ export default function Sponsors() {
               {loading ? (
                 <div className="sponsors-grid-page">
                   {[1, 2, 3, 4, 5, 6].map(idx => (
-                    <div key={idx} className="skeleton-pulse" style={{ height: '200px' }}></div>
+                    <div key={idx} className="skeleton-pulse" style={{ height: '220px' }}></div>
                   ))}
                 </div>
               ) : (
                 <div className="sponsors-grid-page">
                   {sponsors.map(sponsor => {
                     const isMain = mainSponsor?.id === sponsor.id;
-                    const isSelected = selectedSponsors.some(s => s.id === sponsor.id);
+                    const isSelected = !isMain && (sponsor.is_selected !== false);
 
                     return (
                       <div 
                         key={sponsor.id} 
-                        className={`sponsor-card-page ${isMain ? 'main-sponsor' : isSelected ? 'selected' : ''}`}
-                        onClick={() => toggleSelectSponsor(sponsor)}
+                        className={`sponsor-card-page ${isMain ? 'main-sponsor' : isSelected ? 'selected' : 'inactive'}`}
+                        onClick={(e) => toggleSelectSponsor(sponsor, e)}
                       >
-                        {isMain && (
+                        {isMain ? (
                           <div className="main-sponsor-badge">
                             <Star size={12} fill="#000" /> BOSH HOMIY
+                          </div>
+                        ) : (
+                          <div className={`sponsor-status-badge ${isSelected ? 'active' : 'inactive'}`}>
+                            {isSelected ? (
+                              <><CheckCircle2 size={12} /> AKTIV</>
+                            ) : (
+                              <><XCircle size={12} /> NOFAOL</>
+                            )}
                           </div>
                         )}
 
@@ -447,8 +474,20 @@ export default function Sponsors() {
                             onClick={(e) => handleSetMainSponsor(sponsor, e)}
                             title={isMain ? "Bosh homiylikdan chiqarish" : "Tashkilot bosh homiysi qilib belgilash"}
                           >
-                            <Star size={14} fill={isMain ? "#fef08a" : "none"} /> {isMain ? "Bosh Homiy" : "Bosh Homiy qilish"}
+                            <Star size={14} fill={isMain ? "#fef08a" : "none"} /> {isMain ? "Bosh Homiy" : "Bosh Homiy"}
                           </button>
+
+                          {!isMain && (
+                            <button 
+                              type="button"
+                              className={`btn-toggle-active ${isSelected ? 'active' : 'inactive'}`}
+                              onClick={(e) => toggleSelectSponsor(sponsor, e)}
+                              title={isSelected ? "Nofaol qilish" : "Aktiv qilish"}
+                            >
+                              {isSelected ? <Eye size={14} /> : <EyeOff size={14} />} {isSelected ? "Aktiv" : "Nofaol"}
+                            </button>
+                          )}
+
                           <button 
                             type="button"
                             className="sponsor-delete-btn-page" 
