@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabase';
+import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { Check, X, User, Shield, Phone, AlertCircle, RefreshCw, Layers } from 'lucide-react';
 
