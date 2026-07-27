@@ -22,6 +22,17 @@ const extractInstaFromComment = (comment) => {
   return '';
 };
 
+const extractMetaFromComment = (comment) => {
+  if (!comment) return {};
+  const metaMatch = comment.match(/\[METADATA:({[^\]]+})\]/);
+  if (metaMatch?.[1]) {
+    try {
+      return JSON.parse(metaMatch[1]);
+    } catch (e) {}
+  }
+  return {};
+};
+
 export default function ProfileUpdates() {
   const { orgId } = useOrg();
   const [activeTab, setActiveTab] = useState('players');
@@ -299,6 +310,20 @@ export default function ProfileUpdates() {
             const oldInsta = getInstaUser(oldData.instagramUsername) || getInstaUser(oldData.instagram_username) || getInstaUser(oldData.instagramUrl) || extractInstaFromComment(req.comment);
             const newInsta = getInstaUser(newData.instagramUsername) || getInstaUser(newData.instagram_username) || getInstaUser(newData.instagramUrl) || extractInstaFromComment(req.comment);
 
+            const commentMeta = extractMetaFromComment(req.comment);
+
+            const oldCitizenship = oldData.citizenship || req.citizenship || commentMeta.citizenship || '';
+            const newCitizenship = newData.citizenship || oldCitizenship;
+
+            const oldHeight = oldData.height || req.height || commentMeta.height || '';
+            const newHeight = newData.height || oldHeight;
+
+            const oldWeight = oldData.weight || req.weight || commentMeta.weight || '';
+            const newWeight = newData.weight || oldWeight;
+
+            const oldBirthDate = oldData.birthDate || oldData.birth_date || req.birth_date || '';
+            const newBirthDate = newData.birthDate || newData.birth_date || oldBirthDate;
+
             return (
               <div
                 key={req.id}
@@ -398,29 +423,23 @@ export default function ProfileUpdates() {
                     newVal={`#${newData.playerNumber || req.player_number || '0'}`}
                   />
 
-                  {(newData.citizenship || oldData.citizenship) && (
-                    <DiffRow
-                      label="Millati"
-                      oldVal={oldData.citizenship || '—'}
-                      newVal={newData.citizenship || '—'}
-                    />
-                  )}
+                  <DiffRow
+                    label="Millati"
+                    oldVal={oldCitizenship || '—'}
+                    newVal={newCitizenship || '—'}
+                  />
 
-                  {(newData.height || oldData.height || newData.weight || oldData.weight) && (
-                    <DiffRow
-                      label="Bo'yi / Vazni"
-                      oldVal={`${oldData.height ? `${oldData.height} sm` : '—'} / ${oldData.weight ? `${oldData.weight} kg` : '—'}`}
-                      newVal={`${newData.height ? `${newData.height} sm` : '—'} / ${newData.weight ? `${newData.weight} kg` : '—'}`}
-                    />
-                  )}
+                  <DiffRow
+                    label="Bo'yi / Vazni"
+                    oldVal={`${oldHeight ? `${oldHeight} SM` : '—'} / ${oldWeight ? `${oldWeight} KG` : '—'}`}
+                    newVal={`${newHeight ? `${newHeight} SM` : '—'} / ${newWeight ? `${newWeight} KG` : '—'}`}
+                  />
 
-                  {(newData.birthDate || oldData.birthDate) && (
-                    <DiffRow
-                      label="Tug'ilgan Sana"
-                      oldVal={oldData.birthDate || '—'}
-                      newVal={newData.birthDate || '—'}
-                    />
-                  )}
+                  <DiffRow
+                    label="Tug'ilgan Sana"
+                    oldVal={oldBirthDate || '—'}
+                    newVal={newBirthDate || '—'}
+                  />
 
                   <DiffRow
                     label="Instagram Username"
