@@ -46,11 +46,21 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     }
   }, [player.team_id, teams]);
 
+  const getInstaUsername = (p) => {
+    if (!p) return '';
+    if (p.instagram_username) return p.instagram_username;
+    if (p.comment) {
+      const match = p.comment.match(/\[INSTAGRAM:https?:\/\/[^/]+\/([^/\]]+)/);
+      if (match?.[1]) return match[1];
+    }
+    return '';
+  };
+
   const extractPlayerMeta = (p) => {
     let citizenship = p.citizenship || '';
     let height = p.height || '';
     let weight = p.weight || '';
-    let instaUser = p.instagram_username || '';
+    let instaUser = getInstaUsername(p);
 
     if (p.comment) {
       const metaMatch = p.comment.match(/\[METADATA:({[^\]]+})\]/);
@@ -61,11 +71,6 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
           if (obj.height) height = obj.height;
           if (obj.weight) weight = obj.weight;
         } catch (e) {}
-      }
-
-      const instaMatch = p.comment.match(/\[INSTAGRAM:https?:\/\/[^/]+\/([^/\]]+)/);
-      if (instaMatch?.[1]) {
-        instaUser = instaMatch[1];
       }
     }
 
@@ -274,20 +279,20 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
                 <div className="detail-item">
                   <span className="label">Instagram</span>
                   <span className="value" style={{ color: '#E1306C', fontWeight: '800' }}>
-                    {getInstaUsername(player) ? `@${getInstaUsername(player)}` : '—'}
+                    {formData.instagram_username ? `@${formData.instagram_username}` : '—'}
                   </span>
                 </div>
                 <div className="detail-item">
                   <span className="label">Millati</span>
-                  <span className="value">{player.citizenship || '—'}</span>
+                  <span className="value">{formData.citizenship || '—'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="label">Bo'yi</span>
-                  <span className="value">{player.height ? `${player.height} SM` : '—'}</span>
+                  <span className="value">{formData.height ? `${formData.height} SM` : '—'}</span>
                 </div>
                 <div className="detail-item">
                   <span className="label">Vazni</span>
-                  <span className="value">{player.weight ? `${player.weight} KG` : '—'}</span>
+                  <span className="value">{formData.weight ? `${formData.weight} KG` : '—'}</span>
                 </div>
               </div>
 
