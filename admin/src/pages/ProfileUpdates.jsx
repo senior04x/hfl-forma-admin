@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { Check, X, ArrowRight, RefreshCw, AlertCircle, Phone, User, Shield } from 'lucide-react';
+import { Check, X, ArrowRight, RefreshCw, AlertCircle, Phone, User, Shield, Trash2 } from 'lucide-react';
 
 const getInstaUser = (val) => {
   if (!val) return '';
@@ -131,7 +131,7 @@ export default function ProfileUpdates() {
         }
       }
 
-      const { error: ticketErr } = await supabase.from('applications').update({ status: 'approved_update' }).eq('id', reqItem.id);
+      const { error: ticketErr } = await supabase.from('applications').update({ status: 'approved' }).eq('id', reqItem.id);
       if (ticketErr) {
         console.error('Error approving request:', ticketErr);
         alert('Arizani tasdiqlashda xatolik: ' + ticketErr.message);
@@ -151,7 +151,7 @@ export default function ProfileUpdates() {
   const handleReject = async (reqItem) => {
     setProcessingId(reqItem.id);
     try {
-      const { error } = await supabase.from('applications').update({ status: 'rejected_update' }).eq('id', reqItem.id);
+      const { error } = await supabase.from('applications').update({ status: 'rejected' }).eq('id', reqItem.id);
       if (error) {
         alert('Arizani rad etishda xatolik: ' + error.message);
         return;
@@ -161,6 +161,25 @@ export default function ProfileUpdates() {
     } catch (err) {
       console.error('Error rejecting request:', err);
       alert('Xatolik yuz berdi: ' + err.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleDelete = async (reqItem) => {
+    if (!window.confirm("Ushbu arizani rostdan ham o'chirib tashlamoqchimisiz?")) return;
+    setProcessingId(reqItem.id);
+    try {
+      const { error } = await supabase.from('applications').delete().eq('id', reqItem.id);
+      if (error) {
+        alert("Arizani o'chirishda xatolik: " + error.message);
+        return;
+      }
+      alert("Ariza muvaffaqiyatli o'chirildi!");
+      fetchProfileUpdateRequests();
+    } catch (err) {
+      console.error("Error deleting request:", err);
+      alert("Xatolik yuz berdi: " + err.message);
     } finally {
       setProcessingId(null);
     }
@@ -401,11 +420,12 @@ export default function ProfileUpdates() {
 
                 </div>
 
-                {/* ACTION BUTTONS */}
-                {isPending && (
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                {/* ACTION BUTTONS: 3 ICON BUTTONS (Rad etish, O'chirish in middle, Qabul qilish) */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginTop: '16px' }}>
+                  {isPending && (
                     <button
                       type="button"
+                      title="Rad Etish"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -419,20 +439,45 @@ export default function ProfileUpdates() {
                         border: '1px solid rgba(239, 68, 68, 0.4)',
                         color: '#EF4444',
                         borderRadius: '12px',
-                        fontWeight: '800',
-                        fontSize: '12px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
+                        justifyContent: 'center'
                       }}
                     >
-                      <X size={16} /> Rad Etish
+                      <X size={20} />
                     </button>
+                  )}
 
+                  <button
+                    type="button"
+                    title="Arizani O'chirish"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDelete(req);
+                    }}
+                    disabled={processingId === req.id}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      background: 'rgba(239, 68, 68, 0.25)',
+                      border: '1px solid rgba(239, 68, 68, 0.5)',
+                      color: '#ff4d4d',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Trash2 size={20} />
+                  </button>
+
+                  {isPending && (
                     <button
                       type="button"
+                      title="Tasdiqlash va Yangilash"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -440,25 +485,22 @@ export default function ProfileUpdates() {
                       }}
                       disabled={processingId === req.id}
                       style={{
-                        flex: 2,
+                        flex: 1,
                         padding: '12px',
                         background: '#00ff66',
                         border: 'none',
                         color: '#000000',
                         borderRadius: '12px',
-                        fontWeight: '900',
-                        fontSize: '12px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
+                        justifyContent: 'center'
                       }}
                     >
-                      <Check size={16} /> Tasdiqlash va Yangilash
+                      <Check size={20} />
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             );
           })}
