@@ -140,14 +140,23 @@ export default function Sponsors() {
       const fileName = `sponsor_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
+      let bucketName = 'sponsors';
+      let uploadRes = await supabase.storage
         .from('sponsors')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadRes.error) {
+        console.warn('sponsors bucket upload failed, trying player-photos fallback:', uploadRes.error);
+        bucketName = 'player-photos';
+        uploadRes = await supabase.storage
+          .from('player-photos')
+          .upload(filePath, file);
+      }
+
+      if (uploadRes.error) throw uploadRes.error;
 
       const { data: publicUrlData } = supabase.storage
-        .from('sponsors')
+        .from(bucketName)
         .getPublicUrl(filePath);
 
       const publicUrl = publicUrlData.publicUrl;
@@ -182,6 +191,7 @@ export default function Sponsors() {
       alert("Xatolik yuz berdi: " + (err.message || ''));
     } finally {
       setUploading(false);
+      if (e.target) e.target.value = '';
     }
   };
 
