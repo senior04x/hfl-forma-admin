@@ -381,17 +381,17 @@ const Settings = () => {
       const { data: adminUser } = await supabase
         .from('admin_users')
         .select('organization_id, email')
-        .eq('email', emailToSearch)
+        .ilike('email', emailToSearch)
         .maybeSingle();
 
       if (adminUser?.organization_id) {
         foundOrgId = adminUser.organization_id;
       } else {
-        // 2. Try searching organizations table by email if available
+        // 2. Search organizations table by admin_email
         const { data: orgByEmail } = await supabase
           .from('organizations')
           .select('id, name')
-          .ilike('email', emailToSearch)
+          .ilike('admin_email', emailToSearch)
           .maybeSingle();
 
         if (orgByEmail?.id) {
