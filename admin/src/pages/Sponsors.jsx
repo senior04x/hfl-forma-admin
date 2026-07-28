@@ -166,7 +166,7 @@ export default function Sponsors() {
         const { data, error } = await supabase
           .from('sponsors')
           .insert([
-            { name: file.name, logo_url: publicUrl, organization_id: orgId, is_main: false, is_selected: true }
+            { name: file.name, logo_url: publicUrl, organization_id: orgId, is_main: false }
           ])
           .select();
         if (error) throw error;
@@ -175,14 +175,14 @@ export default function Sponsors() {
         const { data } = await supabase
           .from('sponsors')
           .insert([
-            { name: file.name, logo_url: publicUrl, is_main: false, is_selected: true }
+            { name: file.name, logo_url: publicUrl, is_main: false }
           ])
           .select();
         insertData = data;
       }
 
       if (insertData && insertData.length > 0) {
-        const newSponsor = insertData[0];
+        const newSponsor = { ...insertData[0], is_selected: true };
         setSponsors(prev => [newSponsor, ...prev]);
         setSelectedSponsors(prev => [newSponsor, ...prev]);
       }
@@ -228,7 +228,7 @@ export default function Sponsors() {
       }
 
       if (targetMain) {
-        await supabase.from('sponsors').update({ is_main: true, is_selected: false }).eq('id', targetMain.id);
+        await supabase.from('sponsors').update({ is_main: true }).eq('id', targetMain.id);
       }
     } catch (e) {
       console.error("Error updating main sponsor in DB:", e);
@@ -256,7 +256,7 @@ export default function Sponsors() {
     try { localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(newSelected)); } catch (e) {}
 
     try {
-      await supabase.from('sponsors').update({ is_selected: nextSelectedState }).eq('id', sponsor.id);
+      await supabase.from('sponsors').update({ is_selected: nextSelectedState }).eq('id', sponsor.id).catch(() => {});
     } catch (e) {
       console.error("Error updating is_selected in DB:", e);
     }
