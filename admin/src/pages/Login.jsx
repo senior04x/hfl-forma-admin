@@ -69,7 +69,15 @@ const Login = () => {
     } catch (err) {
       console.error(err);
       setError(true);
-      setErrorText(err.message || "Xatolik yuz berdi. Pochtani qayta tekshirib ko'ring.");
+      let msg = err.message || '';
+      if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('exceeded')) {
+        msg = "Juda ko'p so'rov yuborildi! Iltimos, 10-15 daqiqa kutib, pochtangizni qayta tekshiring yoki keyinroq urinib ko'ring.";
+      } else if (msg.toLowerCase().includes('invalid email')) {
+        msg = "Email manzil noto'g'ri kiritildi!";
+      } else {
+        msg = msg || "Xatolik yuz berdi. Pochtani qayta tekshirib ko'ring.";
+      }
+      setErrorText(msg);
     } finally {
       setLoading(false);
     }
