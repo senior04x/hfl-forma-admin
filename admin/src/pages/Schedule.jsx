@@ -32,7 +32,7 @@ const Schedule = () => {
   const [deletingMatchIds, setDeletingMatchIds] = useState([]);
 
   const [exportLeague, setExportLeague] = useState('');
-  const [exportRound, setExportRound] = useState('');
+  const [exportRound, setExportRound] = useState('1');
   const [isExporting, setIsExporting] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const exportRef = useRef(null);
@@ -584,7 +584,7 @@ const Schedule = () => {
       const maxR = Math.max(...leagueMatches.map(m => Number(m.round)));
       setExportRound(maxR.toString());
     } else {
-      setExportRound('');
+      setExportRound('1');
     }
   }, [matches, exportLeague]);
 
@@ -1132,7 +1132,11 @@ const Schedule = () => {
   };
 
   const availableTeams = teams.filter(t => t.league === selectedLeague);
-  const availableRounds = Array.from(new Set(matches.filter(m => m.league === exportLeague && m.round).map(m => Number(m.round)))).sort((a, b) => b - a);
+  const availableRounds = (() => {
+    const roundsFromMatches = Array.from(new Set(matches.filter(m => m.league === exportLeague && m.round).map(m => Number(m.round)))).sort((a, b) => a - b);
+    if (roundsFromMatches.length > 0) return roundsFromMatches;
+    return Array.from({ length: 30 }, (_, i) => i + 1);
+  })();
 
   return (
     <div className="schedule-page">
@@ -1198,8 +1202,7 @@ const Schedule = () => {
               <div className="filter-field">
                 <label><Layers size={14} /> Tur</label>
                 <div className="custom-select-wrapper">
-                  <select value={exportRound} onChange={e => setExportRound(e.target.value)}>
-                    <option value="">Barcha turlar</option>
+                  <select value={exportRound || '1'} onChange={e => setExportRound(e.target.value)}>
                     {availableRounds.map(r => (
                       <option key={r} value={r}>{r}-Tur</option>
                     ))}
