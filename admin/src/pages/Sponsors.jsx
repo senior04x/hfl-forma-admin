@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { Upload, Trash2, Star, Award, Sparkles, ChevronDown, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 import './Sponsors.css';
@@ -83,14 +83,14 @@ export default function Sponsors() {
       let loadedSponsors = [];
 
       if (orgId) {
-        const { data: orgSponsors } = await supabase
+        const { data: orgSponsors } = await supabaseAdmin
           .from('sponsors')
           .select('*')
           .eq('organization_id', orgId)
           .order('created_at', { ascending: false });
         loadedSponsors = orgSponsors || [];
       } else {
-        const { data } = await supabase
+        const { data } = await supabaseAdmin
           .from('sponsors')
           .select('*')
           .is('organization_id', null)
@@ -163,7 +163,7 @@ export default function Sponsors() {
 
       let insertData = null;
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
           .from('sponsors')
           .insert([
             { name: file.name, logo_url: publicUrl, organization_id: orgId, is_main: false }
@@ -172,7 +172,7 @@ export default function Sponsors() {
         if (error) throw error;
         insertData = data;
       } catch (e) {
-        const { data } = await supabase
+        const { data } = await supabaseAdmin
           .from('sponsors')
           .insert([
             { name: file.name, logo_url: publicUrl, is_main: false }
@@ -222,13 +222,19 @@ export default function Sponsors() {
 
     try {
       if (orgId) {
-        await supabase.from('sponsors').update({ is_main: false }).eq('organization_id', orgId);
-      } else {
-        await supabase.from('sponsors').update({ is_main: false }).is('organization_id', null);
+        await supabaseAdmin.from('sponsors').update({ is_main: false }).eq('organization_id', orgId);
       }
+      await supabaseAdmin.from('sponsors').update({ is_main: false }).is('organization_id', null);
 
       if (targetMain) {
-        await supabase.from('sponsors').update({ is_main: true }).eq('id', targetMain.id);
+        const { error: updateErr } = await supabaseAdmin
+          .from('sponsors')
+          .update({ is_main: true })
+          .eq('id', targetMain.id);
+
+        if (updateErr) {
+          console.error("Error setting main sponsor:", updateErr);
+        }
       }
     } catch (e) {
       console.error("Error updating main sponsor in DB:", e);
@@ -275,7 +281,7 @@ export default function Sponsors() {
         await supabase.storage.from('sponsors').remove([fileName]);
       }
       
-      const { error } = await supabase.from('sponsors').delete().eq('id', id);
+      const { error } = await supabaseAdmin.from('sponsors').delete().eq('id', id);
       if (error) throw error;
       
       setSponsors(prev => prev.filter(s => s.id !== id));
