@@ -181,7 +181,7 @@ const Settings = () => {
 
   // Collab modal / action state
   const [selectedLeagueForCollab, setSelectedLeagueForCollab] = useState(null);
-  const [targetOrgId, setTargetOrgId] = useState('');
+  const [targetOrgEmail, setTargetOrgEmail] = useState('');
   const [sendingCollab, setSendingCollab] = useState(false);
   const [incomingCollabs, setIncomingCollabs] = useState([]);
   const [allCollabs, setAllCollabs] = useState([]);
@@ -367,25 +367,104 @@ const Settings = () => {
 
   const handleSendCollab = async (e) => {
     e.preventDefault();
-    if (!selectedLeagueForCollab || !targetOrgId) return;
+    const emailToSearch = targetOrgEmail.trim().toLowerCase();
+    if (!selectedLeagueForCollab || !emailToSearch) return;
+
     setSendingCollab(true);
+    setMessage({ type: '', text: '' });
 
     try {
+      let foundOrgId = null;
+      let foundOrgName = '';
+
+      // 1. Search for target organization by email in admin_users
+      const { data: adminUser } = await supabase
+        .from('admin_users')
+        .select('organization_id, email')
+        .eq('email', emailToSearch)
+        .maybeSingle();
+
+      if (adminUser?.organization_id) {
+        foundOrgId = adminUser.organization_id;
+      } else {
+        // 2. Try searching organizations table by email if available
+        const { data: orgByEmail } = await supabase
+          .from('organizations')
+          .select('id, name')
+          .ilike('email', emailToSearch)
+          .maybeSingle();
+
+        if (orgByEmail?.id) {
+          foundOrgId = orgByEmail.id;
+          foundOrgName = orgByEmail.name;
+        }
+      }
+
+      if (!foundOrgId) {
+        setMessage({
+          type: 'error',
+          text: `"${targetOrgEmail}" e-mail manzili bo'yicha hech qanday tashkilot topilmadi! Email manzilini to'g'ri kiritganingizga ishonch hosil qiling.`
+        });
+        setSendingCollab(false);
+        return;
+      }
+
+      if (Number(foundOrgId) === Number(orgId)) {
+        setMessage({
+          type: 'error',
+          text: "O'z tashkilotingizga sherikchilik taklifini yubora olmaysiz!"
+        });
+        setSendingCollab(false);
+        return;
+      }
+
+      if (!foundOrgName) {
+        const { data: orgObj } = await supabase
+          .from('organizations')
+          .select('name')
+          .eq('id', foundOrgId)
+          .maybeSingle();
+        foundOrgName = orgObj?.name || 'Tashkilot';
+      }
+
+      // Check if a collab request already exists
+      const { data: existingCollab } = await supabase
+        .from('league_collabs')
+        .select('id, status')
+        .eq('league_id', selectedLeagueForCollab.id)
+        .or(`and(sender_org_id.eq.${orgId},receiver_org_id.eq.${foundOrgId}),and(sender_org_id.eq.${foundOrgId},receiver_org_id.eq.${orgId})`)
+        .maybeSingle();
+
+      if (existingCollab) {
+        const statusText = existingCollab.status === 'accepted' ? 'qabul qilingan' : 'kutilayotgan takliflar ro\'yxatida mavjud';
+        setMessage({
+          type: 'error',
+          text: `"${foundOrgName}" tashkilotiga ushbu liga bo'yicha sherikchilik taklifi allaqachon ${statusText}!`
+        });
+        setSendingCollab(false);
+        return;
+      }
+
+      // Send the collab request
       const { error } = await supabase.from('league_collabs').insert({
         league_id: selectedLeagueForCollab.id,
         sender_org_id: orgId,
-        receiver_org_id: parseInt(targetOrgId),
+        receiver_org_id: foundOrgId,
         status: 'pending',
       });
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'Sherikchilik taklifi muvaffaqiyatli yuborildi!' });
+      setMessage({
+        type: 'success',
+        text: `"${selectedLeagueForCollab.name}" ligasi bo'yicha sherikchilik taklifi "${foundOrgName}" (${targetOrgEmail}) tashkilotiga muvaffaqiyatli yuborildi!`
+      });
       setSelectedLeagueForCollab(null);
-      setTargetOrgId('');
+      setTargetOrgEmail('');
       fetchLeaguesAndOrgs();
     } catch (err) {
-      setMessage({ type: 'error', text: 'Taklif yuborishda xato: ' + err.message });
+      console.error('Send collab error:', err);
+      setMessage({ type: 'error', text: 'Taklif yuborishda xato: ' + (err.message || '') });
     } finally {
       setSendingCollab(false);
     }
@@ -1085,31 +1164,32 @@ const Settings = () => {
 
       {/* Collab Request Modal */}
       {selectedLeagueForCollab && (
-        <div className="settings-modal-overlay" onClick={() => setSelectedLeagueForCollab(null)}>
+        <div className="settings-modal-overlay" onClick={() => { setSelectedLeagueForCollab(null); setTargetOrgEmail(''); }}>
           <div className="settings-modal" onClick={e => e.stopPropagation()}>
             <div className="settings-modal-header">
-              <h2>Sherikchilik Taklifi Yuborish</h2>
-              <button className="close-btn" onClick={() => setSelectedLeagueForCollab(null)}><X size={18} /></button>
+              <h2>Sherikchilik Taklifi Yuborish (Co-host)</h2>
+              <button className="close-btn" onClick={() => { setSelectedLeagueForCollab(null); setTargetOrgEmail(''); }}><X size={18} /></button>
             </div>
             <form onSubmit={handleSendCollab} className="settings-modal-body">
-              <p><strong>"{selectedLeagueForCollab.name}"</strong> ligasini qaysi tashkilot bilan birga olib borasiz (co-host)?</p>
-              <div className="settings-form-group">
-                <label>Hamkor Tashkilotni Tanlang</label>
-                <select
-                  value={targetOrgId}
-                  onChange={e => setTargetOrgId(e.target.value)}
+              <p><strong>"{selectedLeagueForCollab.name}"</strong> ligasini birgalikda (co-host) olib borish uchun hamkor tashkilotning email manzilini kiriting:</p>
+              <div className="settings-form-group" style={{ marginTop: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Mail size={14} color="#00ff66" />
+                  <span>Tashkilot Admin Email Manzili</span>
+                </label>
+                <input
+                  type="email"
+                  placeholder="masalan: admin@tashkilot.uz"
+                  value={targetOrgEmail}
+                  onChange={e => setTargetOrgEmail(e.target.value)}
                   required
-                >
-                  <option value="">-- Tashkilotni tanlang --</option>
-                  {otherOrgs.map(org => (
-                    <option key={org.id} value={org.id}>{org.name}</option>
-                  ))}
-                </select>
+                  autoFocus
+                />
               </div>
-              <div className="settings-modal-footer">
-                <button type="button" className="btn-cancel" onClick={() => setSelectedLeagueForCollab(null)}>Bekor qilish</button>
-                <button type="submit" className="settings-btn settings-btn-primary" disabled={sendingCollab || !targetOrgId}>
-                  <Send size={14} /> {sendingCollab ? 'Yuborilmoqda...' : 'Taklifni yuborish'}
+              <div className="settings-modal-footer" style={{ marginTop: '20px' }}>
+                <button type="button" className="btn-cancel" onClick={() => { setSelectedLeagueForCollab(null); setTargetOrgEmail(''); }}>Bekor qilish</button>
+                <button type="submit" className="settings-btn settings-btn-primary" disabled={sendingCollab || !targetOrgEmail.trim()}>
+                  <Send size={14} /> {sendingCollab ? 'Yuborilmoqda...' : 'Taklifni Yuborish'}
                 </button>
               </div>
             </form>
