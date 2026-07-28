@@ -206,26 +206,29 @@ const Organizations = () => {
 
     try {
       const orgId = deletingOrg.id;
-      const { data: adminUsers } = await supabase.from('admin_users').select('id').eq('organization_id', orgId);
+      const { data: adminUsers } = await supabaseAdmin.from('admin_users').select('id').eq('organization_id', orgId);
       if (adminUsers && adminUsers.length > 0) {
         for (const admin of adminUsers) {
           await supabaseAdmin.auth.admin.deleteUser(admin.id).catch(() => {});
         }
-        await supabase.from('admin_users').delete().eq('organization_id', orgId);
+        await supabaseAdmin.from('admin_users').delete().eq('organization_id', orgId);
       }
 
-      await supabase.from('league_collabs').delete().or(`sender_org_id.eq.${orgId},receiver_org_id.eq.${orgId}`);
-      await supabase.from('leagues').delete().eq('organization_id', orgId);
-      await supabase.from('applications').delete().eq('organization_id', orgId);
-      await supabase.from('matches').delete().eq('organization_id', orgId);
-      await supabase.from('teams').delete().eq('organization_id', orgId);
+      await supabaseAdmin.from('league_collabs').delete().or(`sender_org_id.eq.${orgId},receiver_org_id.eq.${orgId}`);
+      await supabaseAdmin.from('leagues').delete().eq('organization_id', orgId);
+      await supabaseAdmin.from('applications').delete().eq('organization_id', orgId);
+      await supabaseAdmin.from('matches').delete().eq('organization_id', orgId);
+      await supabaseAdmin.from('teams').delete().eq('organization_id', orgId);
+      await supabaseAdmin.from('transfers').delete().eq('organization_id', orgId).catch(() => {});
+      await supabaseAdmin.from('sponsors').delete().eq('organization_id', orgId).catch(() => {});
 
-      const { error: deleteOrgErr } = await supabase.from('organizations').delete().eq('id', orgId);
+      const { error: deleteOrgErr } = await supabaseAdmin.from('organizations').delete().eq('id', orgId);
       if (deleteOrgErr) throw deleteOrgErr;
 
       setDeleteModalOpen(false);
       setDeletingOrg(null);
-      fetchOrganizations();
+      await fetchOrganizations();
+      alert(`"${deletingOrg.name}" tashkiloti va unga tegishli barcha ma'lumotlar muvaffaqiyatli o'chirildi.`);
     } catch (err) {
       alert('O\'chirishda xatolik: ' + err.message);
     } finally {
