@@ -264,15 +264,44 @@ const MatchControl = () => {
       const mainSp = loadedSponsors.find(s => s.is_main === true);
       const secondarySps = loadedSponsors.filter(s => s.is_selected === true && !s.is_main);
 
-      // Find background banner image from league, org, or match
-      const rawBannerUrl = leagueData?.yt_banner_url 
-        || leagueData?.banner_url 
-        || orgData?.yt_banner_url 
-        || orgData?.banner_url 
-        || orgData?.background_url 
-        || finishedMatchObj?.yt_banner_url 
-        || finishedMatchObj?.banner_url 
-        || null;
+      // Find background banner image from league, sponsors, org, match, or localStorage
+      let rawBannerUrl = leagueData?.yt_banner_url || leagueData?.banner_url || leagueData?.schedule_banner_url || leagueData?.export_bg_url;
+
+      if (!rawBannerUrl && finishedMatchObj.league) {
+        const leagueNameTrim = finishedMatchObj.league.trim();
+        const sponsorKeys = [
+          `BANNER_YT_${targetOrgId}_${leagueNameTrim}`,
+          `YT_BANNER_${targetOrgId}_${leagueNameTrim}`,
+          `BANNER_YT_${leagueNameTrim}`,
+          `YT_BANNER_${leagueNameTrim}`,
+          `BANNER_SCHEDULE_${targetOrgId}_${leagueNameTrim}`
+        ];
+
+        const { data: bannerRows } = await supabaseAdmin
+          .from('sponsors')
+          .select('logo_url, name')
+          .in('name', sponsorKeys);
+
+        if (bannerRows && bannerRows.length > 0) {
+          const matchRow = bannerRows.find(b => b.logo_url) || bannerRows[0];
+          rawBannerUrl = matchRow?.logo_url;
+        }
+      }
+
+      if (!rawBannerUrl) {
+        rawBannerUrl = orgData?.yt_banner_url || orgData?.banner_url || orgData?.background_url;
+      }
+
+      if (!rawBannerUrl) {
+        rawBannerUrl = finishedMatchObj?.yt_banner_url || finishedMatchObj?.banner_url;
+      }
+
+      if (!rawBannerUrl && finishedMatchObj.league) {
+        try {
+          const localKey = `hfl_yt_banner_${targetOrgId}_${finishedMatchObj.league.trim()}`;
+          rawBannerUrl = localStorage.getItem(localKey);
+        } catch (e) {}
+      }
 
       // Preload images into Base64 Data URLs for CORS-safe HTML5 Canvas rendering
       const [
@@ -1163,7 +1192,7 @@ const MatchControl = () => {
       {/* Hidden 16:9 YouTube Thumbnail Canvas for Auto-updating */}
       <div style={{ position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -9999, width: '1280px', height: '720px', overflow: 'hidden' }}>
         {ytExportMatch && (
-          <div ref={exportYtRef} style={{ width: '1280px', height: '720px', backgroundImage: (ytExportLeague?.yt_banner_url || ytExportLeague?.banner_url || ytExportOrg?.yt_banner_url || ytExportOrg?.banner_url) ? `url(${ytExportLeague?.yt_banner_url || ytExportLeague?.banner_url || ytExportOrg?.yt_banner_url || ytExportOrg?.banner_url})` : 'none', backgroundColor: '#0b0f19', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', padding: '35px 50px', boxSizing: 'border-box' }}>
+          <div ref={exportYtRef} style={{ width: '1280px', height: '720px', backgroundImage: (ytExportLeague?.yt_banner_url || ytExportLeague?.banner_url || ytExportOrg?.yt_banner_url || ytExportOrg?.banner_url) ? `url("${ytExportLeague?.yt_banner_url || ytExportLeague?.banner_url || ytExportOrg?.yt_banner_url || ytExportOrg?.banner_url}")` : 'none', backgroundColor: '#0b0f19', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', padding: '35px 50px', boxSizing: 'border-box' }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
               <div style={{ width: '280px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>
