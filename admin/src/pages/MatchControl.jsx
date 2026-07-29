@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { 
   ArrowLeft, Trash2, Monitor, Share2, Play, Pause, RotateCcw, 
@@ -41,10 +41,12 @@ const MatchControl = () => {
   // Active Team Roster Switcher ('home' or 'away')
   const [activeRosterTeam, setActiveRosterTeam] = useState('home');
 
-  // Live Timer State
+  // Live Timer State & Refs for Cross-Device / Background Sync
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const timerRef = useRef(null);
+  const timerStartedAtRef = useRef(null);
+  const baseTimerSecondsRef = useRef(0);
 
   // Penalty Shootout State
   const [homePenalties, setHomePenalties] = useState(0);
@@ -89,7 +91,7 @@ const MatchControl = () => {
     } catch (e) {}
 
     try {
-      const { data } = await supabase.from('organizations').select('yt_tokens').eq('id', activeId).maybeSingle();
+      const { data } = await supabaseAdmin.from('organizations').select('yt_tokens').eq('id', activeId).maybeSingle();
       if (data?.yt_tokens) {
         const parsed = typeof data.yt_tokens === 'string' ? JSON.parse(data.yt_tokens) : data.yt_tokens;
         localStorage.setItem(key, JSON.stringify(parsed));
@@ -99,7 +101,7 @@ const MatchControl = () => {
 
     try {
       const configName = `YT_OAUTH_TOKENS_${activeId}`;
-      const { data } = await supabase.from('sponsors').select('logo_url').eq('name', configName).maybeSingle();
+      const { data } = await supabaseAdmin.from('sponsors').select('logo_url').eq('name', configName).maybeSingle();
       if (data?.logo_url) {
         const parsed = JSON.parse(data.logo_url);
         localStorage.setItem(key, JSON.stringify(parsed));
@@ -143,7 +145,7 @@ const MatchControl = () => {
         const payloadStr = JSON.stringify(updated);
         localStorage.setItem(`hfl_yt_tokens_${activeId}`, payloadStr);
         try {
-          await supabase.from('sponsors').update({ logo_url: payloadStr }).eq('name', `YT_OAUTH_TOKENS_${activeId}`);
+          await supabaseAdmin.from('sponsors').update({ logo_url: payloadStr }).eq('name', `YT_OAUTH_TOKENS_${activeId}`);
         } catch (e) {}
         return data.access_token;
       }
@@ -153,17 +155,38 @@ const MatchControl = () => {
     return tokens?.access_token || null;
   };
 
-  const autoUpdateYouTubeThumbnail = async (finishedMatchObj) => {
+  const toDataURL = async (url) => {
+    if (!url) return null;
+    if (url.startsWith('data:')) return url;
+    try {
+      const res = await fetch(url, { mode: 'cors' });
+      const blob = await res.blob();
+      return await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => resolve(url);
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      return url;
+    }
+  };
+
+  const autoUpdateYouTubeThumbnail = async (targetMatchObj, isManual = false) => {
+    const finishedMatchObj = targetMatchObj || match;
+    if (!finishedMatchObj) return;
+
     let videoId = extractYtVideoId(finishedMatchObj?.youtube_link);
     const targetOrgId = finishedMatchObj?.organization_id || orgId || 1;
     const accessToken = await getValidAccessToken(targetOrgId);
 
     if (!accessToken) {
-      console.warn('YouTube OAuth token topilmadi.');
+      const msg = 'YouTube OAuth token topilmadi! Iltimos, Sozlamalar bo\'limida YouTube hisobingizni ulaganizga ishonch hosil qiling.';
+      console.warn(msg);
+      if (isManual) alert(msg);
       return;
     }
 
-    // If videoId was not directly in youtube_link, fetch active live broadcast from YouTube API
     if (!videoId) {
       try {
         const bcRes = await fetch('https://www.googleapis.com/youtube/v3/liveBroadcasts?broadcastStatus=active&mine=true', {
@@ -186,8 +209,25 @@ const MatchControl = () => {
       }
     }
 
+    if (!videoId && isManual) {
+      const inputLink = window.prompt("YouTube video yoki live stream havolasini kiriting (masalan: https://www.youtube.com/watch?v=...):");
+      if (inputLink) {
+        const extracted = extractYtVideoId(inputLink);
+        if (extracted) {
+          videoId = extracted;
+          try {
+            await supabaseAdmin.from('matches').update({ youtube_link: inputLink }).eq('id', finishedMatchObj.id);
+            setMatch(prev => ({ ...prev, youtube_link: inputLink }));
+            finishedMatchObj.youtube_link = inputLink;
+          } catch (e) {}
+        }
+      }
+    }
+
     if (!videoId) {
-      console.warn('YouTube Video / Broadcast ID topilmadi.');
+      const msg = 'YouTube Video / Broadcast ID topilmadi! O\'yinda youtube_link kiritilganiga yoki kanalingizda jonli efir borligiga ishonch hosil qiling.';
+      console.warn(msg);
+      if (isManual) alert(msg);
       return;
     }
 
@@ -195,45 +235,116 @@ const MatchControl = () => {
     try {
       let leagueData = null;
       if (finishedMatchObj.league) {
-        const { data } = await supabase.from('leagues').select('*').ilike('name', finishedMatchObj.league).maybeSingle();
-        leagueData = data;
+        // First try searching league belonging to targetOrgId
+        const { data: orgLeague } = await supabaseAdmin
+          .from('leagues')
+          .select('*')
+          .eq('organization_id', targetOrgId)
+          .ilike('name', finishedMatchObj.league.trim())
+          .maybeSingle();
+        
+        leagueData = orgLeague;
         if (!leagueData) {
-          const { data: fallback } = await supabase.from('leagues').select('*').eq('name', finishedMatchObj.league).maybeSingle();
+          const { data: fallback } = await supabaseAdmin
+            .from('leagues')
+            .select('*')
+            .ilike('name', finishedMatchObj.league.trim())
+            .maybeSingle();
           leagueData = fallback;
         }
       }
-      const { data: orgData } = await supabase.from('organizations').select('*').eq('id', targetOrgId).maybeSingle();
+      const { data: orgData } = await supabaseAdmin.from('organizations').select('*').eq('id', targetOrgId).maybeSingle();
       
       let loadedSponsors = [];
-      const { data: spData } = await supabase.from('sponsors').select('*');
+      const { data: spData } = await supabaseAdmin.from('sponsors').select('*');
       if (spData) {
-        loadedSponsors = spData.filter(s => !s.name?.startsWith('YT_OAUTH_TOKENS_'));
+        loadedSponsors = spData.filter(s => !s.name?.startsWith('YT_OAUTH_TOKENS_') && !s.name?.startsWith('MATCH_TIMER_'));
       }
 
       const mainSp = loadedSponsors.find(s => s.is_main === true);
       const secondarySps = loadedSponsors.filter(s => s.is_selected === true && !s.is_main);
 
-      setYtExportMatch(finishedMatchObj);
-      setYtExportLeague(leagueData);
-      setYtExportOrg(orgData);
-      setYtExportMainSponsor(mainSp);
-      setYtExportSecondarySponsors(secondarySps);
+      // Find background banner image from league, org, or match
+      const rawBannerUrl = leagueData?.yt_banner_url 
+        || leagueData?.banner_url 
+        || orgData?.yt_banner_url 
+        || orgData?.banner_url 
+        || orgData?.background_url 
+        || finishedMatchObj?.yt_banner_url 
+        || finishedMatchObj?.banner_url 
+        || null;
 
-      await new Promise(r => setTimeout(r, 850));
+      // Preload images into Base64 Data URLs for CORS-safe HTML5 Canvas rendering
+      const [
+        convertedOrgLogo,
+        convertedLeagueLogo,
+        convertedBanner,
+        convertedHomeLogo,
+        convertedAwayLogo,
+        convertedMainSpLogo
+      ] = await Promise.all([
+        toDataURL(orgData?.logo_url || '/logo-for-jadval.png'),
+        toDataURL(leagueData?.logo_url),
+        toDataURL(rawBannerUrl),
+        toDataURL(finishedMatchObj.home_team?.logo_url || homeTeam?.logo_url || '/images/default-team.png'),
+        toDataURL(finishedMatchObj.away_team?.logo_url || awayTeam?.logo_url || '/images/default-team.png'),
+        toDataURL(mainSp?.logo_url)
+      ]);
 
-      if (!exportYtRef.current) return;
+      const convertedSecondarySps = await Promise.all(
+        secondarySps.map(async (s) => ({
+          ...s,
+          logo_url: await toDataURL(s.logo_url)
+        }))
+      );
+
+      const preparedMatch = {
+        ...finishedMatchObj,
+        home_team: { ...(finishedMatchObj.home_team || homeTeam), logo_url: convertedHomeLogo },
+        away_team: { ...(finishedMatchObj.away_team || awayTeam), logo_url: convertedAwayLogo }
+      };
+
+      const preparedLeague = {
+        ...(leagueData || {}),
+        logo_url: convertedLeagueLogo,
+        yt_banner_url: convertedBanner,
+        banner_url: convertedBanner
+      };
+
+      const preparedOrg = {
+        ...(orgData || {}),
+        logo_url: convertedOrgLogo,
+        yt_banner_url: convertedBanner,
+        banner_url: convertedBanner
+      };
+
+      const preparedMainSp = mainSp ? {
+        ...mainSp,
+        logo_url: convertedMainSpLogo
+      } : null;
+
+      setYtExportMatch(preparedMatch);
+      setYtExportLeague(preparedLeague);
+      setYtExportOrg(preparedOrg);
+      setYtExportMainSponsor(preparedMainSp);
+      setYtExportSecondarySponsors(convertedSecondarySps);
+
+      await new Promise(r => setTimeout(r, 900));
+
+      if (!exportYtRef.current) throw new Error("Oblojka shabloni (Canvas element) topilmadi.");
 
       const canvas = await html2canvas(exportYtRef.current, {
         scale: 1,
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false,
         backgroundColor: '#0b0f19',
         width: 1280,
-        height: 720
+        height: 720,
+        logging: false
       });
 
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
-      if (!blob) return;
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+      if (!blob) throw new Error("Oblojka rasmi yaratib bo'lmadi (blob error).");
 
       const thumbRes = await fetch(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${videoId}`, {
         method: 'POST',
@@ -245,22 +356,37 @@ const MatchControl = () => {
       });
 
       const thumbData = await thumbRes.json();
-      console.log('✅ YouTube 16:9 Thumbnail auto-updated on match finish:', thumbData);
-      alert(`✅ YouTube oblojkasi avtomatik yangilandi!\nO'yin yakuniy hisobi: ${finishedMatchObj.home_score} : ${finishedMatchObj.away_score}`);
+
+      if (thumbRes.ok && (thumbData.items || thumbData.kind)) {
+        console.log('✅ YouTube 16:9 Thumbnail successfully updated:', thumbData);
+        alert(`✅ YouTube oblojkasi muvaffaqiyatli yangilandi!\nVideo ID: ${videoId}\nO'yin hisobi: ${finishedMatchObj.home_score || 0} : ${finishedMatchObj.away_score || 0}`);
+      } else {
+        const errorMsg = thumbData?.error?.message || JSON.stringify(thumbData);
+        console.error('YouTube Thumbnail Set API Error:', thumbData);
+        alert(`⚠️ YouTube API oblojkani qabul qilmadi:\n${errorMsg}`);
+      }
     } catch (err) {
-      console.error('Error auto updating YouTube thumbnail:', err);
+      console.error('Error updating YouTube thumbnail:', err);
+      alert(`❌ YouTube oblojkasini yangilashda xatolik:\n${err.message || err}`);
     } finally {
       setUpdatingYtThumb(false);
     }
+  };
+
+  const handleManualYtThumbUpdate = async () => {
+    if (!match) return;
+    await autoUpdateYouTubeThumbnail(match, true);
   };
 
   const copyObsLink = () => {
     let streamId = 'stream1';
     if (match?.location?.includes('2-maydon')) streamId = 'stream2';
     
-    const obsLink = `${window.location.origin}/obs/scoreboard/${streamId}`;
-    navigator.clipboard.writeText(obsLink);
-    alert(`${match?.location || '1-maydon'} uchun OBS Link nusxalandi!\n\n${obsLink}`);
+    const directObsLink = `${window.location.origin}/obs/scoreboard/${id}`;
+    const streamObsLink = `${window.location.origin}/obs/scoreboard/${streamId}?org_id=${match?.organization_id || orgId || 1}`;
+    
+    navigator.clipboard.writeText(directObsLink);
+    alert(`OBS Linklari:\n\n1) Aniq Match OBS Linki (nusxalandi):\n${directObsLink}\n\n2) Stream OBS Linki (Maydon bo'yicha):\n${streamObsLink}`);
   };
 
   const copyControlPanelLink = () => {
@@ -269,10 +395,78 @@ const MatchControl = () => {
     alert("Boshqaruv paneli havolasi nusxalandi!\n\n" + link);
   };
 
-  // Timer Effect
+  // Helper to apply persistent timer payload
+  const applyTimerPayload = (payload) => {
+    if (!payload) return;
+    const baseSec = payload.timer_seconds !== undefined ? Number(payload.timer_seconds) : 0;
+    const isRunning = !!payload.is_timer_running;
+    const startedAt = payload.timer_started_at;
+
+    setIsTimerRunning(isRunning);
+    baseTimerSecondsRef.current = baseSec;
+    timerStartedAtRef.current = startedAt || null;
+
+    if (isRunning && startedAt) {
+      const startedMs = new Date(startedAt).getTime();
+      if (!isNaN(startedMs)) {
+        const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
+        setTimerSeconds(baseSec + elapsedSec);
+      } else {
+        setTimerSeconds(baseSec);
+      }
+    } else {
+      setTimerSeconds(baseSec);
+    }
+  };
+
+  // Helper to update persistent timer state across all devices
+  const updateTimerDBAndState = async (baseSec, startedAtIso, isRunning) => {
+    setTimerSeconds(baseSec);
+    setIsTimerRunning(isRunning);
+    baseTimerSecondsRef.current = baseSec;
+    timerStartedAtRef.current = startedAtIso;
+
+    const timerPayload = {
+      timer_seconds: baseSec,
+      timer_started_at: startedAtIso,
+      is_timer_running: isRunning,
+      updated_at: new Date().toISOString()
+    };
+
+    try {
+      const nameKey = `MATCH_TIMER_${id}`;
+      const payloadStr = JSON.stringify(timerPayload);
+      const { data: existing } = await supabaseAdmin.from('sponsors').select('id').eq('name', nameKey).maybeSingle();
+      if (existing) {
+        await supabaseAdmin.from('sponsors').update({ logo_url: payloadStr }).eq('id', existing.id);
+      } else {
+        await supabaseAdmin.from('sponsors').insert({ name: nameKey, logo_url: payloadStr });
+      }
+    } catch (e) {
+      console.warn('Sponsors timer save error:', e);
+    }
+
+    try {
+      await supabaseAdmin.from('matches').update({
+        timer_seconds: baseSec,
+        timer_started_at: startedAtIso,
+        is_timer_running: isRunning
+      }).eq('id', id);
+    } catch (e) {}
+  };
+
+  // Realtime Accurate Timer Interval
   useEffect(() => {
     if (isTimerRunning) {
       timerRef.current = setInterval(() => {
+        if (timerStartedAtRef.current) {
+          const startedMs = new Date(timerStartedAtRef.current).getTime();
+          if (!isNaN(startedMs)) {
+            const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
+            setTimerSeconds(baseTimerSecondsRef.current + elapsedSec);
+            return;
+          }
+        }
         setTimerSeconds(prev => prev + 1);
       }, 1000);
     } else if (timerRef.current) {
@@ -284,29 +478,10 @@ const MatchControl = () => {
     };
   }, [isTimerRunning]);
 
-  // Sync Timer with Match Status
-  useEffect(() => {
-    if (!match) return;
-
-    if (match.status === 'first_half') {
-      setIsTimerRunning(true);
-    } else if (match.status === 'second_half') {
-      setIsTimerRunning(true);
-      setTimerSeconds(prev => (prev < 2700 ? 2700 : prev)); // Start 2nd half at 45:00
-    } else {
-      setIsTimerRunning(false);
-    }
-
-    if (match.home_penalty_score !== undefined && match.away_penalty_score !== undefined) {
-      setHomePenalties(match.home_penalty_score || 0);
-      setAwayPenalties(match.away_penalty_score || 0);
-    }
-  }, [match?.status]);
-
   useEffect(() => {
     fetchMatchData();
 
-    // Supabase Realtime Subscription
+    // Supabase Realtime Subscriptions
     const matchChannel = supabase
       .channel(`match_control_${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter: `match_id=eq.${id}` }, () => {
@@ -314,6 +489,18 @@ const MatchControl = () => {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
         setMatch(prev => ({ ...prev, ...payload.new }));
+        if (payload.new?.timer_seconds !== undefined || payload.new?.is_timer_running !== undefined) {
+          applyTimerPayload(payload.new);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sponsors', filter: `name=eq.MATCH_TIMER_${id}` }, (payload) => {
+        const record = payload.new || payload.record;
+        if (record?.logo_url) {
+          try {
+            const parsed = JSON.parse(record.logo_url);
+            applyTimerPayload(parsed);
+          } catch (e) {}
+        }
       })
       .subscribe();
 
@@ -325,8 +512,8 @@ const MatchControl = () => {
   const fetchMatchData = async () => {
     setLoading(true);
     try {
-      // Fetch match
-      const { data: matchData } = await supabase
+      // Fetch match using supabaseAdmin to bypass RLS for shared control panel links
+      const { data: matchData } = await supabaseAdmin
         .from('matches')
         .select('*')
         .eq('id', id)
@@ -335,20 +522,25 @@ const MatchControl = () => {
       if (!matchData) return;
       setMatch(matchData);
 
+      if (matchData.home_penalty_score !== undefined && matchData.away_penalty_score !== undefined) {
+        setHomePenalties(matchData.home_penalty_score || 0);
+        setAwayPenalties(matchData.away_penalty_score || 0);
+      }
+
       // Fetch teams
-      const { data: home } = await supabase.from('teams').select('*').eq('id', matchData.home_team_id).single();
-      const { data: away } = await supabase.from('teams').select('*').eq('id', matchData.away_team_id).single();
+      const { data: home } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.home_team_id).single();
+      const { data: away } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.away_team_id).single();
       setHomeTeam(home);
       setAwayTeam(away);
 
       // Fetch approved players for each team
-      const { data: hp } = await supabase
+      const { data: hp } = await supabaseAdmin
         .from('applications')
         .select('id, first_name, last_name, position, player_number')
         .eq('team_id', matchData.home_team_id)
         .eq('status', 'approved');
       
-      const { data: ap } = await supabase
+      const { data: ap } = await supabaseAdmin
         .from('applications')
         .select('id, first_name, last_name, position, player_number')
         .eq('team_id', matchData.away_team_id)
@@ -356,6 +548,24 @@ const MatchControl = () => {
 
       setHomePlayers(hp || []);
       setAwayPlayers(ap || []);
+
+      // Fetch persistent timer state from sponsors or match
+      const { data: timerSp } = await supabaseAdmin
+        .from('sponsors')
+        .select('logo_url')
+        .eq('name', `MATCH_TIMER_${id}`)
+        .maybeSingle();
+
+      if (timerSp?.logo_url) {
+        try {
+          const parsed = JSON.parse(timerSp.logo_url);
+          applyTimerPayload(parsed);
+        } catch (e) {
+          applyTimerPayload(matchData);
+        }
+      } else {
+        applyTimerPayload(matchData);
+      }
 
       // Fetch events
       await fetchEvents(matchData.id);
@@ -367,7 +577,7 @@ const MatchControl = () => {
   };
 
   const fetchEvents = async (matchId) => {
-    const { data } = await supabase
+    const { data } = await supabaseAdmin
       .from('match_events')
       .select('*, player:player_id(first_name, last_name, player_number), team:team_id(name)')
       .eq('match_id', matchId || id)
@@ -389,6 +599,18 @@ const MatchControl = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const toggleTimerManual = () => {
+    const newRunning = !isTimerRunning;
+    const nowIso = newRunning ? new Date().toISOString() : null;
+    updateTimerDBAndState(timerSeconds, nowIso, newRunning);
+  };
+
+  const resetTimerManual = () => {
+    const defaultSec = match?.status === 'second_half' ? 2700 : 0;
+    const nowIso = isTimerRunning ? new Date().toISOString() : null;
+    updateTimerDBAndState(defaultSec, nowIso, isTimerRunning);
+  };
+
   // Quick Score Adjuster (+1 / -1)
   const adjustScore = async (teamType, delta) => {
     if (!match) return;
@@ -403,7 +625,7 @@ const MatchControl = () => {
       [isHome ? 'home_score' : 'away_score']: newScore
     }));
 
-    await supabase.from('matches').update(updatePayload).eq('id', id);
+    await supabaseAdmin.from('matches').update(updatePayload).eq('id', id);
   };
 
   // Quick Penalty Score Adjuster (+1 / -1)
@@ -417,7 +639,9 @@ const MatchControl = () => {
     else setAwayPenalties(newPen);
 
     const updatePayload = isHome ? { home_penalty_score: newPen } : { away_penalty_score: newPen };
-    await supabase.from('matches').update(updatePayload).eq('id', id);
+    try {
+      await supabaseAdmin.from('matches').update(updatePayload).eq('id', id);
+    } catch (e) {}
   };
 
   const requestStatusUpdate = (newStatus, message) => {
@@ -426,19 +650,28 @@ const MatchControl = () => {
       message,
       action: async () => {
         let updateData = { status: newStatus };
+        let newBaseSec = timerSeconds;
+        let newRunning = isTimerRunning;
+        let nowIso = new Date().toISOString();
+
         if (newStatus === 'first_half') {
-          setIsTimerRunning(true);
+          newBaseSec = 0;
+          newRunning = true;
         } else if (newStatus === 'half_time') {
-          setIsTimerRunning(false);
+          newRunning = false;
+          nowIso = null;
         } else if (newStatus === 'second_half') {
-          setIsTimerRunning(true);
-          setTimerSeconds(prev => (prev < 2700 ? 2700 : prev));
+          newBaseSec = timerSeconds < 2700 ? 2700 : timerSeconds;
+          newRunning = true;
         } else if (newStatus === 'scheduled') {
-          setIsTimerRunning(false);
-          setTimerSeconds(0);
+          newBaseSec = 0;
+          newRunning = false;
+          nowIso = null;
         }
 
-        const { error } = await supabase.from('matches').update(updateData).eq('id', id);
+        await updateTimerDBAndState(newBaseSec, nowIso, newRunning);
+
+        const { error } = await supabaseAdmin.from('matches').update(updateData).eq('id', id);
         if (!error) setMatch(prev => ({ ...prev, ...updateData }));
         setConfirmModal({ isOpen: false, action: null, message: '' });
       }
@@ -453,13 +686,12 @@ const MatchControl = () => {
         const homeGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.home_team_id).length;
         const awayGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.away_team_id).length;
 
-        // Use events count if goals exist, otherwise preserve manually adjusted score
         const finalHomeScore = homeGoals > 0 ? homeGoals : (match.home_score || 0);
         const finalAwayScore = awayGoals > 0 ? awayGoals : (match.away_score || 0);
 
-        setIsTimerRunning(false);
+        await updateTimerDBAndState(timerSeconds, null, false);
 
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
           .from('matches')
           .update({ 
             status: 'finished', 
@@ -479,7 +711,6 @@ const MatchControl = () => {
           };
           setMatch(updatedMatch);
 
-          // AUTO UPDATE YOUTUBE THUMBNAIL ON MATCH FINISH
           autoUpdateYouTubeThumbnail(updatedMatch);
         }
         setConfirmModal({ isOpen: false, action: null, message: '' });
@@ -504,7 +735,7 @@ const MatchControl = () => {
     try {
       const minuteVal = parseInt(eventMinute) || getCurrentMinute();
 
-      const { error } = await supabase.from('match_events').insert([{
+      const { error } = await supabaseAdmin.from('match_events').insert([{
         match_id: id,
         team_id: selectedTeamId,
         player_id: selectedPlayerId,
@@ -513,13 +744,12 @@ const MatchControl = () => {
       }]);
 
       if (!error) {
-        // If it's a goal, automatically increment the score
         if (eventType === 'goal') {
           const isHome = selectedTeamId === match.home_team_id;
           const newHomeScore = (match.home_score || 0) + (isHome ? 1 : 0);
           const newAwayScore = (match.away_score || 0) + (isHome ? 0 : 1);
           
-          await supabase.from('matches').update({
+          await supabaseAdmin.from('matches').update({
             home_score: newHomeScore,
             away_score: newAwayScore
           }).eq('id', id);
@@ -540,14 +770,14 @@ const MatchControl = () => {
   const handleDeleteEvent = async (event) => {
     if (!window.confirm("Bu voqeani o'chirishni tasdiqlaysizmi?")) return;
 
-    const { error } = await supabase.from('match_events').delete().eq('id', event.id);
+    const { error } = await supabaseAdmin.from('match_events').delete().eq('id', event.id);
     if (!error) {
       if (event.event_type === 'goal') {
         const isHome = event.team_id === match.home_team_id;
         const newHomeScore = Math.max(0, (match.home_score || 0) - (isHome ? 1 : 0));
         const newAwayScore = Math.max(0, (match.away_score || 0) - (isHome ? 0 : 1));
         
-        await supabase.from('matches').update({
+        await supabaseAdmin.from('matches').update({
           home_score: newHomeScore,
           away_score: newAwayScore
         }).eq('id', id);
@@ -606,6 +836,10 @@ const MatchControl = () => {
           <button className="obs-action-btn obs-text-btn" style={{background: '#1e40af'}} onClick={copyObsLink} title="OBS Linkini nusxalash">
             <Monitor size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">{match?.location?.includes('2-maydon') ? '2-Maydon (OBS)' : '1-Maydon (OBS)'}</span>
           </button>
+          <div className="obs-divider"></div>
+          <button className="obs-action-btn obs-text-btn" style={{background: '#cc1818'}} onClick={handleManualYtThumbUpdate} disabled={updatingYtThumb} title="YouTube Oblojkasini yangilash">
+            <span className="btn-text-desktop">{updatingYtThumb ? '🔄 Oblojka yangilanmoqda...' : '🖼️ YT Oblojkani yangilash'}</span>
+          </button>
         </div>
       </div>
 
@@ -637,14 +871,14 @@ const MatchControl = () => {
               <span className="timer-minute">({getCurrentMinute()}')</span>
               <button 
                 className="timer-control-btn"
-                onClick={() => setIsTimerRunning(!isTimerRunning)}
+                onClick={toggleTimerManual}
                 title={isTimerRunning ? 'Sekundomerni to\'xtatish' : 'Sekundomerni yurgizish'}
               >
                 {isTimerRunning ? <Pause size={14} /> : <Play size={14} />}
               </button>
               <button 
                 className="timer-control-btn reset"
-                onClick={() => setTimerSeconds(match.status === 'second_half' ? 2700 : 0)}
+                onClick={resetTimerManual}
                 title="Taym boshiga qaytarish"
               >
                 <RotateCcw size={12} />
@@ -926,10 +1160,10 @@ const MatchControl = () => {
         </div>
       )}
 
-      {/* Hidden 16:9 YouTube Thumbnail Canvas for Auto-updating on Finish */}
-      <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
+      {/* Hidden 16:9 YouTube Thumbnail Canvas for Auto-updating */}
+      <div style={{ position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -9999, width: '1280px', height: '720px', overflow: 'hidden' }}>
         {ytExportMatch && (
-          <div ref={exportYtRef} style={{ width: '1280px', height: '720px', backgroundImage: (ytExportLeague?.yt_banner_url || ytExportLeague?.banner_url) ? `url(${ytExportLeague?.yt_banner_url || ytExportLeague?.banner_url})` : 'none', backgroundColor: '#0b0f19', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', padding: '35px 50px', boxSizing: 'border-box' }}>
+          <div ref={exportYtRef} style={{ width: '1280px', height: '720px', backgroundImage: (ytExportLeague?.yt_banner_url || ytExportLeague?.banner_url || ytExportOrg?.yt_banner_url || ytExportOrg?.banner_url) ? `url(${ytExportLeague?.yt_banner_url || ytExportLeague?.banner_url || ytExportOrg?.yt_banner_url || ytExportOrg?.banner_url})` : 'none', backgroundColor: '#0b0f19', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', padding: '35px 50px', boxSizing: 'border-box' }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
               <div style={{ width: '280px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>

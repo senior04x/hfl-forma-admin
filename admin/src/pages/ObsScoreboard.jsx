@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import './ObsScoreboard.css';
 
 const ObsScoreboard = () => {
@@ -12,23 +12,45 @@ const ObsScoreboard = () => {
   const [activeEvent, setActiveEvent] = useState(null);
   const [isEventExiting, setIsEventExiting] = useState(false);
 
-  // Track specific streams via location
+  // Realtime Timer State for OBS
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const timerRef = useRef(null);
+  const timerStartedAtRef = useRef(null);
+  const baseTimerSecondsRef = useRef(0);
+
+  // 1. Identify active match ID (Direct Match ID vs. Stream + Organization)
   useEffect(() => {
-    if (id !== 'stream1' && id !== 'stream2') return;
+    if (!id) return;
+
+    const queryParams = new URLSearchParams(window.location.search);
+    const targetOrgId = queryParams.get('org_id');
+
+    // If id is not stream1 and not stream2, treat it directly as a Match ID
+    if (id !== 'stream1' && id !== 'stream2') {
+      setActiveMatchId(id);
+      return;
+    }
 
     const locationFilter = id === 'stream1' ? '1-maydon' : '2-maydon';
 
     const findLiveMatch = async () => {
-      const { data } = await supabase
+      let query = supabaseAdmin
         .from('matches')
-        .select('id')
+        .select('id, status')
         .ilike('location', `%${locationFilter}%`)
-        .in('status', ['first_half', 'half_time', 'second_half'])
-        .order('id', { ascending: false })
-        .limit(1);
+        .order('id', { ascending: false });
+
+      if (targetOrgId) {
+        query = query.eq('organization_id', targetOrgId);
+      }
+
+      const { data } = await query;
 
       if (data && data.length > 0) {
-        setActiveMatchId(data[0].id);
+        // Prefer currently active live match if available
+        const liveMatch = data.find(m => ['first_half', 'half_time', 'second_half'].includes(m.status));
+        setActiveMatchId(liveMatch ? liveMatch.id : data[0].id);
       }
     };
 
@@ -38,8 +60,10 @@ const ObsScoreboard = () => {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches' }, (payload) => {
         const newMatch = payload.new;
         if (newMatch.location && newMatch.location.includes(locationFilter)) {
-          if (['first_half', 'half_time', 'second_half'].includes(newMatch.status)) {
-            setActiveMatchId(newMatch.id);
+          if (!targetOrgId || String(newMatch.organization_id) === String(targetOrgId)) {
+            if (['first_half', 'half_time', 'second_half'].includes(newMatch.status)) {
+              setActiveMatchId(newMatch.id);
+            }
           }
         }
       })
@@ -50,14 +74,62 @@ const ObsScoreboard = () => {
     };
   }, [id]);
 
+  // Helper to apply persistent timer payload in OBS
+  const applyTimerPayload = (payload) => {
+    if (!payload) return;
+    const baseSec = payload.timer_seconds !== undefined ? Number(payload.timer_seconds) : 0;
+    const isRunning = !!payload.is_timer_running;
+    const startedAt = payload.timer_started_at;
+
+    setIsTimerRunning(isRunning);
+    baseTimerSecondsRef.current = baseSec;
+    timerStartedAtRef.current = startedAt || null;
+
+    if (isRunning && startedAt) {
+      const startedMs = new Date(startedAt).getTime();
+      if (!isNaN(startedMs)) {
+        const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
+        setTimerSeconds(baseSec + elapsedSec);
+      } else {
+        setTimerSeconds(baseSec);
+      }
+    } else {
+      setTimerSeconds(baseSec);
+    }
+  };
+
+  // Timer interval for OBS display
+  useEffect(() => {
+    if (isTimerRunning) {
+      timerRef.current = setInterval(() => {
+        if (timerStartedAtRef.current) {
+          const startedMs = new Date(timerStartedAtRef.current).getTime();
+          if (!isNaN(startedMs)) {
+            const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
+            setTimerSeconds(baseTimerSecondsRef.current + elapsedSec);
+            return;
+          }
+        }
+        setTimerSeconds(prev => prev + 1);
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isTimerRunning]);
+
+  // 2. Fetch match details & subscribe to live updates
   useEffect(() => {
     if (!activeMatchId) return;
 
     fetchData(activeMatchId);
 
-    // Subscribe to real-time changes for this match
+    // Subscribe to real-time match changes
     const matchSubscription = supabase
-      .channel(`match-${activeMatchId}`)
+      .channel(`obs-match-${activeMatchId}`)
       .on(
         'postgres_changes',
         {
@@ -68,13 +140,39 @@ const ObsScoreboard = () => {
         },
         (payload) => {
           setMatch((prev) => ({ ...prev, ...payload.new }));
+          if (payload.new?.timer_seconds !== undefined || payload.new?.is_timer_running !== undefined) {
+            applyTimerPayload(payload.new);
+          }
         }
       )
       .subscribe();
 
-    // Subscribe to goal events
+    // Subscribe to timer changes via sponsors table fallback
+    const timerSubscription = supabase
+      .channel(`obs-timer-${activeMatchId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sponsors',
+          filter: `name=eq.MATCH_TIMER_${activeMatchId}`
+        },
+        (payload) => {
+          const record = payload.new || payload.record;
+          if (record?.logo_url) {
+            try {
+              const parsed = JSON.parse(record.logo_url);
+              applyTimerPayload(parsed);
+            } catch (e) {}
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to goal & card events for lower third graphic
     const eventsSubscription = supabase
-      .channel(`match-events-${activeMatchId}`)
+      .channel(`obs-match-events-${activeMatchId}`)
       .on(
         'postgres_changes',
         {
@@ -90,13 +188,13 @@ const ObsScoreboard = () => {
             let pName = newEvent.event_type === 'goal' ? 'GOOOL' : 'O\'YINCHI';
             let pPhoto = null;
             if (newEvent.player_id) {
-              const { data: player } = await supabase.from('applications').select('first_name, last_name, photo_url').eq('id', newEvent.player_id).single();
+              const { data: player } = await supabaseAdmin.from('applications').select('first_name, last_name, photo_url').eq('id', newEvent.player_id).maybeSingle();
               if (player) {
-                pName = `${player.first_name} ${player.last_name}`;
+                pName = `${player.first_name || ''} ${player.last_name || ''}`.trim() || pName;
                 pPhoto = player.photo_url;
               }
             }
-            const { data: tData } = await supabase.from('teams').select('name, logo_url').eq('id', newEvent.team_id).single();
+            const { data: tData } = await supabaseAdmin.from('teams').select('name, logo_url').eq('id', newEvent.team_id).maybeSingle();
             
             setActiveEvent({ 
               playerName: pName, 
@@ -122,13 +220,14 @@ const ObsScoreboard = () => {
 
     return () => {
       supabase.removeChannel(matchSubscription);
+      supabase.removeChannel(timerSubscription);
       supabase.removeChannel(eventsSubscription);
     };
   }, [activeMatchId]);
 
   const fetchData = async (matchId) => {
     try {
-      const { data: matchData } = await supabase
+      const { data: matchData } = await supabaseAdmin
         .from('matches')
         .select('*')
         .eq('id', matchId)
@@ -137,11 +236,29 @@ const ObsScoreboard = () => {
       if (matchData) {
         setMatch(matchData);
         
-        const { data: hTeam } = await supabase.from('teams').select('*').eq('id', matchData.home_team_id).single();
-        const { data: aTeam } = await supabase.from('teams').select('*').eq('id', matchData.away_team_id).single();
+        const { data: hTeam } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.home_team_id).single();
+        const { data: aTeam } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.away_team_id).single();
         
         setHomeTeam(hTeam);
         setAwayTeam(aTeam);
+
+        // Fetch timer state
+        const { data: timerSp } = await supabaseAdmin
+          .from('sponsors')
+          .select('logo_url')
+          .eq('name', `MATCH_TIMER_${matchId}`)
+          .maybeSingle();
+
+        if (timerSp?.logo_url) {
+          try {
+            const parsed = JSON.parse(timerSp.logo_url);
+            applyTimerPayload(parsed);
+          } catch (e) {
+            applyTimerPayload(matchData);
+          }
+        } else {
+          applyTimerPayload(matchData);
+        }
       }
     } catch (err) {
       console.error('Error fetching OBS data:', err);
@@ -149,7 +266,7 @@ const ObsScoreboard = () => {
   };
 
   if (!activeMatchId || !match || !homeTeam || !awayTeam) {
-    return null; // Empty transparent background until a match is pushed
+    return null; // Empty transparent background until a match is loaded
   }
 
   // Determine gradient based on league
@@ -168,6 +285,13 @@ const ObsScoreboard = () => {
     if (status === 'half_time') return 'TANAFFUS';
     if (status === 'finished') return 'YAKUNLANDI';
     return '';
+  };
+
+  // Format Timer MM:SS
+  const formatTimer = (totalSeconds) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const statusText = formatStatus(match.status);
@@ -206,8 +330,8 @@ const ObsScoreboard = () => {
         <div className="obs-bottom-row">
           <div className="obs-league-name">
             <div className="obs-league-content">
-              {match.league.toUpperCase()}
-              {statusText && <span className="obs-status-text"> • {statusText}</span>}
+              {match.league ? match.league.toUpperCase() : 'HFL'}
+              {statusText && <span className="obs-status-text"> • {statusText} ({formatTimer(timerSeconds)})</span>}
             </div>
           </div>
         </div>
