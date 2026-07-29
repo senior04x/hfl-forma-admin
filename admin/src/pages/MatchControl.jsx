@@ -408,14 +408,9 @@ const MatchControl = () => {
   };
 
   const copyObsLink = () => {
-    let streamId = 'stream1';
-    if (match?.location?.includes('2-maydon')) streamId = 'stream2';
-    
-    const directObsLink = `${window.location.origin}/obs/scoreboard/${id}`;
-    const streamObsLink = `${window.location.origin}/obs/scoreboard/${streamId}?org_id=${match?.organization_id || orgId || 1}`;
-    
-    navigator.clipboard.writeText(directObsLink);
-    alert(`OBS Linklari:\n\n1) Aniq Match OBS Linki (nusxalandi):\n${directObsLink}\n\n2) Stream OBS Linki (Maydon bo'yicha):\n${streamObsLink}`);
+    const obsLink = `${window.location.origin}/obs/scoreboard/${id}`;
+    navigator.clipboard.writeText(obsLink);
+    alert(`✅ Ushbu o'yin uchun OBS Link nusxalandi!\n\n${obsLink}`);
   };
 
   const copyControlPanelLink = () => {
