@@ -108,22 +108,13 @@ const Dashboard = () => {
               name: key,
               logo_url: newState ? 'true' : 'false',
               organization_id: activeOrgId,
-              is_main: false,
-              is_selected: false
+              is_main: false
             }]);
         }
       }
     } catch (e) {
       console.warn('Sponsors reg toggle save notice:', e);
     }
-
-    // Also attempt updating organizations table
-    try {
-      await supabaseAdmin
-        .from('organizations')
-        .update({ is_registration_open: newState })
-        .eq('id', activeOrgId);
-    } catch (e) {}
 
     setTogglingReg(false);
   };
