@@ -408,9 +408,14 @@ const MatchControl = () => {
   };
 
   const copyObsLink = () => {
-    const obsLink = `${window.location.origin}/obs/scoreboard/${id}`;
-    navigator.clipboard.writeText(obsLink);
-    alert(`✅ Ushbu o'yin uchun OBS Link nusxalandi!\n\n${obsLink}`);
+    let streamId = 'stream1';
+    if (match?.location?.includes('2-maydon')) streamId = 'stream2';
+    
+    const targetOrgId = match?.organization_id || orgId || 1;
+    const universalObsLink = `${window.location.origin}/obs/scoreboard/${streamId}?org_id=${targetOrgId}`;
+
+    navigator.clipboard.writeText(universalObsLink);
+    alert(`✅ Universal Stream OBS Linki nusxalandi!\n(${match?.location || '1-Maydon'} • Tashkilot ID: ${targetOrgId})\n\n${universalObsLink}`);
   };
 
   const copyControlPanelLink = () => {
