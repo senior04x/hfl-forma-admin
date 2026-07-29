@@ -81,30 +81,37 @@ const Dashboard = () => {
     // Instantly persist to localStorage
     try { localStorage.setItem(`hfl_reg_open_${activeOrgId}`, newState ? 'true' : 'false'); } catch (e) {}
 
-    // Save to sponsors KV table using supabaseAdmin to bypass RLS
+    // Save to sponsors KV table using supabaseAdmin across all key formats
     try {
-      const configKey = `REGISTRATION_OPEN_${activeOrgId}`;
-      const { data: existing } = await supabaseAdmin
-        .from('sponsors')
-        .select('id')
-        .eq('name', configKey)
-        .maybeSingle();
+      const keysToUpdate = [
+        `REGISTRATION_OPEN_${activeOrgId}`,
+        `REGISTRATION_OPEN_1`,
+        `REGISTRATION_OPEN`
+      ];
 
-      if (existing?.id) {
-        await supabaseAdmin
+      for (const key of keysToUpdate) {
+        const { data: existing } = await supabaseAdmin
           .from('sponsors')
-          .update({ logo_url: newState ? 'true' : 'false' })
-          .eq('id', existing.id);
-      } else {
-        await supabaseAdmin
-          .from('sponsors')
-          .insert([{
-            name: configKey,
-            logo_url: newState ? 'true' : 'false',
-            organization_id: activeOrgId,
-            is_main: false,
-            is_selected: false
-          }]);
+          .select('id')
+          .eq('name', key)
+          .maybeSingle();
+
+        if (existing?.id) {
+          await supabaseAdmin
+            .from('sponsors')
+            .update({ logo_url: newState ? 'true' : 'false' })
+            .eq('id', existing.id);
+        } else {
+          await supabaseAdmin
+            .from('sponsors')
+            .insert([{
+              name: key,
+              logo_url: newState ? 'true' : 'false',
+              organization_id: activeOrgId,
+              is_main: false,
+              is_selected: false
+            }]);
+        }
       }
     } catch (e) {
       console.warn('Sponsors reg toggle save notice:', e);
