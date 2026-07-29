@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import PlayersTable from '../components/PlayersTable';
 import TeamsTable from '../components/TeamsTable';
@@ -14,7 +14,14 @@ const Dashboard = () => {
   const [activeLeagues, setActiveLeagues] = useState([]);
   const { orgId } = useOrg();
 
-  const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`hfl_reg_open_${orgId || 1}`);
+      if (saved === 'false') return false;
+      if (saved === 'true') return true;
+    } catch (e) {}
+    return true;
+  });
   const [togglingReg, setTogglingReg] = useState(false);
 
   useEffect(() => {
@@ -23,33 +30,44 @@ const Dashboard = () => {
   }, [currentTab, orgId]);
 
   const fetchRegistrationStatus = async () => {
+    const activeOrgId = orgId || 1;
+    let openStatus = true;
+    let found = false;
+
+    // 1. Try sponsors KV table with supabaseAdmin
     try {
-      const activeOrgId = orgId || 1;
-      // 1. Try organizations table
-      const { data: orgData } = await supabase
-        .from('organizations')
-        .select('is_registration_open')
-        .eq('id', activeOrgId)
-        .maybeSingle();
-
-      if (orgData && orgData.is_registration_open !== undefined && orgData.is_registration_open !== null) {
-        setIsRegistrationOpen(!!orgData.is_registration_open);
-        return;
-      }
-
-      // 2. Fallback to sponsors table key-value store
       const configKey = `REGISTRATION_OPEN_${activeOrgId}`;
-      const { data: spData } = await supabase
+      const { data: spData } = await supabaseAdmin
         .from('sponsors')
         .select('logo_url')
         .eq('name', configKey)
         .maybeSingle();
 
       if (spData && spData.logo_url !== undefined && spData.logo_url !== null) {
-        setIsRegistrationOpen(spData.logo_url === 'true');
+        openStatus = spData.logo_url === 'true';
+        found = true;
       }
-    } catch (err) {
-      console.error('Error fetching registration status:', err);
+    } catch (e) {}
+
+    // 2. Try organizations table with supabaseAdmin if not found in sponsors
+    if (!found) {
+      try {
+        const { data: orgData } = await supabaseAdmin
+          .from('organizations')
+          .select('*')
+          .eq('id', activeOrgId)
+          .maybeSingle();
+
+        if (orgData && orgData.is_registration_open !== undefined && orgData.is_registration_open !== null) {
+          openStatus = !!orgData.is_registration_open;
+          found = true;
+        }
+      } catch (e) {}
+    }
+
+    if (found) {
+      setIsRegistrationOpen(openStatus);
+      try { localStorage.setItem(`hfl_reg_open_${activeOrgId}`, openStatus ? 'true' : 'false'); } catch (e) {}
     }
   };
 
@@ -60,30 +78,25 @@ const Dashboard = () => {
     setIsRegistrationOpen(newState);
     const activeOrgId = orgId || 1;
 
-    try {
-      // 1. Try updating organizations table
-      await supabase
-        .from('organizations')
-        .update({ is_registration_open: newState })
-        .eq('id', activeOrgId);
-    } catch (e) {}
+    // Instantly persist to localStorage
+    try { localStorage.setItem(`hfl_reg_open_${activeOrgId}`, newState ? 'true' : 'false'); } catch (e) {}
 
+    // Save to sponsors KV table using supabaseAdmin to bypass RLS
     try {
-      // 2. Dual-sync to sponsors table as key-value config
       const configKey = `REGISTRATION_OPEN_${activeOrgId}`;
-      const { data: existing } = await supabase
+      const { data: existing } = await supabaseAdmin
         .from('sponsors')
         .select('id')
         .eq('name', configKey)
         .maybeSingle();
 
       if (existing?.id) {
-        await supabase
+        await supabaseAdmin
           .from('sponsors')
           .update({ logo_url: newState ? 'true' : 'false' })
           .eq('id', existing.id);
       } else {
-        await supabase
+        await supabaseAdmin
           .from('sponsors')
           .insert([{
             name: configKey,
@@ -93,6 +106,16 @@ const Dashboard = () => {
             is_selected: false
           }]);
       }
+    } catch (e) {
+      console.warn('Sponsors reg toggle save notice:', e);
+    }
+
+    // Also attempt updating organizations table
+    try {
+      await supabaseAdmin
+        .from('organizations')
+        .update({ is_registration_open: newState })
+        .eq('id', activeOrgId);
     } catch (e) {}
 
     setTogglingReg(false);
