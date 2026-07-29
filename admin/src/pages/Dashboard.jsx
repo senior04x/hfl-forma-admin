@@ -14,9 +14,89 @@ const Dashboard = () => {
   const [activeLeagues, setActiveLeagues] = useState([]);
   const { orgId } = useOrg();
 
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
+  const [togglingReg, setTogglingReg] = useState(false);
+
   useEffect(() => {
     loadLeaguesAndStats();
+    fetchRegistrationStatus();
   }, [currentTab, orgId]);
+
+  const fetchRegistrationStatus = async () => {
+    try {
+      const activeOrgId = orgId || 1;
+      // 1. Try organizations table
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('is_registration_open')
+        .eq('id', activeOrgId)
+        .maybeSingle();
+
+      if (orgData && orgData.is_registration_open !== undefined && orgData.is_registration_open !== null) {
+        setIsRegistrationOpen(!!orgData.is_registration_open);
+        return;
+      }
+
+      // 2. Fallback to sponsors table key-value store
+      const configKey = `REGISTRATION_OPEN_${activeOrgId}`;
+      const { data: spData } = await supabase
+        .from('sponsors')
+        .select('logo_url')
+        .eq('name', configKey)
+        .maybeSingle();
+
+      if (spData && spData.logo_url !== undefined && spData.logo_url !== null) {
+        setIsRegistrationOpen(spData.logo_url === 'true');
+      }
+    } catch (err) {
+      console.error('Error fetching registration status:', err);
+    }
+  };
+
+  const handleToggleRegistration = async () => {
+    if (togglingReg) return;
+    setTogglingReg(true);
+    const newState = !isRegistrationOpen;
+    setIsRegistrationOpen(newState);
+    const activeOrgId = orgId || 1;
+
+    try {
+      // 1. Try updating organizations table
+      await supabase
+        .from('organizations')
+        .update({ is_registration_open: newState })
+        .eq('id', activeOrgId);
+    } catch (e) {}
+
+    try {
+      // 2. Dual-sync to sponsors table as key-value config
+      const configKey = `REGISTRATION_OPEN_${activeOrgId}`;
+      const { data: existing } = await supabase
+        .from('sponsors')
+        .select('id')
+        .eq('name', configKey)
+        .maybeSingle();
+
+      if (existing?.id) {
+        await supabase
+          .from('sponsors')
+          .update({ logo_url: newState ? 'true' : 'false' })
+          .eq('id', existing.id);
+      } else {
+        await supabase
+          .from('sponsors')
+          .insert([{
+            name: configKey,
+            logo_url: newState ? 'true' : 'false',
+            organization_id: activeOrgId,
+            is_main: false,
+            is_selected: false
+          }]);
+      }
+    } catch (e) {}
+
+    setTogglingReg(false);
+  };
 
   const loadLeaguesAndStats = async () => {
     const fetched = await getActiveOrgLeagues(orgId);
@@ -123,19 +203,63 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="tabs-container">
-        <button 
-          className={`tab-btn ${currentTab === 'players' ? 'active' : ''}`}
-          onClick={() => setCurrentTab('players')}
+      <div className="tabs-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            className={`tab-btn ${currentTab === 'players' ? 'active' : ''}`}
+            onClick={() => setCurrentTab('players')}
+          >
+            O'yinchilar
+          </button>
+          <button 
+            className={`tab-btn ${currentTab === 'teams' ? 'active' : ''}`}
+            onClick={() => setCurrentTab('teams')}
+          >
+            Jamoalar
+          </button>
+        </div>
+
+        {/* Registration Toggle Switcher */}
+        <div 
+          onClick={handleToggleRegistration}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            background: isRegistrationOpen ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+            border: isRegistrationOpen ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+            padding: '8px 16px',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            userSelect: 'none',
+            transition: 'all 0.3s ease'
+          }}
+          title={isRegistrationOpen ? "Ro'yxatdan o'tish arizalari OCHIQ (Bosib yopish)" : "Ro'yxatdan o'tish arizalari YOPILGAN (Bosib ochish)"}
         >
-          Barcha O'yinchilar
-        </button>
-        <button 
-          className={`tab-btn ${currentTab === 'teams' ? 'active' : ''}`}
-          onClick={() => setCurrentTab('teams')}
-        >
-          Jamoalar
-        </button>
+          <span style={{ fontSize: '13px', fontWeight: '800', color: isRegistrationOpen ? '#10b981' : '#ef4444' }}>
+            {isRegistrationOpen ? "Ro'yxatdan o'tish: OCHIQ" : "Ro'yxatdan o'tish: YOPILGAN"}
+          </span>
+          <div style={{
+            width: '40px',
+            height: '22px',
+            background: isRegistrationOpen ? '#10b981' : '#475569',
+            borderRadius: '12px',
+            position: 'relative',
+            transition: 'background 0.3s ease'
+          }}>
+            <div style={{
+              width: '16px',
+              height: '16px',
+              background: '#ffffff',
+              borderRadius: '50%',
+              position: 'absolute',
+              top: '3px',
+              left: isRegistrationOpen ? '21px' : '3px',
+              transition: 'left 0.3s ease',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+            }} />
+          </div>
+        </div>
       </div>
 
       <div className="tab-content">
