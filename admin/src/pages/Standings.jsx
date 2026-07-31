@@ -197,11 +197,19 @@ export default function Standings() {
     // All finished matches for the selected league (cumulative across ALL rounds)
     const allLeagueMatches = matches.filter(m => filteredTeamIds.has(m.home_team_id));
 
-    // Matches filtered by selectedRound for recent matches display
-    let roundMatches = allLeagueMatches;
-    if (selectedRound && selectedRound !== 'all') {
-      roundMatches = allLeagueMatches.filter(m => String(m.round) === String(selectedRound));
+    // Find max round for the active league
+    let maxLeagueRound = 0;
+    allLeagueMatches.forEach(m => {
+      if (m.round && parseInt(m.round) > maxLeagueRound) maxLeagueRound = parseInt(m.round);
+    });
+
+    // Target round for recent matches card display (defaults to max/latest round)
+    let targetRound = selectedRound;
+    if (!targetRound || targetRound === 'all') {
+      targetRound = maxLeagueRound > 0 ? maxLeagueRound.toString() : '1';
     }
+
+    const roundMatches = allLeagueMatches.filter(m => String(m.round) === String(targetRound));
 
     // Filter events across all league matches
     const filteredEvents = events.filter(e => filteredTeamIds.has(e.team_id));
@@ -579,6 +587,7 @@ export default function Standings() {
               <label>Tur</label>
               <div className="custom-select-wrapper">
                 <select value={selectedRound} onChange={(e) => setSelectedRound(e.target.value)}>
+                  <option value="all">Barchasi (Umumiy)</option>
                   {roundOptions.map(r => <option key={r} value={r}>{r}-tur</option>)}
                 </select>
               </div>
