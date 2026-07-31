@@ -194,16 +194,19 @@ export default function Standings() {
     const filteredTeams = teams.filter(t => (t.league || 'Super liga').includes(selectedLeague));
     const filteredTeamIds = new Set(filteredTeams.map(t => t.id));
 
-    // Filter matches
-    let filteredMatches = matches.filter(m => filteredTeamIds.has(m.home_team_id));
+    // All finished matches for the selected league (cumulative across ALL rounds)
+    const allLeagueMatches = matches.filter(m => filteredTeamIds.has(m.home_team_id));
+
+    // Matches filtered by selectedRound for recent matches display
+    let roundMatches = allLeagueMatches;
     if (selectedRound && selectedRound !== 'all') {
-      filteredMatches = filteredMatches.filter(m => String(m.round) === String(selectedRound));
+      roundMatches = allLeagueMatches.filter(m => String(m.round) === String(selectedRound));
     }
 
-    // Filter events
+    // Filter events across all league matches
     const filteredEvents = events.filter(e => filteredTeamIds.has(e.team_id));
 
-    // 1. Standings Table
+    // 1. Standings Table - calculates cumulative totals across ALL rounds in the league
     const tableMap = {};
     filteredTeams.forEach(t => {
       tableMap[t.id] = {
@@ -219,7 +222,7 @@ export default function Standings() {
       };
     });
 
-    filteredMatches.forEach(m => {
+    allLeagueMatches.forEach(m => {
       const hId = m.home_team_id;
       const aId = m.away_team_id;
       const hScore = parseInt(m.home_score || 0);
@@ -266,9 +269,9 @@ export default function Standings() {
     });
 
     setStandings(computedStandings);
-    setRecentMatches(filteredMatches.slice(0, 6));
+    setRecentMatches(roundMatches.length > 0 ? roundMatches : allLeagueMatches.slice(0, 6));
 
-    // 2. Top Scorers, Assists & Cards
+    // 2. Top Scorers, Assists & Cards - cumulative across ALL rounds
     const playerStats = {};
     filteredEvents.forEach(e => {
       if (!e.player || !e.player_id) return;
