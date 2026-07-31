@@ -172,7 +172,7 @@ export default function Standings() {
       // Fetch Events (goals, assists, yellow cards, red cards)
       const { data: eventsData, error: eventsError } = await supabase
         .from('match_events')
-        .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
+        .select('id, event_type, player_id, team_id, match_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
         .in('event_type', ['goal', 'assist', 'yellow_card', 'red_card']);
 
       if (eventsError) throw eventsError;
@@ -287,13 +287,18 @@ export default function Standings() {
         playerStats[e.player_id] = {
           id: e.player_id,
           name: `${e.player.first_name} ${e.player.last_name}`,
+          teamId: e.team_id,
           teamLogo: e.team?.logo_url || '',
           playerPhoto: e.player?.photo_url || '',
           goals: 0,
           assists: 0,
           yellowCards: 0,
-          redCards: 0
+          redCards: 0,
+          matchIds: new Set()
         };
+      }
+      if (e.match_id) {
+        playerStats[e.player_id].matchIds.add(e.match_id);
       }
       if (e.event_type === 'goal') playerStats[e.player_id].goals += 1;
       if (e.event_type === 'assist') playerStats[e.player_id].assists += 1;
@@ -303,21 +308,37 @@ export default function Standings() {
 
     const scorers = Object.values(playerStats)
       .filter(p => p.goals > 0)
+      .map(p => ({
+        ...p,
+        playedMatches: p.matchIds.size > 0 ? p.matchIds.size : (tableMap[p.teamId]?.played || 1)
+      }))
       .sort((a, b) => b.goals - a.goals)
       .slice(0, 5);
 
     const assists = Object.values(playerStats)
       .filter(p => p.assists > 0)
+      .map(p => ({
+        ...p,
+        playedMatches: p.matchIds.size > 0 ? p.matchIds.size : (tableMap[p.teamId]?.played || 1)
+      }))
       .sort((a, b) => b.assists - a.assists)
       .slice(0, 5);
 
     const yellowCardsList = Object.values(playerStats)
       .filter(p => p.yellowCards > 0)
+      .map(p => ({
+        ...p,
+        playedMatches: p.matchIds.size > 0 ? p.matchIds.size : (tableMap[p.teamId]?.played || 1)
+      }))
       .sort((a, b) => b.yellowCards - a.yellowCards)
       .slice(0, 8);
 
     const redCardsList = Object.values(playerStats)
       .filter(p => p.redCards > 0)
+      .map(p => ({
+        ...p,
+        playedMatches: p.matchIds.size > 0 ? p.matchIds.size : (tableMap[p.teamId]?.played || 1)
+      }))
       .sort((a, b) => b.redCards - a.redCards)
       .slice(0, 8);
 
@@ -803,7 +824,7 @@ export default function Standings() {
                           }} 
                         />
                         <div style={{flex: 1, textTransform: 'uppercase'}}>{p.name}</div>
-                        <div style={{width: '30px', textAlign: 'center'}}>{matches.length > 0 ? matches[0].round : 1}</div>
+                        <div style={{width: '30px', textAlign: 'center'}}>{p.playedMatches || 1}</div>
                         <div style={{width: '30px', textAlign: 'center', fontWeight: '900'}}>{p.goals}</div>
                       </div>
                     ))}
@@ -827,7 +848,7 @@ export default function Standings() {
                           }} 
                         />
                         <div style={{flex: 1, textTransform: 'uppercase'}}>{p.name}</div>
-                        <div style={{width: '30px', textAlign: 'center'}}>{matches.length > 0 ? matches[0].round : 1}</div>
+                        <div style={{width: '30px', textAlign: 'center'}}>{p.playedMatches || 1}</div>
                         <div style={{width: '30px', textAlign: 'center', fontWeight: '900'}}>{p.assists}</div>
                       </div>
                     ))}
