@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { useOrg } from '../context/OrgContext';
 import PlayersTable from '../components/PlayersTable';
 import TeamsTable from '../components/TeamsTable';
 import './Dashboard.css';
@@ -81,4 +82,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
