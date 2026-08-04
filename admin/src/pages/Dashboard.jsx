@@ -3,8 +3,9 @@ import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import PlayersTable from '../components/PlayersTable';
 import TeamsTable from '../components/TeamsTable';
+import PDFExportModal from '../components/PDFExportModal';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Users, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Users, Clock, CheckCircle2, XCircle, Download } from 'lucide-react';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -13,6 +14,11 @@ const Dashboard = () => {
   const [statsLoading, setStatsLoading] = useState(true);
   const [activeLeagues, setActiveLeagues] = useState([]);
   const { orgId } = useOrg();
+  
+  // PDF Export State
+  const [showPDFModal, setShowPDFModal] = useState(false);
+  const [teams, setTeams] = useState([]);
+  const [applications, setApplications] = useState([]);
 
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(() => {
     try {
@@ -123,6 +129,32 @@ const Dashboard = () => {
     const fetched = await getActiveOrgLeagues(orgId);
     setActiveLeagues(fetched);
     fetchStats(fetched);
+    fetchDataForPDF(fetched);
+  };
+
+  const fetchDataForPDF = async (leaguesList = activeLeagues) => {
+    try {
+      const activeLeagueNames = (leaguesList || []).map(l => l.name);
+
+      // Fetch teams
+      const { data: teamsData } = await supabase.from('teams').select('*');
+      const filteredTeams = (teamsData || []).filter(t => 
+        t.organization_id === orgId || activeLeagueNames.includes(t.league)
+      );
+      setTeams(filteredTeams);
+
+      // Fetch applications
+      const { data: appsData } = await supabase.from('applications').select('*');
+      const validTeamIds = new Set(filteredTeams.map(t => t.id));
+      const filteredApps = (appsData || []).filter(app => 
+        app.organization_id === orgId || 
+        (app.team_id && validTeamIds.has(app.team_id)) ||
+        (!orgId)
+      );
+      setApplications(filteredApps);
+    } catch (error) {
+      console.error('Error fetching data for PDF:', error);
+    }
   };
 
   const fetchStats = async (leaguesList = activeLeagues) => {
@@ -191,6 +223,11 @@ const Dashboard = () => {
     }
   };
 
+  const handleOpenPDFModal = async () => {
+    await fetchDataForPDF();
+    setShowPDFModal(true);
+  };
+
   return (
     <div className="dashboard-container">
       <div className="stats-cards">
@@ -240,45 +277,72 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {/* Registration Toggle Switcher */}
-        <div 
-          onClick={handleToggleRegistration}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            background: isRegistrationOpen ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-            border: isRegistrationOpen ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
-            padding: '8px 16px',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            userSelect: 'none',
-            transition: 'all 0.3s ease'
-          }}
-          title={isRegistrationOpen ? "Ro'yxatdan o'tish arizalari OCHIQ (Bosib yopish)" : "Ro'yxatdan o'tish arizalari YOPILGAN (Bosib ochish)"}
-        >
-          <span style={{ fontSize: '13px', fontWeight: '800', color: isRegistrationOpen ? '#10b981' : '#ef4444' }}>
-            {isRegistrationOpen ? "Ro'yxatdan o'tish: OCHIQ" : "Ro'yxatdan o'tish: YOPILGAN"}
-          </span>
-          <div style={{
-            width: '40px',
-            height: '22px',
-            background: isRegistrationOpen ? '#10b981' : '#475569',
-            borderRadius: '12px',
-            position: 'relative',
-            transition: 'background 0.3s ease'
-          }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* PDF Export Button */}
+          <button
+            onClick={handleOpenPDFModal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '13px',
+              transition: 'background 0.3s ease',
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+            title="Jamoa ma'lumotlarini PDF sifatida yuklab olish"
+          >
+            <Download size={18} />
+            PDF Yuklab Olish
+          </button>
+
+          {/* Registration Toggle Switcher */}
+          <div 
+            onClick={handleToggleRegistration}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              background: isRegistrationOpen ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+              border: isRegistrationOpen ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+              padding: '8px 16px',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              transition: 'all 0.3s ease'
+            }}
+            title={isRegistrationOpen ? "Ro'yxatdan o'tish arizalari OCHIQ (Bosib yopish)" : "Ro'yxatdan o'tish arizalari YOPILGAN (Bosib ochish)"}
+          >
+            <span style={{ fontSize: '13px', fontWeight: '800', color: isRegistrationOpen ? '#10b981' : '#ef4444' }}>
+              {isRegistrationOpen ? "Ro'yxatdan o'tish: OCHIQ" : "Ro'yxatdan o'tish: YOPILGAN"}
+            </span>
             <div style={{
-              width: '16px',
-              height: '16px',
-              background: '#ffffff',
-              borderRadius: '50%',
-              position: 'absolute',
-              top: '3px',
-              left: isRegistrationOpen ? '21px' : '3px',
-              transition: 'left 0.3s ease',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-            }} />
+              width: '40px',
+              height: '22px',
+              background: isRegistrationOpen ? '#10b981' : '#475569',
+              borderRadius: '12px',
+              position: 'relative',
+              transition: 'background 0.3s ease'
+            }}>
+              <div style={{
+                width: '16px',
+                height: '16px',
+                background: '#ffffff',
+                borderRadius: '50%',
+                position: 'absolute',
+                top: '3px',
+                left: isRegistrationOpen ? '21px' : '3px',
+                transition: 'left 0.3s ease',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+              }} />
+            </div>
           </div>
         </div>
       </div>
@@ -286,9 +350,17 @@ const Dashboard = () => {
       <div className="tab-content">
         {currentTab === 'players' ? <PlayersTable onStatusChange={fetchStats} /> : <TeamsTable onStatusChange={fetchStats} />}
       </div>
+
+      {/* PDF Export Modal */}
+      <PDFExportModal
+        isOpen={showPDFModal}
+        teams={teams}
+        applications={applications}
+        activeLeagues={activeLeagues}
+        onClose={() => setShowPDFModal(false)}
+      />
     </div>
   );
 };
 
 export default Dashboard;
-
