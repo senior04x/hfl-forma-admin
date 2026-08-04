@@ -4,28 +4,63 @@ import { exportTeamsToPDF, exportPlayersByLeagueToPDF } from '../utils/pdfExport
 import './Modal.css';
 
 const PDFExportModal = ({ isOpen, teams, applications, activeLeagues, onClose }) => {
-  const [exportMode, setExportMode] = useState('teams'); // 'teams' or 'league'
+  const [mode, setMode] = useState(null); // 'all' | 'team' | 'league' | null
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [selectedLeague, setSelectedLeague] = useState('all');
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState(null);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setMode(null);
+      setSelectedTeam('all');
+      setSelectedLeague('all');
+      setIsExporting(false);
+      setError(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const handleExport = async () => {
+  const runExportAll = async () => {
     setIsExporting(true);
     setError(null);
-
     try {
-      if (exportMode === 'teams') {
-        await exportTeamsToPDF(teams, applications, selectedTeam);
-      } else {
-        await exportPlayersByLeagueToPDF(applications, teams, selectedLeague);
-      }
+      await exportTeamsToPDF(teams, applications, 'all');
       onClose();
     } catch (err) {
-      console.error('Export error:', err);
-      setError('PDF yaratishda xatolik yuz berdi. Iltimos qaytadan urinib ko\'ring.');
+      console.error('Export all error:', err);
+      setError('Barchasini yuklashda xatolik yuz berdi. Iltimos qaytadan urinib ko\'ring.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const runExportTeam = async () => {
+    if (!selectedTeam || selectedTeam === 'all') return setError('Iltimos, jamoa tanlang');
+    setIsExporting(true);
+    setError(null);
+    try {
+      await exportTeamsToPDF(teams, applications, selectedTeam);
+      onClose();
+    } catch (err) {
+      console.error('Export team error:', err);
+      setError('Jamoani yuklashda xatolik yuz berdi. Iltimos qaytadan urinib ko\'ring.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const runExportLeague = async () => {
+    if (!selectedLeague || selectedLeague === 'all') return setError('Iltimos, liga tanlang');
+    setIsExporting(true);
+    setError(null);
+    try {
+      await exportPlayersByLeagueToPDF(applications, teams, selectedLeague);
+      onClose();
+    } catch (err) {
+      console.error('Export league error:', err);
+      setError('Liga bo\'yicha yuklashda xatolik yuz berdi. Iltimos qaytadan urinib ko\'ring.');
     } finally {
       setIsExporting(false);
     }
@@ -33,7 +68,7 @@ const PDFExportModal = ({ isOpen, teams, applications, activeLeagues, onClose })
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content" style={{ maxWidth: '560px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>PDF Yuklab Olish</h2>
           <button className="close-btn" onClick={onClose}>
@@ -41,193 +76,134 @@ const PDFExportModal = ({ isOpen, teams, applications, activeLeagues, onClose })
           </button>
         </div>
 
-        <div className="modal-body" style={{ padding: '24px' }}>
-          {/* Export Mode Selection */}
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '14px' }}>
-              Nima export qilmoqchisiz?
-            </label>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="exportMode"
-                  value="teams"
-                  checked={exportMode === 'teams'}
-                  onChange={(e) => {
-                    setExportMode(e.target.value);
-                    setSelectedTeam('all');
-                  }}
-                  style={{ cursor: 'pointer' }}
-                />
-                <span>Jamoalar</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="exportMode"
-                  value="league"
-                  checked={exportMode === 'league'}
-                  onChange={(e) => {
-                    setExportMode(e.target.value);
-                    setSelectedLeague('all');
-                  }}
-                  style={{ cursor: 'pointer' }}
-                />
-                <span>Ligalar bo'yicha</span>
-              </label>
-            </div>
+        <div className="modal-body" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '18px' }}>
+            <button
+              onClick={() => setMode('league')}
+              style={{
+                flex: 1,
+                padding: '12px',
+                borderRadius: '8px',
+                border: mode === 'league' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                background: mode === 'league' ? '#eff6ff' : '#fff',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              Liga bo'yicha
+            </button>
+
+            <button
+              onClick={() => setMode('team')}
+              style={{
+                flex: 1,
+                padding: '12px',
+                borderRadius: '8px',
+                border: mode === 'team' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                background: mode === 'team' ? '#eff6ff' : '#fff',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              Bitta jamoa
+            </button>
+
+            <button
+              onClick={() => setMode('all')}
+              style={{
+                flex: 1,
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                background: '#10b981',
+                color: '#fff',
+                cursor: 'pointer',
+                fontWeight: 700,
+              }}
+            >
+              Barchasini yuklash
+            </button>
           </div>
 
-          {/* Teams Selection */}
-          {exportMode === 'teams' && (
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-                Jamoa tanlang:
-              </label>
+          {/* Mode: Team */}
+          {mode === 'team' && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Jamoa tanlang:</label>
               <select
                 value={selectedTeam}
                 onChange={(e) => setSelectedTeam(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  backgroundColor: '#f8fafc',
-                  cursor: 'pointer',
-                }}
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
               >
-                <option value="all">Barcha Jamoalar</option>
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
+                <option value="">-- Jamoani tanlang --</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
+
+              <div style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button onClick={() => setMode(null)} disabled={isExporting} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff' }}>Ortga</button>
+                <button onClick={runExportTeam} disabled={isExporting} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#3b82f6', color: '#fff' }}>
+                  {isExporting ? 'Yuklanmoqda...' : (<><Download size={14} /> &nbsp; Yuklab olish</>)}
+                </button>
+              </div>
             </div>
           )}
 
-          {/* League Selection */}
-          {exportMode === 'league' && (
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-                Liga tanlang:
-              </label>
+          {/* Mode: League */}
+          {mode === 'league' && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Liga tanlang:</label>
               <select
                 value={selectedLeague}
                 onChange={(e) => setSelectedLeague(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  backgroundColor: '#f8fafc',
-                  cursor: 'pointer',
-                }}
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
               >
-                <option value="all">Barcha Ligalar</option>
-                {activeLeagues.map((league) => (
-                  <option key={league.name} value={league.name}>
-                    {league.name}
-                  </option>
+                <option value="">-- Ligani tanlang --</option>
+                {activeLeagues.map((l) => (
+                  <option key={l.name} value={l.name}>{l.name}</option>
                 ))}
               </select>
+
+              <div style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button onClick={() => setMode(null)} disabled={isExporting} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff' }}>Ortga</button>
+                <button onClick={runExportLeague} disabled={isExporting} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#3b82f6', color: '#fff' }}>
+                  {isExporting ? 'Yuklanmoqda...' : (<><Download size={14} /> &nbsp; Yuklab olish</>)}
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Error Message */}
+          {/* Mode: All */}
+          {mode === 'all' && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ padding: '12px', background: '#ecfdf5', border: '1px solid #d1fae5', borderRadius: '8px', color: '#065f46' }}>
+                Siz barcha jamoalar va ularning o'yinchilarini PDF ga yuklab olasiz.
+              </div>
+
+              <div style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button onClick={() => setMode(null)} disabled={isExporting} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff' }}>Ortga</button>
+                <button onClick={runExportAll} disabled={isExporting} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#10b981', color: '#fff' }}>
+                  {isExporting ? 'Yuklanmoqda...' : (<><Download size={14} /> &nbsp; Barchasini yuklash</>)}
+                </button>
+              </div>
+            </div>
+          )}
+
           {error && (
-            <div
-              style={{
-                marginBottom: '16px',
-                padding: '12px',
-                backgroundColor: '#fee2e2',
-                border: '1px solid #fecaca',
-                borderRadius: '8px',
-                color: '#dc2626',
-                fontSize: '14px',
-              }}
-            >
+            <div style={{ marginTop: '12px', padding: '10px', backgroundColor: '#fee2e2', borderRadius: '8px', color: '#b91c1c' }}>
               {error}
             </div>
           )}
 
-          {/* Info Message */}
-          <div
-            style={{
-              marginBottom: '20px',
-              padding: '12px',
-              backgroundColor: '#eff6ff',
-              border: '1px solid #bfdbfe',
-              borderRadius: '8px',
-              color: '#1e40af',
-              fontSize: '13px',
-              lineHeight: '1.5',
-            }}
-          >
-            📄 PDF fayli o'yinchilarning rasmlari, isimlari, jismoniy ma'lumotlari va hokazo bilan birga yaratiladi.
+          <div style={{ marginTop: '14px', padding: '10px', background: '#f1f5f9', borderRadius: '8px', color: '#0f172a' }}>
+            📄 PDF fayli o'yinchilarning rasmlari, isimlari, jismoniy ma'lumotlari va boshqa ma'lumotlar bilan birga yaratiladi.
           </div>
         </div>
 
-        <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0' }}>
-          <button
-            onClick={onClose}
-            disabled={isExporting}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#f1f5f9',
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              cursor: isExporting ? 'not-allowed' : 'pointer',
-              color: '#1e293b',
-              fontWeight: '500',
-              opacity: isExporting ? 0.6 : 1,
-            }}
-          >
-            Bekor qilish
-          </button>
-          <button
-            onClick={handleExport}
-            disabled={isExporting}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: isExporting ? 'not-allowed' : 'pointer',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              opacity: isExporting ? 0.6 : 1,
-            }}
-          >
-            {isExporting ? (
-              <>
-                <div style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite', display: 'inline-block' }}>
-                  ⟳
-                </div>
-                Yuklanmoqda...
-              </>
-            ) : (
-              <>
-                <Download size={18} />
-                PDF Yuklab Olish
-              </>
-            )}
-          </button>
+        <div className="modal-footer" style={{ padding: '12px 20px', borderTop: '1px solid #e2e8f0' }}>
+          <button onClick={onClose} disabled={isExporting} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff' }}>Yopish</button>
         </div>
       </div>
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };
