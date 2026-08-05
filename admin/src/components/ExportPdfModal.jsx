@@ -52,7 +52,35 @@ export function cyrillicToLatin(text) {
   return text.split('').map(char => map[char] || char).join('');
 }
 
-// Converts any image blob (including WebP which jsPDF can't handle) to JPEG base64 via Canvas
+// Converts image blob to PNG base64 (preserves transparency — for logos)
+const blobToPngBase64 = (blob) => {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width || 200;
+        canvas.height = img.naturalHeight || img.height || 200;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const pngBase64 = canvas.toDataURL('image/png');
+        URL.revokeObjectURL(objectUrl);
+        resolve(pngBase64);
+      } catch (err) {
+        URL.revokeObjectURL(objectUrl);
+        resolve(null);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(null);
+    };
+    img.src = objectUrl;
+  });
+};
+
+// Converts image blob to JPEG base64 (white background — for player photos)
 const blobToJpegBase64 = (blob) => {
   return new Promise((resolve) => {
     const objectUrl = URL.createObjectURL(blob);
@@ -63,7 +91,6 @@ const blobToJpegBase64 = (blob) => {
         canvas.width = img.naturalWidth || img.width || 200;
         canvas.height = img.naturalHeight || img.height || 200;
         const ctx = canvas.getContext('2d');
-        // White background for transparency
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
@@ -92,12 +119,15 @@ const parseStorageUrl = (url) => {
   return null;
 };
 
-// Convert image URL to JPEG Base64 (WebP -> JPEG conversion via Canvas for jsPDF compatibility)
-const loadImageAsBase64 = async (url) => {
+// Convert image URL to Base64 via Canvas for jsPDF compatibility
+// preserveTransparency=true → PNG (for logos), false → JPEG with white bg (for player photos)
+const loadImageAsBase64 = async (url, preserveTransparency = false) => {
   if (!url || typeof url !== 'string') return null;
   if (url.startsWith('data:image/jpeg') || url.startsWith('data:image/png')) return url;
 
-  // Strategy 1: Supabase Storage SDK download -> Canvas JPEG conversion
+  const convertBlob = preserveTransparency ? blobToPngBase64 : blobToJpegBase64;
+
+  // Strategy 1: Supabase Storage SDK download
   const storageInfo = parseStorageUrl(url);
   if (storageInfo) {
     try {
@@ -106,25 +136,25 @@ const loadImageAsBase64 = async (url) => {
         .download(storageInfo.path);
 
       if (!error && blob) {
-        const jpegB64 = await blobToJpegBase64(blob);
-        if (jpegB64) return jpegB64;
+        const b64 = await convertBlob(blob);
+        if (b64) return b64;
       }
     } catch (e) {
       console.warn('Supabase SDK download notice:', e);
     }
   }
 
-  // Strategy 2: Fetch API -> Canvas JPEG conversion
+  // Strategy 2: Fetch API
   try {
     const response = await fetch(url, { mode: 'cors' });
     if (response.ok) {
       const blob = await response.blob();
-      const jpegB64 = await blobToJpegBase64(blob);
-      if (jpegB64) return jpegB64;
+      const b64 = await convertBlob(blob);
+      if (b64) return b64;
     }
   } catch (e) {}
 
-  // Strategy 3: Direct Image Element -> Canvas JPEG
+  // Strategy 3: Direct Image Element -> Canvas
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -134,10 +164,12 @@ const loadImageAsBase64 = async (url) => {
         canvas.width = img.naturalWidth || img.width || 200;
         canvas.height = img.naturalHeight || img.height || 200;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (!preserveTransparency) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
         ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
+        resolve(canvas.toDataURL(preserveTransparency ? 'image/png' : 'image/jpeg', 0.85));
       } catch (err) {
         resolve(null);
       }
@@ -303,7 +335,7 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
 
       // Load Organization Logo base64
       const orgName = cyrillicToLatin(currentOrg?.name || 'HAVAS FUTBOL LIGASI').toUpperCase();
-      const orgLogoB64 = currentOrg?.logo_url ? await loadImageAsBase64(currentOrg.logo_url) : null;
+      const orgLogoB64 = currentOrg?.logo_url ? await loadImageAsBase64(currentOrg.logo_url, true) : null;
 
       // Landscape A4 PDF document (width: 297mm, height: 210mm)
       const doc = new jsPDF({
@@ -328,12 +360,7 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
           const logoX = 12;
           const logoY = 4;
 
-          doc.addImage(orgLogoB64, 'JPEG', logoX, logoY, logoSize, logoSize);
-
-          // White border ring around logo
-          doc.setDrawColor(255, 255, 255);
-          doc.setLineWidth(0.5);
-          doc.rect(logoX, logoY, logoSize, logoSize, 'S');
+          doc.addImage(orgLogoB64, 'PNG', logoX, logoY, logoSize, logoSize);
 
           titleStartX = 32;
         } catch (e) {
