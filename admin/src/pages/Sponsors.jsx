@@ -103,7 +103,8 @@ export default function Sponsors() {
         s.name && 
         !s.name.startsWith('SCHEDULE_BANNER_') && 
         !s.name.startsWith('YT_BANNER_') && 
-        !s.name.startsWith('YT_OAUTH_TOKENS_')
+        !s.name.startsWith('YT_OAUTH_TOKENS_') &&
+        !s.name.startsWith('MATCH_TIMER_')
       );
 
       setSponsors(realSponsors);
@@ -119,7 +120,7 @@ export default function Sponsors() {
       }
 
       // 2. Restore selected secondary sponsors directly from DB
-      const selectedFromDb = realSponsors.filter(s => s.is_selected === true && !s.is_main);
+      const selectedFromDb = realSponsors.filter(s => !s.is_main && s.is_selected !== false);
       setSelectedSponsors(selectedFromDb);
       try { localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(selectedFromDb)); } catch (e) {}
 

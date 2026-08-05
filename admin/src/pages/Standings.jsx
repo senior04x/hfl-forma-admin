@@ -39,45 +39,56 @@ export default function Standings() {
   const [isExportingCards, setIsExportingCards] = useState(false);
 
   const [mainSponsor, setMainSponsor] = useState(null);
+  const [selectedSponsors, setSelectedSponsors] = useState([]);
 
   useEffect(() => {
-    fetchMainSponsor();
+    fetchSponsorsData();
   }, [orgId]);
 
-  const fetchMainSponsor = async () => {
+  const fetchSponsorsData = async () => {
     try {
-      const saved = localStorage.getItem(`hfl_main_sponsor_${orgId}`);
-      if (saved) setMainSponsor(JSON.parse(saved));
+      let loadedSponsors = [];
+      if (orgId) {
+        const { data: orgSponsors } = await supabase
+          .from('sponsors')
+          .select('*')
+          .eq('organization_id', orgId)
+          .order('created_at', { ascending: false });
+        if (orgSponsors && orgSponsors.length > 0) {
+          loadedSponsors = orgSponsors;
+        }
+      }
 
-      try {
-        let query = supabase.from('sponsors').select('*').eq('is_main', true);
+      if (loadedSponsors.length === 0) {
+        let query = supabase.from('sponsors').select('*').order('created_at', { ascending: false });
         if (orgId) {
           query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
         }
-        const { data } = await query.limit(1);
-        if (data && data.length > 0) {
-          setMainSponsor(data[0]);
-          localStorage.setItem(`hfl_main_sponsor_${orgId}`, JSON.stringify(data[0]));
-        }
-      } catch (e) {}
+        const { data } = await query;
+        loadedSponsors = data || [];
+      }
+
+      const realSponsors = loadedSponsors.filter(s => 
+        s.name && 
+        !s.name.startsWith('SCHEDULE_BANNER_') && 
+        !s.name.startsWith('YT_BANNER_') && 
+        !s.name.startsWith('YT_OAUTH_TOKENS_') &&
+        !s.name.startsWith('MATCH_TIMER_')
+      );
+
+      const mainFromDb = realSponsors.find(s => s.is_main === true);
+      if (mainFromDb) {
+        setMainSponsor(mainFromDb);
+      }
+
+      const selectedFromDb = realSponsors.filter(s => !s.is_main && s.is_selected !== false);
+      setSelectedSponsors(selectedFromDb);
     } catch (e) {
-      console.error(e);
+      console.error('Error fetching sponsors in Standings:', e);
     }
   };
 
   const mainSponsorLogo = mainSponsor?.logo_url || '';
-
-  const [selectedSponsors, setSelectedSponsors] = useState(() => {
-    try {
-      const saved = localStorage.getItem(`hfl_selectedSponsors_${orgId}`);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('hfl_selectedSponsors', JSON.stringify(selectedSponsors));
-  }, [selectedSponsors]);
 
   const exportRef = useRef(null);
   const cardsExportRef = useRef(null);
@@ -734,7 +745,7 @@ export default function Standings() {
               const isShowSponsors = currentLeagueObj ? (currentLeagueObj.show_sponsors !== false) : (localStorage.getItem('hfl_league_show_sponsors_' + selectedLeague) !== 'false');
               if (!isShowSponsors) return null;
               const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
-              if (selectedLeague === '7x7 liga' || secondarySponsors.length === 0) return null;
+              if (secondarySponsors.length === 0) return null;
               return (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '15px' }}>
                   {secondarySponsors.map((s, idx) => (
@@ -754,7 +765,7 @@ export default function Standings() {
               color: '#ffffff', 
               opacity: 0.7, 
               fontSize: '12px', 
-              marginTop: selectedLeague !== '7x7 liga' && selectedSponsors.length > 0 ? '25px' : '15px',
+              marginTop: secondarySponsors.length > 0 ? '25px' : '15px',
               marginBottom: '20px',
               textTransform: 'uppercase',
               letterSpacing: '2px',
@@ -897,7 +908,7 @@ export default function Standings() {
               const isShowSponsors = currentLeagueObj ? (currentLeagueObj.show_sponsors !== false) : (localStorage.getItem('hfl_league_show_sponsors_' + selectedLeague) !== 'false');
               if (!isShowSponsors) return null;
               const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
-              if (selectedLeague === '7x7 liga' || secondarySponsors.length === 0) return null;
+              if (secondarySponsors.length === 0) return null;
               return (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '15px' }}>
                   {secondarySponsors.map((s, idx) => (
