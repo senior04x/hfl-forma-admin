@@ -57,17 +57,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             const seasonStr = `${maxYear}/${maxYear + 1}`;
-            currentRound = maxRound > 0 ? maxRound.toString() : '1';
+            currentRound = 'all';
 
             // Update trigger text initially
             if(roundFilterTrigger) {
-                roundFilterTrigger.querySelector('span').innerText = `${currentRound}-tur ${seasonStr}`;
+                roundFilterTrigger.querySelector('span').innerText = `Barchasi (Umumiy)`;
             }
 
             // Rebuild the HTML for round options up to maxRound
-            let roundHTML = ``;
+            let roundHTML = `<div class="custom-option active" data-value="all">Barchasi (Umumiy)</div>`;
             for (let i = 1; i <= maxRound; i++) {
-                roundHTML += `<div class="custom-option ${i.toString() === currentRound ? 'active' : ''}" data-value="${i}">${i}-tur ${seasonStr}</div>`;
+                roundHTML += `<div class="custom-option" data-value="${i}">${i}-tur ${seasonStr}</div>`;
             }
             roundOptionsContainer.innerHTML = roundHTML;
         }
@@ -152,16 +152,19 @@ function renderStandingsByLeague(selectedLeague, selectedRound = 'all') {
     const filteredTeams = allTeamsData.filter(t => (t.league || 'Super liga').includes(selectedLeague));
     const filteredTeamIds = new Set(filteredTeams.map(t => t.id));
 
-    // 2. Filter matches (only matches where BOTH teams are in the selected league, or at least one is)
-    let filteredMatches = allMatchesData.filter(m => filteredTeamIds.has(m.home_team_id));
+    // 2. All finished matches in the selected league (cumulative across ALL rounds)
+    const leagueMatches = allMatchesData.filter(m => filteredTeamIds.has(m.home_team_id));
+
+    // Matches filtered by selectedRound for recent results display
+    let roundMatches = leagueMatches;
     if (selectedRound !== 'all') {
-        filteredMatches = filteredMatches.filter(m => String(m.round) === selectedRound);
+        roundMatches = leagueMatches.filter(m => String(m.round) === String(selectedRound));
     }
 
-    // 3. Filter events (only events belonging to teams in the selected league)
+    // 3. Filter events (only events belonging to teams in the selected league across ALL rounds)
     const filteredEvents = allEventsData.filter(e => filteredTeamIds.has(e.team_id));
 
-    // --- Calculate League Table ---
+    // --- Calculate League Table (Cumulative across ALL rounds) ---
     const tableMap = {};
     filteredTeams.forEach(t => {
         tableMap[t.id] = {
@@ -176,7 +179,7 @@ function renderStandingsByLeague(selectedLeague, selectedRound = 'all') {
         };
     });
 
-    filteredMatches.forEach(m => {
+    leagueMatches.forEach(m => {
         const hId = m.home_team_id;
         const aId = m.away_team_id;
         const hScore = m.home_score || 0;
@@ -219,30 +222,49 @@ function renderStandingsByLeague(selectedLeague, selectedRound = 'all') {
             playerStats[e.player_id] = {
                 id: e.player_id,
                 name: `${e.player.first_name} ${e.player.last_name}`,
+                teamId: e.team_id,
                 playerPhoto: e.player?.photo_url || '',
                 teamName: e.team?.name || '',
                 teamLogo: e.team?.logo_url || '',
                 goals: 0,
-                assists: 0
+                assists: 0,
+                matchIds: new Set()
             };
         }
+        if (e.match_id) playerStats[e.player_id].matchIds.add(e.match_id);
         if (e.event_type === 'goal') playerStats[e.player_id].goals += 1;
         if (e.event_type === 'assist') playerStats[e.player_id].assists += 1;
     });
 
     const topScorers = Object.values(playerStats)
         .filter(p => p.goals > 0)
+        .map(p => ({
+            ...p,
+            playedMatches: p.matchIds.size > 0 ? p.matchIds.size : (tableMap[p.teamId]?.played || 1)
+        }))
         .sort((a, b) => b.goals - a.goals)
         .slice(0, 5);
 
     const topAssists = Object.values(playerStats)
         .filter(p => p.assists > 0)
+        .map(p => ({
+            ...p,
+            playedMatches: p.matchIds.size > 0 ? p.matchIds.size : (tableMap[p.teamId]?.played || 1)
+        }))
         .sort((a, b) => b.assists - a.assists)
         .slice(0, 5);
 
     // --- Render UI ---
-    renderUI(standings, filteredMatches.slice(0, 5), topScorers, topAssists, allTeamsData, selectedRound);
+    renderUI(standings, (roundMatches.length > 0 ? roundMatches : leagueMatches).slice(0, 5), topScorers, topAssists, allTeamsData, selectedRound);
 }
+
+function renderUI(standings, recentMatches, topScorers, topAssists, allTeams, currentRound) {
+    const container = document.getElementById('contentContainer');
+    if(!container) return;
+    
+    // ...
+    // Update renderUI rows
+    // ...
 
 function renderUI(standings, recentMatches, topScorers, topAssists, allTeams, currentRound) {
     const container = document.getElementById('contentContainer');
@@ -352,7 +374,7 @@ function renderUI(standings, recentMatches, topScorers, topAssists, allTeams, cu
                             <span class="stats-player-name">${p.name}</span>
                         </div>
                     </td>
-                    <td>-</td>
+                    <td>${p.playedMatches || 1}</td>
                     <td class="stats-value">${p.goals}</td>
                 </tr>
             `;
@@ -380,7 +402,7 @@ function renderUI(standings, recentMatches, topScorers, topAssists, allTeams, cu
                             <span class="stats-player-name">${p.name}</span>
                         </div>
                     </td>
-                    <td>-</td>
+                    <td>${p.playedMatches || 1}</td>
                     <td class="stats-value">${p.assists}</td>
                 </tr>
             `;

@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
+import { fetchAllTeams } from '../utils/supabaseHelpers';
 import { Search, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Filter, Trophy, Check, X } from 'lucide-react';
 import SwipeRow from './SwipeRow';
 import TeamModal from './TeamModal';
 import CustomSelect from './CustomSelect';
 import { searchAndRankItems } from '../utils/fuzzySearch';
-// Reusing same CSS as PlayersTable
 import './PlayersTable.css';
-
 import DeleteConfirmModal from './DeleteConfirmModal';
 
 const TeamsTable = ({ onStatusChange = () => {} }) => {
@@ -46,17 +45,7 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
   const fetchTeams = async (leaguesList = activeLeagues) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching teams:', error);
-        setTeams([]);
-        setTotalCount(0);
-        return;
-      }
+      const data = await fetchAllTeams('*');
       
       const activeNames = (leaguesList || []).map(l => l.name);
       let filtered = (data || []).filter(t => 

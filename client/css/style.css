@@ -47,6 +47,92 @@ body {
                 linear-gradient(to bottom, #0a0a0a 0%, var(--bg-dark) 100%);
 }
 
+/* Permanent Global Search in Navbar */
+.nav-search-container {
+    position: relative;
+    flex: 1;
+    max-width: 340px;
+    margin: 0 15px;
+}
+
+.nav-search-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 6px 14px;
+    transition: all 0.3s ease;
+}
+
+.nav-search-wrapper:focus-within {
+    border-color: #00FF66;
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 15px rgba(0, 255, 102, 0.25);
+}
+
+.nav-search-wrapper input, #globalNavSearchInput {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    color: #ffffff !important;
+    font-size: 13px !important;
+    width: 100% !important;
+    margin-left: 8px !important;
+    font-family: 'Inter', sans-serif !important;
+    box-shadow: none !important;
+    height: auto !important;
+    padding: 2px 0 !important;
+}
+
+.nav-search-wrapper input::placeholder, #globalNavSearchInput::placeholder {
+    color: rgba(255, 255, 255, 0.45) !important;
+}
+
+.search-clear-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+}
+
+.search-clear-btn:hover {
+    color: #fff;
+}
+
+.nav-search-results {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-width: 360px;
+    background: #0F121A;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.85);
+    max-height: 480px;
+    overflow-y: auto;
+    z-index: 9999;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.nav-search-results.hidden {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .nav-search-container {
+        max-width: 100%;
+        margin: 0 10px;
+    }
+}
+
 .container {
     width: 100%;
     max-width: 550px;

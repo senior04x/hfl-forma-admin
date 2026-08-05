@@ -3,9 +3,10 @@ import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import PlayersTable from '../components/PlayersTable';
 import TeamsTable from '../components/TeamsTable';
-import PDFExportModal from '../components/PDFExportModal';
-import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Users, Clock, CheckCircle2, XCircle, Download } from 'lucide-react';
+import ExportPdfModal from '../components/ExportPdfModal';
+import { getActiveOrgLeagues } from '../utils/leagueUtils';
+import { fetchAllApplications, fetchAllTeams } from '../utils/supabaseHelpers';
+import { Users, Clock, CheckCircle2, XCircle, FileText } from 'lucide-react';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -13,12 +14,8 @@ const Dashboard = () => {
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
   const [activeLeagues, setActiveLeagues] = useState([]);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const { orgId } = useOrg();
-  
-  // PDF Export State
-  const [showPDFModal, setShowPDFModal] = useState(false);
-  const [teams, setTeams] = useState([]);
-  const [applications, setApplications] = useState([]);
 
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(() => {
     try {
@@ -129,32 +126,6 @@ const Dashboard = () => {
     const fetched = await getActiveOrgLeagues(orgId);
     setActiveLeagues(fetched);
     fetchStats(fetched);
-    fetchDataForPDF(fetched);
-  };
-
-  const fetchDataForPDF = async (leaguesList = activeLeagues) => {
-    try {
-      const activeLeagueNames = (leaguesList || []).map(l => l.name);
-
-      // Fetch teams
-      const { data: teamsData } = await supabase.from('teams').select('*');
-      const filteredTeams = (teamsData || []).filter(t => 
-        t.organization_id === orgId || activeLeagueNames.includes(t.league)
-      );
-      setTeams(filteredTeams);
-
-      // Fetch applications
-      const { data: appsData } = await supabase.from('applications').select('*');
-      const validTeamIds = new Set(filteredTeams.map(t => t.id));
-      const filteredApps = (appsData || []).filter(app => 
-        app.organization_id === orgId || 
-        (app.team_id && validTeamIds.has(app.team_id)) ||
-        (!orgId)
-      );
-      setApplications(filteredApps);
-    } catch (error) {
-      console.error('Error fetching data for PDF:', error);
-    }
   };
 
   const fetchStats = async (leaguesList = activeLeagues) => {
@@ -163,21 +134,18 @@ const Dashboard = () => {
       const activeLeagueNames = (leaguesList || []).map(l => l.name);
 
       if (currentTab === 'players') {
-        const [appRes, teamRes] = await Promise.all([
-          supabase.from('applications').select('id, status, team_id, organization_id'),
-          supabase.from('teams').select('id, league, organization_id')
+        const [allApps, allTeams] = await Promise.all([
+          fetchAllApplications('id, status, team_id, organization_id'),
+          fetchAllTeams('id, league, organization_id')
         ]);
 
-        const allApps = appRes.data || [];
-        const allTeams = teamRes.data || [];
-
         const validTeamIds = new Set(
-          allTeams
+          (allTeams || [])
             .filter(t => t.organization_id === orgId || activeLeagueNames.includes(t.league))
             .map(t => t.id)
         );
 
-        const filteredApps = allApps.filter(app => 
+        const filteredApps = (allApps || []).filter(app => 
           app.organization_id === orgId || 
           (app.team_id && validTeamIds.has(app.team_id)) ||
           (!orgId)
@@ -197,7 +165,7 @@ const Dashboard = () => {
 
         setStats({ total, pending, approved, rejected });
       } else {
-        const { data: allTeams } = await supabase.from('teams').select('id, status, league, organization_id');
+        const allTeams = await fetchAllTeams('id, status, league, organization_id');
         const filteredTeams = (allTeams || []).filter(t => 
           t.organization_id === orgId || activeLeagueNames.includes(t.league)
         );
@@ -221,11 +189,6 @@ const Dashboard = () => {
     } finally {
       setStatsLoading(false);
     }
-  };
-
-  const handleOpenPDFModal = async () => {
-    await fetchDataForPDF();
-    setShowPDFModal(true);
   };
 
   return (
@@ -277,30 +240,29 @@ const Dashboard = () => {
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* PDF Export Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Export PDF Button */}
           <button
-            onClick={handleOpenPDFModal}
+            onClick={() => setIsPdfModalOpen(true)}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '8px 16px',
-              backgroundColor: '#10b981',
-              color: 'white',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+              color: '#ffffff',
               border: 'none',
-              borderRadius: '8px',
+              padding: '8px 16px',
+              borderRadius: '12px',
               cursor: 'pointer',
-              fontWeight: '600',
+              fontWeight: '700',
               fontSize: '13px',
-              transition: 'background 0.3s ease',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+              transition: 'all 0.2s ease'
             }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
-            title="Jamoa ma'lumotlarini PDF sifatida yuklab olish"
+            title="O'yinchilar va jamoalarni PDF formatida yuklab olish"
           >
-            <Download size={18} />
-            PDF Yuklab Olish
+            <FileText size={18} />
+            <span>Export PDF</span>
           </button>
 
           {/* Registration Toggle Switcher */}
@@ -351,13 +313,11 @@ const Dashboard = () => {
         {currentTab === 'players' ? <PlayersTable onStatusChange={fetchStats} /> : <TeamsTable onStatusChange={fetchStats} />}
       </div>
 
-      {/* PDF Export Modal */}
-      <PDFExportModal
-        isOpen={showPDFModal}
-        teams={teams}
-        applications={applications}
+      {/* Export PDF Modal */}
+      <ExportPdfModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
         activeLeagues={activeLeagues}
-        onClose={() => setShowPDFModal(false)}
       />
     </div>
   );

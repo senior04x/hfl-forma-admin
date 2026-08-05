@@ -82,6 +82,101 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize Permanent Full-Screen Search Engine
     initNavbarSearch();
+
+    // Check & Enforce Registration Status (Open / Closed)
+    async function enforceRegistrationStatus() {
+        let isOpen = true;
+        const orgId = window.currentOrg?.id || 1;
+        try {
+            const savedLocal = localStorage.getItem(`hfl_reg_open_${orgId}`) || localStorage.getItem('hfl_reg_open_1') || localStorage.getItem('hfl_reg_open');
+            if (savedLocal === 'false') isOpen = false;
+            if (savedLocal === 'true') isOpen = true;
+        } catch (e) {}
+
+        try {
+            const dbClient = getSupabaseClient();
+            if (dbClient) {
+                const keysToSearch = [
+                    `REGISTRATION_OPEN_${orgId}`,
+                    `REGISTRATION_OPEN_1`,
+                    `REGISTRATION_OPEN`
+                ];
+
+                const { data: spRows } = await dbClient
+                    .from('sponsors')
+                    .select('logo_url, name')
+                    .in('name', keysToSearch);
+
+                if (spRows && spRows.length > 0) {
+                    const closedRow = spRows.find(r => r.logo_url === 'false');
+                    if (closedRow) {
+                        isOpen = false;
+                    } else {
+                        const openRow = spRows.find(r => r.logo_url === 'true');
+                        if (openRow) isOpen = true;
+                    }
+                    try { localStorage.setItem(`hfl_reg_open_${orgId}`, isOpen ? 'true' : 'false'); } catch (e) {}
+                }
+            }
+        } catch (e) {
+            console.warn('Registration status check notice:', e);
+        }
+
+        if (!isOpen) {
+            // 1. Inject global CSS rule into <head> so browser engine automatically hides any apply link
+            if (!document.getElementById('reg-closed-css')) {
+                const styleEl = document.createElement('style');
+                styleEl.id = 'reg-closed-css';
+                styleEl.innerHTML = `
+                  a[href*="apply"], .nav-btn[href*="apply"], .nav-card[href*="apply"] {
+                    display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                  }
+                `;
+                (document.head || document.documentElement).appendChild(styleEl);
+            }
+
+            // 2. Direct DOM element hiding
+            const applyLinks = document.querySelectorAll('a[href*="apply"]');
+            applyLinks.forEach(el => {
+                el.style.setProperty('display', 'none', 'important');
+            });
+
+            // 3. Block direct URL access to /apply, /apply-team, /apply-individual
+            const pathname = window.location.pathname.toLowerCase();
+            if (pathname.includes('apply')) {
+                document.body.innerHTML = `
+                  <div style="min-height:100vh; background:#0b0f19; display:flex; align-items:center; justify-content:center; padding:20px; font-family:'Outfit','Inter',sans-serif; color:#fff; text-align:center;">
+                    <div style="max-width:480px; width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,59,48,0.3); border-radius:24px; padding:40px 24px; box-shadow:0 20px 50px rgba(0,0,0,0.6);">
+                      <div style="width:70px; height:70px; border-radius:50%; background:rgba(255,59,48,0.15); display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto; font-size:32px;">
+                        🚫
+                      </div>
+                      <h2 style="font-size:24px; font-weight:800; margin:0 0 10px 0; color:#ff4d4d;">Ro'yxatdan o'tish vaqtincha yopilgan</h2>
+                      <p style="font-size:14px; color:#94a3b8; line-height:1.6; margin:0 0 28px 0;">
+                        Hozirda yangi arizalar qabul qilish jarayoni to'xtatilgan. Qo'shimcha savollar bo'lsa, havaskorlar ligasi ma'muriyati bilan bog'laning.
+                      </p>
+                      <a href="${homeUrl}" style="display:inline-block; background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color:#fff; text-decoration:none; font-weight:700; padding:14px 28px; border-radius:14px; box-shadow:0 10px 25px rgba(59,130,246,0.3); font-size:15px;">
+                        🏠 Bosh sahifaga qaytish
+                      </a>
+                    </div>
+                  </div>
+                `;
+            }
+        } else {
+            const existingStyle = document.getElementById('reg-closed-css');
+            if (existingStyle) existingStyle.remove();
+        }
+    }
+
+    // Run enforcement immediately and on org resolution
+    enforceRegistrationStatus();
+    if (typeof window.resolveOrg === 'function') {
+        window.resolveOrg().then(enforceRegistrationStatus).catch(enforceRegistrationStatus);
+    } else {
+        setTimeout(enforceRegistrationStatus, 200);
+    }
 });
 
 // SAFE SUPABASE CLIENT RETRIEVAL

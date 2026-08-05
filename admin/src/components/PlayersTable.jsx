@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
+import { fetchAllApplications, fetchAllTeams } from '../utils/supabaseHelpers';
 import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter, Check, X, Trash2, Trophy } from 'lucide-react';
 import SwipeRow from './SwipeRow';
 import PlayerModal from './PlayerModal';
@@ -43,32 +44,25 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
 
   const fetchTeams = async (leaguesList = activeLeagues) => {
     const activeNames = (leaguesList || []).map(l => l.name);
-    let query = supabase.from('teams').select('id, name, league, organization_id');
-    const { data } = await query;
-    if (data) {
-      const filteredTeams = data.filter(t => 
-        t.organization_id === orgId || 
-        (t.league && t.league.split(',').some(l => activeNames.includes(l.trim()))) || 
-        !orgId
-      );
-      setTeams(filteredTeams);
+    try {
+      const data = await fetchAllTeams('id, name, league, organization_id');
+      if (data) {
+        const filteredTeams = data.filter(t => 
+          t.organization_id === orgId || 
+          (t.league && t.league.split(',').some(l => activeNames.includes(l.trim()))) || 
+          !orgId
+        );
+        setTeams(filteredTeams);
+      }
+    } catch (err) {
+      console.error('Error fetching teams:', err);
     }
   };
 
   const fetchPlayers = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('applications')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching players:', error);
-        setPlayers([]);
-        setTotalCount(0);
-        return;
-      }
+      const data = await fetchAllApplications('*');
       
       const activeNames = (activeLeagues || []).map(l => l.name);
       const validTeamIds = new Set(
