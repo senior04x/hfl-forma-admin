@@ -30,6 +30,9 @@ const Settings = () => {
   const [uploadingLeagueBg, setUploadingLeagueBg] = useState(false);
   const leagueBgFileInputRef = useRef(null);
 
+  const [logoUploadLeagueId, setLogoUploadLeagueId] = useState(null);
+  const directLeagueLogoInputRef = useRef(null);
+
   const [brandColors, setBrandColors] = useState(['#00FF66', '#10B981']);
   const [savingBrandColors, setSavingBrandColors] = useState(false);
 
@@ -289,6 +292,43 @@ const Settings = () => {
       fetchLeaguesAndOrgs();
     } catch (err) {
       setMessage({ type: 'error', text: 'Fon rasmini o\'chirishda xatolik: ' + err.message });
+    }
+  };
+
+  // Handle direct league logo selection from league card
+  const handleDirectLeagueLogoSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !logoUploadLeagueId) return;
+
+    setUploadingLeagueLogo(true);
+    try {
+      const fileExt = file.name.split('.').pop() || 'png';
+      const fileName = `league_logo_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadErr } = await supabase.storage.from('player-photos').upload(fileName, file, {
+        contentType: file.type || 'image/png',
+        upsert: true
+      });
+      if (uploadErr) throw uploadErr;
+
+      const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
+      const logoUrl = data.publicUrl;
+
+      const { error: dbErr } = await supabase
+        .from('leagues')
+        .update({ logo_url: logoUrl })
+        .eq('id', logoUploadLeagueId);
+
+      if (dbErr) throw dbErr;
+
+      setMessage({ type: 'success', text: 'Liga logotipi muvaffaqiyatli yangilandi!' });
+      fetchLeaguesAndOrgs();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Logo yuklashda xatolik: ' + (err.message || '') });
+    } finally {
+      setUploadingLeagueLogo(false);
+      setLogoUploadLeagueId(null);
+      e.target.value = '';
     }
   };
 
@@ -972,124 +1012,138 @@ const Settings = () => {
                       const isOwner = l.isOwn !== false && l.organization_id === orgId;
 
                       return (
-                        <div key={l.id} className={`league-card ${editingLeague?.id === l.id ? 'editing' : ''}`}>
-                          <div className="league-card-header">
-                            <div className="league-icon-unconstrained">
+                        <div key={l.id} className={`league-card-drawn ${editingLeague?.id === l.id ? 'editing' : ''}`}>
+                          {/* Top Background Section (hand drawing design) */}
+                          <div 
+                            className="league-card-bg-banner"
+                            style={l.export_bg_url ? { backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.8) 100%), url(${l.export_bg_url})` } : {}}
+                          >
+                            {/* Logo Clickable Area at Top */}
+                            <div 
+                              className={`league-card-logo-area ${isOwner ? 'clickable' : ''}`}
+                              onClick={(e) => {
+                                if (!isOwner) return;
+                                e.stopPropagation();
+                                setLogoUploadLeagueId(l.id);
+                                directLeagueLogoInputRef.current?.click();
+                              }}
+                              title={isOwner ? "Liga logotipini almashtirish uchun bosing" : ""}
+                            >
                               {l.logo_url ? (
-                                <img src={l.logo_url} alt={l.name} className="league-free-logo" />
+                                <img src={l.logo_url} alt={l.name} className="league-card-logo-img" />
                               ) : (
-                                <div className="league-placeholder-icon">
-                                  <Trophy size={28} />
+                                <div className="league-card-logo-placeholder">
+                                  <Trophy size={24} />
+                                </div>
+                              )}
+                              {isOwner && (
+                                <div className="logo-hover-badge">
+                                  <Upload size={12} />
                                 </div>
                               )}
                             </div>
-                            <div className="league-info-centered">
-                              <h4 className="league-title">{l.name}</h4>
-                              <div className="league-badges-wrap">
-                                {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
-                                {!isOwner && <span className="junior-badge" style={{ background: 'rgba(0, 255, 102, 0.15)', color: '#00ff66' }}>SHERIKLIK (CO-HOST)</span>}
-                              </div>
-                            </div>
-                          </div>
 
-                          {partnerOrg && (
-                            <div className="league-collab-partner-badge">
-                              <div className="partner-logo-box">
-                                {partnerOrg.logo_url ? (
-                                  <img src={partnerOrg.logo_url} alt={partnerOrg.name} />
-                                ) : (
-                                  <Building2 size={12} />
-                                )}
-                              </div>
-                              <span className="partner-text">
-                                Sherik: <strong>{partnerOrg.name}</strong>
-                              </span>
-                              {isOwner && activeCollab && (
-                                <button
-                                  type="button"
-                                  className="btn-collab-disconnect"
-                                  onClick={() => setCollabToDisconnect({ id: activeCollab.id, leagueName: l.name, partnerName: partnerOrg.name })}
-                                  title="Sheriklikni uzish"
-                                >
-                                  <X size={14} />
-                                </button>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Liga Fon Rasmi */}
-                          {isOwner && (
-                            <div className="league-bg-section">
-                              <div className="league-bg-preview-row">
-                                {/* 1:1 Preview */}
-                                <div className="league-bg-thumb" onClick={() => { setBgUploadLeagueId(l.id); leagueBgFileInputRef.current?.click(); }}>
-                                  {l.export_bg_url ? (
-                                    <img src={l.export_bg_url} alt="1:1 BG" />
-                                  ) : (
-                                    <div className="league-bg-placeholder">
-                                      <Upload size={16} />
-                                      <span>1:1</span>
-                                    </div>
-                                  )}
-                                  <div className="league-bg-overlay">
-                                    <Upload size={14} />
-                                  </div>
-                                </div>
-                                {/* 16:9 Preview */}
-                                <div className="league-bg-thumb yt-thumb">
-                                  {(l.yt_banner_url || l.banner_url) ? (
-                                    <img src={l.yt_banner_url || l.banner_url} alt="16:9 YT" />
-                                  ) : (
-                                    <div className="league-bg-placeholder">
-                                      <span>16:9</span>
-                                      <span style={{ fontSize: '9px', opacity: 0.6 }}>avto</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              {l.export_bg_url && (
-                                <button
-                                  className="btn-league-bg-delete"
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteLeagueBg(l); }}
-                                  title="Fon rasmini o'chirish"
-                                >
-                                  <Trash2 size={12} /> Fonni o'chirish
-                                </button>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="league-card-actions">
-                            {/* Faqat liga asl egasi hamkorligi bo'lmaganda collab yuborishi mumkin */}
-                            {isOwner && !activeCollab && (
+                            {/* Center Upload BG Trigger */}
+                            {isOwner && (
                               <button
-                                className="btn-collab"
-                                onClick={() => setSelectedLeagueForCollab(l)}
-                                title="Boshqa tashkilotga sheriklik taklifi yuborish"
+                                type="button"
+                                className="btn-upload-bg-trigger"
+                                onClick={() => {
+                                  setBgUploadLeagueId(l.id);
+                                  leagueBgFileInputRef.current?.click();
+                                }}
                               >
-                                <Send size={13} /> Collab
+                                <Upload size={15} />
+                                <span>{l.export_bg_url ? 'Bg image (Orqa fonni almashtirish)' : 'Bg image ↑ upload img'}</span>
                               </button>
                             )}
 
-                            {isOwner && (
-                              <>
-                                <button
-                                  className="btn-league-action btn-league-edit"
-                                  onClick={() => startEditLeague(l)}
-                                  title="Liga ma'lumotlarini tahrirlash"
-                                >
-                                  <Pencil size={14} />
-                                </button>
-                                <button
-                                  className="btn-league-action btn-league-delete"
-                                  onClick={() => handleDeleteLeague(l)}
-                                  disabled={deletingLeagueId === l.id}
-                                  title="Liganı o'chirish"
-                                >
-                                  {deletingLeagueId === l.id ? <span className="btn-spinner"></span> : <Trash2 size={14} />}
-                                </button>
-                              </>
+                            {/* Delete BG button if BG exists */}
+                            {isOwner && l.export_bg_url && (
+                              <button
+                                type="button"
+                                className="btn-delete-bg-corner"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteLeagueBg(l);
+                                }}
+                                title="Fon rasmini o'chirish"
+                              >
+                                <Trash2 size={13} />
+                              </button>
                             )}
+                          </div>
+
+                          {/* Bottom Info Section */}
+                          <div className="league-card-bottom">
+                            <div className="league-card-name-section">
+                              <h4 className="league-title">{l.name}</h4>
+                              <div className="league-badges-wrap">
+                                {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
+                                {!isOwner && <span className="junior-badge collab-badge">SHERIKLIK (CO-HOST)</span>}
+                              </div>
+                            </div>
+
+                            {partnerOrg && (
+                              <div className="league-collab-partner-badge">
+                                <div className="partner-logo-box">
+                                  {partnerOrg.logo_url ? (
+                                    <img src={partnerOrg.logo_url} alt={partnerOrg.name} />
+                                  ) : (
+                                    <Building2 size={12} />
+                                  )}
+                                </div>
+                                <span className="partner-text">
+                                  Sherik: <strong>{partnerOrg.name}</strong>
+                                </span>
+                                {isOwner && activeCollab && (
+                                  <button
+                                    type="button"
+                                    className="btn-collab-disconnect"
+                                    onClick={() => setCollabToDisconnect({ id: activeCollab.id, leagueName: l.name, partnerName: partnerOrg.name })}
+                                    title="Sheriklikni uzish"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Bottom Button Bar matching hand drawing tabs */}
+                            <div className="league-card-action-tabs">
+                              {isOwner && !activeCollab && (
+                                <button
+                                  type="button"
+                                  className="action-tab btn-tab-collab"
+                                  onClick={() => setSelectedLeagueForCollab(l)}
+                                  title="Sheriklik taklifi"
+                                >
+                                  <Send size={13} /> <span>Collab</span>
+                                </button>
+                              )}
+
+                              {isOwner && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="action-tab btn-tab-edit"
+                                    onClick={() => startEditLeague(l)}
+                                    title="Tahrirlash"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="action-tab btn-tab-delete"
+                                    onClick={() => handleDeleteLeague(l)}
+                                    disabled={deletingLeagueId === l.id}
+                                    title="O'chirish"
+                                  >
+                                    {deletingLeagueId === l.id ? <span className="btn-spinner"></span> : <Trash2 size={14} />}
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -1373,6 +1427,15 @@ const Settings = () => {
           title="Tashkilot Logotipini 1:1 Qirqish"
         />
       )}
+
+      {/* Direct League Logo File Input */}
+      <input
+        ref={directLeagueLogoInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleDirectLeagueLogoSelect}
+      />
 
       {/* League BG file input */}
       <input

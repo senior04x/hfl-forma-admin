@@ -451,98 +451,196 @@
   margin-top: 12px;
 }
 
-/* League BG Image Section */
-.league-bg-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.league-bg-preview-row {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
-
-.league-bg-thumb {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
-  overflow: hidden;
-  position: relative;
-  cursor: pointer;
+/* Hand-Drawn League Card Design */
+.league-card-drawn {
+  background: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  flex-shrink: 0;
-  transition: all 0.2s ease;
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.league-bg-thumb:hover {
-  border-color: rgba(0, 255, 102, 0.4);
-  box-shadow: 0 0 12px rgba(0, 255, 102, 0.15);
+.league-card-drawn:hover {
+  border-color: rgba(0, 255, 102, 0.35);
+  box-shadow: 0 12px 32px rgba(0, 255, 102, 0.12);
+  transform: translateY(-2px);
 }
 
-.league-bg-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.league-bg-thumb.yt-thumb {
-  width: 120px;
-  height: 68px;
-  cursor: default;
-}
-
-.league-bg-placeholder {
-  width: 100%;
-  height: 100%;
+.league-card-bg-banner {
+  height: 185px;
+  background-color: rgba(255, 255, 255, 0.03);
+  background-size: cover;
+  background-position: center;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 11px;
-  font-weight: 700;
+  justify-content: space-between;
+  padding: 16px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.league-bg-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+.league-card-logo-area {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.league-card-logo-area.clickable {
+  cursor: pointer;
+}
+
+.league-card-logo-area.clickable:hover {
+  border-color: #00ff66;
+  transform: scale(1.05);
+}
+
+.league-card-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+
+.league-card-logo-placeholder {
+  color: #00ff66;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-hover-badge {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00ff66;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
 
-.league-bg-thumb:hover .league-bg-overlay {
+.league-card-logo-area:hover .logo-hover-badge {
   opacity: 1;
 }
 
-.btn-league-bg-delete {
+.btn-upload-bg-trigger {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 4px 10px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #ef4444;
-  border-radius: 6px;
-  font-size: 10px;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(10px);
+  border: 1px dashed rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.95);
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
-  width: fit-content;
+  transition: all 0.2s ease;
 }
 
-.btn-league-bg-delete:hover {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.5);
+.btn-upload-bg-trigger:hover {
+  background: rgba(0, 255, 102, 0.2);
+  border-color: #00ff66;
+  color: #00ff66;
+  transform: scale(1.03);
+}
+
+.btn-delete-bg-corner {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-bg-corner:hover {
+  background: rgba(239, 68, 68, 0.4);
+  color: #fff;
+}
+
+.league-card-bottom {
+  padding: 14px 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.league-card-name-section {
+  text-align: center;
+}
+
+.league-card-name-section .league-title {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.league-card-action-tabs {
+  display: flex;
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 10px -16px 0;
+}
+
+.action-tab {
+  flex: 1;
+  padding: 10px 6px;
+  background: rgba(15, 23, 42, 0.9);
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.btn-tab-collab:hover {
+  color: #00ff66;
+}
+
+.btn-tab-edit:hover {
+  color: #3b82f6;
+}
+
+.btn-tab-delete:hover {
+  color: #ef4444;
 }
 
 .btn-collab {
