@@ -1032,33 +1032,34 @@ const Settings = () => {
                   </div>
                 )}
 
-                <div className="form-row">
-                  <div className="settings-form-group flex-2">
+                <div className="league-form-responsive-grid">
+                  {/* Liga Nomi */}
+                  <div className="settings-form-group">
                     <label>{editingLeague ? 'Liga Nomi' : 'Yangi Liga Nomi'}</label>
                     <input
                       ref={leagueInputRef}
                       type="text"
-                      placeholder="Masalan: Farg'ona Super Liga"
+                      placeholder="Masalan: Super Liga"
                       value={leagueName}
                       onChange={e => setLeagueName(e.target.value)}
                       required
                     />
                   </div>
 
-                  {/* League Logo Direct Upload (PNG / Transparent) */}
-                  <div className="settings-form-group flex-2">
+                  {/* Liga Logosi */}
+                  <div className="settings-form-group">
                     <label>Liga Logosi</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
                       {leagueLogo && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <img src={leagueLogo} alt="League Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                          <img src={leagueLogo} alt="Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain', border: '1px solid rgba(255,255,255,0.2)' }} />
                           <button
                             type="button"
                             onClick={() => setLeagueLogo('')}
                             title="Logotipni o'chirish"
-                            style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', padding: '6px 10px', borderRadius: '8px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', width: '36px', height: '36px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       )}
@@ -1067,7 +1068,8 @@ const Settings = () => {
                         onClick={() => leagueFileInputRef.current?.click()}
                         disabled={uploadingLeagueLogo}
                         style={{
-                          padding: '9px 14px',
+                          height: '42px',
+                          padding: '0 14px',
                           background: 'rgba(0, 170, 255, 0.12)',
                           border: '1px solid rgba(0, 170, 255, 0.3)',
                           color: '#00aaff',
@@ -1077,13 +1079,16 @@ const Settings = () => {
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '6px'
+                          justify-content: 'center',
+                          gap: '6px',
+                          flex: 1
                         }}
                       >
                         <Upload size={15} />
-                        <span>{uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Logo almashtirish' : 'Logo yuklash (PNG / Transparent)')}</span>
+                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Logo almashtirish' : 'Logo yuklash (PNG)')}
+                        </span>
                       </button>
-
                       <input
                         ref={leagueFileInputRef}
                         type="file"
@@ -1094,89 +1099,60 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  {/* Match Duration Field */}
-                  <div className="settings-form-group flex-1">
-                    <label>O'yin Davomiyligi (Daqiqa)</label>
+                  {/* O'yin Davomiyligi */}
+                  <div className="settings-form-group">
+                    <label>O'yin Davomiyligi</label>
                     <select
                       value={matchDuration}
                       onChange={e => setMatchDuration(Number(e.target.value))}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: '10px',
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        color: '#fff',
-                        fontWeight: '700',
-                        fontSize: '13px',
-                        width: '100%',
-                        marginTop: '4px'
-                      }}
                     >
-                      <option value={90} style={{ background: '#0b0e17', color: '#fff' }}>90 daqiqa (45 + 45)</option>
-                      <option value={80} style={{ background: '#0b0e17', color: '#fff' }}>80 daqiqa (40 + 40)</option>
-                      <option value={70} style={{ background: '#0b0e17', color: '#fff' }}>70 daqiqa (35 + 35)</option>
-                      <option value={60} style={{ background: '#0b0e17', color: '#fff' }}>60 daqiqa (30 + 30)</option>
-                      <option value={50} style={{ background: '#0b0e17', color: '#fff' }}>50 daqiqa (25 + 25)</option>
-                      <option value={40} style={{ background: '#0b0e17', color: '#fff' }}>40 daqiqa (20 + 20)</option>
-                      <option value={30} style={{ background: '#0b0e17', color: '#fff' }}>30 daqiqa (15 + 15)</option>
+                      <option value={90}>90 daqiqa (45 + 45)</option>
+                      <option value={80}>80 daqiqa (40 + 40)</option>
+                      <option value={70}>70 daqiqa (35 + 35)</option>
+                      <option value={60}>60 daqiqa (30 + 30)</option>
+                      <option value={50}>50 daqiqa (25 + 25)</option>
+                      <option value={40}>40 daqiqa (20 + 20)</option>
+                      <option value={30}>30 daqiqa (15 + 15)</option>
                     </select>
                   </div>
 
-                  {/* Season Field */}
-                  <div className="settings-form-group flex-1">
+                  {/* Mavsum */}
+                  <div className="settings-form-group">
                     <label>Mavsum (Season)</label>
                     <input
                       type="text"
                       placeholder="2026/2027"
                       value={leagueSeason}
                       onChange={e => setLeagueSeason(e.target.value)}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: '10px',
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        color: '#fff',
-                        fontWeight: '700',
-                        fontSize: '13px',
-                        width: '100%',
-                        marginTop: '4px'
-                      }}
                     />
                   </div>
 
-                  {/* Status Field */}
-                  <div className="settings-form-group flex-1">
+                  {/* Liga Holati */}
+                  <div className="settings-form-group">
                     <label>Liga Holati</label>
                     <select
                       value={leagueStatus}
                       onChange={e => setLeagueStatus(e.target.value)}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: '10px',
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        color: '#fff',
-                        fontWeight: '700',
-                        fontSize: '13px',
-                        width: '100%',
-                        marginTop: '4px'
-                      }}
                     >
-                      <option value="active" style={{ background: '#0b0e17', color: '#00ff87' }}>🟢 FAOL MAVSUM</option>
-                      <option value="archived" style={{ background: '#0b0e17', color: '#ffaa00' }}>📦 YAKUNLANGAN (ARCHIVED)</option>
+                      <option value="active">🟢 FAOL MAVSUM</option>
+                      <option value="archived">📦 YAKUNLANGAN</option>
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-                    <button type="submit" className="settings-btn settings-btn-primary add-league-btn" disabled={creatingLeague}>
-                      {editingLeague ? <Save size={16} /> : <Plus size={16} />}
-                      <span>{creatingLeague ? 'Saqlanmoqda...' : (editingLeague ? 'Saqlash' : 'Liga qo\'shish')}</span>
-                    </button>
-                    {editingLeague && (
-                      <button type="button" className="settings-btn" onClick={cancelEditLeague}>
-                        Bekor qilish
+                  {/* Action Buttons Container */}
+                  <div className="settings-form-group form-actions-group">
+                    <label style={{ opacity: 0 }}>Amallar</label>
+                    <div className="form-buttons-row">
+                      <button type="submit" className="settings-btn settings-btn-primary add-league-btn" disabled={creatingLeague}>
+                        {editingLeague ? <Save size={16} /> : <Plus size={16} />}
+                        <span>{creatingLeague ? 'Saqlanmoqda...' : (editingLeague ? 'Saqlash' : 'Liga qo\'shish')}</span>
                       </button>
-                    )}
+                      {editingLeague && (
+                        <button type="button" className="settings-btn cancel-btn" onClick={cancelEditLeague}>
+                          Bekor qilish
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </form>
