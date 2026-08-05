@@ -763,7 +763,7 @@ export default function Standings() {
                 }}>
                   {secondarySponsors.map((s, idx) => (
                     <React.Fragment key={s.id || idx}>
-                      <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '34px', maxWidth: '110px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                      <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '34px', maxWidth: '110px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.8 }} />
                       {idx < secondarySponsors.length - 1 && (
                         <div style={{ height: '20px', width: '1px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
                       )}
@@ -939,7 +939,7 @@ export default function Standings() {
                 }}>
                   {secondarySponsors.map((s, idx) => (
                     <React.Fragment key={s.id || idx}>
-                      <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '34px', maxWidth: '110px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                      <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '34px', maxWidth: '110px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.8 }} />
                       {idx < secondarySponsors.length - 1 && (
                         <div style={{ height: '20px', width: '1px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
                       )}
