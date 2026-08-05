@@ -79,26 +79,52 @@ async function formatApplicationMessage(appData) {
     let leagueName = appData.league || '-';
     let isTeamApp = false;
 
+    // Check if league is in comment
+    if ((!leagueName || leagueName === '-') && appData.comment && appData.comment.includes('[LEAGUE:')) {
+        const match = appData.comment.match(/\[LEAGUE:([^\]]+)\]/);
+        if (match && match[1]) leagueName = match[1];
+    }
+
     if (appData.teams) {
         teamName = appData.teams.name || teamName;
-        leagueName = appData.teams.league || leagueName;
+        if (!leagueName || leagueName === '-') leagueName = appData.teams.league || leagueName;
         isTeamApp = true;
     } else if (appData.team_id) {
         try {
             const { data: tm } = await supabase.from('teams').select('name, league').eq('id', appData.team_id).single();
             if (tm) {
                 teamName = tm.name || teamName;
-                leagueName = tm.league || leagueName;
+                if (!leagueName || leagueName === '-') leagueName = tm.league || leagueName;
                 isTeamApp = true;
             }
         } catch (e) {}
     }
 
-    const typeText = isTeamApp ? 'Jamoaviy' : 'Yakkaxon';
+    // Fallback: If still no teamName/leagueName, search applications/teams by player's phone
+    if ((!leagueName || leagueName === '-' || teamName === 'Yakkaxon (O\'yinchi)') && appData.phone) {
+        try {
+            const cleanP = appData.phone.replace(/\D/g, '').slice(-9);
+            const { data: matchedApp } = await supabase
+                .from('applications')
+                .select('*, teams(*)')
+                .ilike('phone', `%${cleanP}%`)
+                .not('team_id', 'is', null)
+                .limit(1);
+
+            if (matchedApp && matchedApp.length > 0 && matchedApp[0].teams) {
+                teamName = matchedApp[0].teams.name || teamName;
+                if (!leagueName || leagueName === '-') leagueName = matchedApp[0].teams.league || leagueName;
+            }
+        } catch (e) {}
+    }
+
+    const isProfileUpdate = (appData.comment && appData.comment.includes('[PROFILE_UPDATE]'));
+    const typeText = isProfileUpdate ? 'Profil ma\'lumotlarini o\'zgartirish' : (isTeamApp ? 'Jamoaviy' : 'Yakkaxon');
+    const titleHeader = isProfileUpdate ? '📝 <b>PROFIL YANGILASH ARIZASI</b>' : '📋 <b>ARIZA MA\'LUMOTLARI</b>';
     const fullName = `${appData.first_name || ''} ${appData.last_name || ''}`.trim() || 'O\'yinchi';
 
     return `
-📋 <b>ARIZA MA'LUMOTLARI</b>
+${titleHeader}
 
 🏢 <b>Tashkilot:</b> ${orgName}
 🏆 <b>Liga:</b> ${leagueName}
@@ -107,7 +133,7 @@ async function formatApplicationMessage(appData) {
 📌 <b>Turi:</b> ${typeText}
 📊 <b>Holati:</b> ${getStatusBadge(appData.status)}
 
-<i>Arizangiz holati o'zgarganda bot orqali avtomatik xabar beriladi.</i>
+<i>${isProfileUpdate ? "Profil ma'lumotlaringizni o'zgartirish bo'yicha arizangiz ko'rib chiqilmoqda." : "Arizangiz holati o'zgarganda bot orqali avtomatik xabar beriladi."}</i>
 `.trim();
 }
 
@@ -308,11 +334,22 @@ supabase
           }
 
           if (chatId) {
-              const statusHeader = newRecord.status === 'approved'
-                  ? '🎉 <b>ARIZANGIZ TASDIQLANDI!</b>'
-                  : newRecord.status === 'rejected'
-                  ? '❌ <b>ARIZANGIZ RAD ETILDI</b>'
-                  : '📢 <b>ARIZA HOLATI O\'ZGARDI</b>';
+              const isProfileUpdate = (newRecord.comment && newRecord.comment.includes('[PROFILE_UPDATE]'));
+              let statusHeader = '';
+
+              if (isProfileUpdate) {
+                  statusHeader = newRecord.status === 'approved'
+                      ? '🎉 <b>PROFILINGIZ MUVAFFAQIYATLI YANGILANDI!</b>'
+                      : newRecord.status === 'rejected'
+                      ? '❌ <b>PROFIL O\'ZGARTIRISH ARIZASI RAD ETILDI</b>'
+                      : '📝 <b>PROFIL ARIZASI HOLATI O\'ZGARDI</b>';
+              } else {
+                  statusHeader = newRecord.status === 'approved'
+                      ? '🎉 <b>ARIZANGIZ TASDIQLANDI!</b>'
+                      : newRecord.status === 'rejected'
+                      ? '❌ <b>ARIZANGIZ RAD ETILDI</b>'
+                      : '📢 <b>ARIZA HOLATI O\'ZGARDI</b>';
+              }
 
               const detailMsg = await formatApplicationMessage(newRecord);
               const fullMsg = `${statusHeader}\n\n${detailMsg}`;
