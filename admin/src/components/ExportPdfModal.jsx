@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { X, Download, Shield, Trophy, Users, FileText, CheckCircle2 } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 import { fetchAllApplications, fetchAllTeams } from '../utils/supabaseHelpers';
 import { useOrg } from '../context/OrgContext';
 import './ExportPdfModal.css';
@@ -51,27 +52,57 @@ export function cyrillicToLatin(text) {
   return text.split('').map(char => map[char] || char).join('');
 }
 
-// Convert image URL to Base64 using multi-strategy (fetch blob + Image fallback)
+const blobToBase64 = (blob) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(blob);
+  });
+};
+
+const parseStorageUrl = (url) => {
+  if (!url || typeof url !== 'string') return null;
+  const match = url.match(/\/storage\/v1\/object\/(?:public|authenticated)\/([^/]+)\/(.+)$/);
+  if (match) {
+    return { bucket: match[1], path: decodeURIComponent(match[2].split('?')[0]) };
+  }
+  return null;
+};
+
+// Convert image URL to Base64 using Supabase Storage SDK (bypasses browser CORS restrictions 100%)
 const loadImageAsBase64 = async (url) => {
   if (!url || typeof url !== 'string') return null;
+  if (url.startsWith('data:image/')) return url;
 
-  // Strategy 1: Fetch API
+  // Strategy 1: Supabase Storage SDK download (Native client SDK request bypasses CORS)
+  const storageInfo = parseStorageUrl(url);
+  if (storageInfo) {
+    try {
+      const { data: blob, error } = await supabase.storage
+        .from(storageInfo.bucket)
+        .download(storageInfo.path);
+
+      if (!error && blob) {
+        const b64 = await blobToBase64(blob);
+        if (b64) return b64;
+      }
+    } catch (e) {
+      console.warn('Supabase storage SDK download notice:', e);
+    }
+  }
+
+  // Strategy 2: Fetch API
   try {
     const response = await fetch(url, { mode: 'cors' });
     if (response.ok) {
       const blob = await response.blob();
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(blob);
-      });
+      const b64 = await blobToBase64(blob);
+      if (b64) return b64;
     }
-  } catch (e) {
-    // Strategy 1 failed, proceed to Strategy 2
-  }
+  } catch (e) {}
 
-  // Strategy 2: Image object with Canvas
+  // Strategy 3: HTML Image Element + Canvas Fallback
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -87,24 +118,7 @@ const loadImageAsBase64 = async (url) => {
         resolve(null);
       }
     };
-    img.onerror = () => {
-      // Fallback without crossOrigin attribute
-      const imgFallback = new Image();
-      imgFallback.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = imgFallback.naturalWidth || imgFallback.width || 120;
-          canvas.height = imgFallback.naturalHeight || imgFallback.height || 120;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(imgFallback, 0, 0);
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
-        } catch (e) {
-          resolve(null);
-        }
-      };
-      imgFallback.onerror = () => resolve(null);
-      imgFallback.src = url;
-    };
+    img.onerror = () => resolve(null);
     img.src = url;
   });
 };
