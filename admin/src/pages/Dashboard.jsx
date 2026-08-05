@@ -135,7 +135,7 @@ const Dashboard = () => {
 
       if (currentTab === 'players') {
         const [allApps, allTeams] = await Promise.all([
-          fetchAllApplications('id, status, team_id, organization_id'),
+          fetchAllApplications('id, status, team_id, organization_id, comment'),
           fetchAllTeams('id, league, organization_id')
         ]);
 
@@ -145,11 +145,13 @@ const Dashboard = () => {
             .map(t => t.id)
         );
 
-        const filteredApps = (allApps || []).filter(app => 
-          app.organization_id === orgId || 
-          (app.team_id && validTeamIds.has(app.team_id)) ||
-          (!orgId)
-        );
+        const filteredApps = (allApps || [])
+          .filter(app => !app.comment || !app.comment.includes('[PROFILE_UPDATE]'))
+          .filter(app => 
+            app.organization_id === orgId || 
+            (app.team_id && validTeamIds.has(app.team_id)) ||
+            (!orgId)
+          );
 
         let total = filteredApps.length;
         let pending = 0;
