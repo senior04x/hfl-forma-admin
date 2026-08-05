@@ -1,20 +1,89 @@
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { X, Download, Shield, Trophy, Users, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Download, Shield, Trophy, Users, FileText, CheckCircle2 } from 'lucide-react';
 import { fetchAllApplications, fetchAllTeams } from '../utils/supabaseHelpers';
 import { useOrg } from '../context/OrgContext';
 import './ExportPdfModal.css';
 
+// Convert image URL to base64 for jsPDF
+const loadImageAsBase64 = (url) => {
+  return new Promise((resolve) => {
+    if (!url) return resolve(null);
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL('image/jpeg');
+        resolve(dataURL);
+      } catch (e) {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+};
+
+// Helper to extract all metadata from player comment / object
+const extractFullPlayerInfo = (p) => {
+  let citizenship = p.citizenship || '';
+  let height = p.height || '';
+  let weight = p.weight || '';
+  let instaUser = p.instagram_username || '';
+
+  if (p.comment) {
+    if (!instaUser) {
+      const match = p.comment.match(/\[INSTAGRAM:https?:\/\/[^/]+\/([^/\]]+)/);
+      if (match?.[1]) instaUser = match[1];
+    }
+    const metaMatch = p.comment.match(/\[METADATA:({[^\]]+})\]/);
+    if (metaMatch?.[1]) {
+      try {
+        const obj = JSON.parse(metaMatch[1]);
+        if (obj.citizenship) citizenship = obj.citizenship;
+        if (obj.height) height = obj.height;
+        if (obj.weight) weight = obj.weight;
+      } catch (e) {}
+    }
+  }
+
+  const fullName = `${p.last_name || ''} ${p.first_name || ''} ${p.father_name || ''}`.trim() || '—';
+  const passport = `${p.passport_series || ''}${p.passport_number || ''}`.trim() || '—';
+  const phone = p.phone || '—';
+  const birthDate = p.birth_date || '—';
+  const position = p.position || '—';
+  const number = p.player_number ? `#${p.player_number}` : '—';
+  const heightWeight = (height || weight) ? `${height ? `${height}sm` : ''} ${weight ? `${weight}kg` : ''}`.trim() : '—';
+  const instagram = instaUser ? `@${instaUser}` : '—';
+
+  return {
+    fullName,
+    birthDate,
+    passport,
+    phone,
+    position,
+    number,
+    citizenship: citizenship || '—',
+    heightWeight,
+    instagram,
+    photoUrl: p.photo_url,
+    status: p.status
+  };
+};
+
 const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
   const { orgId } = useOrg();
 
-  // Export selection states
   const [leagueForLeagueExport, setLeagueForLeagueExport] = useState('');
   const [leagueForTeamExport, setLeagueForTeamExport] = useState('');
   const [teamIdForTeamExport, setTeamIdForTeamExport] = useState('');
 
-  // Data states
   const [teams, setTeams] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -44,7 +113,6 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
     }
   };
 
-  // Filtered teams for single team select based on leagueForTeamExport
   const availableTeamsForSingleExport = teams.filter(t => {
     if (!leagueForTeamExport) return true;
     if (!t.league) return false;
@@ -62,12 +130,9 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
     setStatusMessage('Ma\'lumotlar yuklanmoqda...');
 
     try {
-      // 1. Fetch all applications without 1000 cap
       const allApps = await fetchAllApplications('*');
-      const activeNames = (activeLeagues || []).map(l => l.name);
       const validTeamIds = new Set(teams.map(t => t.id));
 
-      // Filter applications for current org / leagues
       let validApps = allApps
         .filter(app => !app.comment || !app.comment.includes('[PROFILE_UPDATE]'))
         .filter(app =>
@@ -76,7 +141,6 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
           !orgId
         );
 
-      // Determine targeted teams & players based on exportType
       let targetTeams = [];
       let docTitle = '';
       let fileName = '';
@@ -117,11 +181,11 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
         return;
       }
 
-      setStatusMessage('PDF hujjat shakllantirilmoqda...');
+      setStatusMessage('O\'yinchilar rasmlari va ma\'lumotlari shakllantirilmoqda...');
 
-      // 2. Initialize jsPDF
+      // Landscape A4 PDF document (width: 297mm, height: 210mm)
       const doc = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
@@ -130,122 +194,178 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
       let currentY = 15;
 
       // Header Branding
-      doc.setFillColor(15, 23, 42); // dark navy #0f172a
-      doc.rect(0, 0, pageWidth, 26, 'F');
+      doc.setFillColor(15, 23, 42); // #0f172a
+      doc.rect(0, 0, pageWidth, 24, 'F');
 
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.text('AMATORA ORGANIZATSIYA', 14, 12);
+      doc.text('AMATORA ORGANIZATSIYA', 12, 11);
 
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(203, 213, 225);
-      doc.text(docTitle, 14, 19);
+      doc.text(docTitle, 12, 17);
 
       doc.setFontSize(8);
-      doc.text(`Sana: ${new Date().toLocaleDateString('uz-UZ')}`, pageWidth - 14, 19, { align: 'right' });
+      doc.text(`Sana: ${new Date().toLocaleDateString('uz-UZ')}`, pageWidth - 12, 17, { align: 'right' });
 
-      currentY = 32;
-
-      // 3. Render Teams and Players tables
+      currentY = 28;
       let totalExportedPlayers = 0;
 
-      targetTeams.forEach((team, teamIndex) => {
+      for (let teamIndex = 0; teamIndex < targetTeams.length; teamIndex++) {
+        const team = targetTeams[teamIndex];
         const teamPlayers = validApps.filter(app => app.team_id === team.id);
         totalExportedPlayers += teamPlayers.length;
 
-        // Check page space for team header
-        if (currentY > 260) {
+        // Pre-load images into base64 map
+        const photoMap = new Map();
+        const imageLoadPromises = teamPlayers.map(async (p) => {
+          if (p.photo_url) {
+            const b64 = await loadImageAsBase64(p.photo_url);
+            if (b64) photoMap.set(p.id, b64);
+          }
+        });
+        await Promise.all(imageLoadPromises);
+
+        if (currentY > 175) {
           doc.addPage();
           currentY = 15;
         }
 
-        // Team Title Banner
-        doc.setFillColor(241, 245, 249); // #f1f5f9
-        doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
+        // Team Header Banner
+        doc.setFillColor(241, 245, 249);
+        doc.roundedRect(12, currentY, pageWidth - 24, 8, 1.5, 1.5, 'F');
 
         doc.setDrawColor(203, 213, 225);
-        doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'S');
+        doc.roundedRect(12, currentY, pageWidth - 24, 8, 1.5, 1.5, 'S');
 
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(15, 23, 42);
-        doc.text(`${teamIndex + 1}. JAMOA: ${team.name.toUpperCase()} (Liga: ${team.league || '—'})`, 18, currentY + 6.5);
+        doc.text(`${teamIndex + 1}. JAMOA: ${team.name.toUpperCase()} (Liga: ${team.league || '—'})`, 15, currentY + 5.5);
 
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(100, 116, 139);
-        doc.text(`O'yinchilar: ${teamPlayers.length} ta`, pageWidth - 18, currentY + 6.5, { align: 'right' });
+        doc.text(`O'yinchilar: ${teamPlayers.length} ta`, pageWidth - 15, currentY + 5.5, { align: 'right' });
 
-        currentY += 13;
+        currentY += 10;
 
-        // Player Table Rows
-        const tableBody = teamPlayers.map((p, idx) => [
-          idx + 1,
-          `${p.last_name || ''} ${p.first_name || ''} ${p.father_name || ''}`.trim() || '—',
-          p.position || '—',
-          p.player_number ? `#${p.player_number}` : '—',
-          p.birth_date || '—',
-          `${p.passport_series || ''}${p.passport_number || ''}` || '—',
-          p.phone || '—',
-          getStatusLabel(p.status)
-        ]);
+        // Build Table rows with ALL 12 fields
+        const tableBody = teamPlayers.map((p, idx) => {
+          const info = extractFullPlayerInfo(p);
+          return [
+            idx + 1,
+            '', // Rasm column (rendered via didDrawCell)
+            info.fullName,
+            info.birthDate,
+            info.passport,
+            info.phone,
+            info.position,
+            info.number,
+            info.citizenship,
+            info.heightWeight,
+            info.instagram,
+            getStatusLabel(info.status)
+          ];
+        });
 
         if (tableBody.length === 0) {
-          tableBody.push(['—', 'O\'yinchilar ro\'yxatdan o\'tmagan', '—', '—', '—', '—', '—', '—']);
+          tableBody.push(['—', '—', 'O\'yinchilar ro\'yxatdan o\'tmagan', '—', '—', '—', '—', '—', '—', '—', '—', '—']);
         }
 
         autoTable(doc, {
           startY: currentY,
-          head: [['№', 'F.I.SH', 'Pozitsiya', 'Raqam', 'Tug\'ilgan yili', 'Pasport', 'Telefon', 'Holati']],
+          head: [['№', 'Rasm', 'F.I.SH', 'Tug\'ilgan sana', 'Pasport', 'Telefon', 'Pozitsiya', 'Raqam', 'Millati', 'Bo\'yi/Vazni', 'Instagram', 'Holati']],
           body: tableBody,
-          margin: { left: 14, right: 14 },
+          margin: { left: 12, right: 12 },
           styles: {
-            fontSize: 8,
+            fontSize: 7.5,
             cellPadding: 2,
             font: 'helvetica',
-            textColor: [51, 65, 85]
+            textColor: [51, 65, 85],
+            valign: 'middle',
+            overflow: 'linebreak'
           },
           headStyles: {
             fillColor: [30, 41, 59],
             textColor: [255, 255, 255],
             fontStyle: 'bold',
-            halign: 'left'
+            fontSize: 7.5,
+            halign: 'left',
+            valign: 'middle'
           },
           columnStyles: {
-            0: { cellWidth: 10, halign: 'center' },
-            1: { cellWidth: 46 },
-            2: { cellWidth: 22 },
-            3: { cellWidth: 15, halign: 'center' },
-            4: { cellWidth: 24, halign: 'center' },
-            5: { cellWidth: 24, halign: 'center' },
-            6: { cellWidth: 24, halign: 'center' },
-            7: { cellWidth: 17, halign: 'center' }
+            0: { cellWidth: 8, halign: 'center' },   // №
+            1: { cellWidth: 14, halign: 'center' },  // Rasm
+            2: { cellWidth: 42 },                    // F.I.SH
+            3: { cellWidth: 24, halign: 'center' },  // Tug'ilgan sana
+            4: { cellWidth: 22, halign: 'center' },  // Pasport
+            5: { cellWidth: 25, halign: 'center' },  // Telefon
+            6: { cellWidth: 20 },                    // Pozitsiya
+            7: { cellWidth: 12, halign: 'center' },  // Raqam
+            8: { cellWidth: 22 },                    // Millati
+            9: { cellWidth: 22, halign: 'center' },  // Bo'yi/Vazni
+            10: { cellWidth: 24 },                   // Instagram
+            11: { cellWidth: 18, halign: 'center' }  // Holati
           },
           alternateRowStyles: {
             fillColor: [248, 250, 252]
           },
+          didDrawCell: (data) => {
+            if (data.section === 'body' && data.column.index === 1) {
+              const player = teamPlayers[data.row.index];
+              if (player) {
+                const imgB64 = photoMap.get(player.id);
+                const cellX = data.cell.x;
+                const cellY = data.cell.y;
+                const size = 9; // 9mm diameter
+                const posX = cellX + (data.cell.width - size) / 2;
+                const posY = cellY + (data.cell.height - size) / 2;
+                const radius = size / 2;
+
+                if (imgB64) {
+                  try {
+                    doc.saveGraphicsState();
+                    doc.circle(posX + radius, posY + radius, radius, 'clip');
+                    doc.addImage(imgB64, 'JPEG', posX, posY, size, size);
+                    doc.restoreGraphicsState();
+
+                    // Subtle circle border
+                    doc.setDrawColor(203, 213, 225);
+                    doc.setLineWidth(0.2);
+                    doc.circle(posX + radius, posY + radius, radius, 'S');
+                  } catch (e) {}
+                } else {
+                  // Fallback clean circular avatar icon
+                  doc.setFillColor(226, 232, 240);
+                  doc.circle(posX + radius, posY + radius, radius, 'F');
+                  doc.setFontSize(6);
+                  doc.setTextColor(148, 163, 184);
+                  doc.text('—', posX + radius, posY + radius + 1, { align: 'center' });
+                }
+              }
+            }
+          },
           didDrawPage: (data) => {
-            // Footer page numbers
             const totalPages = doc.internal.getNumberOfPages();
-            doc.setFontSize(8);
+            doc.setFontSize(7.5);
             doc.setTextColor(148, 163, 184);
             doc.text(
               `Sahifa ${data.pageNumber} / ${totalPages}`,
               pageWidth / 2,
-              doc.internal.pageSize.getHeight() - 8,
+              doc.internal.pageSize.getHeight() - 6,
               { align: 'center' }
             );
           }
         });
 
         currentY = doc.lastAutoTable.finalY + 8;
-      });
+      }
 
-      // Save PDF
       doc.save(fileName);
-      setStatusMessage(`Muvaffaqiyatli yuklandi! Jami jamoalar: ${targetTeams.length}, O'yinchilar: ${totalExportedPlayers}`);
+      setStatusMessage(`PDF muvaffaqiyatli yuklandi! Jami jamoalar: ${targetTeams.length}, O'yinchilar: ${totalExportedPlayers}`);
     } catch (err) {
       console.error('Error generating PDF:', err);
       alert('PDF yaratishda xatolik yuz berdi: ' + (err.message || ''));
@@ -264,7 +384,7 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
             <FileText className="header-icon" size={22} />
             <div>
               <h3>O'yinchilar Ma'lumotlarini PDF Export Qilish</h3>
-              <p>Formatlangan PDF hujjat ko'rinishida yuklab olish</p>
+              <p>Barcha ma'lumotlar va burchaksiz rasmlari bilan PDF saqlash</p>
             </div>
           </div>
           <button className="close-pdf-btn" onClick={onClose}>
@@ -286,7 +406,7 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
                   <Users className="option-icon text-emerald" size={24} />
                   <div>
                     <h4>1. Barcha Jamoalarni Yuklab Olish</h4>
-                    <p>Barcha ligalardagi barcha jamoalar va o'yinchilar ro'yxati</p>
+                    <p>Barcha ligalardagi barcha jamoalar va ularning to'liq o'yinchilar ro'yxati</p>
                   </div>
                 </div>
                 <div className="option-action">
@@ -307,7 +427,7 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
                   <Trophy className="option-icon text-amber" size={24} />
                   <div>
                     <h4>2. Liga Bo'yicha Yuklab Olish</h4>
-                    <p>Tanlangan ligadagi barcha jamoalar va o'yinchilarni yuklaydi</p>
+                    <p>Tanlangan ligadagi barcha jamoalar va ularning o'yinchilarini yuklaydi</p>
                   </div>
                 </div>
                 <div className="option-inputs">
@@ -340,7 +460,7 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
                   <Shield className="option-icon text-indigo" size={24} />
                   <div>
                     <h4>3. Bitta Jamoani Yuklab Olish</h4>
-                    <p>Liga va jamoani tanlab faqat shu jamoa o'yinchilarini yuklaydi</p>
+                    <p>Liga va jamoani tanlab faqat shu jamoa o mezonlari bo'yicha o'yinchilarni yuklaydi</p>
                   </div>
                 </div>
                 <div className="option-inputs dual">
