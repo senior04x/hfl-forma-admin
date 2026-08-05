@@ -324,21 +324,16 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
       // Render Organization Logo if available
       if (orgLogoB64) {
         try {
-          doc.saveGraphicsState();
           const logoSize = 16;
           const logoX = 12;
           const logoY = 4;
-          const radius = logoSize / 2;
 
-          doc.circle(logoX + radius, logoY + radius, radius, 'clip');
-          const imgType = orgLogoB64.includes('png') ? 'PNG' : 'JPEG';
-          doc.addImage(orgLogoB64, imgType, logoX, logoY, logoSize, logoSize);
-          doc.restoreGraphicsState();
+          doc.addImage(orgLogoB64, 'JPEG', logoX, logoY, logoSize, logoSize);
 
-          // Logo ring
+          // White border ring around logo
           doc.setDrawColor(255, 255, 255);
-          doc.setLineWidth(0.3);
-          doc.circle(logoX + radius, logoY + radius, radius, 'S');
+          doc.setLineWidth(0.5);
+          doc.rect(logoX, logoY, logoSize, logoSize, 'S');
 
           titleStartX = 32;
         } catch (e) {
