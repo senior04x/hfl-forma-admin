@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues } from '../utils/leagueUtils';
-import { X, Trash2, Save, Eye, Crop, Plus, Check, Trophy } from 'lucide-react';
+import { X, Trash2, Save, Eye, Crop, Plus, Check, Trophy, Clock } from 'lucide-react';
 import PlayerModal from './PlayerModal';
 import ImageCropperModal from './ImageCropperModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
@@ -230,8 +230,30 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
   return (
     <>
       <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-content" style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
           <button className="close-btn" onClick={onClose}><X size={24} /></button>
+          
+          {team.created_at && (
+            <div style={{
+              position: 'absolute',
+              top: '16px',
+              left: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: '700',
+              color: '#00ff66',
+              background: 'rgba(0, 255, 102, 0.1)',
+              border: '1px solid rgba(0, 255, 102, 0.25)',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              zIndex: 10
+            }}>
+              <Clock size={13} color="#00ff66" />
+              <span>Yuborilgan vaqti: {new Date(team.created_at).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          )}
           
           {currentMode === 'view' ? (
             <div className="modal-view">

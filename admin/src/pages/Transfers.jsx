@@ -613,6 +613,25 @@ const Transfers = () => {
                 <Pencil size={20} />
                 <h2>Transfer So'rovini Tahrirlash</h2>
               </div>
+              {editingTransfer.created_at && (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  color: '#00ff66',
+                  background: 'rgba(0, 255, 102, 0.1)',
+                  border: '1px solid rgba(0, 255, 102, 0.25)',
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                  marginLeft: 'auto',
+                  marginRight: '12px'
+                }}>
+                  <Clock size={13} color="#00ff66" />
+                  <span>Yuborilgan vaqti: {new Date(editingTransfer.created_at).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              )}
               <button className="modal-close-btn" onClick={() => setEditingTransfer(null)}>
                 <X size={18} />
               </button>
