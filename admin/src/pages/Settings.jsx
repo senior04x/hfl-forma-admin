@@ -295,6 +295,23 @@ const Settings = () => {
     }
   };
 
+  // Update match duration directly from league card badge
+  const handleUpdateLeagueDurationDirect = async (leagueId, newDuration) => {
+    try {
+      const durationNum = Number(newDuration);
+      const { error } = await supabase
+        .from('leagues')
+        .update({ match_duration: durationNum })
+        .eq('id', leagueId);
+
+      if (error) throw error;
+      setMessage({ type: 'success', text: `O'yin vaqti ${durationNum} daqiqaga o'zgartirildi!` });
+      fetchLeaguesAndOrgs();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Vaqtni yangilashda xatolik: ' + err.message });
+    }
+  };
+
   // Handle direct league logo selection from league card
   const handleDirectLeagueLogoSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -338,6 +355,7 @@ const Settings = () => {
   const [leagueName, setLeagueName] = useState('');
   const [leagueLogo, setLeagueLogo] = useState('');
   const [isJunior, setIsJunior] = useState(false);
+  const [matchDuration, setMatchDuration] = useState(90);
   const [creatingLeague, setCreatingLeague] = useState(false);
 
   // League Edit/Delete state
@@ -439,6 +457,7 @@ const Settings = () => {
     setLeagueName(league.name);
     setLeagueLogo(league.logo_url || '');
     setIsJunior(!!league.is_junior);
+    setMatchDuration(league.match_duration || 90);
     setMessage({ type: '', text: '' });
 
     setTimeout(() => {
@@ -452,6 +471,7 @@ const Settings = () => {
     setLeagueName('');
     setLeagueLogo('');
     setIsJunior(false);
+    setMatchDuration(90);
   };
 
   const handleSaveLeague = async (e) => {
@@ -470,7 +490,8 @@ const Settings = () => {
           .update({
             name: newName,
             logo_url: leagueLogo.trim() || null,
-            is_junior: isJunior
+            is_junior: isJunior,
+            match_duration: Number(matchDuration) || 90
           })
           .eq('id', editingLeague.id);
 
@@ -490,6 +511,7 @@ const Settings = () => {
           logo_url: leagueLogo.trim() || null,
           organization_id: orgId,
           is_junior: isJunior,
+          match_duration: Number(matchDuration) || 90
         });
 
         if (error) throw error;
@@ -498,6 +520,7 @@ const Settings = () => {
         setLeagueName('');
         setLeagueLogo('');
         setIsJunior(false);
+        setMatchDuration(90);
       }
       fetchLeaguesAndOrgs();
     } catch (err) {
@@ -981,6 +1004,34 @@ const Settings = () => {
                     </div>
                   </div>
 
+                  {/* Match Duration Field */}
+                  <div className="settings-form-group flex-1">
+                    <label>O'yin Davomiyligi (Daqiqa)</label>
+                    <select
+                      value={matchDuration}
+                      onChange={e => setMatchDuration(Number(e.target.value))}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        color: '#fff',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        width: '100%',
+                        marginTop: '4px'
+                      }}
+                    >
+                      <option value={90} style={{ background: '#0b0e17', color: '#fff' }}>90 daqiqa (45 + 45)</option>
+                      <option value={80} style={{ background: '#0b0e17', color: '#fff' }}>80 daqiqa (40 + 40)</option>
+                      <option value={70} style={{ background: '#0b0e17', color: '#fff' }}>70 daqiqa (35 + 35)</option>
+                      <option value={60} style={{ background: '#0b0e17', color: '#fff' }}>60 daqiqa (30 + 30)</option>
+                      <option value={50} style={{ background: '#0b0e17', color: '#fff' }}>50 daqiqa (25 + 25)</option>
+                      <option value={40} style={{ background: '#0b0e17', color: '#fff' }}>40 daqiqa (20 + 20)</option>
+                      <option value={30} style={{ background: '#0b0e17', color: '#fff' }}>30 daqiqa (15 + 15)</option>
+                    </select>
+                  </div>
+
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
                     <button type="submit" className="settings-btn settings-btn-primary add-league-btn" disabled={creatingLeague}>
                       {editingLeague ? <Save size={16} /> : <Plus size={16} />}
@@ -1080,6 +1131,39 @@ const Settings = () => {
                               <h4 className="league-title">{l.name}</h4>
                               <div className="league-badges-wrap">
                                 {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
+                                {isOwner ? (
+                                  <select
+                                    value={l.match_duration || 90}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      handleUpdateLeagueDurationDirect(l.id, e.target.value);
+                                    }}
+                                    style={{
+                                      background: 'rgba(59, 130, 246, 0.2)',
+                                      color: '#60a5fa',
+                                      border: '1px solid rgba(59, 130, 246, 0.4)',
+                                      borderRadius: '8px',
+                                      padding: '3px 8px',
+                                      fontSize: '11px',
+                                      fontWeight: '800',
+                                      cursor: 'pointer',
+                                      outline: 'none'
+                                    }}
+                                    title="O'yin davomiyligini tanlang"
+                                  >
+                                    <option value={90} style={{ background: '#0b0e17', color: '#fff' }}>⏱️ 90 daq (45x2)</option>
+                                    <option value={80} style={{ background: '#0b0e17', color: '#fff' }}>⏱️ 80 daq (40x2)</option>
+                                    <option value={70} style={{ background: '#0b0e17', color: '#fff' }}>⏱️ 70 daq (35x2)</option>
+                                    <option value={60} style={{ background: '#0b0e17', color: '#fff' }}>⏱️ 60 daq (30x2)</option>
+                                    <option value={50} style={{ background: '#0b0e17', color: '#fff' }}>⏱️ 50 daq (25x2)</option>
+                                    <option value={40} style={{ background: '#0b0e17', color: '#fff' }}>⏱️ 40 daq (20x2)</option>
+                                    <option value={30} style={{ background: '#0b0e17', color: '#fff' }}>⏱️ 30 daq (15x2)</option>
+                                  </select>
+                                ) : (
+                                  <span className="junior-badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+                                    ⏱️ {l.match_duration || 90} daq ({Math.round((l.match_duration || 90) / 2)}x2)
+                                  </span>
+                                )}
                                 {!isOwner && <span className="junior-badge collab-badge">SHERIKLIK (CO-HOST)</span>}
                               </div>
                             </div>

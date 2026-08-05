@@ -31,6 +31,7 @@ const MatchControl = () => {
   const { currentOrg, orgId } = useOrg();
 
   const [match, setMatch] = useState(null);
+  const [leagueData, setLeagueData] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
   const [homePlayers, setHomePlayers] = useState([]);
@@ -551,6 +552,17 @@ const MatchControl = () => {
       if (!matchData) return;
       setMatch(matchData);
 
+      if (matchData.league) {
+        try {
+          const { data: lData } = await supabaseAdmin
+            .from('leagues')
+            .select('*')
+            .ilike('name', matchData.league.trim())
+            .maybeSingle();
+          if (lData) setLeagueData(lData);
+        } catch (lErr) {}
+      }
+
       if (matchData.home_penalty_score !== undefined && matchData.away_penalty_score !== undefined) {
         setHomePenalties(matchData.home_penalty_score || 0);
         setAwayPenalties(matchData.away_penalty_score || 0);
@@ -634,8 +646,13 @@ const MatchControl = () => {
     updateTimerDBAndState(timerSeconds, nowIso, newRunning);
   };
 
+  // Dynamic Match Duration calculation from League / Match settings
+  const matchDurationMins = Number(match?.match_duration || leagueData?.match_duration || 90);
+  const halfDurationMins = Math.round(matchDurationMins / 2);
+  const halfDurationSecs = halfDurationMins * 60;
+
   const resetTimerManual = () => {
-    const defaultSec = match?.status === 'second_half' ? 2700 : 0;
+    const defaultSec = match?.status === 'second_half' ? halfDurationSecs : 0;
     const nowIso = isTimerRunning ? new Date().toISOString() : null;
     updateTimerDBAndState(defaultSec, nowIso, isTimerRunning);
   };
@@ -690,7 +707,7 @@ const MatchControl = () => {
           newRunning = false;
           nowIso = null;
         } else if (newStatus === 'second_half') {
-          newBaseSec = timerSeconds < 2700 ? 2700 : timerSeconds;
+          newBaseSec = timerSeconds < halfDurationSecs ? halfDurationSecs : timerSeconds;
           newRunning = true;
         } else if (newStatus === 'scheduled') {
           newBaseSec = 0;

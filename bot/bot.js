@@ -2,7 +2,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const { createClient } = require('@supabase/supabase-js');
 
 // Config
-const TELEGRAM_TOKEN = '8920990708:AAEhrRtX06AEDhJyKNx_CSLWYMNSYviEYHc';
+const TELEGRAM_TOKEN = '8644740765:AAHHhAvzTpUgfz5kevg5iiDfA9GafA1m6Vs';
 const SUPABASE_URL = 'https://xzzyhfyazwohdqqbjiiy.supabase.co';
 const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6enloZnlhendvaGRxcWJqaWl5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MzEwMzU1MSwiZXhwIjoyMDk4Njc5NTUxfQ.Z_qdzR5mYepOEyW57WXl9fb1v5FV4xEYDP-LvihiU6I';
 
@@ -15,362 +15,300 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-    res.send('HFL Bot is running...');
+    res.send('Amatora Bot is running...');
 });
 
 app.listen(PORT, () => {
     console.log(`Web server listening on port ${PORT}`);
 });
 
-console.log('Telegram Bot is starting up... Waiting for realtime events');
+console.log('Amatora Telegram Bot is starting up... Waiting for realtime events');
 
-// Helper to format messages
-function getStatusText(status) {
-    if (status === 'approved') return '✅ Tasdiqlangan';
-    if (status === 'rejected') return '❌ Rad etilgan';
-    if (status === 'partially_approved') return '⚠️ Qisman tasdiqlangan';
-    return '⏳ Kutilmoqda';
+// Memory Cache for last message sent per chat (auto-delete old messages)
+const lastChatMsgCache = new Map();
+
+async function sendCleanMessage(chatId, text, options = { parse_mode: 'HTML' }, dbRecordToUpdate = null) {
+    const prevMsgId = lastChatMsgCache.get(chatId) || (dbRecordToUpdate ? dbRecordToUpdate.telegram_message_id : null);
+    if (prevMsgId) {
+        try {
+            await bot.deleteMessage(chatId, prevMsgId);
+        } catch (e) {}
+    }
+
+    try {
+        const sent = await bot.sendMessage(chatId, text, options);
+        if (sent && sent.message_id) {
+            const sentId = sent.message_id.toString();
+            lastChatMsgCache.set(chatId, sentId);
+
+            if (dbRecordToUpdate && dbRecordToUpdate.id) {
+                const table = dbRecordToUpdate.captain_phone ? 'teams' : 'applications';
+                await supabase.from(table).update({ telegram_chat_id: chatId, telegram_message_id: sentId }).eq('id', dbRecordToUpdate.id);
+            }
+            return sent;
+        }
+    } catch (err) {
+        console.error('sendCleanMessage error:', err);
+    }
+    return null;
+}
+
+// Helper to format badges
+function getStatusBadge(status) {
+    if (status === 'approved') return '✅ TASDIQLANDI';
+    if (status === 'rejected') return '❌ RAD ETILDI';
+    if (status === 'partially_approved') return '⚠️ QISMAN TASDIQLANDI';
+    return '⏳ KUTILMOQDA';
 }
 
 function getShortId(id) {
     return id ? id.split('-')[0].toUpperCase() : 'N/A';
 }
 
-// 1. /start command - Deep link or Ask for phone number
-bot.onText(/\/start(.*)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const deepLinkParam = match[1] ? match[1].trim() : '';
-
-    if (deepLinkParam.startsWith('app_')) {
-        const applicationId = deepLinkParam.replace('app_', '');
+// Format Individual Player Application Details
+async function formatApplicationMessage(appData) {
+    let orgName = 'Amatora League';
+    if (appData.organization_id) {
         try {
-            const { data, error } = await supabase.from('applications').select('*, teams(name, league)').eq('id', applicationId).single();
-            if (error || !data) return bot.sendMessage(chatId, "Bunday ariza topilmadi. Yoki id noto'g'ri.");
-
-            if (data.telegram_message_id) {
-                bot.deleteMessage(chatId, data.telegram_message_id).catch(() => {});
-            }
-
-            const teamName = data.teams ? data.teams.name : 'Yakkaxon (Jamoasiz)';
-            const message = `
-🏆 <b>Havas Futbol Ligasi</b>
-
-Assalomu alaykum, <b>${data.first_name} ${data.last_name}</b>! ⚽️
-
-📑 <b>Ariza raqami:</b> #${getShortId(data.id)}
-🏆 <b>Turnir:</b> ${data.teams ? data.teams.league || 'Kiritilmagan' : '-'}
-🛡 <b>Jamoa:</b> ${teamName}
-📊 <b>Sizning holatingiz:</b> ${getStatusText(data.status)}
-
-<i>Arizangiz holati o'zgarganda tizim sizga avtomatik xabar yuboradi.</i>
-            `;
-            const sentMsg = await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
-            await supabase.from('applications').update({ telegram_chat_id: chatId, telegram_message_id: sentMsg.message_id.toString() }).eq('id', applicationId);
-        } catch (err) {
-            console.error(err);
-        }
-    } else if (deepLinkParam.startsWith('team_')) {
-        const teamId = deepLinkParam.replace('team_', '');
-        try {
-            const { data, error } = await supabase.from('teams').select('*').eq('id', teamId).single();
-            if (error || !data) return bot.sendMessage(chatId, "Bunday jamoa topilmadi. Yoki id noto'g'ri.");
-
-            if (data.telegram_message_id) {
-                bot.deleteMessage(chatId, data.telegram_message_id).catch(() => {});
-            }
-
-            const message = `
-🏆 <b>Havas Futbol Ligasi</b>
-
-Assalomu alaykum, <b>${data.name}</b> jamoasi sardori! 🛡
-
-📑 <b>Jamoa ID:</b> #${getShortId(data.id)}
-🏆 <b>Turnir:</b> ${data.league || 'Kiritilmagan'}
-📞 <b>Telefoningiz:</b> ${data.captain_phone}
-📊 <b>Jamoa Holati:</b> ${getStatusText(data.status)}
-
-<i>Jamoangiz holati o'zgarganda yoki yangi o'yinchi holati yangilanganda ushbu bot orqali avtomatik xabarnoma olasiz!</i>
-            `;
-            const sentMsg = await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
-            await supabase.from('teams').update({ telegram_chat_id: chatId, telegram_message_id: sentMsg.message_id.toString() }).eq('id', teamId);
-        } catch (err) {
-            console.error(err);
-        }
-    } else if (deepLinkParam.toLowerCase().includes('login')) {
-        const rawParam = deepLinkParam.trim();
-        const digits = rawParam.match(/\d+/g) || [];
-        let phoneDigits = '';
-        let otpCode = '';
-
-        for (const d of digits) {
-            if (d.length >= 9) phoneDigits = d.slice(-9);
-            else if (d.length === 6) otpCode = d;
-        }
-
-        if (!otpCode) otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-        try {
-            if (phoneDigits) {
-                // Update chat id and OTP in teams and applications
-                await supabase.from('teams').update({ telegram_chat_id: chatId, telegram_message_id: 'OTP_' + otpCode }).or(`captain_phone.ilike.%${phoneDigits}%`);
-                await supabase.from('applications').update({ telegram_chat_id: chatId, telegram_message_id: 'OTP_' + otpCode }).or(`phone.ilike.%${phoneDigits}%`);
-
-                // Save OTP to otp_codes table
-                const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-                await supabase.from('otp_codes').upsert({
-                    phone: phoneDigits,
-                    code: otpCode,
-                    expires_at: expiresAt,
-                    is_used: false,
-                    created_at: new Date().toISOString()
-                }, { onConflict: 'phone' });
-            }
-
-            const message = `
-🔑 <b>HFL Ilovasiga kirish kodingiz:</b> <code>${otpCode}</code>
-
-📱 <i>Ushbu 6 xonali tasdiqlash kodini HFL mobil ilovasiga kiriting. Kod 5 daqiqa davomida amal qiladi.</i>
-            `;
-            await bot.sendMessage(chatId, message, {
-                parse_mode: 'HTML',
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            {
-                                text: '📋 Copy Code',
-                                copy_text: { text: otpCode }
-                            }
-                        ]
-                    ]
-                }
-            });
-        } catch (err) {
-            console.error('Deep link login error:', err);
-            bot.sendMessage(chatId, "Kirish kodini shakllantirishda xatolik yuz berdi.");
-        }
-    } else {
-        // Default behavior: Ask for contact
-        const opts = {
-            reply_markup: {
-                keyboard: [
-                    [{ text: "📱 Telefon raqamni yuborish", request_contact: true }]
-                ],
-                resize_keyboard: true,
-                one_time_keyboard: true
-            }
-        };
-        bot.sendMessage(chatId, "Assalomu alaykum! Havas Futbol Ligasining rasmiy botiga xush kelibsiz.\n\nIltimos, arizangiz holatini ko'rish uchun pastdagi <b>📱 Telefon raqamni yuborish</b> tugmasini bosing.", Object.assign({ parse_mode: 'HTML' }, opts));
+            const { data: org } = await supabase.from('organizations').select('name').eq('id', appData.organization_id).single();
+            if (org && org.name) orgName = org.name;
+        } catch (e) {}
     }
+
+    let teamName = 'Yakkaxon (O\'yinchi)';
+    let leagueName = appData.league || '-';
+    let isTeamApp = false;
+
+    if (appData.teams) {
+        teamName = appData.teams.name || teamName;
+        leagueName = appData.teams.league || leagueName;
+        isTeamApp = true;
+    } else if (appData.team_id) {
+        try {
+            const { data: tm } = await supabase.from('teams').select('name, league').eq('id', appData.team_id).single();
+            if (tm) {
+                teamName = tm.name || teamName;
+                leagueName = tm.league || leagueName;
+                isTeamApp = true;
+            }
+        } catch (e) {}
+    }
+
+    const typeText = isTeamApp ? 'Jamoaviy' : 'Yakkaxon';
+    const fullName = `${appData.first_name || ''} ${appData.last_name || ''}`.trim() || 'O\'yinchi';
+
+    return `
+📋 <b>ARIZA MA'LUMOTLARI</b>
+
+🏢 <b>Tashkilot:</b> ${orgName}
+🏆 <b>Liga:</b> ${leagueName}
+🛡 <b>Jamoa:</b> ${teamName}
+👤 <b>Arizachi:</b> ${fullName}
+📌 <b>Turi:</b> ${typeText}
+📊 <b>Holati:</b> ${getStatusBadge(appData.status)}
+
+<i>Arizangiz holati o'zgarganda bot orqali avtomatik xabar beriladi.</i>
+`.trim();
+}
+
+// Format Team Application Details
+async function formatTeamMessage(teamData) {
+    let orgName = 'Amatora League';
+    if (teamData.organization_id) {
+        try {
+            const { data: org } = await supabase.from('organizations').select('name').eq('id', teamData.organization_id).single();
+            if (org && org.name) orgName = org.name;
+        } catch (e) {}
+    }
+
+    return `
+📋 <b>JAMOA ARIZA MA'LUMOTLARI</b>
+
+🏢 <b>Tashkilot:</b> ${orgName}
+🏆 <b>Liga:</b> ${teamData.league || 'Super liga'}
+🛡 <b>Jamoa nomi:</b> ${teamData.name}
+📞 <b>Sardor tel:</b> ${teamData.captain_phone || '-'}
+📌 <b>Turi:</b> Jamoaviy
+📊 <b>Holati:</b> ${getStatusBadge(teamData.status)}
+
+<i>Tashkilotchilar ko'rib chiqqach sizga xabar beriladi.</i>
+`.trim();
+}
+
+// 1. /start command — faqat telefon raqam so'raydi
+bot.onText(/\/start(.*)/, async (msg) => {
+    const chatId = msg.chat.id;
+
+    await sendCleanMessage(chatId, "Assalomu alaykum! 👋\n\n<b>Amatora</b> ilovasiga kirish uchun tasdiqlash kodi olish kerak.\n\nPastdagi <b>📱 Telefon raqamni yuborish</b> tugmasini bosing.", {
+        parse_mode: 'HTML',
+        reply_markup: {
+            keyboard: [
+                [{ text: "📱 Telefon raqamni yuborish", request_contact: true }]
+            ],
+            resize_keyboard: true,
+            one_time_keyboard: true
+        }
+    });
 });
 
-// 2. Handle Contact
+// 2. Handle Contact — faqat 4 xonali tasdiqlash kodi yuboradi
 bot.on('contact', async (msg) => {
     const chatId = msg.chat.id;
     let rawPhone = msg.contact.phone_number || '';
-    
-    // Remove any spaces or non-digit/plus characters just in case
     let phone = rawPhone.replace(/[^0-9+]/g, '');
 
-    // Normalize phone to start with +
     if (!phone.startsWith('+')) {
         phone = '+' + phone;
     }
 
-    bot.sendMessage(chatId, "🔍 Ma'lumotlaringiz qidirilmoqda...", { reply_markup: { remove_keyboard: true } });
+    const cleanDigits = phone.replace(/\D/g, '').slice(-9);
 
     try {
-        let found = false;
-
-        // A) Check if Team Captain
-        const { data: teamData, error: teamError } = await supabase
+        // Telefon raqamni bazadan tekshirish
+        const { data: teams } = await supabase
             .from('teams')
-            .select('*')
-            .eq('captain_phone', phone)
-            .single();
+            .select('id, captain_phone, telegram_chat_id')
+            .or(`captain_phone.ilike.%${cleanDigits}%`)
+            .limit(1);
 
-        if (teamData && !teamError) {
-            found = true;
-            await supabase.from('teams').update({ telegram_chat_id: chatId }).eq('id', teamData.id);
-
-            const message = `
-🏆 <b>Havas Futbol Ligasi</b>
-
-Assalomu alaykum, <b>${teamData.name}</b> jamoasi sardori! 🛡
-
-📑 <b>Jamoa ID:</b> #${getShortId(teamData.id)}
-🏆 <b>Turnir:</b> ${teamData.league || 'Kiritilmagan'}
-📞 <b>Telefoningiz:</b> ${teamData.captain_phone}
-📊 <b>Jamoa Holati:</b> ${getStatusText(teamData.status)}
-
-<i>Jamoangiz holati o'zgarganda yoki yangi o'yinchi holati yangilanganda ushbu bot orqali avtomatik xabarnoma olasiz!</i>
-            `;
-            await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
-        }
-
-        // B) Check if Individual Player (can be multiple applications)
-        const { data: appData, error: appError } = await supabase
+        const { data: apps } = await supabase
             .from('applications')
-            .select('*, teams(name, league)')
-            .eq('phone', phone)
-            .order('created_at', { ascending: false });
+            .select('id, phone, telegram_chat_id')
+            .or(`phone.ilike.%${cleanDigits}%`)
+            .limit(1);
 
-        if (appData && appData.length > 0 && !appError) {
-            found = true;
-            await supabase.from('applications').update({ telegram_chat_id: chatId }).eq('phone', phone);
+        const found = (teams && teams.length > 0) || (apps && apps.length > 0);
 
-            for (const app of appData) {
-                const teamName = app.teams ? app.teams.name : 'Yakkaxon (Jamoasiz)';
-                const message = `
-🏆 <b>Havas Futbol Ligasi</b>
-
-Assalomu alaykum, <b>${app.first_name} ${app.last_name}</b>! ⚽️
-
-📑 <b>Ariza raqami:</b> #${getShortId(app.id)}
-🏆 <b>Turnir:</b> ${app.teams ? app.teams.league || 'Kiritilmagan' : '-'}
-🛡 <b>Jamoa:</b> ${teamName}
-📊 <b>Sizning holatingiz:</b> ${getStatusText(app.status)}
-
-<i>Arizangiz holati o'zgarganda tizim sizga avtomatik xabar yuboradi.</i>
-                `;
-                await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
-            }
+        if (!found) {
+            await sendCleanMessage(chatId, `<b>${phone}</b> raqamiga tegishli ariza topilmadi.\n\nIltimos, avval ilova orqali ariza topshiring.`, { parse_mode: 'HTML', reply_markup: { remove_keyboard: true } });
+            return;
         }
 
-        // C) Generate & Save Login OTP Code for HFL Mobile App
-        if (found) {
-            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-            const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 min expiry
-            const cleanDigitsPhone = phone.replace(/\D/g, '');
-
-            try {
-                await supabase.from('otp_codes').upsert({
-                    phone: cleanDigitsPhone,
-                    code: otpCode,
-                    expires_at: expiresAt,
-                    is_used: false,
-                    created_at: new Date().toISOString()
-                }, { onConflict: 'phone' });
-            } catch (otpErr) {
-                console.warn('OTP save error:', otpErr);
-            }
-
-            const otpMessage = `
-🔑 <b>HFL Ilovasiga kirish kodingiz:</b> <code>${otpCode}</code>
-
-📱 <i>Ushbu 6 xonali tasdiqlash kodini HFL mobil ilovasiga kiriting. Kod 5 daqiqa davomida amal qiladi.</i>
-            `;
-            await bot.sendMessage(chatId, otpMessage, {
-                parse_mode: 'HTML',
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            {
-                                text: '📋 Copy Code',
-                                copy_text: { text: otpCode }
-                            }
-                        ]
-                    ]
-                }
-            });
-        } else {
-            bot.sendMessage(chatId, `Bazada <b>${phone}</b> raqamiga tegishli hech qanday ariza yoki jamoa topilmadi.\n\nIltimos, ilova yoki sayt orqali ariza topshirgan raqamingizni yuborganingizga ishonch hosil qiling.`, { parse_mode: 'HTML' });
+        // telegram_chat_id saqlash
+        if (teams && teams.length > 0) {
+            await supabase.from('teams').update({ telegram_chat_id: chatId }).or(`captain_phone.ilike.%${cleanDigits}%`);
         }
+        if (apps && apps.length > 0) {
+            await supabase.from('applications').update({ telegram_chat_id: chatId }).or(`phone.ilike.%${cleanDigits}%`);
+        }
+
+        // 4 xonali OTP generatsiya
+        const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+        // OTP saqlash
+        try {
+            const otpVal = `OTP_${otpCode}`;
+            if (teams && teams.length > 0) {
+                await supabase.from('teams').update({ telegram_message_id: otpVal }).or(`captain_phone.ilike.%${cleanDigits}%`);
+            }
+            if (apps && apps.length > 0) {
+                await supabase.from('applications').update({ telegram_message_id: otpVal }).or(`phone.ilike.%${cleanDigits}%`);
+            }
+            await supabase.from('otp_codes').upsert({
+                phone: cleanDigits,
+                code: otpCode,
+                expires_at: expiresAt,
+                is_used: false,
+                created_at: new Date().toISOString()
+            }, { onConflict: 'phone' });
+        } catch (otpErr) {
+            console.warn('OTP save error:', otpErr);
+        }
+
+        // Faqat kodni yuborish
+        await sendCleanMessage(chatId, `🔑 <b>Tasdiqlash kodingiz:</b> <code>${otpCode}</code>\n\n📱 <i>4 xonali kodni ilovaga kiriting. Kod 5 daqiqa amal qiladi.</i>`, {
+            parse_mode: 'HTML',
+            reply_markup: {
+                remove_keyboard: true,
+                inline_keyboard: [
+                    [{ text: '📋 Nusxalash', copy_text: { text: otpCode } }]
+                ]
+            }
+        });
 
     } catch (err) {
         console.error(err);
-        bot.sendMessage(chatId, "Tizimda xatolik yuz berdi. Iltimos keyinroq qayta urinib ko'ring.");
+        sendCleanMessage(chatId, "Xatolik yuz berdi. Qayta urinib ko'ring.", { reply_markup: { remove_keyboard: true } });
     }
 });
 
 const lastStatusCache = new Map();
 
-// 3. Realtime listener for status changes (Individuals)
+// 3. Realtime listener for status changes (Individual Applications)
 supabase
   .channel('applications-status')
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'applications' }, async (payload) => {
       const newRecord = payload.new;
-      
       const cacheKey = 'app_' + newRecord.id;
       const prevStatus = lastStatusCache.get(cacheKey);
 
       if (prevStatus !== newRecord.status) {
           lastStatusCache.set(cacheKey, newRecord.status);
 
-          let teamName = 'Yakkaxon (Jamoasiz)';
-          let captainChatId = null;
-
-          let teamLeague = 'Kiritilmagan';
-
-          if (newRecord.team_id) {
-              const { data: teamData } = await supabase.from('teams').select('name, telegram_chat_id, league').eq('id', newRecord.team_id).single();
-              if (teamData) {
-                  teamName = teamData.name;
-                  captainChatId = teamData.telegram_chat_id;
-                  teamLeague = teamData.league || 'Kiritilmagan';
-              }
+          let chatId = newRecord.telegram_chat_id;
+          if (!chatId && newRecord.phone) {
+              const cleanP = newRecord.phone.replace(/\D/g, '').slice(-9);
+              const { data: existingApp } = await supabase
+                  .from('applications')
+                  .select('telegram_chat_id')
+                  .or(`phone.ilike.%${cleanP}%`)
+                  .not('telegram_chat_id', 'is', null)
+                  .limit(1);
+              if (existingApp && existingApp.length > 0) chatId = existingApp[0].telegram_chat_id;
           }
 
-          // A) Notify the Player
-          if (newRecord.telegram_chat_id) {
-              if (newRecord.telegram_message_id) {
-                  bot.deleteMessage(newRecord.telegram_chat_id, newRecord.telegram_message_id).catch(() => {});
-              }
-              const playerMessage = `
-🏆 <b>Havas Futbol Ligasi</b>
+          if (chatId) {
+              const statusHeader = newRecord.status === 'approved'
+                  ? '🎉 <b>ARIZANGIZ TASDIQLANDI!</b>'
+                  : newRecord.status === 'rejected'
+                  ? '❌ <b>ARIZANGIZ RAD ETILDI</b>'
+                  : '📢 <b>ARIZA HOLATI O\'ZGARDI</b>';
 
-Hurmatli <b>${newRecord.first_name} ${newRecord.last_name}</b>, sizning arizangiz bo'yicha qaror qabul qilindi!
+              const detailMsg = await formatApplicationMessage(newRecord);
+              const fullMsg = `${statusHeader}\n\n${detailMsg}`;
 
-🏆 <b>Turnir:</b> ${teamLeague}
-🛡 <b>Jamoangiz:</b> ${teamName}
-🆕 <b>Yangi holat:</b> ${getStatusText(newRecord.status)}
-
-<i>Murojaat uchun ma'muriyat bilan bog'laning.</i>
-              `;
-              try {
-                  const sentMsg = await bot.sendMessage(newRecord.telegram_chat_id, playerMessage, { parse_mode: 'HTML' });
-                  await supabase.from('applications').update({ telegram_message_id: sentMsg.message_id.toString() }).eq('id', newRecord.id);
-              } catch (e) {}
+              await sendCleanMessage(chatId, fullMsg, { parse_mode: 'HTML' }, newRecord);
           }
-
-          // B) Notify the Team Captain
-          // Kapitanga har bitta o'yinchi uchun alohida xabar yuborish o'chirildi (spam bo'lmasligi uchun).
-          // Jamoa holati o'zgarganda Team Listener orqali bitta xabar boradi.
       }
   })
   .subscribe();
 
-// 4. Realtime listener for team status changes
+// 4. Realtime listener for Team status changes
 supabase
   .channel('teams-status')
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams' }, async (payload) => {
       const newRecord = payload.new;
-
       const cacheKey = 'team_' + newRecord.id;
       const prevStatus = lastStatusCache.get(cacheKey);
 
-      if (prevStatus !== newRecord.status && newRecord.telegram_chat_id) {
+      if (prevStatus !== newRecord.status) {
           lastStatusCache.set(cacheKey, newRecord.status);
 
-          if (newRecord.telegram_message_id) {
-              bot.deleteMessage(newRecord.telegram_chat_id, newRecord.telegram_message_id).catch(() => {});
+          let chatId = newRecord.telegram_chat_id;
+          if (!chatId && newRecord.captain_phone) {
+              const cleanP = newRecord.captain_phone.replace(/\D/g, '').slice(-9);
+              const { data: existingTeam } = await supabase
+                  .from('teams')
+                  .select('telegram_chat_id')
+                  .or(`captain_phone.ilike.%${cleanP}%`)
+                  .not('telegram_chat_id', 'is', null)
+                  .limit(1);
+              if (existingTeam && existingTeam.length > 0) chatId = existingTeam[0].telegram_chat_id;
           }
 
-          const message = `
-🏆 <b>Havas Futbol Ligasi</b>
+          if (chatId) {
+              const statusHeader = newRecord.status === 'approved'
+                  ? '🎉 <b>JAMOA ARIZASI TASDIQLANDI!</b>'
+                  : newRecord.status === 'rejected'
+                  ? '❌ <b>JAMOA ARIZASI RAD ETILDI</b>'
+                  : '📢 <b>JAMOA ARIZA HOLATI O\'ZGARDI</b>';
 
-Hurmatli Sardor, jamoangiz arizasi bo'yicha qaror qabul qilindi!
+              const detailMsg = await formatTeamMessage(newRecord);
+              const fullMsg = `${statusHeader}\n\n${detailMsg}`;
 
-🏆 <b>Turnir:</b> ${newRecord.league || 'Kiritilmagan'}
-🛡 <b>Jamoa:</b> ${newRecord.name}
-🆕 <b>Yangi holat:</b> ${getStatusText(newRecord.status)}
-
-<i>Qo'shimcha tafsilotlar uchun ma'muriyat bilan bog'lanishingiz mumkin.</i>
-          `;
-          
-          try {
-              const sentMsg = await bot.sendMessage(newRecord.telegram_chat_id, message, { parse_mode: 'HTML' });
-              await supabase.from('teams').update({ telegram_message_id: sentMsg.message_id.toString() }).eq('id', newRecord.id);
-          } catch(e) {}
+              await sendCleanMessage(chatId, fullMsg, { parse_mode: 'HTML' }, newRecord);
+          }
       }
   })
   .subscribe();
@@ -388,7 +326,6 @@ supabase
           if (!homeTeam || !awayTeam) return;
 
           const chatIds = new Set();
-          
           if (homeTeam.telegram_chat_id) chatIds.add(homeTeam.telegram_chat_id);
           if (awayTeam.telegram_chat_id) chatIds.add(awayTeam.telegram_chat_id);
 
@@ -400,13 +337,13 @@ supabase
 
           const message = [
               '',
-              '\uD83D\uDCE2 <b>Yangi O\'yin Belgilandi!</b>',
+              '📢 <b>Yangi O\'yin Belgilandi!</b>',
               '',
-              '\u26BD <b>' + homeTeam.name + '</b> \uD83C\uDD9A <b>' + awayTeam.name + '</b>',
-              '\uD83C\uDFC6 <b>Liga:</b> ' + (match.league || '-'),
-              '\uD83D\uDCC5 <b>Sana:</b> ' + match.match_date,
-              '\u23F0 <b>Vaqt:</b> ' + match.match_time,
-              '\uD83C\uDFDF <b>Manzil:</b> ' + match.location,
+              '⚽ <b>' + homeTeam.name + '</b> 🆚 <b>' + awayTeam.name + '</b>',
+              '🏆 <b>Liga:</b> ' + (match.league || '-'),
+              '📅 <b>Sana:</b> ' + match.match_date,
+              '⏰ <b>Vaqt:</b> ' + match.match_time,
+              '🏟 <b>Manzil:</b> ' + match.location,
               '',
               '<i>Barchaga omad yor bo\'lsin!</i>'
           ].join('\n');
@@ -415,7 +352,6 @@ supabase
           if (match.youtube_link) {
               inlineKeyboard.push([{ text: "🔴 Jonli ko'rish", url: match.youtube_link }]);
           }
-          inlineKeyboard.push([{ text: "📊 Barcha o'yinlarni ko'rish", url: "https://hfl-forma.vercel.app/schedule" }]);
 
           const opts = {
               parse_mode: 'HTML',
@@ -426,9 +362,9 @@ supabase
 
           for (const chatId of chatIds) {
               try {
-                  await bot.sendMessage(chatId, message, opts);
+                  await sendCleanMessage(chatId, message, opts);
               } catch (e) {
-                  console.error("Failed to send to", chatId, e.message);
+                  console.error("Failed to send match to", chatId, e.message);
               }
           }
       } catch (err) {
@@ -437,14 +373,13 @@ supabase
   })
   .subscribe();
 
-// 6. Realtime listener for Match Results (when match finishes or reverts)
+// 6. Realtime listener for Match Results
 supabase
   .channel('matches-results')
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches' }, async (payload) => {
       const oldMatch = payload.old;
       const newMatch = payload.new;
 
-      // Detect status changes
       const isFinished = oldMatch.status !== 'finished' && newMatch.status === 'finished';
       const isReverted = oldMatch.status === 'finished' && newMatch.status === 'scheduled';
 
@@ -456,14 +391,12 @@ supabase
 
           if (!homeTeam || !awayTeam) return;
 
-          // Fetch match events for summary
           const { data: matchEvents } = await supabase
               .from('match_events')
               .select('*, player:player_id(first_name, last_name)')
               .eq('match_id', newMatch.id)
               .order('minute', { ascending: true });
 
-          // Build goals text
           const homeGoals = (matchEvents || []).filter(e => e.event_type === 'goal' && e.team_id === newMatch.home_team_id);
           const awayGoals = (matchEvents || []).filter(e => e.event_type === 'goal' && e.team_id === newMatch.away_team_id);
           const yellowCards = (matchEvents || []).filter(e => e.event_type === 'yellow_card').length;
@@ -472,7 +405,6 @@ supabase
           const homeGoalsText = homeGoals.map(g => (g.player ? g.player.first_name + ' ' + g.player.last_name : '?') + " " + g.minute + "'").join(', ') || '-';
           const awayGoalsText = awayGoals.map(g => (g.player ? g.player.first_name + ' ' + g.player.last_name : '?') + " " + g.minute + "'").join(', ') || '-';
 
-          // Collect all chat IDs
           const chatIds = new Set();
           if (homeTeam.telegram_chat_id) chatIds.add(homeTeam.telegram_chat_id);
           if (awayTeam.telegram_chat_id) chatIds.add(awayTeam.telegram_chat_id);
@@ -487,41 +419,30 @@ supabase
           if (isFinished) {
               message = [
                   '',
-                  '\u26BD <b>O\'yin Yakunlandi!</b>',
+                  '⚽ <b>O\'yin Yakunlandi!</b>',
                   '',
                   '<b>' + homeTeam.name + '</b> <b>' + (newMatch.home_score || 0) + ' : ' + (newMatch.away_score || 0) + '</b> <b>' + awayTeam.name + '</b>',
                   '',
-                  '\uD83C\uDFC6 <b>Liga:</b> ' + (newMatch.league || '-'),
-                  '\u26BD <b>' + homeTeam.name + ':</b> ' + homeGoalsText,
-                  '\u26BD <b>' + awayTeam.name + ':</b> ' + awayGoalsText,
-                  '\uD83D\uDFE8 Sariq: ' + yellowCards + ' | \uD83D\uDFE5 Qizil: ' + redCards,
+                  '🏆 <b>Liga:</b> ' + (newMatch.league || '-'),
+                  '⚽ <b>' + homeTeam.name + ':</b> ' + homeGoalsText,
+                  '⚽ <b>' + awayTeam.name + ':</b> ' + awayGoalsText,
+                  '🟨 Sariq: ' + yellowCards + ' | 🟥 Qizil: ' + redCards,
                   '',
                   '<i>Keyingi o\'yinlarni kuzatib boring!</i>'
               ].join('\n');
           } else if (isReverted) {
               message = [
                   '',
-                  '\u26A0\uFE0F <b>O\'yin holati qayta tiklandi!</b>',
+                  '⚠️ <b>O\'yin holati qayta tiklandi!</b>',
                   '',
                   '<b>' + homeTeam.name + '</b> 🆚 <b>' + awayTeam.name + '</b>',
-                  'uzrasidagi o\'yin natijasi xatolik tufayli bekor qilindi va o\'yin holati qayta <b>Rejalashtirilgan</b> holatiga qaytarildi.',
-                  '',
-                  '<i>Noqulaylik uchun uzr so\'raymiz!</i>'
+                  'o\'yini holati qayta <b>Rejalashtirilgan</b> holatiga qaytarildi.'
               ].join('\n');
           }
 
-          const opts = {
-              parse_mode: 'HTML',
-              reply_markup: {
-                  inline_keyboard: [
-                      [{ text: '\uD83D\uDCCA Barcha o\'yinlarni ko\'rish', url: 'https://hfl-forma.vercel.app/schedule' }]
-                  ]
-              }
-          };
-
           for (const chatId of chatIds) {
               try {
-                  await bot.sendMessage(chatId, message, opts);
+                  await sendCleanMessage(chatId, message, { parse_mode: 'HTML' });
               } catch (e) {
                   console.error('Result send failed:', chatId, e.message);
               }
@@ -531,4 +452,3 @@ supabase
       }
   })
   .subscribe();
-
