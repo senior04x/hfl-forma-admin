@@ -523,6 +523,26 @@ const Schedule = () => {
 
   const mainSponsorLogo = mainSponsor?.logo_url || '';
 
+  const checkIsShowSponsors = (leagueObj, leagueName) => {
+    if (!leagueName && !leagueObj) return true;
+    const nameToUse = leagueName || leagueObj?.name;
+    const idToUse = leagueObj?.id;
+
+    const localByName = nameToUse ? localStorage.getItem(`hfl_league_show_sponsors_${nameToUse}`) : null;
+    if (localByName === 'false') return false;
+    if (localByName === 'true') return true;
+
+    const localById = idToUse ? localStorage.getItem(`hfl_league_show_sponsors_${idToUse}`) : null;
+    if (localById === 'false') return false;
+    if (localById === 'true') return true;
+
+    if (leagueObj && leagueObj.show_sponsors !== undefined && leagueObj.show_sponsors !== null) {
+      return leagueObj.show_sponsors !== false;
+    }
+
+    return true;
+  };
+
   const loadLeaguesAndData = async () => {
     setLoading(true);
     try {
@@ -1338,7 +1358,7 @@ const Schedule = () => {
               {(() => {
                 const targetLeagueName = selectedMatchForYtExport?.league || exportLeague;
                 const currentLeagueObj = activeLeagues.find(l => l.name === targetLeagueName);
-                const isShowSponsors = currentLeagueObj ? (currentLeagueObj.show_sponsors !== false) : true;
+                const isShowSponsors = checkIsShowSponsors(currentLeagueObj, targetLeagueName);
                 if (!isShowSponsors) return null;
                 const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
                 if (secondarySponsors.length === 0) return null;
@@ -1443,6 +1463,9 @@ const Schedule = () => {
 
               {/* Bottom Selected Secondary Sponsors Banner */}
               {(() => {
+                const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
+                const isShowSponsors = checkIsShowSponsors(currentLeagueObj, exportLeague);
+                if (!isShowSponsors) return null;
                 const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
                 if (secondarySponsors.length === 0) return null;
                 return (

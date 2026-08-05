@@ -90,6 +90,26 @@ export default function Standings() {
 
   const mainSponsorLogo = mainSponsor?.logo_url || '';
 
+  const checkIsShowSponsors = (leagueObj, leagueName) => {
+    if (!leagueName && !leagueObj) return true;
+    const nameToUse = leagueName || leagueObj?.name;
+    const idToUse = leagueObj?.id;
+
+    const localByName = nameToUse ? localStorage.getItem(`hfl_league_show_sponsors_${nameToUse}`) : null;
+    if (localByName === 'false') return false;
+    if (localByName === 'true') return true;
+
+    const localById = idToUse ? localStorage.getItem(`hfl_league_show_sponsors_${idToUse}`) : null;
+    if (localById === 'false') return false;
+    if (localById === 'true') return true;
+
+    if (leagueObj && leagueObj.show_sponsors !== undefined && leagueObj.show_sponsors !== null) {
+      return leagueObj.show_sponsors !== false;
+    }
+
+    return true;
+  };
+
   const exportRef = useRef(null);
   const cardsExportRef = useRef(null);
 
@@ -742,7 +762,7 @@ export default function Standings() {
 
             {(() => {
               const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
-              const isShowSponsors = currentLeagueObj ? (currentLeagueObj.show_sponsors !== false) : (localStorage.getItem('hfl_league_show_sponsors_' + selectedLeague) !== 'false');
+              const isShowSponsors = checkIsShowSponsors(currentLeagueObj, selectedLeague);
               if (!isShowSponsors) return null;
               const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
               if (secondarySponsors.length === 0) return null;
@@ -910,7 +930,7 @@ export default function Standings() {
 
             {(() => {
               const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
-              const isShowSponsors = currentLeagueObj ? (currentLeagueObj.show_sponsors !== false) : (localStorage.getItem('hfl_league_show_sponsors_' + selectedLeague) !== 'false');
+              const isShowSponsors = checkIsShowSponsors(currentLeagueObj, selectedLeague);
               if (!isShowSponsors) return null;
               const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
               if (secondarySponsors.length === 0) return null;
