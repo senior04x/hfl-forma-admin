@@ -370,6 +370,8 @@ const Settings = () => {
   const [leagueLogo, setLeagueLogo] = useState('');
   const [isJunior, setIsJunior] = useState(false);
   const [matchDuration, setMatchDuration] = useState(90);
+  const [leagueSeason, setLeagueSeason] = useState('2026/2027');
+  const [leagueStatus, setLeagueStatus] = useState('active');
   const [creatingLeague, setCreatingLeague] = useState(false);
 
   // League Edit/Delete state
@@ -493,6 +495,8 @@ const Settings = () => {
     setLeagueLogo(league.logo_url || '');
     setIsJunior(!!league.is_junior);
     setMatchDuration(league.match_duration || 90);
+    setLeagueSeason(league.season || '2026/2027');
+    setLeagueStatus(league.status || 'active');
     setMessage({ type: '', text: '' });
 
     setTimeout(() => {
@@ -507,6 +511,8 @@ const Settings = () => {
     setLeagueLogo('');
     setIsJunior(false);
     setMatchDuration(90);
+    setLeagueSeason('2026/2027');
+    setLeagueStatus('active');
   };
 
   const handleSaveLeague = async (e) => {
@@ -526,7 +532,9 @@ const Settings = () => {
             name: newName,
             logo_url: leagueLogo.trim() || null,
             is_junior: isJunior,
-            match_duration: Number(matchDuration) || 90
+            match_duration: Number(matchDuration) || 90,
+            season: leagueSeason.trim() || '2026/2027',
+            status: leagueStatus || 'active'
           })
           .eq('id', editingLeague.id);
 
@@ -538,7 +546,7 @@ const Settings = () => {
           await supabase.from('applications').update({ league: newName }).eq('league', oldName).eq('organization_id', orgId);
         }
 
-        setMessage({ type: 'success', text: 'Liga ma\'lumotlari muvaffaqiyatli yangilandi!' });
+        setMessage({ type: 'success', text: 'Liga ma\'lumotlari va mavsumi muvaffaqiyatli yangilandi!' });
         cancelEditLeague();
       } else {
         const { error } = await supabase.from('leagues').insert({
@@ -546,16 +554,20 @@ const Settings = () => {
           logo_url: leagueLogo.trim() || null,
           organization_id: orgId,
           is_junior: isJunior,
-          match_duration: Number(matchDuration) || 90
+          match_duration: Number(matchDuration) || 90,
+          season: leagueSeason.trim() || '2026/2027',
+          status: leagueStatus || 'active'
         });
 
         if (error) throw error;
 
-        setMessage({ type: 'success', text: `"${leagueName}" ligasi muvaffaqiyatli yaratildi!` });
+        setMessage({ type: 'success', text: `"${leagueName}" (${leagueSeason}) ligasi muvaffaqiyatli yaratildi!` });
         setLeagueName('');
         setLeagueLogo('');
         setIsJunior(false);
         setMatchDuration(90);
+        setLeagueSeason('2026/2027');
+        setLeagueStatus('active');
       }
       fetchLeaguesAndOrgs();
     } catch (err) {
@@ -1067,6 +1079,51 @@ const Settings = () => {
                     </select>
                   </div>
 
+                  {/* Season Field */}
+                  <div className="settings-form-group flex-1">
+                    <label>Mavsum (Season)</label>
+                    <input
+                      type="text"
+                      placeholder="2026/2027"
+                      value={leagueSeason}
+                      onChange={e => setLeagueSeason(e.target.value)}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        color: '#fff',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        width: '100%',
+                        marginTop: '4px'
+                      }}
+                    />
+                  </div>
+
+                  {/* Status Field */}
+                  <div className="settings-form-group flex-1">
+                    <label>Liga Holati</label>
+                    <select
+                      value={leagueStatus}
+                      onChange={e => setLeagueStatus(e.target.value)}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        color: '#fff',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        width: '100%',
+                        marginTop: '4px'
+                      }}
+                    >
+                      <option value="active" style={{ background: '#0b0e17', color: '#00ff87' }}>🟢 FAOL MAVSUM</option>
+                      <option value="archived" style={{ background: '#0b0e17', color: '#ffaa00' }}>📦 YAKUNLANGAN (ARCHIVED)</option>
+                    </select>
+                  </div>
+
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
                     <button type="submit" className="settings-btn settings-btn-primary add-league-btn" disabled={creatingLeague}>
                       {editingLeague ? <Save size={16} /> : <Plus size={16} />}
@@ -1165,6 +1222,14 @@ const Settings = () => {
                             <div className="league-card-name-section">
                               <h4 className="league-title">{l.name}</h4>
                               <div className="league-badges-wrap">
+                                <span className="junior-badge" style={{ background: 'rgba(0, 255, 135, 0.15)', color: '#00ff87', borderColor: 'rgba(0, 255, 135, 0.3)' }}>
+                                  📅 {l.season || '2026/2027'}
+                                </span>
+                                {l.status === 'archived' && (
+                                  <span className="junior-badge" style={{ background: 'rgba(255, 170, 0, 0.15)', color: '#ffaa00', borderColor: 'rgba(255, 170, 0, 0.3)' }}>
+                                    📦 YAKUNLANGAN
+                                  </span>
+                                )}
                                 {l.is_junior && <span className="junior-badge">JUNIOR U-14</span>}
                                 {isOwner ? (
                                   <select
