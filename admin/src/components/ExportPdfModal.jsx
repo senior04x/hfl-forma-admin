@@ -52,12 +52,34 @@ export function cyrillicToLatin(text) {
   return text.split('').map(char => map[char] || char).join('');
 }
 
-const blobToBase64 = (blob) => {
+// Converts any image blob (including WebP which jsPDF can't handle) to JPEG base64 via Canvas
+const blobToJpegBase64 = (blob) => {
   return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(blob);
+    const objectUrl = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width || 200;
+        canvas.height = img.naturalHeight || img.height || 200;
+        const ctx = canvas.getContext('2d');
+        // White background for transparency
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        const jpegBase64 = canvas.toDataURL('image/jpeg', 0.85);
+        URL.revokeObjectURL(objectUrl);
+        resolve(jpegBase64);
+      } catch (err) {
+        URL.revokeObjectURL(objectUrl);
+        resolve(null);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(null);
+    };
+    img.src = objectUrl;
   });
 };
 
@@ -70,12 +92,12 @@ const parseStorageUrl = (url) => {
   return null;
 };
 
-// Convert image URL to Base64 using Supabase Storage SDK (bypasses browser CORS restrictions 100%)
+// Convert image URL to JPEG Base64 (WebP -> JPEG conversion via Canvas for jsPDF compatibility)
 const loadImageAsBase64 = async (url) => {
   if (!url || typeof url !== 'string') return null;
-  if (url.startsWith('data:image/')) return url;
+  if (url.startsWith('data:image/jpeg') || url.startsWith('data:image/png')) return url;
 
-  // Strategy 1: Supabase Storage SDK download (Native client SDK request bypasses CORS)
+  // Strategy 1: Supabase Storage SDK download -> Canvas JPEG conversion
   const storageInfo = parseStorageUrl(url);
   if (storageInfo) {
     try {
@@ -84,34 +106,36 @@ const loadImageAsBase64 = async (url) => {
         .download(storageInfo.path);
 
       if (!error && blob) {
-        const b64 = await blobToBase64(blob);
-        if (b64) return b64;
+        const jpegB64 = await blobToJpegBase64(blob);
+        if (jpegB64) return jpegB64;
       }
     } catch (e) {
-      console.warn('Supabase storage SDK download notice:', e);
+      console.warn('Supabase SDK download notice:', e);
     }
   }
 
-  // Strategy 2: Fetch API
+  // Strategy 2: Fetch API -> Canvas JPEG conversion
   try {
     const response = await fetch(url, { mode: 'cors' });
     if (response.ok) {
       const blob = await response.blob();
-      const b64 = await blobToBase64(blob);
-      if (b64) return b64;
+      const jpegB64 = await blobToJpegBase64(blob);
+      if (jpegB64) return jpegB64;
     }
   } catch (e) {}
 
-  // Strategy 3: HTML Image Element + Canvas Fallback
+  // Strategy 3: Direct Image Element -> Canvas JPEG
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth || img.width || 120;
-        canvas.height = img.naturalHeight || img.height || 120;
+        canvas.width = img.naturalWidth || img.width || 200;
+        canvas.height = img.naturalHeight || img.height || 200;
         const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
         resolve(canvas.toDataURL('image/jpeg', 0.85));
       } catch (err) {
