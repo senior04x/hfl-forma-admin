@@ -768,6 +768,7 @@ export default function Standings() {
               if (secondarySponsors.length === 0) return null;
               return (
                 <div style={{
+                  width: '100%',
                   display: 'flex',
                   alignItems: 'center',
                   justify: 'center',
@@ -936,6 +937,7 @@ export default function Standings() {
               if (secondarySponsors.length === 0) return null;
               return (
                 <div style={{
+                  width: '100%',
                   display: 'flex',
                   alignItems: 'center',
                   justify: 'center',
