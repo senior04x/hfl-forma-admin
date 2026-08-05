@@ -630,7 +630,7 @@ export default function Standings() {
 
                   <div className="export-logo-right" style={{ width: '230px', minWidth: '230px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                     {mainSponsorLogo ? (
-                      <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ height: '65px', objectFit: 'contain', background: 'transparent' }} />
+                      <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: '65px', maxWidth: '200px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', margin: '0 0 0 auto', display: 'block' }} />
                     ) : null}
                   </div>
                 </div>
@@ -829,12 +829,10 @@ export default function Standings() {
 
                   <div className="export-logo-right" style={{ width: '230px', minWidth: '230px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                     {mainSponsorLogo ? (
-                      <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ height: '65px', objectFit: 'contain', background: 'transparent' }} />
+                      <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: '65px', maxWidth: '200px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', margin: '0 0 0 auto', display: 'block' }} />
                     ) : null}
                   </div>
                 </div>
-
-            {/* Title Banner */}
             <div className="cards-export-title-banner">
               <span>🟨 🟥 SARIQ VA QIZIL KARTOCHKALAR</span>
             </div>
