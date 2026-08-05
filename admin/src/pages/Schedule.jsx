@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Image as ImageIcon, Upload, Pencil } from 'lucide-react';
+import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Pencil } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import ImageCropperModal from '../components/ImageCropperModal';
 import './Schedule.css';
 
 const Schedule = () => {
@@ -38,16 +37,9 @@ const Schedule = () => {
   const exportRef = useRef(null);
 
   const [scheduleBanner, setScheduleBanner] = useState('');
-  const [cropperRawImage, setCropperRawImage] = useState(null);
-  const [uploadingBanner, setUploadingBanner] = useState(false);
-  const bannerFileInputRef = useRef(null);
 
   const [ytBanner, setYtBanner] = useState('');
-  const [cropperRawYtImage, setCropperRawYtImage] = useState(null);
-  const [uploadingYtBanner, setUploadingYtBanner] = useState(false);
-  const ytFileInputRef = useRef(null);
   const exportYtRef = useRef(null);
-  const [showBannerControls, setShowBannerControls] = useState(false);
   const [selectedMatchForYtExport, setSelectedMatchForYtExport] = useState(null);
   const [exportingMatchId, setExportingMatchId] = useState(null);
 
@@ -588,240 +580,6 @@ const Schedule = () => {
     }
   }, [matches, exportLeague]);
 
-  const handleBannerFileSelect = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCropperRawImage(reader.result);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const handleYtFileSelect = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCropperRawYtImage(reader.result);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const handleCroppedBannerSave = async (croppedDataUrl) => {
-    if (!croppedDataUrl) return;
-    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
-
-    setUploadingBanner(true);
-    try {
-      let publicUrl = croppedDataUrl;
-
-      try {
-        const response = await fetch(croppedDataUrl);
-        const blob = await response.blob();
-        const fileName = `schedule_banner_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
-
-        const { error: uploadErr } = await supabase.storage.from('player-photos').upload(fileName, blob, {
-          contentType: 'image/png',
-          upsert: true
-        });
-
-        if (!uploadErr) {
-          const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
-          if (data?.publicUrl) {
-            publicUrl = data.publicUrl;
-          }
-        }
-      } catch (uploadExc) {
-        console.warn('Storage upload fallback:', uploadExc);
-      }
-
-      setScheduleBanner(publicUrl);
-      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
-      try { localStorage.setItem(localKey, publicUrl); } catch (e) {}
-
-      // Update 1x1 schedule banner DB columns across all devices
-      const targetId = currentLeagueObj?.id;
-      const targetName = currentLeagueObj?.name || exportLeague;
-
-      await Promise.allSettled([
-        targetId
-          ? supabase.from('leagues').update({ schedule_banner_url: publicUrl }).eq('id', targetId)
-          : supabase.from('leagues').update({ schedule_banner_url: publicUrl }).ilike('name', targetName),
-        targetId
-          ? supabase.from('leagues').update({ export_bg_url: publicUrl }).eq('id', targetId)
-          : supabase.from('leagues').update({ export_bg_url: publicUrl }).ilike('name', targetName)
-      ]);
-
-      // Dual-sync to sponsors table as guaranteed cross-device key-value entry
-      const scheduleSponsorKey = `BANNER_SCHEDULE_${orgId}_${exportLeague}`;
-      try {
-        const { data: existingSponsor } = await supabase.from('sponsors').select('id').eq('name', scheduleSponsorKey).maybeSingle();
-        if (existingSponsor?.id) {
-          await supabase.from('sponsors').update({ logo_url: publicUrl }).eq('id', existingSponsor.id);
-        } else {
-          await supabase.from('sponsors').insert([{
-            name: scheduleSponsorKey,
-            logo_url: publicUrl,
-            organization_id: orgId || null,
-            is_main: false,
-            is_selected: false
-          }]);
-        }
-      } catch (kvErr) {
-        console.warn('Sponsors KV error:', kvErr);
-      }
-
-      setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj?.id || String(l.name).toLowerCase() === String(exportLeague).toLowerCase()) ? { ...l, schedule_banner_url: publicUrl, export_bg_url: publicUrl } : l));
-      setAllSponsors(prev => {
-        const idx = prev.findIndex(s => s.name === scheduleSponsorKey);
-        if (idx >= 0) {
-          const updated = [...prev];
-          updated[idx] = { ...updated[idx], logo_url: publicUrl };
-          return updated;
-        }
-        return [...prev, { name: scheduleSponsorKey, logo_url: publicUrl, organization_id: orgId || null, is_main: false, is_selected: false }];
-      });
-    } catch (err) {
-      console.error('Error saving schedule banner:', err);
-    } finally {
-      setUploadingBanner(false);
-      setCropperRawImage(null);
-    }
-  };
-
-  const handleCroppedYtBannerSave = async (croppedDataUrl) => {
-    if (!croppedDataUrl) return;
-    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
-
-    setUploadingYtBanner(true);
-    try {
-      let publicUrl = croppedDataUrl;
-
-      try {
-        const response = await fetch(croppedDataUrl);
-        const blob = await response.blob();
-        const fileName = `yt_banner_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
-
-        const { error: uploadErr } = await supabase.storage.from('player-photos').upload(fileName, blob, {
-          contentType: 'image/png',
-          upsert: true
-        });
-
-        if (!uploadErr) {
-          const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
-          if (data?.publicUrl) {
-            publicUrl = data.publicUrl;
-          }
-        }
-      } catch (uploadExc) {
-        console.warn('Storage upload fallback:', uploadExc);
-      }
-
-      setYtBanner(publicUrl);
-      const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
-      try { localStorage.setItem(localKey, publicUrl); } catch (e) {}
-
-      // Update YouTube 16:9 banner DB columns across all devices
-      const targetId = currentLeagueObj?.id;
-      const targetName = currentLeagueObj?.name || exportLeague;
-
-      await Promise.allSettled([
-        targetId
-          ? supabase.from('leagues').update({ yt_banner_url: publicUrl }).eq('id', targetId)
-          : supabase.from('leagues').update({ yt_banner_url: publicUrl }).ilike('name', targetName),
-        targetId
-          ? supabase.from('leagues').update({ banner_url: publicUrl }).eq('id', targetId)
-          : supabase.from('leagues').update({ banner_url: publicUrl }).ilike('name', targetName)
-      ]);
-
-      // Dual-sync to sponsors table as guaranteed cross-device key-value entry
-      const ytSponsorKey = `BANNER_YT_${orgId}_${exportLeague}`;
-      try {
-        const { data: existingSponsor } = await supabase.from('sponsors').select('id').eq('name', ytSponsorKey).maybeSingle();
-        if (existingSponsor?.id) {
-          await supabase.from('sponsors').update({ logo_url: publicUrl }).eq('id', existingSponsor.id);
-        } else {
-          await supabase.from('sponsors').insert([{
-            name: ytSponsorKey,
-            logo_url: publicUrl,
-            organization_id: orgId || null,
-            is_main: false,
-            is_selected: false
-          }]);
-        }
-      } catch (kvErr) {
-        console.warn('Sponsors KV error:', kvErr);
-      }
-
-      setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj?.id || String(l.name).toLowerCase() === String(exportLeague).toLowerCase()) ? { ...l, yt_banner_url: publicUrl, banner_url: publicUrl } : l));
-      setAllSponsors(prev => {
-        const idx = prev.findIndex(s => s.name === ytSponsorKey);
-        if (idx >= 0) {
-          const updated = [...prev];
-          updated[idx] = { ...updated[idx], logo_url: publicUrl };
-          return updated;
-        }
-        return [...prev, { name: ytSponsorKey, logo_url: publicUrl, organization_id: orgId || null, is_main: false, is_selected: false }];
-      });
-    } catch (err) {
-      console.error('Error saving YouTube banner:', err);
-    } finally {
-      setUploadingYtBanner(false);
-      setCropperRawYtImage(null);
-    }
-  };
-
-  const handleDeleteBanner = async () => {
-    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
-    if (!window.confirm(`"${exportLeague}" ligasi uchun 1x1 orqa fon rasmini o'chirmoqchimisiz?`)) return;
-
-    setScheduleBanner('');
-    const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
-    localStorage.removeItem(localKey);
-
-    const scheduleSponsorKey = `BANNER_SCHEDULE_${orgId}_${exportLeague}`;
-    const targetId = currentLeagueObj?.id;
-    const targetName = currentLeagueObj?.name || exportLeague;
-    await Promise.allSettled([
-      targetId
-        ? supabase.from('leagues').update({ schedule_banner_url: null }).eq('id', targetId)
-        : supabase.from('leagues').update({ schedule_banner_url: null }).ilike('name', targetName),
-      targetId
-        ? supabase.from('leagues').update({ export_bg_url: null }).eq('id', targetId)
-        : supabase.from('leagues').update({ export_bg_url: null }).ilike('name', targetName),
-      supabase.from('sponsors').delete().eq('name', scheduleSponsorKey)
-    ]);
-
-    setAllSponsors(prev => prev.filter(s => s.name !== scheduleSponsorKey));
-  };
-
-  const handleDeleteYtBanner = async () => {
-    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
-    if (!window.confirm(`"${exportLeague}" ligasi uchun YouTube 16:9 fon rasmini o'chirmoqchimisiz?`)) return;
-
-    setYtBanner('');
-    const localKey = `hfl_yt_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
-    localStorage.removeItem(localKey);
-
-    const ytSponsorKey = `BANNER_YT_${orgId}_${exportLeague}`;
-    const targetId = currentLeagueObj?.id;
-    const targetName = currentLeagueObj?.name || exportLeague;
-    await Promise.allSettled([
-      targetId
-        ? supabase.from('leagues').update({ yt_banner_url: null }).eq('id', targetId)
-        : supabase.from('leagues').update({ yt_banner_url: null }).ilike('name', targetName),
-      targetId
-        ? supabase.from('leagues').update({ banner_url: null }).eq('id', targetId)
-        : supabase.from('leagues').update({ banner_url: null }).ilike('name', targetName),
-      supabase.from('sponsors').delete().eq('name', ytSponsorKey)
-    ]);
-
-    setAllSponsors(prev => prev.filter(s => s.name !== ytSponsorKey));
-  };
-
   const handleExportYtThumbnail = async (match) => {
     setSelectedMatchForYtExport(match);
     setExportingMatchId(match.id);
@@ -1227,110 +985,15 @@ const Schedule = () => {
           </div>
         )}
 
-        {/* Collapsible 1x1 Poster & 16:9 YouTube Background Section */}
-        <div style={{ marginTop: '16px', borderRadius: '14px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.08)', overflow: 'hidden' }}>
-          <button 
-            type="button"
-            onClick={() => setShowBannerControls(!showBannerControls)}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justify: 'space-between',
-              padding: '14px 20px',
-              background: showBannerControls ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
-              border: 'none',
-              color: '#ffffff',
-              fontWeight: '800',
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <ImageIcon size={18} style={{ color: '#00ff66' }} />
-              <span>Fon Rasmlari va Shablon Boshqaruvi (1x1 va 16:9 YouTube)</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '12px', opacity: 0.6, color: showBannerControls ? '#00ff66' : '#ffffff' }}>
-                {showBannerControls ? 'Yopish' : 'Ochish'}
-              </span>
-              <ChevronDown size={18} style={{ transform: showBannerControls ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', color: showBannerControls ? '#00ff66' : '#ffffff' }} />
-            </div>
+        {/* PNG Eksport Buttonlari */}
+        <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button className="btn-download-poster" onClick={handleExport} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
+            {isExporting ? (
+              <><span className="btn-spinner"></span> <span>Yuklanmoqda...</span></>
+            ) : (
+              <><Download size={18} /> <span>Jadvalni yuklab olish (1:1)</span></>
+            )}
           </button>
-
-          {showBannerControls && (
-            <div style={{ padding: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* 1x1 Poster Banner Section */}
-              <div className="poster-banner-section">
-                {/* Left: 1x1 Poster Image Box */}
-                <div className="poster-preview-square">
-                  {scheduleBanner ? (
-                    <img src={scheduleBanner} alt="1x1 Schedule Banner" className="poster-img-1x1" />
-                  ) : (
-                    <div className="poster-placeholder-1x1">
-                      <ImageIcon size={32} />
-                      <span>1x1 Orqa Fon</span>
-                      <span className="sub-tag">({exportLeague || 'Tanlanmagan'})</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Right: Actions */}
-                <div className="poster-action-buttons">
-                  <button className="btn-download-poster" onClick={handleExport} disabled={isExporting}>
-                    {isExporting ? (
-                      <><span className="btn-spinner"></span> <span>Yuklanmoqda...</span></>
-                    ) : (
-                      <><Download size={18} /> <span>Rasmni Yuklab Olish</span></>
-                    )}
-                  </button>
-                  <div className="poster-sub-buttons">
-                    <button className="btn-banner-action btn-upload" onClick={() => bannerFileInputRef.current?.click()} disabled={uploadingBanner}>
-                      <Upload size={15} /> <span>{scheduleBanner ? 'Boshqa rasm yuklash' : 'Rasm yuklash'}</span>
-                    </button>
-                    {scheduleBanner && (
-                      <button className="btn-banner-action btn-delete" onClick={handleDeleteBanner}>
-                        <Trash2 size={15} /> <span>O'chirish</span>
-                      </button>
-                    )}
-                  </div>
-                  <input ref={bannerFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBannerFileSelect} />
-                </div>
-              </div>
-
-              {/* YouTube Shablon 16:9 Background Control Section */}
-              <div className="poster-banner-section" style={{ paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                {/* Left: 16:9 Preview Square/Rectangle */}
-                <div className="poster-preview-square" style={{ width: '220px', height: '124px', aspectRatio: '16/9' }}>
-                  {ytBanner ? (
-                    <img src={ytBanner} alt="16:9 YouTube Banner" className="poster-img-1x1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div className="poster-placeholder-1x1">
-                      <Video size={28} />
-                      <span style={{ fontSize: '12px' }}>YouTube Shablon Fon (16:9)</span>
-                      <span className="sub-tag">({exportLeague || 'Tanlanmagan'})</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Right: Upload & Delete Actions */}
-                <div className="poster-action-buttons" style={{ justifyContent: 'center' }}>
-                  <div className="poster-sub-buttons" style={{ flexDirection: 'column', gap: '8px' }}>
-                    <button className="btn-banner-action btn-upload" onClick={() => ytFileInputRef.current?.click()} disabled={uploadingYtBanner}>
-                      <Upload size={15} /> <span>{ytBanner ? 'YouTube Shablon fonini almashtirish (16:9)' : 'YouTube Shablon Fon yuklash (16:9)'}</span>
-                    </button>
-                    {ytBanner && (
-                      <button className="btn-banner-action btn-delete" onClick={handleDeleteYtBanner}>
-                        <Trash2 size={15} /> <span>Fonni o'chirish</span>
-                      </button>
-                    )}
-                  </div>
-                  <input ref={ytFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleYtFileSelect} />
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -1564,30 +1227,6 @@ const Schedule = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {cropperRawImage && (
-        <ImageCropperModal
-          isOpen={!!cropperRawImage}
-          imageSrc={cropperRawImage}
-          onClose={() => setCropperRawImage(null)}
-          onSave={handleCroppedBannerSave}
-          title="Schedule 1:1 Orqa Fon Rasmini Qirqish"
-          aspect={1 / 1}
-          showAspectSelector={false}
-        />
-      )}
-
-      {cropperRawYtImage && (
-        <ImageCropperModal
-          isOpen={!!cropperRawYtImage}
-          imageSrc={cropperRawYtImage}
-          onClose={() => setCropperRawYtImage(null)}
-          onSave={handleCroppedYtBannerSave}
-          title="YouTube Shablon 16:9 Orqa Fon Rasmini Qirqish"
-          aspect={16 / 9}
-          showAspectSelector={false}
-        />
       )}
 
       {/* HIDDEN YOUTUBE THUMBNAIL 16:9 EXPORT TEMPLATE */}

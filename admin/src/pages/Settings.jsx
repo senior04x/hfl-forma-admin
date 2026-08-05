@@ -25,6 +25,10 @@ const Settings = () => {
   const leagueFormRef = useRef(null);
   const leagueInputRef = useRef(null);
   const [uploadingLeagueLogo, setUploadingLeagueLogo] = useState(false);
+  const [bgUploadLeagueId, setBgUploadLeagueId] = useState(null);
+  const [bgCropperImage, setBgCropperImage] = useState(null);
+  const [uploadingLeagueBg, setUploadingLeagueBg] = useState(false);
+  const leagueBgFileInputRef = useRef(null);
 
   const [brandColors, setBrandColors] = useState(['#00FF66', '#10B981']);
   const [savingBrandColors, setSavingBrandColors] = useState(false);
@@ -165,6 +169,126 @@ const Settings = () => {
     } finally {
       setUploadingLeagueLogo(false);
       e.target.value = '';
+    }
+  };
+
+  // Handle league BG file selection
+  const handleLeagueBgFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setBgCropperImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  // Save cropped 1:1 BG and auto-generate 16:9 YT cover from center
+  const handleSaveCroppedLeagueBg = async (croppedBase64) => {
+    if (!bgUploadLeagueId) return;
+    setUploadingLeagueBg(true);
+    setBgCropperImage(null);
+
+    try {
+      // Convert base64 to blob
+      const res = await fetch(croppedBase64);
+      const blob = await res.blob();
+
+      // Upload 1:1 image
+      const fileName1x1 = `league_bg_1x1_${bgUploadLeagueId}_${Date.now()}.jpg`;
+      const { error: uploadErr } = await supabase.storage.from('player-photos').upload(fileName1x1, blob, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+      if (uploadErr) throw uploadErr;
+      const { data: urlData1x1 } = supabase.storage.from('player-photos').getPublicUrl(fileName1x1);
+      const bgUrl1x1 = urlData1x1.publicUrl;
+
+      // Auto-generate 16:9 from center of 1:1 image
+      const ytBlob = await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const targetW = img.width;
+          const targetH = Math.round(img.width * 9 / 16);
+          canvas.width = targetW;
+          canvas.height = targetH;
+          const ctx = canvas.getContext('2d');
+          const sy = Math.round((img.height - targetH) / 2);
+          ctx.drawImage(img, 0, sy, img.width, targetH, 0, 0, targetW, targetH);
+          canvas.toBlob(resolve, 'image/jpeg', 0.92);
+        };
+        img.src = croppedBase64;
+      });
+
+      let ytBannerUrl = null;
+      if (ytBlob) {
+        const fileName16x9 = `league_bg_16x9_${bgUploadLeagueId}_${Date.now()}.jpg`;
+        const { error: ytErr } = await supabase.storage.from('player-photos').upload(fileName16x9, ytBlob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+        if (!ytErr) {
+          const { data: ytUrlData } = supabase.storage.from('player-photos').getPublicUrl(fileName16x9);
+          ytBannerUrl = ytUrlData.publicUrl;
+        }
+      }
+
+      // Update league record in DB
+      const updateData = {
+        export_bg_url: bgUrl1x1,
+        schedule_banner_url: bgUrl1x1
+      };
+      if (ytBannerUrl) {
+        updateData.yt_banner_url = ytBannerUrl;
+        updateData.banner_url = ytBannerUrl;
+      }
+
+      const { error: dbErr } = await supabase
+        .from('leagues')
+        .update(updateData)
+        .eq('id', bgUploadLeagueId);
+
+      if (dbErr) throw dbErr;
+
+      // Also save to localStorage for cross-page compatibility
+      const leagueObj = leagues.find(l => l.id === bgUploadLeagueId);
+      if (leagueObj) {
+        localStorage.setItem(`hfl_export_bg_${orgId}_${leagueObj.name}`, bgUrl1x1);
+        localStorage.setItem(`hfl_schedule_banner_${orgId}_${leagueObj.id || leagueObj.name}`, bgUrl1x1);
+        if (ytBannerUrl) {
+          localStorage.setItem(`hfl_yt_banner_${orgId}_${leagueObj.id || leagueObj.name}`, ytBannerUrl);
+        }
+      }
+
+      setMessage({ type: 'success', text: 'Liga fon rasmi muvaffaqiyatli yuklandi! (1:1 + 16:9 YT)' });
+      fetchLeaguesAndOrgs();
+    } catch (err) {
+      console.error('League BG upload error:', err);
+      setMessage({ type: 'error', text: 'Fon rasmini yuklashda xatolik: ' + (err.message || '') });
+    } finally {
+      setUploadingLeagueBg(false);
+      setBgUploadLeagueId(null);
+    }
+  };
+
+  // Delete league BG
+  const handleDeleteLeagueBg = async (league) => {
+    try {
+      await supabase
+        .from('leagues')
+        .update({ export_bg_url: null, schedule_banner_url: null, yt_banner_url: null, banner_url: null })
+        .eq('id', league.id);
+
+      localStorage.removeItem(`hfl_export_bg_${orgId}_${league.name}`);
+      localStorage.removeItem(`hfl_schedule_banner_${orgId}_${league.id || league.name}`);
+      localStorage.removeItem(`hfl_yt_banner_${orgId}_${league.id || league.name}`);
+
+      setMessage({ type: 'success', text: `"${league.name}" liga fon rasmi o'chirildi!` });
+      fetchLeaguesAndOrgs();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Fon rasmini o\'chirishda xatolik: ' + err.message });
     }
   };
 
@@ -893,6 +1017,48 @@ const Settings = () => {
                             </div>
                           )}
 
+                          {/* Liga Fon Rasmi */}
+                          {isOwner && (
+                            <div className="league-bg-section">
+                              <div className="league-bg-preview-row">
+                                {/* 1:1 Preview */}
+                                <div className="league-bg-thumb" onClick={() => { setBgUploadLeagueId(l.id); leagueBgFileInputRef.current?.click(); }}>
+                                  {l.export_bg_url ? (
+                                    <img src={l.export_bg_url} alt="1:1 BG" />
+                                  ) : (
+                                    <div className="league-bg-placeholder">
+                                      <Upload size={16} />
+                                      <span>1:1</span>
+                                    </div>
+                                  )}
+                                  <div className="league-bg-overlay">
+                                    <Upload size={14} />
+                                  </div>
+                                </div>
+                                {/* 16:9 Preview */}
+                                <div className="league-bg-thumb yt-thumb">
+                                  {(l.yt_banner_url || l.banner_url) ? (
+                                    <img src={l.yt_banner_url || l.banner_url} alt="16:9 YT" />
+                                  ) : (
+                                    <div className="league-bg-placeholder">
+                                      <span>16:9</span>
+                                      <span style={{ fontSize: '9px', opacity: 0.6 }}>avto</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              {l.export_bg_url && (
+                                <button
+                                  className="btn-league-bg-delete"
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteLeagueBg(l); }}
+                                  title="Fon rasmini o'chirish"
+                                >
+                                  <Trash2 size={12} /> Fonni o'chirish
+                                </button>
+                              )}
+                            </div>
+                          )}
+
                           <div className="league-card-actions">
                             {/* Faqat liga asl egasi hamkorligi bo'lmaganda collab yuborishi mumkin */}
                             {isOwner && !activeCollab && (
@@ -1208,8 +1374,27 @@ const Settings = () => {
         />
       )}
 
+      {/* League BG file input */}
+      <input
+        ref={leagueBgFileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleLeagueBgFileSelect}
+      />
 
-
+      {/* League BG Cropper Modal */}
+      {bgCropperImage && (
+        <ImageCropperModal
+          isOpen={!!bgCropperImage}
+          imageSrc={bgCropperImage}
+          onClose={() => { setBgCropperImage(null); setBgUploadLeagueId(null); }}
+          onSave={handleSaveCroppedLeagueBg}
+          title="Liga Fon Rasmini 1:1 Qirqish"
+          aspect={1 / 1}
+          showAspectSelector={false}
+        />
+      )}
       {/* Collab Disconnect Confirmation Modal */}
       {collabToDisconnect && (
         <div className="settings-modal-overlay" onClick={() => setCollabToDisconnect(null)}>

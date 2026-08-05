@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Download, Save, ShieldAlert, Crop, Image as ImageIcon, Upload, Sparkles, AlertCircle, X, Check, Trophy, Trash2 } from 'lucide-react';
+import { Download, Save, ShieldAlert, Upload, Sparkles, AlertCircle, X, Check, Trophy } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import ImageCropperModal from '../components/ImageCropperModal';
 import './Standings.css';
 
 const DEFAULT_LEAGUE_LOGOS = {
@@ -38,24 +37,6 @@ export default function Standings() {
   const [savingPenalty, setSavingPenalty] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingCards, setIsExportingCards] = useState(false);
-
-  // Background Image Cropper & Prompt Modal states
-  const [isCropperOpen, setIsCropperOpen] = useState(false);
-  const [cropperRawImage, setCropperRawImage] = useState(null);
-  const bgFileInputRef = useRef(null);
-  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
-  const [pendingExportType, setPendingExportType] = useState(null); // 'standings' | 'cards'
-  
-  const handleBgFileSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCropperRawImage(reader.result);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
 
   const [mainSponsor, setMainSponsor] = useState(null);
 
@@ -368,13 +349,7 @@ export default function Standings() {
   };
 
   const handleExportWithCheck = (type) => {
-    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
-    if (!currentLeagueObj?.export_bg_url) {
-      setPendingExportType(type);
-      setIsPromptModalOpen(true);
-    } else {
-      executeExport(type);
-    }
+    executeExport(type);
   };
 
   const executeExport = async (type) => {
@@ -425,67 +400,6 @@ export default function Standings() {
     }
   };
 
-  const handleSaveCroppedBg = async (croppedDataUrl) => {
-    if (!croppedDataUrl) return;
-    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
-
-    setCropperRawImage(null);
-    try {
-      // 1. Immediately show preview & save to localStorage
-      const storageKey = `hfl_export_bg_${orgId}_${selectedLeague}`;
-      try {
-        localStorage.setItem(storageKey, croppedDataUrl);
-      } catch (e) {}
-
-      setActiveLeagues(prev => prev.map(l => (l.id === currentLeagueObj?.id || String(l.name).toLowerCase() === String(selectedLeague).toLowerCase()) ? { ...l, export_bg_url: croppedDataUrl } : l));
-
-      // 2. Upload to Supabase Storage bucket for clean publicUrl and permanent persistence across all devices
-      let publicUrl = croppedDataUrl;
-      try {
-        const response = await fetch(croppedDataUrl);
-        const blob = await response.blob();
-        const fileName = `league_bg_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-
-        const { error: uploadErr } = await supabase.storage.from('player-photos').upload(fileName, blob, {
-          contentType: 'image/jpeg',
-          upsert: true
-        });
-
-        if (!uploadErr) {
-          const { data } = supabase.storage.from('player-photos').getPublicUrl(fileName);
-          if (data?.publicUrl) {
-            publicUrl = data.publicUrl;
-            try {
-              localStorage.setItem(storageKey, publicUrl);
-            } catch (e) {}
-          }
-        }
-      } catch (uploadException) {
-        console.warn('Storage upload fallback:', uploadException);
-      }
-
-      // 3. Update leagues table with clean publicUrl
-      let updateQuery = supabase.from('leagues').update({ export_bg_url: publicUrl, schedule_banner_url: publicUrl });
-      if (currentLeagueObj?.id) {
-        updateQuery = updateQuery.eq('id', currentLeagueObj.id);
-      } else {
-        updateQuery = updateQuery.ilike('name', selectedLeague);
-      }
-      const { error: updateErr } = await updateQuery;
-
-      if (updateErr) {
-        console.warn('Leagues table update notice:', updateErr);
-      }
-
-      if (pendingExportType) {
-        executeExport(pendingExportType);
-        setPendingExportType(null);
-      }
-    } catch (err) {
-      console.error('Error saving background:', err);
-    }
-  };
-
   // Get dynamic rounds
   let maxRound = 0;
   matches.forEach(m => {
@@ -506,23 +420,6 @@ export default function Standings() {
 
   const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
   const currentLeagueBg = currentLeagueObj?.export_bg_url || getLeagueBgForOrg(orgId, selectedLeague);
-
-  const handleDeleteLeagueBg = async () => {
-    if (!window.confirm(`"${selectedLeague}" ligasi uchun saqlangan 1:1 fon rasmini o'chirmoqchimisiz?`)) return;
-    try {
-      localStorage.removeItem(`hfl_export_bg_${orgId}_${selectedLeague}`);
-      const updatedLeagues = activeLeagues.map(l => (l.id === currentLeagueObj?.id || String(l.name).toLowerCase() === String(selectedLeague).toLowerCase()) ? { ...l, export_bg_url: null } : l);
-      setActiveLeagues(updatedLeagues);
-
-      if (currentLeagueObj?.id) {
-        await supabase.from('leagues').update({ export_bg_url: null }).eq('id', currentLeagueObj.id);
-      } else {
-        await supabase.from('leagues').update({ export_bg_url: null }).ilike('name', selectedLeague);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   if (loading) {
     return (
@@ -617,40 +514,14 @@ export default function Standings() {
         </div>
 
         {/* 1x1 Poster Image Box & Buttons */}
-        <div className="poster-banner-section">
-          <div className="poster-preview-square" style={{ width: '200px', height: '200px' }}>
-            {currentLeagueBg ? (
-              <img src={currentLeagueBg} alt="1x1 Export Background" className="poster-img-1x1" />
-            ) : (
-              <div className="poster-placeholder-1x1">
-                <ImageIcon size={36} />
-                <span>1x1 Orqa Fon</span>
-                <span className="sub-tag">({selectedLeague || 'Tanlanmagan'})</span>
-              </div>
-            )}
-          </div>
-
-          <div className="poster-action-buttons">
-            <div style={{ display: 'flex', gap: '12px', width: '100%', flexWrap: 'wrap' }}>
-              <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
-                <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish'}</span>
-              </button>
-              <button className="btn-download cards-btn" onClick={() => handleExportWithCheck('cards')} disabled={isExportingCards} style={{ flex: 1, minWidth: '180px' }}>
-                <ShieldAlert size={18} /> <span>{isExportingCards ? 'Yuklanmoqda...' : 'Kartochkalarni yuklab olish'}</span>
-              </button>
-            </div>
-
-            <div className="poster-sub-buttons" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-              <button className="btn-banner-action btn-upload" onClick={() => bgFileInputRef.current?.click()}>
-                <Crop size={15} /> <span>{currentLeagueBg ? 'Boshqa rasm yuklash (1:1)' : '1:1 Fon Rasm yuklash'}</span>
-              </button>
-              {currentLeagueBg && (
-                <button className="btn-banner-action btn-delete" onClick={handleDeleteLeagueBg}>
-                  <Trash2 size={15} /> <span>Fonni o'chirish</span>
-                </button>
-              )}
-            </div>
-            <input ref={bgFileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBgFileSelect} />
+        <div className="poster-banner-section" style={{ justifyContent: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: '12px', width: '100%', flexWrap: 'wrap' }}>
+            <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
+              <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish'}</span>
+            </button>
+            <button className="btn-download cards-btn" onClick={() => handleExportWithCheck('cards')} disabled={isExportingCards} style={{ flex: 1, minWidth: '180px' }}>
+              <ShieldAlert size={18} /> <span>{isExportingCards ? 'Yuklanmoqda...' : 'Kartochkalarni yuklab olish'}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1061,66 +932,6 @@ export default function Standings() {
         );
       })()}
       </div>
-      
-      {/* 1:1 Image Cropper Modal */}
-      {cropperRawImage && (
-        <ImageCropperModal
-          isOpen={!!cropperRawImage}
-          imageSrc={cropperRawImage}
-          onClose={() => setCropperRawImage(null)}
-          onSave={handleSaveCroppedBg}
-          title={`"${selectedLeague}" Ligasi Uchun Fon Rasmini 1:1 Formatda Qirqish`}
-        />
-      )}
-
-      {/* Background Prompt Modal */}
-      {isPromptModalOpen && (
-        <div className="cropper-modal-overlay" onClick={() => setIsPromptModalOpen(false)}>
-          <div className="cropper-modal" style={{ maxWidth: '460px' }} onClick={e => e.stopPropagation()}>
-            <div className="cropper-header">
-              <div className="cropper-title">
-                <ImageIcon size={22} />
-                <h2>Eksport Fon Rasmi Yo'q</h2>
-              </div>
-              <button className="cropper-close-btn" onClick={() => setIsPromptModalOpen(false)}><X size={18} /></button>
-            </div>
-            <div className="cropper-body" style={{ textAlign: 'center', gap: '16px' }}>
-              <div style={{ background: 'rgba(0, 255, 102, 0.1)', border: '1px solid rgba(0, 255, 102, 0.25)', padding: '16px', borderRadius: '14px', color: '#fff' }}>
-                <Sparkles size={32} style={{ color: '#00ff66', marginBottom: '8px' }} />
-                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5' }}>
-                  <strong>"{selectedLeague}"</strong> ligasi uchun hali maxsus 1:1 eksport fon rasmi yuklanmagan.
-                </p>
-              </div>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', margin: 0 }}>
-                Hozir rasm yuklab 1:1 formatda qirqasizmi yoki odatiy to'q fon bilan yuklab olasizmi?
-              </p>
-            </div>
-            <div className="cropper-footer" style={{ justifyContent: 'space-between' }}>
-              <button
-                className="cropper-cancel-btn"
-                onClick={() => {
-                  setIsPromptModalOpen(false);
-                  if (pendingExportType) {
-                    executeExport(pendingExportType);
-                    setPendingExportType(null);
-                  }
-                }}
-              >
-                Odatiy fon bilan yuklab olish
-              </button>
-              <button
-                className="cropper-save-btn"
-                onClick={() => {
-                  setIsPromptModalOpen(false);
-                  bgFileInputRef.current?.click();
-                }}
-              >
-                <Crop size={16} /> Rasm Yuklash & Qirqish
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );
