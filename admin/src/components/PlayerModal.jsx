@@ -240,30 +240,16 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   return (
     <>
       <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-content" style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
-          <button className="close-btn" onClick={onClose}><X size={24} /></button>
-          
-          {(player.created_at || player.created_at) && (
-            <div style={{
-              position: 'absolute',
-              top: '16px',
-              left: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              fontWeight: '700',
-              color: '#00ff66',
-              background: 'rgba(0, 255, 102, 0.1)',
-              border: '1px solid rgba(0, 255, 102, 0.25)',
-              padding: '4px 10px',
-              borderRadius: '8px',
-              zIndex: 10
-            }}>
-              <Clock size={13} color="#00ff66" />
-              <span>Yuborilgan vaqti: {new Date(player.created_at).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-          )}
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            {player.created_at ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.45)' }}>
+                <Clock size={12} color="rgba(255, 255, 255, 0.45)" />
+                <span>{new Date(player.created_at).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            ) : <div />}
+            <button className="close-btn" style={{ position: 'static' }} onClick={onClose}><X size={20} /></button>
+          </div>
           
           {currentMode === 'view' ? (
             <div className="modal-view">
