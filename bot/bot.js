@@ -135,26 +135,31 @@ async function formatTeamMessage(teamData) {
 `.trim();
 }
 
-// Session store for chat target phone numbers
+// Session store for chat target phone numbers and mode
 const targetPhoneByChat = new Map();
 
-// 1. /start command — deep link parametrini ham o'qiydi (masalan: /start login_933786886)
+// 1. /start command — deep link parametrini ham o'qiydi (masalan: /start login_933786886 yoki /start status_933786886)
 bot.onText(/\/start(.*)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const param = (match && match[1] ? match[1].trim() : '');
 
     let targetPhone = '';
+    let isLoginMode = false;
+
     if (param) {
         const cleanDigits = param.replace(/\D/g, '').slice(-9);
         if (cleanDigits.length === 9) {
             targetPhone = cleanDigits;
-            targetPhoneByChat.set(chatId, cleanDigits);
+            isLoginMode = param.toLowerCase().includes('login_');
+            targetPhoneByChat.set(chatId, { phone: cleanDigits, isLoginMode });
         }
     }
 
     const phonePrompt = targetPhone
-        ? `Assalomu alaykum! 👋\n\n+998 ${targetPhone.slice(0,2)} ${targetPhone.slice(2,5)} ${targetPhone.slice(5,7)} ${targetPhone.slice(7)} raqami uchun 4 xonali kirish kodini olish uchun pastdagi <b>📱 Telefon raqamni yuborish</b> tugmasini bosing.`
-        : `Assalomu alaykum! 👋\n\n<b>Amatora</b> ilovasiga kirish uchun tasdiqlash kodi olish kerak.\n\nPastdagi <b>📱 Telefon raqamni yuborish</b> tugmasini bosing.`;
+        ? (isLoginMode
+            ? `Assalomu alaykum! 👋\n\n+998 ${targetPhone.slice(0,2)} ${targetPhone.slice(2,5)} ${targetPhone.slice(5,7)} ${targetPhone.slice(7)} raqami uchun 4 xonali kirish kodini olish uchun pastdagi <b>📱 Telefon raqamni yuborish</b> tugmasini bosing.`
+            : `Assalomu alaykum! 👋\n\nArizangiz bo'yicha Telegram xabarnomalarni yoqish va chatni bog'lash uchun pastdagi <b>📱 Telefon raqamni yuborish</b> tugmasini bosing.`)
+        : `Assalomu alaykum! 👋\n\n<b>Amatora</b> xabarnomalari va tasdiqlash kodi uchun pastdagi <b>📱 Telefon raqamni yuborish</b> tugmasini bosing.`;
 
     await sendCleanMessage(chatId, phonePrompt, {
         parse_mode: 'HTML',
@@ -168,24 +173,26 @@ bot.onText(/\/start(.*)/, async (msg, match) => {
     });
 });
 
-// 2. Handle Contact — faqat mos kelgan raqamga tasdiqlash kodi beradi
+// 2. Handle Contact — faqat mos kelgan raqamga bog'lanadi va login rejimida kod beradi
 bot.on('contact', async (msg) => {
     const chatId = msg.chat.id;
     let rawPhone = msg.contact.phone_number || '';
     let contactPhone = rawPhone.replace(/\D/g, '').slice(-9);
 
-    let targetPhone = targetPhoneByChat.get(chatId) || contactPhone;
+    const session = targetPhoneByChat.get(chatId);
+    let targetPhone = session ? session.phone : contactPhone;
+    let isLoginMode = session ? session.isLoginMode : false;
 
     try {
         // Telefon raqamni bazadan tekshirish
         const { data: matchedTeams } = await supabase
             .from('teams')
-            .select('id, captain_phone, telegram_chat_id')
+            .select('*, organization_id')
             .ilike('captain_phone', `%${targetPhone}%`);
 
         const { data: matchedApps } = await supabase
             .from('applications')
-            .select('id, phone, telegram_chat_id')
+            .select('*, organization_id, teams(*)')
             .ilike('phone', `%${targetPhone}%`);
 
         const isTargetRegistered = (matchedTeams && matchedTeams.length > 0) || (matchedApps && matchedApps.length > 0);
@@ -211,7 +218,29 @@ bot.on('contact', async (msg) => {
             await supabase.from('applications').update({ telegram_chat_id: chatId }).ilike('phone', `%${targetPhone}%`);
         }
 
-        // Ilovada yaratilgan faol 4 xonali OTP kodni bazadan olish
+        targetPhoneByChat.delete(chatId);
+
+        // AGAR ariza topshirishdan o'tgan bo'lsa (status rejimi): Chat ID bog'landi xabari + Ariza ma'lumoti. KOD YUBORILMAYDI!
+        if (!isLoginMode) {
+            await sendCleanMessage(chatId, `✅ <b>Telegram hisobingiz (+998${contactPhone}) muvaffaqiyatli bog'landi!</b>\n\nArizangiz holati o'zgarganda ushbu chat orqali avtomatik xabar beriladi.`, {
+                parse_mode: 'HTML',
+                reply_markup: { remove_keyboard: true }
+            });
+
+            const targetApp = (matchedApps && matchedApps.length > 0) ? matchedApps[0] : null;
+            const targetTeam = (matchedTeams && matchedTeams.length > 0) ? matchedTeams[0] : null;
+
+            if (targetApp) {
+                const appMsg = await formatApplicationMessage(targetApp);
+                await bot.sendMessage(chatId, appMsg, { parse_mode: 'HTML' });
+            } else if (targetTeam) {
+                const teamMsg = await formatTeamMessage(targetTeam);
+                await bot.sendMessage(chatId, teamMsg, { parse_mode: 'HTML' });
+            }
+            return;
+        }
+
+        // AGAR kirish rejimidan o'tgan bo'lsa (login_...): 4 xonali OTP kod yuborish
         let otpCode = '';
         const { data: existingOtp } = await supabase
             .from('otp_codes')
@@ -227,7 +256,7 @@ bot.on('contact', async (msg) => {
             otpCode = existingOtp.code;
         } else {
             otpCode = Math.floor(1000 + Math.random() * 9000).toString();
-            const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
             await supabase.from('otp_codes').upsert({
                 phone: targetPhone,
                 code: otpCode,
@@ -237,10 +266,7 @@ bot.on('contact', async (msg) => {
             }, { onConflict: 'phone' });
         }
 
-        targetPhoneByChat.delete(chatId);
-
-        // Faqat o'sha chatga 4 xonali kodni yuborish
-        await sendCleanMessage(chatId, `🔑 <b>Tasdiqlash kodingiz:</b> <code>${otpCode}</code>\n\n📱 <i>4 xonali kodni ilovaga kiriting. Kod 5 daqiqa amal qiladi.</i>`, {
+        await sendCleanMessage(chatId, `🔑 <b>Tasdiqlash kodingiz:</b> <code>${otpCode}</code>\n\n📱 <i>4 xonali kodni ilovaga kiriting. Kod 10 daqiqa amal qiladi.</i>`, {
             parse_mode: 'HTML',
             reply_markup: {
                 remove_keyboard: true,
