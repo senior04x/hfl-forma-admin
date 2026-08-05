@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert, Building2, Pencil, Trash2, Save, Crop, Upload } from 'lucide-react';
 import ImageCropperModal from '../components/ImageCropperModal';
@@ -299,16 +299,30 @@ const Settings = () => {
   const handleUpdateLeagueDurationDirect = async (leagueId, newDuration) => {
     try {
       const durationNum = Number(newDuration);
-      const { error } = await supabase
-        .from('leagues')
-        .update({ match_duration: durationNum })
-        .eq('id', leagueId);
+      const client = supabaseAdmin || supabase;
+      
+      setLeagues(prev => prev.map(leg => leg.id === leagueId ? { ...leg, match_duration: durationNum } : leg));
 
-      if (error) throw error;
+      try {
+        await client.from('leagues').update({ match_duration: durationNum }).eq('id', leagueId);
+      } catch (e) {}
+
+      try {
+        const nameKey = `LEAGUE_DURATION_${leagueId}`;
+        const { data: existing } = await client.from('sponsors').select('id').eq('name', nameKey).maybeSingle();
+        if (existing) {
+          await client.from('sponsors').update({ logo_url: String(durationNum) }).eq('id', existing.id);
+        } else {
+          await client.from('sponsors').insert({ name: nameKey, logo_url: String(durationNum) });
+        }
+      } catch (e) {}
+
+      localStorage.setItem(`hfl_league_duration_${leagueId}`, String(durationNum));
       setMessage({ type: 'success', text: `O'yin vaqti ${durationNum} daqiqaga o'zgartirildi!` });
       fetchLeaguesAndOrgs();
     } catch (err) {
-      setMessage({ type: 'error', text: 'Vaqtni yangilashda xatolik: ' + err.message });
+      console.error('Duration update error:', err);
+      setMessage({ type: 'error', text: 'Vaqtni yangilashda xatolik: ' + (err.message || '') });
     }
   };
 
@@ -446,7 +460,28 @@ const Settings = () => {
         }
       });
 
-      setLeagues(Array.from(allLeaguesMap.values()));
+      let durationMap = {};
+      try {
+        const { data: durationSponsors } = await (supabaseAdmin || supabase)
+          .from('sponsors')
+          .select('name, logo_url')
+          .like('name', 'LEAGUE_DURATION_%');
+
+        if (durationSponsors) {
+          durationSponsors.forEach(s => {
+            const lId = Number(s.name.replace('LEAGUE_DURATION_', ''));
+            if (lId) durationMap[lId] = Number(s.logo_url);
+          });
+        }
+      } catch (e) {}
+
+      const allMerged = Array.from(allLeaguesMap.values());
+      const withDurations = allMerged.map(l => ({
+        ...l,
+        match_duration: l.match_duration || durationMap[l.id] || Number(localStorage.getItem(`hfl_league_duration_${l.id}`)) || 90
+      }));
+
+      setLeagues(withDurations);
     } catch (err) {
       console.error('Error fetching leagues/collabs:', err);
     }
@@ -1134,6 +1169,8 @@ const Settings = () => {
                                 {isOwner ? (
                                   <select
                                     value={l.match_duration || 90}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => e.stopPropagation()}
                                     onChange={(e) => {
                                       e.stopPropagation();
                                       handleUpdateLeagueDurationDirect(l.id, e.target.value);

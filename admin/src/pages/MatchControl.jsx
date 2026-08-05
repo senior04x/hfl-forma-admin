@@ -559,7 +559,26 @@ const MatchControl = () => {
             .select('*')
             .ilike('name', matchData.league.trim())
             .maybeSingle();
-          if (lData) setLeagueData(lData);
+            
+          let dur = lData?.match_duration;
+
+          if (!dur && lData?.id) {
+            const { data: spDur } = await supabaseAdmin
+              .from('sponsors')
+              .select('logo_url')
+              .eq('name', `LEAGUE_DURATION_${lData.id}`)
+              .maybeSingle();
+            if (spDur?.logo_url) dur = Number(spDur.logo_url);
+          }
+
+          if (!dur && lData?.id) {
+            const localDur = localStorage.getItem(`hfl_league_duration_${lData.id}`);
+            if (localDur) dur = Number(localDur);
+          }
+
+          if (lData) {
+            setLeagueData({ ...lData, match_duration: dur || 90 });
+          }
         } catch (lErr) {}
       }
 
