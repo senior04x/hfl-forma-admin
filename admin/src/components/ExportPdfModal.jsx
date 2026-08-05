@@ -391,6 +391,7 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
           head: [['№', 'Rasm', 'F.I.SH', 'Tug\'ilgan sana', 'Pasport', 'Telefon', 'Pozitsiya', 'Raqam', 'Millati', 'Bo\'yi/Vazni', 'Instagram', 'Holati']],
           body: tableBody,
           margin: { left: 12, right: 12 },
+          tableWidth: 273,
           styles: {
             fontSize: 7.2,
             cellPadding: 2,
@@ -411,16 +412,16 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
           columnStyles: {
             0: { cellWidth: 8, halign: 'center' },   // №
             1: { cellWidth: 14, halign: 'center' },  // Rasm
-            2: { cellWidth: 44 },                    // F.I.SH
-            3: { cellWidth: 22, halign: 'center' },  // Tug'ilgan sana
+            2: { cellWidth: 50 },                    // F.I.SH
+            3: { cellWidth: 23, halign: 'center' },  // Tug'ilgan sana
             4: { cellWidth: 22, halign: 'center' },  // Pasport
-            5: { cellWidth: 25, halign: 'center' },  // Telefon
-            6: { cellWidth: 22 },                    // Pozitsiya
-            7: { cellWidth: 12, halign: 'center' },  // Raqam
-            8: { cellWidth: 20 },                    // Millati
+            5: { cellWidth: 27, halign: 'center' },  // Telefon
+            6: { cellWidth: 26 },                    // Pozitsiya
+            7: { cellWidth: 13, halign: 'center' },  // Raqam
+            8: { cellWidth: 18 },                    // Millati
             9: { cellWidth: 20, halign: 'center' },  // Bo'yi/Vazni
-            10: { cellWidth: 24 },                   // Instagram
-            11: { cellWidth: 20, halign: 'center' }  // Holati (prevents word wrapping)
+            10: { cellWidth: 25 },                   // Instagram
+            11: { cellWidth: 27, halign: 'center' }  // Holati (fits "Tasdiqlangan" on 1 line)
           },
           alternateRowStyles: {
             fillColor: [248, 250, 252]
