@@ -48,6 +48,10 @@
 }
 
 .modal-header-profile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     margin-bottom: 24px;
 }
@@ -57,7 +61,8 @@
     height: 96px;
     border-radius: 50%;
     object-fit: cover;
-    margin-bottom: 12px;
+    margin: 0 auto 12px auto;
+    display: block;
     border: 3px solid #00ff66;
     box-shadow: 0 0 20px rgba(0, 255, 102, 0.25);
     cursor: pointer;
@@ -65,6 +70,8 @@
 
 .modal-avatar.team {
     border-radius: 18px;
+    margin: 0 auto 12px auto;
+    display: block;
 }
 
 .modal-header-profile h2 {

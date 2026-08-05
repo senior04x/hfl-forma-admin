@@ -243,8 +243,13 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
           
           {currentMode === 'view' ? (
             <div className="modal-view">
-              <div className="modal-header-profile">
-                <img src={formData.logo_url || team.logo_url} alt="Logo" className="modal-avatar team" />
+              <div className="modal-header-profile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                <img 
+                  src={formData.logo_url || team.logo_url} 
+                  alt="Logo" 
+                  className="modal-avatar team" 
+                  style={{ margin: '0 auto 12px auto', display: 'block', objectFit: 'contain' }} 
+                />
                 <h2>{team.name}</h2>
                 <div className="team-leagues-badges">
                   {selectedLeagues.length > 0 ? (
