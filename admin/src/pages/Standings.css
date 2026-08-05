@@ -215,7 +215,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 40px 50px 20px 50px;
+  padding: 28px 45px 10px 45px;
 }
 
 .export-logo-left {
@@ -223,7 +223,7 @@
   flex-direction: column;
 }
 .export-logo-left h2 {
-  font-size: 32px;
+  font-size: 28px;
   font-style: italic;
   font-weight: 900;
   margin: 0;
@@ -231,7 +231,7 @@
   font-family: 'Outfit', sans-serif;
 }
 .export-logo-left span {
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: 2px;
 }
 
@@ -244,17 +244,17 @@
   height: 40px;
 }
 .export-logo-right span {
-  font-size: 14px;
-  margin-top: 5px;
+  font-size: 13px;
+  margin-top: 4px;
 }
 
 /* Main Grid Layout for Export */
 .export-body {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  padding: 20px 50px 30px 50px;
+  padding: 10px 45px 10px 45px;
   flex: 1;
-  gap: 20px;
+  gap: 16px;
 }
 
 /* Table Area */
@@ -273,27 +273,27 @@
 .export-table-header {
   display: flex;
   background: rgba(255, 255, 255, 0.1);
-  padding: 15px;
+  padding: 10px 14px;
   font-weight: 800;
-  font-size: 18px;
+  font-size: 16px;
   border-bottom: 2px solid rgba(255, 255, 255, 0.2);
   color: #fff;
 }
-.export-col-hash { width: 40px; text-align: center; }
-.export-col-team { flex: 1; margin-left: 10px; }
-.export-col-stat { width: 50px; text-align: center; }
+.export-col-hash { width: 36px; text-align: center; }
+.export-col-team { flex: 1; margin-left: 8px; }
+.export-col-stat { width: 44px; text-align: center; }
 
 .export-table-row {
   display: flex;
-  padding: 12px 15px;
+  padding: 8px 12px;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 18px;
+  font-size: 16.5px;
   font-weight: 700;
 }
 .export-table-row:last-child { border-bottom: none; }
 .export-table-row .team-img {
-  width: 30px; height: 30px; border-radius: 50%; margin-right: 15px; object-fit: cover;
+  width: 26px; height: 26px; border-radius: 50%; margin-right: 12px; object-fit: cover;
 }
 
 /* Right Column (Results & Stats) */

@@ -1343,12 +1343,25 @@ const Schedule = () => {
                 const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
                 if (secondarySponsors.length === 0) return null;
                 return (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px', marginBottom: '5px' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'center',
+                    gap: '20px',
+                    margin: '5px auto 10px auto',
+                    padding: '6px 20px',
+                    background: 'rgba(0, 0, 0, 0.45)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                    borderRadius: '20px',
+                    width: 'fit-content',
+                    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)'
+                  }}>
                     {secondarySponsors.map((s, idx) => (
                       <React.Fragment key={s.id || idx}>
-                        <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '36px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                        <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '30px', maxWidth: '100px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
                         {idx < secondarySponsors.length - 1 && (
-                          <div style={{ height: '22px', width: '1px', backgroundColor: '#ffffff', opacity: 0.4 }}></div>
+                          <div style={{ height: '18px', width: '1px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
                         )}
                       </React.Fragment>
                     ))}
@@ -1368,30 +1381,30 @@ const Schedule = () => {
           return (
             <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', padding: '40px 50px', boxSizing: 'border-box' }}>
               {/* Header */}
-              <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', width: '100%' }}>
-                <div className="export-logo-left" style={{ width: '250px', minWidth: '250px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>
+              <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', width: '100%' }}>
+                <div className="export-logo-left" style={{ width: '230px', minWidth: '230px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>
                   {isCollab ? (
                     <>
-                      <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '90px', objectFit: 'contain', background: 'transparent' }} />
-                      <img src="/x.png" crossOrigin="anonymous" style={{ height: '18px', objectFit: 'contain', opacity: 0.7, background: 'transparent' }} />
-                      <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain', background: 'transparent' }} />
+                      <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '70px', objectFit: 'contain', background: 'transparent' }} />
+                      <img src="/x.png" crossOrigin="anonymous" style={{ height: '14px', objectFit: 'contain', opacity: 0.7, background: 'transparent' }} />
+                      <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain', background: 'transparent' }} />
                     </>
                   ) : (
-                    <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain', background: 'transparent' }} />
+                    <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain', background: 'transparent' }} />
                   )}
                 </div>
 
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
                   {currentLeagueObj?.logo_url ? (
-                    <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: '95px', maxWidth: '360px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                    <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: '75px', maxWidth: '320px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
                   ) : (
-                    <h2 style={{ color: '#fff', fontSize: '32px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>{exportLeague} {exportRound ? `(${exportRound}-TUR)` : ''}</h2>
+                    <h2 style={{ color: '#fff', fontSize: '28px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>{exportLeague} {exportRound ? `(${exportRound}-TUR)` : ''}</h2>
                   )}
                 </div>
 
-                <div className="export-logo-right" style={{ width: '250px', minWidth: '250px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <div className="export-logo-right" style={{ width: '230px', minWidth: '230px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                   {mainSponsorLogo ? (
-                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain', background: 'transparent' }} />
+                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ height: '65px', objectFit: 'contain', background: 'transparent' }} />
                   ) : null}
                 </div>
               </div>
@@ -1439,12 +1452,25 @@ const Schedule = () => {
                 const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
                 if (secondarySponsors.length === 0) return null;
                 return (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '30px', marginTop: '20px', marginBottom: '15px' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'center',
+                    gap: '24px',
+                    margin: '10px auto 16px auto',
+                    padding: '8px 24px',
+                    background: 'rgba(0, 0, 0, 0.45)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                    borderRadius: '25px',
+                    width: 'fit-content',
+                    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)'
+                  }}>
                     {secondarySponsors.map((s, idx) => (
                       <React.Fragment key={s.id || idx}>
-                        <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '42px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                        <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '34px', maxWidth: '110px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
                         {idx < secondarySponsors.length - 1 && (
-                          <div style={{ height: '28px', width: '1px', backgroundColor: '#ffffff', opacity: 0.5 }}></div>
+                          <div style={{ height: '20px', width: '1px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
                         )}
                       </React.Fragment>
                     ))}
