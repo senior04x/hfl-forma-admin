@@ -471,33 +471,29 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
                 const imgB64 = photoMap.get(player.id);
                 const cellX = data.cell.x;
                 const cellY = data.cell.y;
-                const size = 9; // 9mm diameter
-                const posX = cellX + (data.cell.width - size) / 2;
-                const posY = cellY + (data.cell.height - size) / 2;
-                const radius = size / 2;
+                const cellW = data.cell.width;
+                const cellH = data.cell.height;
+                const size = 9; // 9mm
+                const posX = cellX + (cellW - size) / 2;
+                const posY = cellY + (cellH - size) / 2;
 
                 if (imgB64) {
                   try {
-                    doc.saveGraphicsState();
-                    doc.circle(posX + radius, posY + radius, radius, 'clip');
-                    const imgType = imgB64.includes('png') ? 'PNG' : 'JPEG';
-                    doc.addImage(imgB64, imgType, posX, posY, size, size);
-                    doc.restoreGraphicsState();
-
-                    // Subtle circle border
+                    doc.addImage(imgB64, 'JPEG', posX, posY, size, size);
+                    // Draw a thin border around the image
                     doc.setDrawColor(203, 213, 225);
                     doc.setLineWidth(0.2);
-                    doc.circle(posX + radius, posY + radius, radius, 'S');
+                    doc.rect(posX, posY, size, size, 'S');
                   } catch (e) {
                     console.warn('Drawing cell image notice:', e);
                   }
                 } else {
-                  // Fallback clean circular avatar placeholder
+                  // Placeholder gray box
                   doc.setFillColor(226, 232, 240);
-                  doc.circle(posX + radius, posY + radius, radius, 'F');
+                  doc.rect(posX, posY, size, size, 'F');
                   doc.setFontSize(6);
                   doc.setTextColor(148, 163, 184);
-                  doc.text('—', posX + radius, posY + radius + 1, { align: 'center' });
+                  doc.text('—', posX + size / 2, posY + size / 2 + 1, { align: 'center' });
                 }
               }
             }
