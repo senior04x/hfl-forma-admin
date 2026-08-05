@@ -313,7 +313,7 @@ supabase
   })
   .subscribe();
 
-// 5. Realtime listener for Matches
+// 5. Realtime listener for Matches (New Match Scheduled)
 supabase
   .channel('matches-status')
   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'matches' }, async (payload) => {
@@ -325,27 +325,30 @@ supabase
 
           if (!homeTeam || !awayTeam) return;
 
-          const chatIds = new Set();
-          if (homeTeam.telegram_chat_id) chatIds.add(homeTeam.telegram_chat_id);
-          if (awayTeam.telegram_chat_id) chatIds.add(awayTeam.telegram_chat_id);
+          // Faqat shu 2 ta jamoa sardorlari va o'yinchilariga yuboriladi
+          const recipientChatIds = new Set();
+          if (homeTeam.telegram_chat_id) recipientChatIds.add(homeTeam.telegram_chat_id);
+          if (awayTeam.telegram_chat_id) recipientChatIds.add(awayTeam.telegram_chat_id);
 
           const { data: homePlayers } = await supabase.from('applications').select('telegram_chat_id').eq('team_id', match.home_team_id).not('telegram_chat_id', 'is', null);
           const { data: awayPlayers } = await supabase.from('applications').select('telegram_chat_id').eq('team_id', match.away_team_id).not('telegram_chat_id', 'is', null);
 
-          if (homePlayers) homePlayers.forEach(p => chatIds.add(p.telegram_chat_id));
-          if (awayPlayers) awayPlayers.forEach(p => chatIds.add(p.telegram_chat_id));
+          if (homePlayers) homePlayers.forEach(p => p.telegram_chat_id && recipientChatIds.add(p.telegram_chat_id));
+          if (awayPlayers) awayPlayers.forEach(p => p.telegram_chat_id && recipientChatIds.add(p.telegram_chat_id));
+
+          if (recipientChatIds.size === 0) return;
 
           const message = [
               '',
-              '📢 <b>Yangi O\'yin Belgilandi!</b>',
+              '📢 <b>Yangi O\'yiningiz Belgilandi!</b>',
               '',
               '⚽ <b>' + homeTeam.name + '</b> 🆚 <b>' + awayTeam.name + '</b>',
               '🏆 <b>Liga:</b> ' + (match.league || '-'),
-              '📅 <b>Sana:</b> ' + match.match_date,
-              '⏰ <b>Vaqt:</b> ' + match.match_time,
-              '🏟 <b>Manzil:</b> ' + match.location,
+              '📅 <b>Sana:</b> ' + (match.match_date || '-'),
+              '⏰ <b>Vaqt:</b> ' + (match.match_time || '-'),
+              '🏟 <b>Manzil:</b> ' + (match.location || '1-Maydon'),
               '',
-              '<i>Barchaga omad yor bo\'lsin!</i>'
+              '<i>O\'yinga omad yor bo\'lsin!</i>'
           ].join('\n');
 
           const inlineKeyboard = [];
@@ -360,11 +363,11 @@ supabase
               }
           };
 
-          for (const chatId of chatIds) {
+          for (const targetChatId of recipientChatIds) {
               try {
-                  await sendCleanMessage(chatId, message, opts);
+                  await sendCleanMessage(targetChatId, message, opts);
               } catch (e) {
-                  console.error("Failed to send match to", chatId, e.message);
+                  console.error("Failed to send match schedule to", targetChatId, e.message);
               }
           }
       } catch (err) {
@@ -373,7 +376,7 @@ supabase
   })
   .subscribe();
 
-// 6. Realtime listener for Match Results
+// 6. Realtime listener for Match Results (Finished Match)
 supabase
   .channel('matches-results')
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches' }, async (payload) => {
@@ -405,21 +408,38 @@ supabase
           const homeGoalsText = homeGoals.map(g => (g.player ? g.player.first_name + ' ' + g.player.last_name : '?') + " " + g.minute + "'").join(', ') || '-';
           const awayGoalsText = awayGoals.map(g => (g.player ? g.player.first_name + ' ' + g.player.last_name : '?') + " " + g.minute + "'").join(', ') || '-';
 
-          const chatIds = new Set();
-          if (homeTeam.telegram_chat_id) chatIds.add(homeTeam.telegram_chat_id);
-          if (awayTeam.telegram_chat_id) chatIds.add(awayTeam.telegram_chat_id);
+          // Faqat shu o'yinda o'ynagan 2 ta jamoa sardorlari va o'yinchilariga yuboriladi
+          const recipientChatIds = new Set();
+          if (homeTeam.telegram_chat_id) recipientChatIds.add(homeTeam.telegram_chat_id);
+          if (awayTeam.telegram_chat_id) recipientChatIds.add(awayTeam.telegram_chat_id);
 
-          const { data: homePlayers } = await supabase.from('applications').select('telegram_chat_id').eq('team_id', newMatch.home_team_id).not('telegram_chat_id', 'is', null);
-          const { data: awayPlayers } = await supabase.from('applications').select('telegram_chat_id').eq('team_id', newMatch.away_team_id).not('telegram_chat_id', 'is', null);
-          if (homePlayers) homePlayers.forEach(p => chatIds.add(p.telegram_chat_id));
-          if (awayPlayers) awayPlayers.forEach(p => chatIds.add(p.telegram_chat_id));
+          const { data: homePlayers } = await supabase
+              .from('applications')
+              .select('telegram_chat_id')
+              .eq('team_id', newMatch.home_team_id)
+              .not('telegram_chat_id', 'is', null);
+
+          const { data: awayPlayers } = await supabase
+              .from('applications')
+              .select('telegram_chat_id')
+              .eq('team_id', newMatch.away_team_id)
+              .not('telegram_chat_id', 'is', null);
+
+          if (homePlayers) {
+              homePlayers.forEach(p => p.telegram_chat_id && recipientChatIds.add(p.telegram_chat_id));
+          }
+          if (awayPlayers) {
+              awayPlayers.forEach(p => p.telegram_chat_id && recipientChatIds.add(p.telegram_chat_id));
+          }
+
+          if (recipientChatIds.size === 0) return;
 
           let message = '';
           
           if (isFinished) {
               message = [
                   '',
-                  '⚽ <b>O\'yin Yakunlandi!</b>',
+                  '⚽ <b>O\'yin Natijasi</b>',
                   '',
                   '<b>' + homeTeam.name + '</b> <b>' + (newMatch.home_score || 0) + ' : ' + (newMatch.away_score || 0) + '</b> <b>' + awayTeam.name + '</b>',
                   '',
@@ -428,7 +448,7 @@ supabase
                   '⚽ <b>' + awayTeam.name + ':</b> ' + awayGoalsText,
                   '🟨 Sariq: ' + yellowCards + ' | 🟥 Qizil: ' + redCards,
                   '',
-                  '<i>Keyingi o\'yinlarni kuzatib boring!</i>'
+                  '<i>Keyingi o\'yiningizda omad yor bo\'lsin!</i>'
               ].join('\n');
           } else if (isReverted) {
               message = [
@@ -440,15 +460,15 @@ supabase
               ].join('\n');
           }
 
-          for (const chatId of chatIds) {
+          for (const targetChatId of recipientChatIds) {
               try {
-                  await sendCleanMessage(chatId, message, { parse_mode: 'HTML' });
+                  await sendCleanMessage(targetChatId, message, { parse_mode: 'HTML' });
               } catch (e) {
-                  console.error('Result send failed:', chatId, e.message);
+                  console.error("Failed to send match result to", targetChatId, e.message);
               }
           }
       } catch (err) {
-          console.error('Match results listener error:', err);
+          console.error("Match result listener error:", err);
       }
   })
   .subscribe();
