@@ -934,6 +934,9 @@ const MatchControl = () => {
               <Clock size={16} className={isTimerRunning ? 'timer-icon-pulsing' : ''} />
               <span className="timer-display">{formatTimer(timerSeconds)}</span>
               <span className="timer-minute">({getCurrentMinute()}')</span>
+              <span style={{ fontSize: '11px', color: '#60a5fa', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 6px', borderRadius: '6px', marginLeft: '6px', fontWeight: '800' }} title="Liga bo'yicha belgilangan o'yin vaqti">
+                ⏱️ {matchDurationMins} daq ({halfDurationMins}x2)
+              </span>
               <button 
                 className="timer-control-btn"
                 onClick={toggleTimerManual}
