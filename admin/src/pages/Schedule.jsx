@@ -595,6 +595,7 @@ const Schedule = () => {
         const canvas = await html2canvas(exportYtRef.current, {
           scale: 2,
           useCORS: true,
+          allowTaint: true,
           backgroundColor: null
         });
         const dataUrl = canvas.toDataURL('image/png');
@@ -625,7 +626,7 @@ const Schedule = () => {
       } finally {
         setExportingMatchId(null);
       }
-    }, 150);
+    }, 350);
   };
 
   const handleExport = async () => {
