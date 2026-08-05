@@ -1,5 +1,14 @@
 {
+  "name": "hfl-forma-admin-bot",
+  "version": "1.0.0",
+  "main": "bot/bot.js",
+  "scripts": {
+    "start": "node bot/bot.js"
+  },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "express": "^5.2.1",
+    "node-telegram-bot-api": "^0.64.0",
     "sharp": "^0.35.3"
   }
 }
