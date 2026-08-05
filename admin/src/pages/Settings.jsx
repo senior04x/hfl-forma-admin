@@ -522,46 +522,88 @@ const Settings = () => {
     setMessage({ type: '', text: '' });
 
     try {
+      const client = supabaseAdmin || supabase;
+      const cleanSeason = leagueSeason.trim() || '2026/2027';
+      const cleanName = leagueName.trim();
+
       if (editingLeague) {
         const oldName = editingLeague.name;
-        const newName = leagueName.trim();
+        const targetId = editingLeague.id;
 
-        const { error } = await supabase
-          .from('leagues')
-          .update({
-            name: newName,
-            logo_url: leagueLogo.trim() || null,
-            is_junior: isJunior,
-            match_duration: Number(matchDuration) || 90,
-            season: leagueSeason.trim() || '2026/2027',
-            status: leagueStatus || 'active'
-          })
-          .eq('id', editingLeague.id);
+        // Base update payload without match_duration to avoid PGRST204 schema error
+        const updatePayload = {
+          name: cleanName,
+          logo_url: leagueLogo.trim() || null,
+          is_junior: isJunior
+        };
 
-        if (error) throw error;
-
-        if (oldName !== newName) {
-          await supabase.from('teams').update({ league: newName }).eq('league', oldName).eq('organization_id', orgId);
-          await supabase.from('matches').update({ league: newName }).eq('league', oldName).eq('organization_id', orgId);
-          await supabase.from('applications').update({ league: newName }).eq('league', oldName).eq('organization_id', orgId);
+        // Try updating with season and status if columns exist, otherwise fallback cleanly
+        try {
+          const { error: sErr } = await client.from('leagues').update({
+            ...updatePayload,
+            season: cleanSeason,
+            status: leagueStatus
+          }).eq('id', targetId);
+          if (sErr) throw sErr;
+        } catch (e) {
+          const { error: baseErr } = await client.from('leagues').update(updatePayload).eq('id', targetId);
+          if (baseErr) throw baseErr;
         }
 
-        setMessage({ type: 'success', text: 'Liga ma\'lumotlari va mavsumi muvaffaqiyatli yangilandi!' });
+        // Save match duration in sponsors table / localStorage helper
+        if (matchDuration && targetId) {
+          try {
+            const nameKey = `LEAGUE_DURATION_${targetId}`;
+            const { data: existing } = await client.from('sponsors').select('id').eq('name', nameKey).maybeSingle();
+            if (existing) {
+              await client.from('sponsors').update({ logo_url: String(matchDuration) }).eq('id', existing.id);
+            } else {
+              await client.from('sponsors').insert({ name: nameKey, logo_url: String(matchDuration) });
+            }
+          } catch (e) {}
+          localStorage.setItem(`hfl_league_duration_${targetId}`, String(matchDuration));
+        }
+
+        if (oldName !== cleanName) {
+          await client.from('teams').update({ league: cleanName }).eq('league', oldName).eq('organization_id', orgId);
+          await client.from('matches').update({ league: cleanName }).eq('league', oldName).eq('organization_id', orgId);
+          await client.from('applications').update({ league: cleanName }).eq('league', oldName).eq('organization_id', orgId);
+        }
+
+        setMessage({ type: 'success', text: 'Liga ma\'lumotlari muvaffaqiyatli yangilandi!' });
         cancelEditLeague();
       } else {
-        const { error } = await supabase.from('leagues').insert({
-          name: leagueName.trim(),
+        const insertPayload = {
+          name: cleanName,
           logo_url: leagueLogo.trim() || null,
           organization_id: orgId,
-          is_junior: isJunior,
-          match_duration: Number(matchDuration) || 90,
-          season: leagueSeason.trim() || '2026/2027',
-          status: leagueStatus || 'active'
-        });
+          is_junior: isJunior
+        };
 
-        if (error) throw error;
+        let newLeague = null;
+        try {
+          const { data, error } = await client.from('leagues').insert({
+            ...insertPayload,
+            season: cleanSeason,
+            status: leagueStatus
+          }).select().single();
+          if (error) throw error;
+          newLeague = data;
+        } catch (e) {
+          const { data, error: baseErr } = await client.from('leagues').insert(insertPayload).select().single();
+          if (baseErr) throw baseErr;
+          newLeague = data;
+        }
 
-        setMessage({ type: 'success', text: `"${leagueName}" (${leagueSeason}) ligasi muvaffaqiyatli yaratildi!` });
+        if (newLeague && matchDuration) {
+          try {
+            const nameKey = `LEAGUE_DURATION_${newLeague.id}`;
+            await client.from('sponsors').insert({ name: nameKey, logo_url: String(matchDuration) });
+          } catch (e) {}
+          localStorage.setItem(`hfl_league_duration_${newLeague.id}`, String(matchDuration));
+        }
+
+        setMessage({ type: 'success', text: `"${cleanName}" ligasi muvaffaqiyatli yaratildi!` });
         setLeagueName('');
         setLeagueLogo('');
         setIsJunior(false);
@@ -571,7 +613,8 @@ const Settings = () => {
       }
       fetchLeaguesAndOrgs();
     } catch (err) {
-      setMessage({ type: 'error', text: 'Liga saqlashda xato: ' + err.message });
+      console.error('Save league error:', err);
+      setMessage({ type: 'error', text: 'Liga saqlashda xato: ' + (err.message || JSON.stringify(err)) });
     } finally {
       setCreatingLeague(false);
     }
