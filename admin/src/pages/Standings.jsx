@@ -751,15 +751,9 @@ export default function Standings() {
                   display: 'flex',
                   alignItems: 'center',
                   justify: 'center',
-                  gap: '24px',
-                  margin: '10px auto 12px auto',
-                  padding: '8px 24px',
-                  background: 'rgba(0, 0, 0, 0.45)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.18)',
-                  borderRadius: '25px',
-                  width: 'fit-content',
-                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)'
+                  gap: '32px',
+                  marginTop: '28px',
+                  marginBottom: '12px'
                 }}>
                   {secondarySponsors.map((s, idx) => (
                     <React.Fragment key={s.id || idx}>
@@ -927,15 +921,9 @@ export default function Standings() {
                   display: 'flex',
                   alignItems: 'center',
                   justify: 'center',
-                  gap: '24px',
-                  margin: '10px auto 12px auto',
-                  padding: '8px 24px',
-                  background: 'rgba(0, 0, 0, 0.45)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.18)',
-                  borderRadius: '25px',
-                  width: 'fit-content',
-                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)'
+                  gap: '32px',
+                  marginTop: '28px',
+                  marginBottom: '12px'
                 }}>
                   {secondarySponsors.map((s, idx) => (
                     <React.Fragment key={s.id || idx}>
