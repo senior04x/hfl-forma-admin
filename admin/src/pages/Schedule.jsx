@@ -1363,23 +1363,17 @@ const Schedule = () => {
                 const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
                 if (secondarySponsors.length === 0) return null;
                 return (
-                  <div style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justify: 'center',
-                    gap: '28px',
-                    marginTop: '20px',
-                    marginBottom: '10px'
-                  }}>
-                    {secondarySponsors.map((s, idx) => (
-                      <React.Fragment key={s.id || idx}>
-                        <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '30px', maxWidth: '100px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.8 }} />
-                        {idx < secondarySponsors.length - 1 && (
-                          <div style={{ height: '18px', width: '1px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
-                        )}
-                      </React.Fragment>
-                    ))}
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '20px 0 10px 0', boxSizing: 'border-box' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '28px' }}>
+                      {secondarySponsors.map((s, idx) => (
+                        <React.Fragment key={s.id || idx}>
+                          <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '30px', maxWidth: '100px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.8 }} />
+                          {idx < secondarySponsors.length - 1 && (
+                            <div style={{ height: '18px', width: '1px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
                   </div>
                 );
               })()}
@@ -1470,23 +1464,17 @@ const Schedule = () => {
                 const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
                 if (secondarySponsors.length === 0) return null;
                 return (
-                  <div style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justify: 'center',
-                    gap: '32px',
-                    marginTop: '28px',
-                    marginBottom: '12px'
-                  }}>
-                    {secondarySponsors.map((s, idx) => (
-                      <React.Fragment key={s.id || idx}>
-                        <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '34px', maxWidth: '110px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.8 }} />
-                        {idx < secondarySponsors.length - 1 && (
-                          <div style={{ height: '20px', width: '1px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
-                        )}
-                      </React.Fragment>
-                    ))}
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '28px 0 12px 0', boxSizing: 'border-box' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px' }}>
+                      {secondarySponsors.map((s, idx) => (
+                        <React.Fragment key={s.id || idx}>
+                          <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '34px', maxWidth: '110px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.8 }} />
+                          {idx < secondarySponsors.length - 1 && (
+                            <div style={{ height: '20px', width: '1px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
                   </div>
                 );
               })()}
