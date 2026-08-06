@@ -210,6 +210,12 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
     setPage(1);
   };
 
+  const getLeagueTeamCount = (targetLeague) => {
+    if (!teams || teams.length === 0) return 0;
+    if (targetLeague === 'all') return teams.length;
+    return teams.filter(t => t.league && t.league.split(',').map(s => s.trim()).includes(targetLeague)).length;
+  };
+
   return (
     <div className="table-wrapper">
       <div className="table-controls">
@@ -234,15 +240,20 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
           ]}
         />
 
-        <CustomSelect
-          value={leagueFilter}
-          onChange={(val) => { setLeagueFilter(val); setPage(1); }}
-          icon={Trophy}
-          options={[
-            { value: 'all', label: 'Barcha ligalar' },
-            ...activeLeagues.map(l => ({ value: l.name, label: l.name }))
-          ]}
-        />
+        <div className="league-filter-container">
+          <CustomSelect
+            value={leagueFilter}
+            onChange={(val) => { setLeagueFilter(val); setPage(1); }}
+            icon={Trophy}
+            options={[
+              { value: 'all', label: 'Barcha ligalar' },
+              ...activeLeagues.map(l => ({ value: l.name, label: l.name }))
+            ]}
+          />
+          <div className="league-team-count-badge">
+            <span>⚽ Jamoalar soni:</span> <strong>{getLeagueTeamCount(leagueFilter)} ta</strong>
+          </div>
+        </div>
       </div>
 
       <div className="list-container">

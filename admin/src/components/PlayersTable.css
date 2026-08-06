@@ -15,8 +15,39 @@
     padding: 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-start;
     background: rgba(255, 255, 255, 0.02);
+}
+
+.league-filter-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.league-team-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 255, 102, 0.12);
+    border: 1px solid rgba(0, 255, 102, 0.35);
+    color: #00ff66;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 4px;
+    width: fit-content;
+    box-shadow: 0 4px 12px rgba(0, 255, 102, 0.15);
+    backdrop-filter: blur(8px);
+}
+
+.league-team-count-badge strong {
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 14px;
 }
 
 .search-box {

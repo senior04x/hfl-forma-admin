@@ -20,6 +20,8 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const { orgId } = useOrg();
   
+  const [allOrgTeams, setAllOrgTeams] = useState([]);
+
   // Pagination & Filtering
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -48,11 +50,14 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
       const data = await fetchAllTeams('*');
       
       const activeNames = (leaguesList || []).map(l => l.name);
-      let filtered = (data || []).filter(t => 
+      let orgTeams = (data || []).filter(t => 
         t.organization_id === orgId || 
         (t.league && t.league.split(',').some(l => activeNames.includes(l.trim()))) || 
         (!orgId)
       );
+      setAllOrgTeams(orgTeams);
+
+      let filtered = [...orgTeams];
 
       // 1. Status Filter
       if (filter !== 'all') {
@@ -83,6 +88,12 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getLeagueTeamCount = (targetLeague) => {
+    if (!allOrgTeams || allOrgTeams.length === 0) return 0;
+    if (targetLeague === 'all') return allOrgTeams.length;
+    return allOrgTeams.filter(t => t.league && t.league.split(',').map(s => s.trim()).includes(targetLeague)).length;
   };
 
   const handleConfirmDelete = async () => {
@@ -183,15 +194,20 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
           ]}
         />
 
-        <CustomSelect
-          value={leagueFilter}
-          onChange={(val) => { setLeagueFilter(val); setPage(1); }}
-          icon={Trophy}
-          options={[
-            { value: 'all', label: 'Barcha ligalar' },
-            ...activeLeagues.map(l => ({ value: l.name, label: l.name }))
-          ]}
-        />
+        <div className="league-filter-container">
+          <CustomSelect
+            value={leagueFilter}
+            onChange={(val) => { setLeagueFilter(val); setPage(1); }}
+            icon={Trophy}
+            options={[
+              { value: 'all', label: 'Barcha ligalar' },
+              ...activeLeagues.map(l => ({ value: l.name, label: l.name }))
+            ]}
+          />
+          <div className="league-team-count-badge">
+            <span>⚽ Jamoalar soni:</span> <strong>{getLeagueTeamCount(leagueFilter)} ta</strong>
+          </div>
+        </div>
       </div>
 
       <div className="list-container">
