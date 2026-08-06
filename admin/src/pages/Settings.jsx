@@ -238,22 +238,30 @@ const Settings = () => {
         }
       }
 
-      // Update league record in DB
-      const updateData = {
+      // Update league record in DB with safe fallback
+      const fullUpdateData = {
         export_bg_url: bgUrl1x1,
         schedule_banner_url: bgUrl1x1
       };
       if (ytBannerUrl) {
-        updateData.yt_banner_url = ytBannerUrl;
-        updateData.banner_url = ytBannerUrl;
+        fullUpdateData.yt_banner_url = ytBannerUrl;
+        fullUpdateData.banner_url = ytBannerUrl;
       }
 
-      const { error: dbErr } = await supabase
-        .from('leagues')
-        .update(updateData)
-        .eq('id', bgUploadLeagueId);
-
-      if (dbErr) throw dbErr;
+      try {
+        const { error: dbErr } = await supabase
+          .from('leagues')
+          .update(fullUpdateData)
+          .eq('id', bgUploadLeagueId);
+        if (dbErr) throw dbErr;
+      } catch (e) {
+        // Fallback: only use export_bg_url which is guaranteed to exist
+        const { error: safeErr } = await supabase
+          .from('leagues')
+          .update({ export_bg_url: bgUrl1x1 })
+          .eq('id', bgUploadLeagueId);
+        if (safeErr) throw safeErr;
+      }
 
       // Also save to localStorage for cross-page compatibility
       const leagueObj = leagues.find(l => l.id === bgUploadLeagueId);
@@ -279,10 +287,17 @@ const Settings = () => {
   // Delete league BG
   const handleDeleteLeagueBg = async (league) => {
     try {
-      await supabase
-        .from('leagues')
-        .update({ export_bg_url: null, schedule_banner_url: null, yt_banner_url: null, banner_url: null })
-        .eq('id', league.id);
+      try {
+        await supabase
+          .from('leagues')
+          .update({ export_bg_url: null, schedule_banner_url: null, yt_banner_url: null, banner_url: null })
+          .eq('id', league.id);
+      } catch (e) {
+        await supabase
+          .from('leagues')
+          .update({ export_bg_url: null })
+          .eq('id', league.id);
+      }
 
       localStorage.removeItem(`hfl_export_bg_${orgId}_${league.name}`);
       localStorage.removeItem(`hfl_schedule_banner_${orgId}_${league.id || league.name}`);
