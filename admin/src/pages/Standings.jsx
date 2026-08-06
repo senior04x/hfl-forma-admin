@@ -803,21 +803,22 @@ export default function Standings() {
                       </div>
                     );
                   })()}
+                </div>
 
-                  <div style={{
-                    textAlign: 'center', 
-                    color: '#ffffff', 
-                    opacity: 0.75, 
-                    fontSize: '13px', 
-                    marginTop: '6px',
-                    marginBottom: '16px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '2px',
-                    fontWeight: '700'
-                  }}>
-                    {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
-                    {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM {displayRound}-TUR
-                  </div>
+                <div style={{
+                  textAlign: 'center', 
+                  color: '#ffffff', 
+                  opacity: 0.8, 
+                  fontSize: '13.5px', 
+                  paddingBottom: '24px',
+                  paddingTop: '8px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '2px',
+                  fontWeight: '700',
+                  width: '100%'
+                }}>
+                  {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
+                  {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM {displayRound}-TUR
                 </div>
 
               </div>
@@ -969,21 +970,22 @@ export default function Standings() {
                           </div>
                         );
                       })()}
+                    </div>
 
-                      <div style={{
-                        textAlign: 'center', 
-                        color: '#ffffff', 
-                        opacity: 0.75, 
-                        fontSize: '13px', 
-                        marginTop: '6px',
-                        marginBottom: '16px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '2px',
-                        fontWeight: '700'
-                      }}>
-                        {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
-                        {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM INTIZOM JADVALI
-                      </div>
+                    <div style={{
+                      textAlign: 'center', 
+                      color: '#ffffff', 
+                      opacity: 0.8, 
+                      fontSize: '13.5px', 
+                      paddingBottom: '24px',
+                      paddingTop: '8px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '2px',
+                      fontWeight: '700',
+                      width: '100%'
+                    }}>
+                      {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
+                      {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM INTIZOM JADVALI
                     </div>
 
           </div>
