@@ -192,7 +192,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   width: 100%;
 }
 
@@ -223,7 +223,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 25px 45px 10px 45px;
+  padding: 42px 45px 20px 45px;
 }
 
 .export-logo-left {
@@ -260,10 +260,11 @@
 .export-body {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
-  padding: 5px 45px 15px 45px;
+  padding: 0 45px;
   gap: 18px;
   align-items: stretch;
-  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Table Area */
