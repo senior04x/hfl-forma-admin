@@ -1083,7 +1083,7 @@ const Schedule = () => {
 
                 <div className="match-teams">
                   <div className="team"><img src={match.home_team?.logo_url || '/images/default-team.png'} alt="Home" className="team-logo" /><span>{match.home_team?.name}</span></div>
-                  <div className="match-vs">{(match.status === 'finished' || match.home_score > 0 || match.away_score > 0) ? <>{match.home_score || 0} : {match.away_score || 0}</> : 'VS'}</div>
+                  <div className="match-vs">{(match.status === 'finished' || match.home_score > 0 || match.away_score > 0) ? <>{match.home_score || 0} - {match.away_score || 0}</> : 'VS'}</div>
                   <div className="team"><img src={match.away_team?.logo_url || '/images/default-team.png'} alt="Away" className="team-logo" /><span>{match.away_team?.name}</span></div>
                 </div>
 
@@ -1368,7 +1368,7 @@ const Schedule = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     <div style={{ background: 'linear-gradient(135deg, #00ff66 0%, #00cc52 100%)', color: '#050910', padding: '10px 24px', borderRadius: '16px', fontSize: '34px', fontWeight: '900', fontStyle: 'italic', letterSpacing: '2px', boxShadow: '0 0 25px rgba(0, 255, 102, 0.5)' }}>
                       {(selectedMatchForYtExport.status === 'finished' || selectedMatchForYtExport.home_score > 0 || selectedMatchForYtExport.away_score > 0)
-                        ? `${selectedMatchForYtExport.home_score || 0} : ${selectedMatchForYtExport.away_score || 0}`
+                        ? `${selectedMatchForYtExport.home_score || 0} - ${selectedMatchForYtExport.away_score || 0}`
                         : 'VS'}
                     </div>
                     {selectedMatchForYtExport.round && (
@@ -1483,7 +1483,7 @@ const Schedule = () => {
                             <div className="sch-time-container">
                               <div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div>
                               <div className="sch-time-box">
-                                {isMatchFinished ? `${match.home_score || 0} : ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
+                                {isMatchFinished ? `${match.home_score || 0} - ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
                               </div>
                             </div>
                             <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
@@ -1506,7 +1506,7 @@ const Schedule = () => {
                                 <div className="sch-time-container">
                                   <div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div>
                                   <div className="sch-time-box">
-                                    {isMatchFinished ? `${match.home_score || 0} : ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
+                                    {isMatchFinished ? `${match.home_score || 0} - ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
                                   </div>
                                 </div>
                                 <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
