@@ -372,6 +372,8 @@ const Settings = () => {
   const [matchDuration, setMatchDuration] = useState(90);
   const [leagueSeason, setLeagueSeason] = useState('2026/2027');
   const [leagueStatus, setLeagueStatus] = useState('active');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [creatingLeague, setCreatingLeague] = useState(false);
 
   // League Edit/Delete state
@@ -497,6 +499,8 @@ const Settings = () => {
     setMatchDuration(league.match_duration || 90);
     setLeagueSeason(league.season || '2026/2027');
     setLeagueStatus(league.status || 'active');
+    setStartDate(league.start_date || league.startDate || '');
+    setEndDate(league.end_date || league.endDate || '');
     setMessage({ type: '', text: '' });
 
     setTimeout(() => {
@@ -513,6 +517,8 @@ const Settings = () => {
     setMatchDuration(90);
     setLeagueSeason('2026/2027');
     setLeagueStatus('active');
+    setStartDate('');
+    setEndDate('');
   };
 
   const handleSaveLeague = async (e) => {
@@ -534,7 +540,9 @@ const Settings = () => {
         const updatePayload = {
           name: cleanName,
           logo_url: leagueLogo.trim() || null,
-          is_junior: isJunior
+          is_junior: isJunior,
+          start_date: startDate ? startDate : null,
+          end_date: endDate ? endDate : null
         };
 
         // Try updating with season and status if columns exist, otherwise fallback cleanly
@@ -550,18 +558,38 @@ const Settings = () => {
           if (baseErr) throw baseErr;
         }
 
-        // Save match duration in sponsors table / localStorage helper
-        if (matchDuration && targetId) {
+        // Save match duration and start/end dates in sponsors table / localStorage helper
+        if (targetId) {
           try {
-            const nameKey = `LEAGUE_DURATION_${targetId}`;
-            const { data: existing } = await client.from('sponsors').select('id').eq('name', nameKey).maybeSingle();
-            if (existing) {
-              await client.from('sponsors').update({ logo_url: String(matchDuration) }).eq('id', existing.id);
-            } else {
-              await client.from('sponsors').insert({ name: nameKey, logo_url: String(matchDuration) });
+            if (matchDuration) {
+              const nameKey = `LEAGUE_DURATION_${targetId}`;
+              const { data: existing } = await client.from('sponsors').select('id').eq('name', nameKey).maybeSingle();
+              if (existing) {
+                await client.from('sponsors').update({ logo_url: String(matchDuration) }).eq('id', existing.id);
+              } else {
+                await client.from('sponsors').insert({ name: nameKey, logo_url: String(matchDuration) });
+              }
+            }
+            if (startDate) {
+              const startKey = `LEAGUE_START_DATE_${targetId}`;
+              const { data: exStart } = await client.from('sponsors').select('id').eq('name', startKey).maybeSingle();
+              if (exStart) {
+                await client.from('sponsors').update({ logo_url: startDate }).eq('id', exStart.id);
+              } else {
+                await client.from('sponsors').insert({ name: startKey, logo_url: startDate });
+              }
+            }
+            if (endDate) {
+              const endKey = `LEAGUE_END_DATE_${targetId}`;
+              const { data: exEnd } = await client.from('sponsors').select('id').eq('name', endKey).maybeSingle();
+              if (exEnd) {
+                await client.from('sponsors').update({ logo_url: endDate }).eq('id', exEnd.id);
+              } else {
+                await client.from('sponsors').insert({ name: endKey, logo_url: endDate });
+              }
             }
           } catch (e) {}
-          localStorage.setItem(`hfl_league_duration_${targetId}`, String(matchDuration));
+          if (matchDuration) localStorage.setItem(`hfl_league_duration_${targetId}`, String(matchDuration));
         }
 
         if (oldName !== cleanName) {
@@ -570,14 +598,16 @@ const Settings = () => {
           await client.from('applications').update({ league: cleanName }).eq('league', oldName).eq('organization_id', orgId);
         }
 
-        setMessage({ type: 'success', text: 'Liga ma\'lumotlari muvaffaqiyatli yangilandi!' });
+        setMessage({ type: 'success', text: 'Liga ma\'lumotlari va sanalari muvaffaqiyatli yangilandi!' });
         cancelEditLeague();
       } else {
         const insertPayload = {
           name: cleanName,
           logo_url: leagueLogo.trim() || null,
           organization_id: orgId,
-          is_junior: isJunior
+          is_junior: isJunior,
+          start_date: startDate ? startDate : null,
+          end_date: endDate ? endDate : null
         };
 
         let newLeague = null;
@@ -595,12 +625,22 @@ const Settings = () => {
           newLeague = data;
         }
 
-        if (newLeague && matchDuration) {
+        if (newLeague) {
           try {
-            const nameKey = `LEAGUE_DURATION_${newLeague.id}`;
-            await client.from('sponsors').insert({ name: nameKey, logo_url: String(matchDuration) });
+            if (matchDuration) {
+              const nameKey = `LEAGUE_DURATION_${newLeague.id}`;
+              await client.from('sponsors').insert({ name: nameKey, logo_url: String(matchDuration) });
+            }
+            if (startDate) {
+              const startKey = `LEAGUE_START_DATE_${newLeague.id}`;
+              await client.from('sponsors').insert({ name: startKey, logo_url: startDate });
+            }
+            if (endDate) {
+              const endKey = `LEAGUE_END_DATE_${newLeague.id}`;
+              await client.from('sponsors').insert({ name: endKey, logo_url: endDate });
+            }
           } catch (e) {}
-          localStorage.setItem(`hfl_league_duration_${newLeague.id}`, String(matchDuration));
+          if (matchDuration) localStorage.setItem(`hfl_league_duration_${newLeague.id}`, String(matchDuration));
         }
 
         setMessage({ type: 'success', text: `"${cleanName}" ligasi muvaffaqiyatli yaratildi!` });
@@ -610,6 +650,8 @@ const Settings = () => {
         setMatchDuration(90);
         setLeagueSeason('2026/2027');
         setLeagueStatus('active');
+        setStartDate('');
+        setEndDate('');
       }
       fetchLeaguesAndOrgs();
     } catch (err) {
@@ -1124,6 +1166,26 @@ const Settings = () => {
                       placeholder="2026/2027"
                       value={leagueSeason}
                       onChange={e => setLeagueSeason(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Boshlanish Sanasi */}
+                  <div className="settings-form-group">
+                    <label>Boshlanish Sanasi</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={e => setStartDate(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Tugash Sanasi */}
+                  <div className="settings-form-group">
+                    <label>Tugash Sanasi</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={e => setEndDate(e.target.value)}
                     />
                   </div>
 
