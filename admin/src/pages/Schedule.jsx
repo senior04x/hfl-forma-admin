@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Pencil } from 'lucide-react';
+import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Pencil, CheckCircle2, Radio, AlertCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Schedule.css';
 
@@ -1135,19 +1135,39 @@ const Schedule = () => {
                       )}
                     </div>
 
-                    <label 
-                      className={`match-postponed-toggle ${match.is_postponed ? 'is-postponed' : ''}`}
-                      onClick={(e) => e.stopPropagation()}
-                      title="Qoldirilgan o'yin deb belgilash"
-                      style={{ margin: 0, opacity: isDeleting ? 0.5 : 1, pointerEvents: isDeleting ? 'none' : 'auto' }}
-                    >
-                      <input 
-                        type="checkbox" 
-                        checked={!!match.is_postponed} 
-                        disabled={isDeleting}
-                        onChange={(e) => handleTogglePostponed(match, e.target.checked)} 
-                      />
-                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {match.is_postponed ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(255, 59, 48, 0.2)', border: '1px solid rgba(255, 59, 48, 0.4)', color: '#ff3b30', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: '800' }}>
+                          <AlertCircle size={13} /> Qoldirilgan
+                        </div>
+                      ) : match.status === 'finished' ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(0, 255, 102, 0.15)', border: '1px solid rgba(0, 255, 102, 0.4)', color: '#00ff66', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: '800' }}>
+                          <CheckCircle2 size={13} /> Tugagan
+                        </div>
+                      ) : (match.status === 'first_half' || match.status === 'second_half' || match.status === 'half_time' || match.status === 'live') ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(255, 59, 48, 0.25)', border: '1px solid rgba(255, 59, 48, 0.6)', color: '#ff3b30', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: '800' }}>
+                          <Radio size={13} /> Jonli
+                        </div>
+                      ) : (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.2)', color: 'rgba(255, 255, 255, 0.8)', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: '800' }}>
+                          <Clock size={13} /> Rejalashtirilgan
+                        </div>
+                      )}
+
+                      <label 
+                        className={`match-postponed-toggle ${match.is_postponed ? 'is-postponed' : ''}`}
+                        onClick={(e) => e.stopPropagation()}
+                        title="Qoldirilgan o'yin deb belgilash"
+                        style={{ margin: 0, opacity: isDeleting ? 0.5 : 1, pointerEvents: isDeleting ? 'none' : 'auto' }}
+                      >
+                        <input 
+                          type="checkbox" 
+                          checked={!!match.is_postponed} 
+                          disabled={isDeleting}
+                          onChange={(e) => handleTogglePostponed(match, e.target.checked)} 
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
 
@@ -1441,35 +1461,59 @@ const Schedule = () => {
 
               <div className="sch-export-body" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center' }}>
                 {(() => {
-                  const currentRoundMatches = matches.filter(m => m.league === exportLeague && m.round == exportRound && !m.is_postponed);
-                  const postponedMatches = matches.filter(m => m.league === exportLeague && m.is_postponed);
+                  const filteredList = matches
+                    .filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound))
+                    .filter(m => {
+                      if (filterStatus === 'all') return true;
+                      if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
+                      return m.status === filterStatus;
+                    });
+
+                  const currentRoundMatches = filteredList.filter(m => !m.is_postponed);
+                  const postponedMatches = filteredList.filter(m => m.is_postponed);
 
                   return (
                     <>
-                      {currentRoundMatches.map(match => (
-                        <div key={match.id} className="sch-match-row">
-                          <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                          <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
-                          <div className="sch-time-container"><div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div><div className="sch-time-box">{match.match_time?.substring(0, 5)}</div></div>
-                          <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
-                          <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                        </div>
-                      ))}
+                      {currentRoundMatches.map(match => {
+                        const isMatchFinished = match.status === 'finished' || filterStatus === 'finished' || (match.home_score !== null && match.away_score !== null && (match.home_score > 0 || match.away_score > 0 || match.status === 'finished'));
+                        return (
+                          <div key={match.id} className="sch-match-row">
+                            <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                            <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
+                            <div className="sch-time-container">
+                              <div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div>
+                              <div className="sch-time-box">
+                                {isMatchFinished ? `${match.home_score || 0} : ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
+                              </div>
+                            </div>
+                            <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
+                            <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                          </div>
+                        );
+                      })}
 
                       {postponedMatches.length > 0 && (
                         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', alignItems: 'center' }}>
                           <div style={{ background: 'rgba(255, 59, 48, 0.35)', border: '1px solid rgba(255, 59, 48, 0.75)', color: '#ffffff', padding: '5px 20px', borderRadius: '12px', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }}>
                             {postponedMatches.length > 1 ? "QOLDIRILGAN O'YINLAR" : "QOLDIRILGAN O'YIN"}
                           </div>
-                          {postponedMatches.map(match => (
-                            <div key={match.id} className="sch-match-row" style={{ borderColor: 'rgba(255, 59, 48, 0.65)', background: 'rgba(255, 59, 48, 0.2)' }}>
-                              <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                              <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
-                              <div className="sch-time-container"><div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div><div className="sch-time-box">{match.match_time?.substring(0, 5)}</div></div>
-                              <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
-                              <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                            </div>
-                          ))}
+                          {postponedMatches.map(match => {
+                            const isMatchFinished = match.status === 'finished' || filterStatus === 'finished' || (match.home_score !== null && match.away_score !== null && (match.home_score > 0 || match.away_score > 0 || match.status === 'finished'));
+                            return (
+                              <div key={match.id} className="sch-match-row" style={{ borderColor: 'rgba(255, 59, 48, 0.65)', background: 'rgba(255, 59, 48, 0.2)' }}>
+                                <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                                <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
+                                <div className="sch-time-container">
+                                  <div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div>
+                                  <div className="sch-time-box">
+                                    {isMatchFinished ? `${match.home_score || 0} : ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
+                                  </div>
+                                </div>
+                                <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
+                                <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </>
