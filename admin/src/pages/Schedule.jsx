@@ -1292,7 +1292,7 @@ const Schedule = () => {
                 display: 'flex', 
                 flexDirection: 'column', 
                 justify: 'space-between',
-                padding: '20px 45px 30px 45px', 
+                padding: '10px 45px 25px 45px', 
                 boxSizing: 'border-box',
                 fontFamily: "'Outfit', 'Inter', sans-serif"
               }}
@@ -1319,9 +1319,9 @@ const Schedule = () => {
                   )}
                 </div>
 
-                <div className="export-logo-right" style={{ width: '280px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <div className="export-logo-right" style={{ width: '280px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: '20px', boxSizing: 'border-box' }}>
                   {mainSponsorLogo ? (
-                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: '85px', maxWidth: '260px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', margin: '0 0 0 auto', display: 'block' }} />
+                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: '85px', maxWidth: '240px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', display: 'block' }} />
                   ) : null}
                 </div>
               </div>
@@ -1409,7 +1409,7 @@ const Schedule = () => {
           const isCollab = currentLeagueObj?.isCollab;
 
           return (
-            <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', padding: '20px 50px 30px 50px', boxSizing: 'border-box' }}>
+            <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', padding: '10px 45px 25px 45px', boxSizing: 'border-box' }}>
               {/* Header */}
               <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', width: '100%' }}>
                 <div className="export-logo-left" style={{ width: '280px', minWidth: '280px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>
@@ -1432,9 +1432,9 @@ const Schedule = () => {
                   )}
                 </div>
 
-                <div className="export-logo-right" style={{ width: '280px', minWidth: '280px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <div className="export-logo-right" style={{ width: '280px', minWidth: '280px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: '20px', boxSizing: 'border-box' }}>
                   {mainSponsorLogo ? (
-                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: '85px', maxWidth: '260px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', margin: '0 0 0 auto', display: 'block' }} />
+                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: '85px', maxWidth: '240px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', display: 'block' }} />
                   ) : null}
                 </div>
               </div>
