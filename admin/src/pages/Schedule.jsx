@@ -1441,7 +1441,7 @@ const Schedule = () => {
                             {postponedMatches.length > 1 ? "QOLDIRILGAN O'YINLAR" : "QOLDIRILGAN O'YIN"}
                           </div>
                           {postponedMatches.map(match => (
-                            <div key={match.id} className="sch-match-row" style={{ borderColor: 'rgba(255, 59, 48, 0.65)', background: 'rgba(255, 59, 48, 0.2)', width: '100%' }}>
+                            <div key={match.id} className="sch-match-row" style={{ borderColor: 'rgba(255, 59, 48, 0.65)', background: 'rgba(255, 59, 48, 0.2)' }}>
                               <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
                               <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
                               <div className="sch-time-container"><div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div><div className="sch-time-box">{match.match_time?.substring(0, 5)}</div></div>
