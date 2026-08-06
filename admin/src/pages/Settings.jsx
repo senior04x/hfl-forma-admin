@@ -378,6 +378,7 @@ const Settings = () => {
 
   // League Edit/Delete state
   const [editingLeague, setEditingLeague] = useState(null);
+  const [isLeagueModalOpen, setIsLeagueModalOpen] = useState(false);
 
   // Collab modal / action state
   const [selectedLeagueForCollab, setSelectedLeagueForCollab] = useState(null);
@@ -514,11 +515,7 @@ const Settings = () => {
     setStartDate(league.start_date || league.startDate || '');
     setEndDate(league.end_date || league.endDate || '');
     setMessage({ type: '', text: '' });
-
-    setTimeout(() => {
-      leagueFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      leagueInputRef.current?.focus();
-    }, 100);
+    setIsLeagueModalOpen(true);
   };
 
   const cancelEditLeague = () => {
@@ -531,6 +528,7 @@ const Settings = () => {
     setLeagueStatus('active');
     setStartDate('');
     setEndDate('');
+    setIsLeagueModalOpen(false);
   };
 
   const handleSaveLeague = async (e) => {
@@ -1078,163 +1076,6 @@ const Settings = () => {
                 <h2>Tashkilot Ligalari Boshqaruvi</h2>
               </div>
 
-              <form ref={leagueFormRef} onSubmit={handleSaveLeague} className={`create-league-form ${editingLeague ? 'editing-active' : ''}`}>
-                {editingLeague && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid rgba(0, 170, 255, 0.2)' }}>
-                    <span style={{ color: '#00aaff', fontWeight: '800', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Pencil size={14} /> <strong>"{editingLeague.name}"</strong> ligasi tahrirlanmoqda
-                    </span>
-                    <button type="button" onClick={cancelEditLeague} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '12px' }}>
-                      Bekor qilish ✕
-                    </button>
-                  </div>
-                )}
-
-                <div className="league-form-responsive-grid">
-                  {/* Liga Nomi */}
-                  <div className="settings-form-group">
-                    <label>{editingLeague ? 'Liga Nomi' : 'Yangi Liga Nomi'}</label>
-                    <input
-                      ref={leagueInputRef}
-                      type="text"
-                      placeholder="Masalan: Super Liga"
-                      value={leagueName}
-                      onChange={e => setLeagueName(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  {/* Liga Logosi */}
-                  <div className="settings-form-group">
-                    <label>Liga Logosi</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                      {leagueLogo && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                          <img src={leagueLogo} alt="Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain', border: '1px solid rgba(255,255,255,0.2)' }} />
-                          <button
-                            type="button"
-                            onClick={() => setLeagueLogo('')}
-                            title="Logotipni o'chirish"
-                            style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', width: '36px', height: '36px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => leagueFileInputRef.current?.click()}
-                        disabled={uploadingLeagueLogo}
-                        style={{
-                          height: '42px',
-                          padding: '0 14px',
-                          background: 'rgba(0, 170, 255, 0.12)',
-                          border: '1px solid rgba(0, 170, 255, 0.3)',
-                          color: '#00aaff',
-                          borderRadius: '10px',
-                          fontWeight: '600',
-                          fontSize: '13px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          flex: 1
-                        }}
-                      >
-                        <Upload size={15} />
-                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Logo almashtirish' : 'Logo yuklash (PNG)')}
-                        </span>
-                      </button>
-                      <input
-                        ref={leagueFileInputRef}
-                        type="file"
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        onChange={handleLeagueFileSelect}
-                      />
-                    </div>
-                  </div>
-
-                  {/* O'yin Davomiyligi */}
-                  <div className="settings-form-group">
-                    <label>O'yin Davomiyligi</label>
-                    <select
-                      value={matchDuration}
-                      onChange={e => setMatchDuration(Number(e.target.value))}
-                    >
-                      <option value={90}>90 daqiqa (45 + 45)</option>
-                      <option value={80}>80 daqiqa (40 + 40)</option>
-                      <option value={70}>70 daqiqa (35 + 35)</option>
-                      <option value={60}>60 daqiqa (30 + 30)</option>
-                      <option value={50}>50 daqiqa (25 + 25)</option>
-                      <option value={40}>40 daqiqa (20 + 20)</option>
-                      <option value={30}>30 daqiqa (15 + 15)</option>
-                    </select>
-                  </div>
-
-                  {/* Mavsum */}
-                  <div className="settings-form-group">
-                    <label>Mavsum (Season)</label>
-                    <input
-                      type="text"
-                      placeholder="2026/2027"
-                      value={leagueSeason}
-                      onChange={e => setLeagueSeason(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Boshlanish Sanasi */}
-                  <div className="settings-form-group">
-                    <label>Boshlanish Sanasi</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={e => setStartDate(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Tugash Sanasi */}
-                  <div className="settings-form-group">
-                    <label>Tugash Sanasi</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={e => setEndDate(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Liga Holati */}
-                  <div className="settings-form-group">
-                    <label>Liga Holati</label>
-                    <select
-                      value={leagueStatus}
-                      onChange={e => setLeagueStatus(e.target.value)}
-                    >
-                      <option value="active">🟢 FAOL MAVSUM</option>
-                      <option value="archived">📦 YAKUNLANGAN</option>
-                    </select>
-                  </div>
-
-                  {/* Action Buttons Container */}
-                  <div className="settings-form-group form-actions-group">
-                    <label style={{ opacity: 0 }}>Amallar</label>
-                    <div className="form-buttons-row">
-                      <button type="submit" className="settings-btn settings-btn-primary add-league-btn" disabled={creatingLeague}>
-                        {editingLeague ? <Save size={16} /> : <Plus size={16} />}
-                        <span>{creatingLeague ? 'Saqlanmoqda...' : (editingLeague ? 'Saqlash' : 'Liga qo\'shish')}</span>
-                      </button>
-                      {editingLeague && (
-                        <button type="button" className="settings-btn cancel-btn" onClick={cancelEditLeague}>
-                          Bekor qilish
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </form>
-
               {/* Current Leagues List */}
               <div className="leagues-list-container">
                 <h3>Mavjud Ligalar ({leagues.length})</h3>
@@ -1433,6 +1274,35 @@ const Settings = () => {
                     })}
                   </div>
                 )}
+
+                {/* Add League Button placed at the VERY BOTTOM of the leagues list! */}
+                <div style={{ marginTop: '28px', display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    className="settings-btn settings-btn-primary"
+                    style={{
+                      width: '100%',
+                      maxWidth: '340px',
+                      height: '46px',
+                      fontSize: '14px',
+                      fontWeight: '800',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 20px rgba(0, 255, 102, 0.25)'
+                    }}
+                    onClick={() => {
+                      cancelEditLeague();
+                      setIsLeagueModalOpen(true);
+                    }}
+                  >
+                    <Plus size={18} />
+                    <span>➕ LIGA QO'SHISH</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1663,6 +1533,165 @@ const Settings = () => {
             </div>
           </div>
         </>
+      )}
+
+      {/* League Create/Edit Modal Popup */}
+      {isLeagueModalOpen && (
+        <div className="league-modal-overlay" onClick={() => setIsLeagueModalOpen(false)}>
+          <div className="league-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="league-modal-header">
+              <h3>
+                {editingLeague ? <Pencil size={18} color="#00aaff" /> : <Plus size={18} color="#00ff66" />}
+                <span>{editingLeague ? `"${editingLeague.name}" Ligasini Tahrirlash` : 'Yangi Liga Qo\'shish'}</span>
+              </h3>
+              <button type="button" className="league-modal-close" onClick={() => setIsLeagueModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              handleSaveLeague(e);
+              setIsLeagueModalOpen(false);
+            }} className="league-modal-form">
+              <div className="league-modal-grid">
+                {/* Liga Nomi */}
+                <div className="settings-form-group">
+                  <label>{editingLeague ? 'Liga Nomi' : 'Yangi Liga Nomi'}</label>
+                  <input
+                    ref={leagueInputRef}
+                    type="text"
+                    placeholder="Masalan: Super Liga"
+                    value={leagueName}
+                    onChange={e => setLeagueName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Liga Logosi */}
+                <div className="settings-form-group">
+                  <label>Liga Logosi</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                    {leagueLogo && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                        <img src={leagueLogo} alt="Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain', border: '1px solid rgba(255,255,255,0.2)' }} />
+                        <button
+                          type="button"
+                          onClick={() => setLeagueLogo('')}
+                          title="Logotipni o'chirish"
+                          style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', width: '36px', height: '36px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => leagueFileInputRef.current?.click()}
+                      disabled={uploadingLeagueLogo}
+                      style={{
+                        height: '42px',
+                        padding: '0 14px',
+                        background: 'rgba(0, 170, 255, 0.12)',
+                        border: '1px solid rgba(0, 170, 255, 0.3)',
+                        color: '#00aaff',
+                        borderRadius: '10px',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        flex: 1
+                      }}
+                    >
+                      <Upload size={15} />
+                      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {uploadingLeagueLogo ? 'Yuklanmoqda...' : (leagueLogo ? 'Logo almashtirish' : 'Logo yuklash (PNG)')}
+                      </span>
+                    </button>
+                    <input
+                      ref={leagueFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleLeagueFileSelect}
+                    />
+                  </div>
+                </div>
+
+                {/* O'yin Davomiyligi */}
+                <div className="settings-form-group">
+                  <label>O'yin Davomiyligi</label>
+                  <select
+                    value={matchDuration}
+                    onChange={e => setMatchDuration(Number(e.target.value))}
+                  >
+                    <option value={90}>90 daqiqa (45 + 45)</option>
+                    <option value={80}>80 daqiqa (40 + 40)</option>
+                    <option value={70}>70 daqiqa (35 + 35)</option>
+                    <option value={60}>60 daqiqa (30 + 30)</option>
+                    <option value={50}>50 daqiqa (25 + 25)</option>
+                    <option value={40}>40 daqiqa (20 + 20)</option>
+                    <option value={30}>30 daqiqa (15 + 15)</option>
+                  </select>
+                </div>
+
+                {/* Mavsum */}
+                <div className="settings-form-group">
+                  <label>Mavsum (Season)</label>
+                  <input
+                    type="text"
+                    placeholder="2026/2027"
+                    value={leagueSeason}
+                    onChange={e => setLeagueSeason(e.target.value)}
+                  />
+                </div>
+
+                {/* Boshlanish Sanasi */}
+                <div className="settings-form-group">
+                  <label>Boshlanish Sanasi</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                  />
+                </div>
+
+                {/* Tugash Sanasi */}
+                <div className="settings-form-group">
+                  <label>Tugash Sanasi</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={e => setEndDate(e.target.value)}
+                  />
+                </div>
+
+                {/* Liga Holati */}
+                <div className="settings-form-group" style={{ gridColumn: 'span 2' }}>
+                  <label>Liga Holati</label>
+                  <select
+                    value={leagueStatus}
+                    onChange={e => setLeagueStatus(e.target.value)}
+                  >
+                    <option value="active">🟢 FAOL MAVSUM</option>
+                    <option value="archived">📦 YAKUNLANGAN</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="league-modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setIsLeagueModalOpen(false)}>
+                  Bekor qilish
+                </button>
+                <button type="submit" className="settings-btn settings-btn-primary" disabled={creatingLeague}>
+                  {creatingLeague ? 'Saqlanmoqda...' : (editingLeague ? 'Saqlash' : 'Liga qo\'shish')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Collab Request Modal */}
