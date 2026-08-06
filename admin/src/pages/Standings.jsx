@@ -730,18 +730,20 @@ export default function Standings() {
                         <div className="export-col-stat">T/N</div>
                         <div className="export-col-stat">O</div>
                       </div>
-                      {standings.map((t, idx) => (
-                        <div className="export-table-row" key={t.id} style={{ padding: rowPadding, fontSize: fontSize }}>
-                          <div className="export-col-hash">{idx + 1}</div>
-                          <div className="export-col-team" style={{display: 'flex', alignItems: 'center'}}>
-                            <img src={t.logo_url} className="team-img" alt="" crossOrigin="anonymous" style={{ width: logoSize, height: logoSize, borderRadius: '50%', marginRight: '10px', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
-                            <span style={{textTransform: 'uppercase'}}>{t.name}</span>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        {standings.map((t, idx) => (
+                          <div className="export-table-row" key={t.id} style={{ padding: rowPadding, fontSize: fontSize }}>
+                            <div className="export-col-hash">{idx + 1}</div>
+                            <div className="export-col-team" style={{display: 'flex', alignItems: 'center'}}>
+                              <img src={t.logo_url} className="team-img" alt="" crossOrigin="anonymous" style={{ width: logoSize, height: logoSize, borderRadius: '50%', marginRight: '10px', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                              <span style={{textTransform: 'uppercase'}}>{t.name}</span>
+                            </div>
+                            <div className="export-col-stat">{t.played}</div>
+                            <div className="export-col-stat">{t.gd}</div>
+                            <div className="export-col-stat">{t.points}</div>
                           </div>
-                          <div className="export-col-stat">{t.played}</div>
-                          <div className="export-col-stat">{t.gd}</div>
-                          <div className="export-col-stat">{t.points}</div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
 
                     {/* Right Col: Results, Top Scorers, Assists */}
