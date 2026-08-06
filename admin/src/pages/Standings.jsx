@@ -634,6 +634,33 @@ export default function Standings() {
           const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
           const isCollab = currentLeagueObj?.isCollab;
 
+          const teamCount = standings.length;
+          let rowPadding = '9px 14px';
+          let fontSize = '19px';
+          let logoSize = '32px';
+          let headerPadding = '12px 16px';
+          let headerFontSize = '18px';
+
+          if (teamCount > 18) {
+            rowPadding = '3px 8px';
+            fontSize = '13px';
+            logoSize = '20px';
+            headerPadding = '6px 10px';
+            headerFontSize = '14px';
+          } else if (teamCount > 14) {
+            rowPadding = '5px 10px';
+            fontSize = '15px';
+            logoSize = '24px';
+            headerPadding = '8px 12px';
+            headerFontSize = '15.5px';
+          } else if (teamCount > 11) {
+            rowPadding = '7px 12px';
+            fontSize = '17px';
+            logoSize = '28px';
+            headerPadding = '10px 14px';
+            headerFontSize = '17px';
+          }
+
           return (
             <div 
               ref={exportRef} 
@@ -682,18 +709,18 @@ export default function Standings() {
                     
                     {/* Left Col: Standings Table */}
                     <div className="export-table-container">
-                      <div className="export-table-header">
+                      <div className="export-table-header" style={{ padding: headerPadding, fontSize: headerFontSize }}>
                         <div className="export-col-hash">#</div>
                         <div className="export-col-team">JAMOA</div>
                         <div className="export-col-stat">O'</div>
                         <div className="export-col-stat">T/N</div>
                         <div className="export-col-stat">O</div>
                       </div>
-                      {standings.slice(0, 13).map((t, idx) => (
-                        <div className="export-table-row" key={t.id}>
+                      {standings.map((t, idx) => (
+                        <div className="export-table-row" key={t.id} style={{ padding: rowPadding, fontSize: fontSize }}>
                           <div className="export-col-hash">{idx + 1}</div>
                           <div className="export-col-team" style={{display: 'flex', alignItems: 'center'}}>
-                            <img src={t.logo_url} className="team-img" alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                            <img src={t.logo_url} className="team-img" alt="" crossOrigin="anonymous" style={{ width: logoSize, height: logoSize, borderRadius: '50%', marginRight: '10px', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
                             <span style={{textTransform: 'uppercase'}}>{t.name}</span>
                           </div>
                           <div className="export-col-stat">{t.played}</div>
