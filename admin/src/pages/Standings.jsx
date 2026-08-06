@@ -752,26 +752,26 @@ export default function Standings() {
                       {/* Results */}
                       <div className="export-card" style={{ flex: recentMatches.length > 4 ? 1.15 : 1 }}>
                         <div className="export-card-title">{displayRound}-TUR NATIJALARI</div>
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '3px 6px' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '4px 8px' }}>
                           {recentMatches.length === 0 ? (
                             <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '16px 0', textTransform: 'uppercase' }}>NATIJALAR KIRITILMAGAN</div>
                           ) : (() => {
                             const matchCount = recentMatches.length;
-                            let resultRowPadding = '3px 5px';
-                            let resultFontSize = '11.5px';
-                            let resultLogoSize = '20px';
-                            let resultScoreFontSize = '14.5px';
+                            let resultRowPadding = '4px 6px';
+                            let resultFontSize = '13.5px';
+                            let resultLogoSize = '24px';
+                            let resultScoreFontSize = '16px';
 
                             if (matchCount > 6) {
-                              resultRowPadding = '1.5px 4px';
-                              resultFontSize = '10.5px';
-                              resultLogoSize = '17px';
-                              resultScoreFontSize = '13px';
-                            } else if (matchCount > 4) {
-                              resultRowPadding = '2.5px 5px';
-                              resultFontSize = '11px';
-                              resultLogoSize = '19px';
-                              resultScoreFontSize = '14px';
+                              resultRowPadding = '2px 4px';
+                              resultFontSize = '12px';
+                              resultLogoSize = '20px';
+                              resultScoreFontSize = '14.5px';
+                            } else if (matchCount <= 4) {
+                              resultRowPadding = '6px 8px';
+                              resultFontSize = '14.5px';
+                              resultLogoSize = '26px';
+                              resultScoreFontSize = '17px';
                             }
 
                             return recentMatches.map(m => {
@@ -782,12 +782,12 @@ export default function Standings() {
                                 <div className="export-result-row" key={m.id} style={{ padding: resultRowPadding }}>
                                   <div className="export-result-team">
                                     <img src={hTeam.logo_url} alt="" crossOrigin="anonymous" style={{ width: resultLogoSize, height: resultLogoSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
-                                    <span style={{textTransform:'uppercase', fontSize: resultFontSize, fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '105px'}}>{hTeam.name}</span>
+                                    <span style={{textTransform:'uppercase', fontSize: resultFontSize, fontWeight: '800', wordBreak: 'break-word', lineBreak: 'anywhere'}}>{hTeam.name}</span>
                                   </div>
                                   <div className="export-result-score" style={{ fontSize: resultScoreFontSize, padding: '0 4px', flexShrink: 0 }}>{m.home_score}-{m.away_score}</div>
                                   <div className="export-result-team away">
                                     <img src={aTeam.logo_url} alt="" crossOrigin="anonymous" style={{ width: resultLogoSize, height: resultLogoSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
-                                    <span style={{textTransform:'uppercase', fontSize: resultFontSize, fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '105px'}}>{aTeam.name}</span>
+                                    <span style={{textTransform:'uppercase', fontSize: resultFontSize, fontWeight: '800', wordBreak: 'break-word', lineBreak: 'anywhere'}}>{aTeam.name}</span>
                                   </div>
                                 </div>
                               );
@@ -798,7 +798,7 @@ export default function Standings() {
 
                       {/* Top Scorers */}
                       <div className="export-card" style={{ flex: 1 }}>
-                        <div className="export-card-title">TO'PURARLAR <span style={{float:'right', fontSize:'14px'}}>O'   G</span></div>
+                        <div className="export-card-title">TO'PURARLAR <span style={{float:'right', fontSize:'15px'}}>O'   G</span></div>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                           {topScorers.length === 0 ? (
                             <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '16px 0', textTransform: 'uppercase' }}>TO'PURARLAR MAVJUD EMAS</div>
@@ -815,9 +815,9 @@ export default function Standings() {
                                     e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
                                   }} 
                                 />
-                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '14px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{p.name}</div>
-                                <div style={{width: '28px', textAlign: 'center', fontSize: '15px'}}>{p.playedMatches || 1}</div>
-                                <div style={{width: '28px', textAlign: 'center', fontWeight: '900', fontSize: '16px'}}>{p.goals}</div>
+                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', wordBreak: 'break-word'}}>{p.name}</div>
+                                <div style={{width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800'}}>{p.playedMatches || 1}</div>
+                                <div style={{width: '30px', textAlign: 'center', fontWeight: '900', fontSize: '17.5px'}}>{p.goals}</div>
                               </div>
                             ))
                           )}
@@ -826,7 +826,7 @@ export default function Standings() {
 
                       {/* Top Assists */}
                       <div className="export-card" style={{ flex: 1 }}>
-                        <div className="export-card-title">ASSISTENTLAR <span style={{float:'right', fontSize:'14px'}}>O'   A</span></div>
+                        <div className="export-card-title">ASSISTENTLAR <span style={{float:'right', fontSize:'15px'}}>O'   A</span></div>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                           {topAssists.length === 0 ? (
                             <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '16px 0', textTransform: 'uppercase' }}>ASSISTENTLAR MAVJUD EMAS</div>
@@ -843,9 +843,9 @@ export default function Standings() {
                                     e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
                                   }} 
                                 />
-                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '14px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{p.name}</div>
-                                <div style={{width: '28px', textAlign: 'center', fontSize: '15px'}}>{p.playedMatches || 1}</div>
-                                <div style={{width: '28px', textAlign: 'center', fontWeight: '900', fontSize: '16px'}}>{p.assists}</div>
+                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', wordBreak: 'break-word'}}>{p.name}</div>
+                                <div style={{width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800'}}>{p.playedMatches || 1}</div>
+                                <div style={{width: '30px', textAlign: 'center', fontWeight: '900', fontSize: '17.5px'}}>{p.assists}</div>
                               </div>
                             ))
                           )}
