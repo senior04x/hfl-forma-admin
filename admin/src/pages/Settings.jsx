@@ -1079,7 +1079,7 @@ const Settings = () => {
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          justify-content: 'center',
+                          justifyContent: 'center',
                           gap: '6px',
                           flex: 1
                         }}
