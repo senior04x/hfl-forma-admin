@@ -194,14 +194,6 @@ export default function Standings() {
       if (matchesError) throw matchesError;
       setMatches(matchesData || []);
 
-      if (matchesData && matchesData.length > 0) {
-        let maxR = 0;
-        matchesData.forEach(m => {
-          if (m.round && parseInt(m.round) > maxR) maxR = parseInt(m.round);
-        });
-        setSelectedRound(maxR.toString());
-      }
-
       // Fetch Events (goals, assists, yellow cards, red cards)
       const { data: eventsData, error: eventsError } = await supabase
         .from('match_events')
@@ -217,6 +209,22 @@ export default function Standings() {
       setLoading(false);
     }
   };
+
+  // Auto-set selectedRound to max finished round for the SPECIFIC active league
+  useEffect(() => {
+    if (!selectedLeague || teams.length === 0) return;
+    const currentLeagueTeams = teams.filter(t => (t.league || '').includes(selectedLeague));
+    const currentLeagueTeamIds = new Set(currentLeagueTeams.map(t => t.id));
+    const currentLeagueMatches = matches.filter(m => currentLeagueTeamIds.has(m.home_team_id));
+
+    let maxR = 0;
+    currentLeagueMatches.forEach(m => {
+      if (m.round && parseInt(m.round) > maxR) maxR = parseInt(m.round);
+    });
+
+    const defaultRound = maxR > 0 ? maxR.toString() : '1';
+    setSelectedRound(defaultRound);
+  }, [selectedLeague, teams, matches]);
 
   useEffect(() => {
     computeStandings();
@@ -452,15 +460,21 @@ export default function Standings() {
     }
   };
 
-  // Get dynamic rounds
+  // Get dynamic rounds specifically for the active selected league
+  const activeLeagueTeams = teams.filter(t => (t.league || '').includes(selectedLeague));
+  const activeLeagueTeamIds = new Set(activeLeagueTeams.map(t => t.id));
+  const activeLeagueMatches = matches.filter(m => activeLeagueTeamIds.has(m.home_team_id));
+
   let maxRound = 0;
-  matches.forEach(m => {
+  activeLeagueMatches.forEach(m => {
     if (m.round && parseInt(m.round) > maxRound) maxRound = parseInt(m.round);
   });
+  if (maxRound === 0) maxRound = 1;
+
   const roundOptions = [];
   for (let i = 1; i <= maxRound; i++) roundOptions.push(i);
 
-  const displayRound = selectedRound || '1';
+  const displayRound = (selectedRound && selectedRound !== 'all') ? selectedRound : (maxRound > 0 ? maxRound.toString() : '1');
 
   // Background theme mapping for export
   let exportThemeClass = 'theme-export-Super';
