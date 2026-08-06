@@ -223,7 +223,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 45px 12px 45px;
+  padding: 35px 45px 15px 45px;
 }
 
 .export-logo-left {
@@ -259,10 +259,10 @@
 /* Main Grid Layout for Export */
 .export-body {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 10px 45px 10px 45px;
-  gap: 18px;
-  align-items: start;
+  grid-template-columns: 1.12fr 0.88fr;
+  padding: 10px 45px;
+  gap: 20px;
+  align-items: stretch;
 }
 
 /* Table Area */
@@ -271,7 +271,7 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
+  border-radius: 14px;
   color: white;
   overflow: hidden;
   display: flex;
@@ -287,9 +287,9 @@
   border-bottom: 2px solid rgba(255, 255, 255, 0.25);
   color: #fff;
 }
-.export-col-hash { width: 42px; text-align: center; }
+.export-col-hash { width: 36px; text-align: center; }
 .export-col-team { flex: 1; margin-left: 8px; }
-.export-col-stat { width: 48px; text-align: center; }
+.export-col-stat { width: 44px; text-align: center; }
 
 .export-table-row {
   display: flex;
@@ -308,7 +308,9 @@
 .export-right-col {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 14px;
+  height: 100%;
 }
 
 .export-card {
@@ -316,9 +318,12 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
+  border-radius: 14px;
   color: white;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .export-card-title {

@@ -736,73 +736,85 @@ export default function Standings() {
                       {/* Results */}
                       <div className="export-card">
                         <div className="export-card-title">{displayRound}-TUR NATIJALARI</div>
-                        <div style={{padding: '8px 12px'}}>
-                          {recentMatches.slice(0, 6).map(m => {
-                            const hTeam = teams.find(t => t.id === m.home_team_id);
-                            const aTeam = teams.find(t => t.id === m.away_team_id);
-                            if(!hTeam || !aTeam) return null;
-                            return (
-                              <div className="export-result-row" key={m.id}>
-                                <div className="export-result-team">
-                                  <img src={hTeam.logo_url} alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
-                                  <span style={{textTransform:'uppercase', fontSize: '15.5px', fontWeight: '800'}}>{hTeam.name}</span>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '6px 10px' }}>
+                          {recentMatches.length === 0 ? (
+                            <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '16px 0', textTransform: 'uppercase' }}>NATIJALAR KIRITILMAGAN</div>
+                          ) : (
+                            recentMatches.slice(0, 6).map(m => {
+                              const hTeam = teams.find(t => t.id === m.home_team_id);
+                              const aTeam = teams.find(t => t.id === m.away_team_id);
+                              if(!hTeam || !aTeam) return null;
+                              return (
+                                <div className="export-result-row" key={m.id}>
+                                  <div className="export-result-team">
+                                    <img src={hTeam.logo_url} alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                                    <span style={{textTransform:'uppercase', fontSize: '14.5px', fontWeight: '800'}}>{hTeam.name}</span>
+                                  </div>
+                                  <div className="export-result-score">{m.home_score}-{m.away_score}</div>
+                                  <div className="export-result-team away">
+                                    <img src={aTeam.logo_url} alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                                    <span style={{textTransform:'uppercase', fontSize: '14.5px', fontWeight: '800'}}>{aTeam.name}</span>
+                                  </div>
                                 </div>
-                                <div className="export-result-score">{m.home_score}-{m.away_score}</div>
-                                <div className="export-result-team away">
-                                  <img src={aTeam.logo_url} alt="" crossOrigin="anonymous" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
-                                  <span style={{textTransform:'uppercase', fontSize: '15.5px', fontWeight: '800'}}>{aTeam.name}</span>
-                                </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })
+                          )}
                         </div>
                       </div>
 
                       {/* Top Scorers */}
                       <div className="export-card">
-                        <div className="export-card-title">TO'PURARLAR <span style={{float:'right', fontSize:'16px'}}>O'   G</span></div>
-                        <div>
-                          {topScorers.slice(0, 3).map(p => (
-                            <div className="export-stats-row" key={p.id}>
-                              <img 
-                                src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
-                                className="stat-img" 
-                                alt="" 
-                                crossOrigin="anonymous" 
-                                onError={(e) => { 
-                                  e.target.onerror = null; 
-                                  e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
-                                }} 
-                              />
-                              <div style={{flex: 1, textTransform: 'uppercase', fontSize: '17px', fontWeight: '800'}}>{p.name}</div>
-                              <div style={{width: '34px', textAlign: 'center', fontSize: '18px'}}>{p.playedMatches || 1}</div>
-                              <div style={{width: '34px', textAlign: 'center', fontWeight: '900', fontSize: '19px'}}>{p.goals}</div>
-                            </div>
-                          ))}
+                        <div className="export-card-title">TO'PURARLAR <span style={{float:'right', fontSize:'15px'}}>O'   G</span></div>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          {topScorers.length === 0 ? (
+                            <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '16px 0', textTransform: 'uppercase' }}>TO'PURARLAR MAVJUD EMAS</div>
+                          ) : (
+                            topScorers.slice(0, 3).map(p => (
+                              <div className="export-stats-row" key={p.id}>
+                                <img 
+                                  src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
+                                  className="stat-img" 
+                                  alt="" 
+                                  crossOrigin="anonymous" 
+                                  onError={(e) => { 
+                                    e.target.onerror = null; 
+                                    e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
+                                  }} 
+                                />
+                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '16px', fontWeight: '800'}}>{p.name}</div>
+                                <div style={{width: '32px', textAlign: 'center', fontSize: '17px'}}>{p.playedMatches || 1}</div>
+                                <div style={{width: '32px', textAlign: 'center', fontWeight: '900', fontSize: '18px'}}>{p.goals}</div>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </div>
 
                       {/* Top Assists */}
                       <div className="export-card">
-                        <div className="export-card-title">ASSISTENTLAR <span style={{float:'right', fontSize:'16px'}}>O'   A</span></div>
-                        <div>
-                          {topAssists.slice(0, 3).map(p => (
-                            <div className="export-stats-row" key={p.id}>
-                              <img 
-                                src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
-                                className="stat-img" 
-                                alt="" 
-                                crossOrigin="anonymous" 
-                                onError={(e) => { 
-                                  e.target.onerror = null; 
-                                  e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
-                                }} 
-                              />
-                              <div style={{flex: 1, textTransform: 'uppercase', fontSize: '17px', fontWeight: '800'}}>{p.name}</div>
-                              <div style={{width: '34px', textAlign: 'center', fontSize: '18px'}}>{p.playedMatches || 1}</div>
-                              <div style={{width: '34px', textAlign: 'center', fontWeight: '900', fontSize: '19px'}}>{p.assists}</div>
-                            </div>
-                          ))}
+                        <div className="export-card-title">ASSISTENTLAR <span style={{float:'right', fontSize:'15px'}}>O'   A</span></div>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          {topAssists.length === 0 ? (
+                            <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '16px 0', textTransform: 'uppercase' }}>ASSISTENTLAR MAVJUD EMAS</div>
+                          ) : (
+                            topAssists.slice(0, 3).map(p => (
+                              <div className="export-stats-row" key={p.id}>
+                                <img 
+                                  src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
+                                  className="stat-img" 
+                                  alt="" 
+                                  crossOrigin="anonymous" 
+                                  onError={(e) => { 
+                                    e.target.onerror = null; 
+                                    e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
+                                  }} 
+                                />
+                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '16px', fontWeight: '800'}}>{p.name}</div>
+                                <div style={{width: '32px', textAlign: 'center', fontSize: '17px'}}>{p.playedMatches || 1}</div>
+                                <div style={{width: '32px', textAlign: 'center', fontWeight: '900', fontSize: '18px'}}>{p.assists}</div>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </div>
 
