@@ -782,12 +782,12 @@ export default function Standings() {
                                 <div className="export-result-row" key={m.id} style={{ padding: resultRowPadding }}>
                                   <div className="export-result-team">
                                     <img src={hTeam.logo_url} alt="" crossOrigin="anonymous" style={{ width: resultLogoSize, height: resultLogoSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
-                                    <span style={{textTransform:'uppercase', fontSize: resultFontSize, fontWeight: '800', wordBreak: 'break-word', lineBreak: 'anywhere'}}>{hTeam.name}</span>
+                                    <span style={{textTransform:'uppercase', fontSize: resultFontSize, fontWeight: '800', wordBreak: 'normal', overflowWrap: 'break-word', whiteSpace: 'normal'}}>{hTeam.name}</span>
                                   </div>
                                   <div className="export-result-score" style={{ fontSize: resultScoreFontSize, padding: '0 4px', flexShrink: 0 }}>{m.home_score}-{m.away_score}</div>
                                   <div className="export-result-team away">
                                     <img src={aTeam.logo_url} alt="" crossOrigin="anonymous" style={{ width: resultLogoSize, height: resultLogoSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
-                                    <span style={{textTransform:'uppercase', fontSize: resultFontSize, fontWeight: '800', wordBreak: 'break-word', lineBreak: 'anywhere'}}>{aTeam.name}</span>
+                                    <span style={{textTransform:'uppercase', fontSize: resultFontSize, fontWeight: '800', wordBreak: 'normal', overflowWrap: 'break-word', whiteSpace: 'normal'}}>{aTeam.name}</span>
                                   </div>
                                 </div>
                               );
@@ -815,7 +815,7 @@ export default function Standings() {
                                     e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
                                   }} 
                                 />
-                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', wordBreak: 'break-word'}}>{p.name}</div>
+                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', wordBreak: 'normal', overflowWrap: 'break-word', whiteSpace: 'normal'}}>{p.name}</div>
                                 <div style={{width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800'}}>{p.playedMatches || 1}</div>
                                 <div style={{width: '30px', textAlign: 'center', fontWeight: '900', fontSize: '17.5px'}}>{p.goals}</div>
                               </div>
@@ -843,7 +843,7 @@ export default function Standings() {
                                     e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
                                   }} 
                                 />
-                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', wordBreak: 'break-word'}}>{p.name}</div>
+                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', wordBreak: 'normal', overflowWrap: 'break-word', whiteSpace: 'normal'}}>{p.name}</div>
                                 <div style={{width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800'}}>{p.playedMatches || 1}</div>
                                 <div style={{width: '30px', textAlign: 'center', fontWeight: '900', fontSize: '17.5px'}}>{p.assists}</div>
                               </div>
