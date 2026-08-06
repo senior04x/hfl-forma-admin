@@ -820,7 +820,10 @@ export default function Standings() {
 
                     </div>
                   </div>
+                </div>
 
+                {/* Footer Group (Secondary Sponsors + Season Text with 5px gap) */}
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: '20px' }}>
                   {(() => {
                     const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
                     const isShowSponsors = checkIsShowSponsors(currentLeagueObj, selectedLeague);
@@ -828,13 +831,13 @@ export default function Standings() {
                     const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
                     if (secondarySponsors.length === 0) return null;
                     return (
-                      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '22px 0 10px 0', boxSizing: 'border-box' }}>
+                      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '5px', boxSizing: 'border-box' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '36px' }}>
                           {secondarySponsors.map((s, idx) => (
                             <React.Fragment key={s.id || idx}>
-                              <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '46px', maxWidth: '140px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.85 }} />
+                              <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '44px', maxWidth: '140px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.85 }} />
                               {idx < secondarySponsors.length - 1 && (
-                                <div style={{ height: '26px', width: '1.5px', backgroundColor: '#ffffff', opacity: 0.4 }}></div>
+                                <div style={{ height: '24px', width: '1.5px', backgroundColor: '#ffffff', opacity: 0.4 }}></div>
                               )}
                             </React.Fragment>
                           ))}
@@ -842,22 +845,22 @@ export default function Standings() {
                       </div>
                     );
                   })()}
-                </div>
 
-                <div style={{
-                  textAlign: 'center', 
-                  color: '#ffffff', 
-                  opacity: 0.8, 
-                  fontSize: '13.5px', 
-                  paddingBottom: '24px',
-                  paddingTop: '8px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '2px',
-                  fontWeight: '700',
-                  width: '100%'
-                }}>
-                  {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
-                  {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM {displayRound}-TUR
+                  <div style={{
+                    textAlign: 'center', 
+                    color: '#ffffff', 
+                    opacity: 0.8, 
+                    fontSize: '13.5px', 
+                    marginTop: '0px',
+                    paddingTop: '0px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '2px',
+                    fontWeight: '700',
+                    width: '100%'
+                  }}>
+                    {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
+                    {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM {displayRound}-TUR
+                  </div>
                 </div>
 
               </div>
@@ -987,7 +990,10 @@ export default function Standings() {
                         </div>
 
                       </div>
+                    </div>
 
+                    {/* Footer Group (Secondary Sponsors + Season Text with 5px gap) */}
+                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: '20px' }}>
                       {(() => {
                         const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
                         const isShowSponsors = checkIsShowSponsors(currentLeagueObj, selectedLeague);
@@ -995,13 +1001,13 @@ export default function Standings() {
                         const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
                         if (secondarySponsors.length === 0) return null;
                         return (
-                          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '22px 0 10px 0', boxSizing: 'border-box' }}>
+                          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '5px', boxSizing: 'border-box' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '36px' }}>
                               {secondarySponsors.map((s, idx) => (
                                 <React.Fragment key={s.id || idx}>
-                                  <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '46px', maxWidth: '140px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.85 }} />
+                                  <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '44px', maxWidth: '140px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.85 }} />
                                   {idx < secondarySponsors.length - 1 && (
-                                    <div style={{ height: '26px', width: '1.5px', backgroundColor: '#ffffff', opacity: 0.4 }}></div>
+                                    <div style={{ height: '24px', width: '1.5px', backgroundColor: '#ffffff', opacity: 0.4 }}></div>
                                   )}
                                 </React.Fragment>
                               ))}
@@ -1009,22 +1015,22 @@ export default function Standings() {
                           </div>
                         );
                       })()}
-                    </div>
 
-                    <div style={{
-                      textAlign: 'center', 
-                      color: '#ffffff', 
-                      opacity: 0.8, 
-                      fontSize: '13.5px', 
-                      paddingBottom: '24px',
-                      paddingTop: '8px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '2px',
-                      fontWeight: '700',
-                      width: '100%'
-                    }}>
-                      {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
-                      {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM INTIZOM JADVALI
+                      <div style={{
+                        textAlign: 'center', 
+                        color: '#ffffff', 
+                        opacity: 0.8, 
+                        fontSize: '13.5px', 
+                        marginTop: '0px',
+                        paddingTop: '0px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '2px',
+                        fontWeight: '700',
+                        width: '100%'
+                      }}>
+                        {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
+                        {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM INTIZOM JADVALI
+                      </div>
                     </div>
 
           </div>
