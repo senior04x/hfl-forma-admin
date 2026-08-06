@@ -539,7 +539,15 @@ const Settings = () => {
 
     try {
       const client = supabaseAdmin || supabase;
-      const cleanSeason = leagueSeason.trim() || '2026/2027';
+      // Auto-derive season from start/end dates
+      let cleanSeason = leagueSeason.trim() || '2026/2027';
+      if (startDate && endDate) {
+        const sYear = new Date(startDate).getFullYear();
+        const eYear = new Date(endDate).getFullYear();
+        cleanSeason = sYear === eYear ? `${sYear}` : `${sYear}/${eYear}`;
+      } else if (startDate) {
+        cleanSeason = `${new Date(startDate).getFullYear()}`;
+      }
       const cleanName = leagueName.trim();
 
       if (editingLeague) {
@@ -1300,7 +1308,7 @@ const Settings = () => {
                     }}
                   >
                     <Plus size={18} />
-                    <span>➕ LIGA QO'SHISH</span>
+                    <span>LIGA QO'SHISH</span>
                   </button>
                 </div>
               </div>
@@ -1637,16 +1645,6 @@ const Settings = () => {
                   </select>
                 </div>
 
-                {/* Mavsum */}
-                <div className="settings-form-group">
-                  <label>Mavsum (Season)</label>
-                  <input
-                    type="text"
-                    placeholder="2026/2027"
-                    value={leagueSeason}
-                    onChange={e => setLeagueSeason(e.target.value)}
-                  />
-                </div>
 
                 {/* Boshlanish Sanasi */}
                 <div className="settings-form-group">
@@ -1682,8 +1680,8 @@ const Settings = () => {
               </div>
 
               <div className="league-modal-actions">
-                <button type="button" className="btn-cancel" onClick={() => setIsLeagueModalOpen(false)}>
-                  Bekor qilish
+                <button type="button" className="league-modal-close" onClick={() => setIsLeagueModalOpen(false)} title="Bekor qilish">
+                  <X size={18} />
                 </button>
                 <button type="submit" className="settings-btn settings-btn-primary" disabled={creatingLeague}>
                   {creatingLeague ? 'Saqlanmoqda...' : (editingLeague ? 'Saqlash' : 'Liga qo\'shish')}
