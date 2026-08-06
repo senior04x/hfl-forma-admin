@@ -280,28 +280,29 @@
 
 .export-table-header {
   display: flex;
-  background: rgba(255, 255, 255, 0.12);
-  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.14);
+  padding: 10px 14px;
   font-weight: 900;
-  font-size: 18px;
+  font-size: 17px;
   border-bottom: 2px solid rgba(255, 255, 255, 0.25);
   color: #fff;
+  letter-spacing: 0.5px;
 }
-.export-col-hash { width: 36px; text-align: center; }
-.export-col-team { flex: 1; margin-left: 8px; }
-.export-col-stat { width: 44px; text-align: center; }
+.export-col-hash { width: 34px; text-align: center; font-weight: 900; }
+.export-col-team { flex: 1; margin-left: 8px; font-weight: 900; }
+.export-col-stat { width: 44px; text-align: center; font-weight: 900; }
 
 .export-table-row {
   display: flex;
-  padding: 9px 14px;
+  padding: 6px 12px;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 800;
 }
 .export-table-row:last-child { border-bottom: none; }
 .export-table-row .team-img {
-  width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; object-fit: cover;
+  width: 28px; height: 28px; border-radius: 50%; margin-right: 10px; object-fit: cover;
 }
 
 /* Right Column (Results & Stats) */
@@ -309,7 +310,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   height: 100%;
 }
 
@@ -328,13 +329,14 @@
 
 .export-card-title {
   text-align: center;
-  padding: 12px 16px;
-  font-size: 18px;
+  padding: 10px 14px;
+  font-size: 16.5px;
   font-weight: 900;
   color: white;
   text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.14);
   border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.5px;
 }
 
 .export-results-title {
@@ -349,31 +351,31 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 14px;
+  padding: 6px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-weight: 800;
-  font-size: 15px;
+  font-size: 14.5px;
   background: transparent;
   border-radius: 6px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .export-result-row:last-child { border-bottom: none; margin-bottom: 0; }
-.export-result-team { display: flex; align-items: center; gap: 10px; flex: 1; }
+.export-result-team { display: flex; align-items: center; gap: 8px; flex: 1; }
 .export-result-team.away { flex-direction: row-reverse; }
-.export-result-team img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
-.export-result-score { font-size: 20px; padding: 0 12px; font-weight: 900; }
+.export-result-team img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.export-result-score { font-size: 17px; padding: 0 10px; font-weight: 900; }
 
 .export-stats-row {
   display: flex;
   align-items: center;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 17.5px;
+  font-size: 15.5px;
   font-weight: 800;
 }
 .export-stats-row:last-child { border-bottom: none; }
 .export-stats-row .stat-img {
-  width: 34px; height: 34px; border-radius: 50%; margin-right: 12px; object-fit: cover;
+  width: 28px; height: 28px; border-radius: 50%; margin-right: 10px; object-fit: cover;
 }
 
 /* ============================================================ */
