@@ -620,6 +620,7 @@ const Settings = () => {
 
         setMessage({ type: 'success', text: 'Liga ma\'lumotlari va sanalari muvaffaqiyatli yangilandi!' });
         cancelEditLeague();
+        setIsLeagueModalOpen(false);
       } else {
         const safeInsertPayload = {
           name: cleanName,
@@ -674,6 +675,7 @@ const Settings = () => {
         setLeagueStatus('active');
         setStartDate('');
         setEndDate('');
+        setIsLeagueModalOpen(false);
       }
       fetchLeaguesAndOrgs();
     } catch (err) {
@@ -1559,7 +1561,6 @@ const Settings = () => {
 
             <form onSubmit={(e) => {
               handleSaveLeague(e);
-              setIsLeagueModalOpen(false);
             }} className="league-modal-form">
               <div className="league-modal-grid">
                 {/* Liga Nomi */}
@@ -1683,8 +1684,10 @@ const Settings = () => {
                 <button type="button" className="league-modal-close" onClick={() => setIsLeagueModalOpen(false)} title="Bekor qilish">
                   <X size={18} />
                 </button>
-                <button type="submit" className="settings-btn settings-btn-primary" disabled={creatingLeague}>
-                  {creatingLeague ? 'Saqlanmoqda...' : (editingLeague ? 'Saqlash' : 'Liga qo\'shish')}
+                <button type="submit" className="settings-btn settings-btn-primary" disabled={creatingLeague} style={{ minWidth: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  {creatingLeague ? (
+                    <><span className="btn-spinner"></span> Saqlanmoqda...</>
+                  ) : (editingLeague ? 'Saqlash' : 'Liga qo\'shish')}
                 </button>
               </div>
             </form>
