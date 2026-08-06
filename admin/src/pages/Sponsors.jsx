@@ -43,9 +43,27 @@ export default function Sponsors() {
         data = res.data || [];
       }
 
+      // Fetch system sponsor visibility settings from database
+      const { data: systemSponsorSettings } = await supabaseAdmin
+        .from('sponsors')
+        .select('*')
+        .like('name', 'LEAGUE_SHOW_SPONSORS_%');
+
+      const settingsMap = {};
+      (systemSponsorSettings || []).forEach(s => {
+        const key = s.name.replace('LEAGUE_SHOW_SPONSORS_', '');
+        settingsMap[key] = s.logo_url === 'true';
+      });
+
       const processed = (data || []).map(l => {
-        let showSponsorsVal = l.show_sponsors;
-        if (showSponsorsVal === undefined || showSponsorsVal === null) {
+        let showSponsorsVal = undefined;
+        if (l.id !== undefined && l.id !== null && settingsMap[`${l.id}`] !== undefined) {
+          showSponsorsVal = settingsMap[`${l.id}`];
+        } else if (l.name && settingsMap[l.name] !== undefined) {
+          showSponsorsVal = settingsMap[l.name];
+        } else if (l.show_sponsors !== undefined && l.show_sponsors !== null) {
+          showSponsorsVal = l.show_sponsors !== false;
+        } else {
           const savedLocal = localStorage.getItem(`hfl_league_show_sponsors_${l.id}`) || localStorage.getItem(`hfl_league_show_sponsors_${l.name}`);
           showSponsorsVal = savedLocal !== 'false';
         }
@@ -68,6 +86,34 @@ export default function Sponsors() {
       localStorage.setItem(`hfl_league_show_sponsors_${league.id}`, String(nextVal));
       localStorage.setItem(`hfl_league_show_sponsors_${league.name}`, String(nextVal));
 
+      // Save setting to Supabase DB sponsors system keys for global cross-device sync
+      const keysToSave = [`LEAGUE_SHOW_SPONSORS_${league.id}`, `LEAGUE_SHOW_SPONSORS_${league.name}`];
+      for (const keyName of keysToSave) {
+        if (!keyName) continue;
+        const { data: existing } = await supabaseAdmin
+          .from('sponsors')
+          .select('id')
+          .eq('name', keyName)
+          .maybeSingle();
+
+        if (existing) {
+          await supabaseAdmin
+            .from('sponsors')
+            .update({ logo_url: String(nextVal) })
+            .eq('id', existing.id);
+        } else {
+          await supabaseAdmin
+            .from('sponsors')
+            .insert([{
+              name: keyName,
+              logo_url: String(nextVal),
+              organization_id: orgId || null,
+              is_main: false
+            }]);
+        }
+      }
+
+      // Try updating leagues table column as well if exists
       await supabase
         .from('leagues')
         .update({ show_sponsors: nextVal })
@@ -98,13 +144,14 @@ export default function Sponsors() {
         loadedSponsors = data || [];
       }
 
-      // Filter out system internal banner keys
+      // Filter out system internal banner and settings keys
       const realSponsors = loadedSponsors.filter(s => 
         s.name && 
         !s.name.startsWith('SCHEDULE_BANNER_') && 
         !s.name.startsWith('YT_BANNER_') && 
         !s.name.startsWith('YT_OAUTH_TOKENS_') &&
-        !s.name.startsWith('MATCH_TIMER_')
+        !s.name.startsWith('MATCH_TIMER_') &&
+        !s.name.startsWith('LEAGUE_SHOW_SPONSORS_')
       );
 
       setSponsors(realSponsors);

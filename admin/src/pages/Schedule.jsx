@@ -460,9 +460,10 @@ const Schedule = () => {
     }
   };
 
+  const [allSponsors, setAllSponsors] = useState([]);
   const [mainSponsor, setMainSponsor] = useState(null);
   const [selectedSponsors, setSelectedSponsors] = useState([]);
-  const [allSponsors, setAllSponsors] = useState([]);
+  const [leagueSponsorsSettingsMap, setLeagueSponsorsSettingsMap] = useState({});
 
   useEffect(() => {
     fetchSponsorsData();
@@ -492,13 +493,23 @@ const Schedule = () => {
         loadedSponsors = data || [];
       }
 
-      // Filter out system internal banner keys
+      const settingsMap = {};
+      loadedSponsors.forEach(s => {
+        if (s.name && s.name.startsWith('LEAGUE_SHOW_SPONSORS_')) {
+          const key = s.name.replace('LEAGUE_SHOW_SPONSORS_', '');
+          settingsMap[key] = s.logo_url === 'true';
+        }
+      });
+      setLeagueSponsorsSettingsMap(settingsMap);
+
+      // Filter out system internal banner and settings keys
       const realSponsors = loadedSponsors.filter(s => 
         s.name && 
         !s.name.startsWith('SCHEDULE_BANNER_') && 
         !s.name.startsWith('YT_BANNER_') && 
         !s.name.startsWith('YT_OAUTH_TOKENS_') &&
-        !s.name.startsWith('MATCH_TIMER_')
+        !s.name.startsWith('MATCH_TIMER_') &&
+        !s.name.startsWith('LEAGUE_SHOW_SPONSORS_')
       );
 
       setAllSponsors(realSponsors);
@@ -528,6 +539,20 @@ const Schedule = () => {
     const nameToUse = leagueName || leagueObj?.name;
     const idToUse = leagueObj?.id;
 
+    // 1. Check DB system settings FIRST (synced across devices)
+    if (idToUse !== undefined && idToUse !== null && leagueSponsorsSettingsMap[`${idToUse}`] !== undefined) {
+      return leagueSponsorsSettingsMap[`${idToUse}`];
+    }
+    if (nameToUse && leagueSponsorsSettingsMap[nameToUse] !== undefined) {
+      return leagueSponsorsSettingsMap[nameToUse];
+    }
+
+    // 2. Check DB column if present
+    if (leagueObj && leagueObj.show_sponsors !== undefined && leagueObj.show_sponsors !== null) {
+      return leagueObj.show_sponsors !== false;
+    }
+
+    // 3. Fallback to localStorage
     const localByName = nameToUse ? localStorage.getItem(`hfl_league_show_sponsors_${nameToUse}`) : null;
     if (localByName === 'false') return false;
     if (localByName === 'true') return true;
@@ -535,10 +560,6 @@ const Schedule = () => {
     const localById = idToUse ? localStorage.getItem(`hfl_league_show_sponsors_${idToUse}`) : null;
     if (localById === 'false') return false;
     if (localById === 'true') return true;
-
-    if (leagueObj && leagueObj.show_sponsors !== undefined && leagueObj.show_sponsors !== null) {
-      return leagueObj.show_sponsors !== false;
-    }
 
     return true;
   };
