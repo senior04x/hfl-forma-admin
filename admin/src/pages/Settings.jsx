@@ -465,16 +465,26 @@ const Settings = () => {
       });
 
       let durationMap = {};
+      let startDateMap = {};
+      let endDateMap = {};
       try {
-        const { data: durationSponsors } = await (supabaseAdmin || supabase)
+        const { data: dateSponsors } = await (supabaseAdmin || supabase)
           .from('sponsors')
           .select('name, logo_url')
-          .like('name', 'LEAGUE_DURATION_%');
+          .or('name.like.LEAGUE_DURATION_%,name.like.LEAGUE_START_DATE_%,name.like.LEAGUE_END_DATE_%');
 
-        if (durationSponsors) {
-          durationSponsors.forEach(s => {
-            const lId = Number(s.name.replace('LEAGUE_DURATION_', ''));
-            if (lId) durationMap[lId] = Number(s.logo_url);
+        if (dateSponsors) {
+          dateSponsors.forEach(s => {
+            if (s.name.startsWith('LEAGUE_DURATION_')) {
+              const lId = Number(s.name.replace('LEAGUE_DURATION_', ''));
+              if (lId) durationMap[lId] = Number(s.logo_url);
+            } else if (s.name.startsWith('LEAGUE_START_DATE_')) {
+              const lId = Number(s.name.replace('LEAGUE_START_DATE_', ''));
+              if (lId) startDateMap[lId] = s.logo_url;
+            } else if (s.name.startsWith('LEAGUE_END_DATE_')) {
+              const lId = Number(s.name.replace('LEAGUE_END_DATE_', ''));
+              if (lId) endDateMap[lId] = s.logo_url;
+            }
           });
         }
       } catch (e) {}
@@ -482,7 +492,9 @@ const Settings = () => {
       const allMerged = Array.from(allLeaguesMap.values());
       const withDurations = allMerged.map(l => ({
         ...l,
-        match_duration: l.match_duration || durationMap[l.id] || Number(localStorage.getItem(`hfl_league_duration_${l.id}`)) || 90
+        match_duration: l.match_duration || durationMap[l.id] || Number(localStorage.getItem(`hfl_league_duration_${l.id}`)) || 90,
+        start_date: l.start_date || startDateMap[l.id] || '',
+        end_date: l.end_date || endDateMap[l.id] || ''
       }));
 
       setLeagues(withDurations);
@@ -536,26 +548,28 @@ const Settings = () => {
         const oldName = editingLeague.name;
         const targetId = editingLeague.id;
 
-        // Base update payload without match_duration to avoid PGRST204 schema error
-        const updatePayload = {
+        // Safe update payload containing columns guaranteed to exist
+        const safePayload = {
           name: cleanName,
           logo_url: leagueLogo.trim() || null,
-          is_junior: isJunior,
+          is_junior: isJunior
+        };
+
+        const fullPayload = {
+          ...safePayload,
+          season: cleanSeason,
+          status: leagueStatus,
           start_date: startDate ? startDate : null,
           end_date: endDate ? endDate : null
         };
 
-        // Try updating with season and status if columns exist, otherwise fallback cleanly
+        // Try updating full payload first; fallback to safePayload if optional columns don't exist
         try {
-          const { error: sErr } = await client.from('leagues').update({
-            ...updatePayload,
-            season: cleanSeason,
-            status: leagueStatus
-          }).eq('id', targetId);
+          const { error: sErr } = await client.from('leagues').update(fullPayload).eq('id', targetId);
           if (sErr) throw sErr;
         } catch (e) {
-          const { error: baseErr } = await client.from('leagues').update(updatePayload).eq('id', targetId);
-          if (baseErr) throw baseErr;
+          const { error: baseErr } = await client.from('leagues').update(safePayload).eq('id', targetId);
+          if (baseErr) console.warn('Base update warning:', baseErr);
         }
 
         // Save match duration and start/end dates in sponsors table / localStorage helper
@@ -601,27 +615,29 @@ const Settings = () => {
         setMessage({ type: 'success', text: 'Liga ma\'lumotlari va sanalari muvaffaqiyatli yangilandi!' });
         cancelEditLeague();
       } else {
-        const insertPayload = {
+        const safeInsertPayload = {
           name: cleanName,
           logo_url: leagueLogo.trim() || null,
           organization_id: orgId,
-          is_junior: isJunior,
+          is_junior: isJunior
+        };
+
+        const fullInsertPayload = {
+          ...safeInsertPayload,
+          season: cleanSeason,
+          status: leagueStatus,
           start_date: startDate ? startDate : null,
           end_date: endDate ? endDate : null
         };
 
         let newLeague = null;
         try {
-          const { data, error } = await client.from('leagues').insert({
-            ...insertPayload,
-            season: cleanSeason,
-            status: leagueStatus
-          }).select().single();
+          const { data, error } = await client.from('leagues').insert(fullInsertPayload).select().single();
           if (error) throw error;
           newLeague = data;
         } catch (e) {
-          const { data, error: baseErr } = await client.from('leagues').insert(insertPayload).select().single();
-          if (baseErr) throw baseErr;
+          const { data, error: baseErr } = await client.from('leagues').insert(safeInsertPayload).select().single();
+          if (baseErr) console.warn('Base insert warning:', baseErr);
           newLeague = data;
         }
 
