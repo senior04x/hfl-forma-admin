@@ -856,7 +856,7 @@ export default function Standings() {
                   </div>
                 </div>
 
-                {/* Footer Group (Secondary Sponsors + Season Text with 5px gap) */}
+                {/* Footer Group (Secondary Sponsors) */}
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: '20px' }}>
                   {(() => {
                     const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
@@ -865,7 +865,7 @@ export default function Standings() {
                     const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
                     if (secondarySponsors.length === 0) return null;
                     return (
-                      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '5px', boxSizing: 'border-box' }}>
+                      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', boxSizing: 'border-box' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '36px' }}>
                           {secondarySponsors.map((s, idx) => (
                             <React.Fragment key={s.id || idx}>
@@ -879,22 +879,6 @@ export default function Standings() {
                       </div>
                     );
                   })()}
-
-                  <div style={{
-                    textAlign: 'center', 
-                    color: '#ffffff', 
-                    opacity: 0.8, 
-                    fontSize: '13.5px', 
-                    marginTop: '0px',
-                    paddingTop: '0px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '2px',
-                    fontWeight: '700',
-                    width: '100%'
-                  }}>
-                    {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
-                    {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM {displayRound}-TUR
-                  </div>
                 </div>
 
               </div>
@@ -1026,7 +1010,7 @@ export default function Standings() {
                       </div>
                     </div>
 
-                    {/* Footer Group (Secondary Sponsors + Season Text with 5px gap) */}
+                    {/* Footer Group (Secondary Sponsors) */}
                     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: '20px' }}>
                       {(() => {
                         const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
@@ -1035,7 +1019,7 @@ export default function Standings() {
                         const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
                         if (secondarySponsors.length === 0) return null;
                         return (
-                          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '5px', boxSizing: 'border-box' }}>
+                          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', boxSizing: 'border-box' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '36px' }}>
                               {secondarySponsors.map((s, idx) => (
                                 <React.Fragment key={s.id || idx}>
@@ -1049,22 +1033,6 @@ export default function Standings() {
                           </div>
                         );
                       })()}
-
-                      <div style={{
-                        textAlign: 'center', 
-                        color: '#ffffff', 
-                        opacity: 0.8, 
-                        fontSize: '13.5px', 
-                        marginTop: '0px',
-                        paddingTop: '0px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '2px',
-                        fontWeight: '700',
-                        width: '100%'
-                      }}>
-                        {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() : new Date().getFullYear()}/
-                        {matches.length > 0 ? new Date(matches[0].match_date).getFullYear() + 1 : new Date().getFullYear() + 1}-MAVSUM INTIZOM JADVALI
-                      </div>
                     </div>
 
           </div>
