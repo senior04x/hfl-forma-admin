@@ -1429,37 +1429,8 @@ const Schedule = () => {
           const isCollab = currentLeagueObj?.isCollab;
 
           return (
-            <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', padding: '10px 45px 25px 45px', boxSizing: 'border-box' }}>
-              {/* Header */}
-              <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', width: '100%' }}>
-                <div className="export-logo-left" style={{ width: '280px', minWidth: '280px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>
-                  {isCollab ? (
-                    <>
-                      <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '95px', objectFit: 'contain', background: 'transparent' }} />
-                      <img src="/x.png" crossOrigin="anonymous" style={{ height: '16px', objectFit: 'contain', opacity: 0.7, background: 'transparent' }} />
-                      <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain', background: 'transparent' }} />
-                    </>
-                  ) : (
-                    <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain', background: 'transparent' }} />
-                  )}
-                </div>
-
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-                  {currentLeagueObj?.logo_url ? (
-                    <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: '110px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
-                  ) : (
-                    <h2 style={{ color: '#fff', fontSize: '36px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>{exportLeague} {exportRound ? `(${exportRound}-TUR)` : ''}</h2>
-                  )}
-                </div>
-
-                <div className="export-logo-right" style={{ width: '280px', minWidth: '280px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: '20px', boxSizing: 'border-box' }}>
-                  {mainSponsorLogo ? (
-                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: '85px', maxWidth: '240px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', display: 'block' }} />
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="sch-export-body" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center' }}>
+            <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '30px 45px', boxSizing: 'border-box' }}>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 {(() => {
                   const filteredList = matches
                     .filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound))
@@ -1471,78 +1442,131 @@ const Schedule = () => {
 
                   const currentRoundMatches = filteredList.filter(m => !m.is_postponed);
                   const postponedMatches = filteredList.filter(m => m.is_postponed);
+                  const totalCount = currentRoundMatches.length + postponedMatches.length;
+
+                  let rowPadding = '8px 18px';
+                  let teamFontSize = '24px';
+                  let teamLogoSize = '65px';
+                  let timeBoxFontSize = '40px';
+                  let timeDateFontSize = '14px';
+                  let matchGap = '14px';
+                  let headerMarginBottom = '22px';
+                  let footerMarginTop = '22px';
+
+                  if (totalCount > 6) {
+                    rowPadding = '5px 14px';
+                    teamFontSize = '20px';
+                    teamLogoSize = '52px';
+                    timeBoxFontSize = '32px';
+                    timeDateFontSize = '12.5px';
+                    matchGap = '8px';
+                    headerMarginBottom = '14px';
+                    footerMarginTop = '14px';
+                  }
 
                   return (
                     <>
-                      {currentRoundMatches.map(match => {
-                        const isMatchFinished = match.status === 'finished' || filterStatus === 'finished' || (match.home_score !== null && match.away_score !== null && (match.home_score > 0 || match.away_score > 0 || match.status === 'finished'));
-                        return (
-                          <div key={match.id} className="sch-match-row">
-                            <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                            <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
-                            <div className="sch-time-container">
-                              <div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div>
-                              <div className="sch-time-box">
-                                {isMatchFinished ? `${match.home_score || 0} - ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
+                      {/* Header */}
+                      <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: headerMarginBottom, width: '100%' }}>
+                        <div className="export-logo-left" style={{ width: '280px', minWidth: '280px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>
+                          {isCollab ? (
+                            <>
+                              <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: totalCount > 6 ? '85px' : '95px', objectFit: 'contain', background: 'transparent' }} />
+                              <img src="/x.png" crossOrigin="anonymous" style={{ height: '16px', objectFit: 'contain', opacity: 0.7, background: 'transparent' }} />
+                              <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: totalCount > 6 ? '70px' : '80px', objectFit: 'contain', background: 'transparent' }} />
+                            </>
+                          ) : (
+                            <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: totalCount > 6 ? '90px' : '100px', objectFit: 'contain', background: 'transparent' }} />
+                          )}
+                        </div>
+
+                        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                          {currentLeagueObj?.logo_url ? (
+                            <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: totalCount > 6 ? '95px' : '110px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                          ) : (
+                            <h2 style={{ color: '#fff', fontSize: '36px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>{exportLeague} {exportRound ? `(${exportRound}-TUR)` : ''}</h2>
+                          )}
+                        </div>
+
+                        <div className="export-logo-right" style={{ width: '280px', minWidth: '280px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: '20px', boxSizing: 'border-box' }}>
+                          {mainSponsorLogo ? (
+                            <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: totalCount > 6 ? '75px' : '85px', maxWidth: '240px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', display: 'block' }} />
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {/* Matches Body */}
+                      <div className="sch-export-body" style={{ display: 'flex', flexDirection: 'column', gap: matchGap, justifyContent: 'center' }}>
+                        {currentRoundMatches.map(match => {
+                          const isMatchFinished = match.status === 'finished' || filterStatus === 'finished' || (match.home_score !== null && match.away_score !== null && (match.home_score > 0 || match.away_score > 0 || match.status === 'finished'));
+                          return (
+                            <div key={match.id} className="sch-match-row" style={{ padding: rowPadding, gridTemplateColumns: `${teamLogoSize} 1fr 200px 1fr ${teamLogoSize}` }}>
+                              <img src={match.home_team?.logo_url} className="sch-team-logo" style={{ width: teamLogoSize, height: teamLogoSize }} crossOrigin="anonymous" alt="" />
+                              <div style={{ color: '#fff', fontSize: teamFontSize, fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 6px' }}>{match.home_team?.name}</div>
+                              <div className="sch-time-container">
+                                <div className="sch-time-date" style={{ fontSize: timeDateFontSize }}>{match.match_date?.split('-').reverse().join('.')}</div>
+                                <div className="sch-time-box" style={{ fontSize: timeBoxFontSize }}>
+                                  {isMatchFinished ? `${match.home_score || 0} - ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
+                                </div>
                               </div>
+                              <div style={{ color: '#fff', fontSize: teamFontSize, fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 6px' }}>{match.away_team?.name}</div>
+                              <img src={match.away_team?.logo_url} className="sch-team-logo" style={{ width: teamLogoSize, height: teamLogoSize }} crossOrigin="anonymous" alt="" />
                             </div>
-                            <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
-                            <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
+                          );
+                        })}
+
+                        {postponedMatches.length > 0 && (
+                          <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: matchGap, width: '100%', alignItems: 'center' }}>
+                            <div style={{ background: 'rgba(255, 59, 48, 0.35)', border: '1px solid rgba(255, 59, 48, 0.75)', color: '#ffffff', padding: '4px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }}>
+                              {postponedMatches.length > 1 ? "QOLDIRILGAN O'YINLAR" : "QOLDIRILGAN O'YIN"}
+                            </div>
+                            {postponedMatches.map(match => {
+                              const isMatchFinished = match.status === 'finished' || filterStatus === 'finished' || (match.home_score !== null && match.away_score !== null && (match.home_score > 0 || match.away_score > 0 || match.status === 'finished'));
+                              return (
+                                <div key={match.id} className="sch-match-row" style={{ padding: rowPadding, gridTemplateColumns: `${teamLogoSize} 1fr 200px 1fr ${teamLogoSize}`, borderColor: 'rgba(255, 59, 48, 0.65)', background: 'rgba(255, 59, 48, 0.2)' }}>
+                                  <img src={match.home_team?.logo_url} className="sch-team-logo" style={{ width: teamLogoSize, height: teamLogoSize }} crossOrigin="anonymous" alt="" />
+                                  <div style={{ color: '#fff', fontSize: teamFontSize, fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 6px' }}>{match.home_team?.name}</div>
+                                  <div className="sch-time-container">
+                                    <div className="sch-time-date" style={{ fontSize: timeDateFontSize }}>{match.match_date?.split('-').reverse().join('.')}</div>
+                                    <div className="sch-time-box" style={{ fontSize: timeBoxFontSize }}>
+                                      {isMatchFinished ? `${match.home_score || 0} - ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
+                                    </div>
+                                  </div>
+                                  <div style={{ color: '#fff', fontSize: teamFontSize, fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 6px' }}>{match.away_team?.name}</div>
+                                  <img src={match.away_team?.logo_url} className="sch-team-logo" style={{ width: teamLogoSize, height: teamLogoSize }} crossOrigin="anonymous" alt="" />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer Secondary Sponsors Banner */}
+                      {(() => {
+                        const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
+                        const isShowSponsors = checkIsShowSponsors(currentLeagueObj, exportLeague);
+                        if (!isShowSponsors) return null;
+                        const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
+                        if (secondarySponsors.length === 0) return null;
+                        return (
+                          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: footerMarginTop, boxSizing: 'border-box' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '28px' }}>
+                              {secondarySponsors.map((s, idx) => (
+                                <React.Fragment key={s.id || idx}>
+                                  <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '30px', maxWidth: '100px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.8 }} />
+                                  {idx < secondarySponsors.length - 1 && (
+                                    <div style={{ height: '18px', width: '1px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
+                                  )}
+                                </React.Fragment>
+                              ))}
+                            </div>
                           </div>
                         );
-                      })}
-
-                      {postponedMatches.length > 0 && (
-                        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', alignItems: 'center' }}>
-                          <div style={{ background: 'rgba(255, 59, 48, 0.35)', border: '1px solid rgba(255, 59, 48, 0.75)', color: '#ffffff', padding: '5px 20px', borderRadius: '12px', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }}>
-                            {postponedMatches.length > 1 ? "QOLDIRILGAN O'YINLAR" : "QOLDIRILGAN O'YIN"}
-                          </div>
-                          {postponedMatches.map(match => {
-                            const isMatchFinished = match.status === 'finished' || filterStatus === 'finished' || (match.home_score !== null && match.away_score !== null && (match.home_score > 0 || match.away_score > 0 || match.status === 'finished'));
-                            return (
-                              <div key={match.id} className="sch-match-row" style={{ borderColor: 'rgba(255, 59, 48, 0.65)', background: 'rgba(255, 59, 48, 0.2)' }}>
-                                <img src={match.home_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                                <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.home_team?.name}</div>
-                                <div className="sch-time-container">
-                                  <div className="sch-time-date">{match.match_date?.split('-').reverse().join('.')}</div>
-                                  <div className="sch-time-box">
-                                    {isMatchFinished ? `${match.home_score || 0} - ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
-                                  </div>
-                                </div>
-                                <div style={{ color: '#fff', fontSize: '24px', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 8px' }}>{match.away_team?.name}</div>
-                                <img src={match.away_team?.logo_url} className="sch-team-logo" crossOrigin="anonymous" alt="" />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                      })()}
                     </>
                   );
                 })()}
               </div>
-
-              {/* Bottom Selected Secondary Sponsors Banner */}
-              {(() => {
-                const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
-                const isShowSponsors = checkIsShowSponsors(currentLeagueObj, exportLeague);
-                if (!isShowSponsors) return null;
-                const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
-                if (secondarySponsors.length === 0) return null;
-                return (
-                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '28px 0 12px 0', boxSizing: 'border-box' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px' }}>
-                      {secondarySponsors.map((s, idx) => (
-                        <React.Fragment key={s.id || idx}>
-                          <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '34px', maxWidth: '110px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.8 }} />
-                          {idx < secondarySponsors.length - 1 && (
-                            <div style={{ height: '20px', width: '1px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
-                          )}
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
           );
         })()}
