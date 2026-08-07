@@ -517,10 +517,12 @@ const MatchControl = () => {
     };
   }, [isTimerRunning]);
 
-  // OBS WebSocket Auto-Connect Effect
+  // OBS WebSocket Auto-Connect Effect (location-based for 1-maydon / 2-maydon)
   useEffect(() => {
-    const savedAddress = localStorage.getItem('obs_websocket_address') || 'ws://localhost:4455';
-    const savedPassword = localStorage.getItem('obs_websocket_password') || '';
+    if (!match) return;
+    const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
+    const savedAddress = localStorage.getItem(`obs_address_${locationKey}`) || localStorage.getItem('obs_websocket_address') || 'ws://localhost:4455';
+    const savedPassword = localStorage.getItem(`obs_password_${locationKey}`) || localStorage.getItem('obs_websocket_password') || '';
     setObsAddress(savedAddress);
     setObsPassword(savedPassword);
 
@@ -533,7 +535,7 @@ const MatchControl = () => {
     return () => {
       unsub();
     };
-  }, []);
+  }, [match?.id, match?.location]);
 
   useEffect(() => {
     fetchMatchData();
@@ -688,12 +690,16 @@ const MatchControl = () => {
 
   const handleConnectObs = async (e) => {
     if (e) e.preventDefault();
+    const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
+    localStorage.getItem(`obs_address_${locationKey}`, obsAddress);
+    localStorage.setItem(`obs_address_${locationKey}`, obsAddress);
+    localStorage.setItem(`obs_password_${locationKey}`, obsPassword);
     localStorage.setItem('obs_websocket_address', obsAddress);
     localStorage.setItem('obs_websocket_password', obsPassword);
 
     const res = await obsService.connect(obsAddress, obsPassword);
     if (res.success) {
-      alert('OBS Studio-ga muvaffaqiyatli ulandi!');
+      alert(`${match?.location || '1-Maydon'} OBS Studio-ga muvaffaqiyatli ulandi!`);
       setShowObsModal(false);
     } else {
       alert(`OBS Ulanish xatoligi: ${res.error}`);
