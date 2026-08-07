@@ -277,15 +277,26 @@ const MatchControl = () => {
 
   const handleConnectObs = async (e) => {
     if (e) e.preventDefault();
+    const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
+    localStorage.setItem(`obs_address_${locationKey}`, obsAddress);
+    localStorage.setItem(`obs_password_${locationKey}`, obsPassword);
     localStorage.setItem('obs_websocket_address', obsAddress);
     localStorage.setItem('obs_websocket_password', obsPassword);
 
-    const res = await obsService.connect(obsAddress, obsPassword);
-    if (res.success) {
-      alert('OBS Studio-ga muvaffaqiyatli ulandi!');
+    try {
+      const res = await obsService.connect(obsAddress, obsPassword);
+      if (res.success) {
+        setIsObsConnected(true);
+        alert(`${match?.location || '1-Maydon'} OBS Studio-ga va paroli muvaffaqiyatli ulandi va saqlandi!`);
+        setShowObsModal(false);
+      } else {
+        setIsObsConnected(false);
+        alert(`OBS WebSocket Sozlamalari va paroli saqlandi!\n\n(Eslatma: Hozirda OBS Studio o'chiq yoki ulanmadi: ${res.error || 'Server javob bermadi'})`);
+        setShowObsModal(false);
+      }
+    } catch (err) {
+      alert(`OBS WebSocket Sozlamalari saqlandi!`);
       setShowObsModal(false);
-    } else {
-      alert(`OBS Ulanish xatoligi: ${res.error}`);
     }
   };
 
