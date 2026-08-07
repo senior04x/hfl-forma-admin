@@ -141,11 +141,12 @@ class OBSService {
           console.log('Replay fayli saqlandi:', savedFilePath);
 
           try {
-            // Update media input source file path in OBS
+            // Update media input source file path in OBS and ensure loop is disabled
             await this.obs.call('SetInputSettings', {
               inputName: replaySource,
               inputSettings: {
-                local_file: savedFilePath
+                local_file: savedFilePath,
+                loop: false
               }
             });
 
