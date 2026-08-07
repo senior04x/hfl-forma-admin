@@ -1,5 +1,6 @@
 /**
- * Generates a 2-second transparent WebM Stinger Transition video with smooth Fade In -> Hold -> Fade Out animation (No rotation, No backdrop glow/shadow)
+ * Generates a 2-second broadcast-quality transparent WebM Stinger Transition:
+ * Features Diagonal Speed Slash Wipes & Smooth 3D Logo Glide (Sports TV Style)
  */
 export async function generateStingerWebM({
   logoUrl,
@@ -18,7 +19,6 @@ export async function generateStingerWebM({
     img.src = logoUrl || '/logo-for-jadval.png';
 
     img.onerror = () => {
-      // Fallback try logo.png if logo-for-jadval fails
       if (img.src !== '/logo.png') {
         img.src = '/logo.png';
       } else {
@@ -60,38 +60,71 @@ export async function generateStingerWebM({
         const elapsed = now - startTime;
         const progress = Math.min(1, elapsed / durationMs);
 
-        // Clear 100% transparent canvas
+        // 1. Clear transparent canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // 2. Draw Diagonal Speed Slash Bars (Wipe Effect)
+        ctx.save();
+        let slashX = 0;
+        if (progress < 0.5) {
+          const p = progress / 0.5;
+          // Smooth ease out
+          slashX = -1200 + p * 3120; // -1200 to 1920
+        } else {
+          const p = (progress - 0.5) / 0.5;
+          slashX = 720 + p * 2400; // 720 to 3120
+        }
+
+        // Draw dynamic angled speed bar
+        ctx.translate(slashX, 0);
+        ctx.skewX = -0.35; // Angled sports slash
+
+        const barGrad = ctx.createLinearGradient(0, 0, 350, 0);
+        barGrad.addColorStop(0, 'rgba(124, 58, 237, 0)');
+        barGrad.addColorStop(0.3, 'rgba(124, 58, 237, 0.85)');
+        barGrad.addColorStop(0.5, 'rgba(59, 130, 246, 0.95)');
+        barGrad.addColorStop(0.7, 'rgba(124, 58, 237, 0.85)');
+        barGrad.addColorStop(1, 'rgba(124, 58, 237, 0)');
+
+        ctx.fillStyle = barGrad;
+        ctx.fillRect(-200, 0, 450, 1080);
+        ctx.restore();
+
+        // 3. Draw Center Logo Glide & Fade
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
 
+        let logoX = 0;
         let scale = 1;
         let opacity = 0;
 
         if (progress < 0.35) {
-          // Phase 1: Smooth Fade In (0.0s - 0.7s) with subtle scale up
+          // Entrance: Slide in from Left (-300px -> 0px) & Fade In
           const p = progress / 0.35;
           const easeOut = Math.sin((p * Math.PI) / 2);
+          logoX = (1 - easeOut) * -350;
           opacity = easeOut;
-          scale = 0.85 + easeOut * 0.2; // 0.85 -> 1.05
+          scale = 0.8 + easeOut * 0.25;
         } else if (progress < 0.65) {
-          // Phase 2: Full Hold & Cut Point (0.7s - 1.3s)
-          opacity = 1;
+          // Hold / Cut point: Center stay (0px) with gentle breathing zoom
           const p = (progress - 0.35) / 0.3;
-          scale = 1.05 - p * 0.05; // 1.05 -> 1.0
+          logoX = 0;
+          opacity = 1;
+          scale = 1.05 - p * 0.03;
         } else {
-          // Phase 3: Smooth Fade Out (1.3s - 2.0s) with subtle scale out
+          // Exit: Slide out to Right (0px -> 350px) & Fade Out
           const p = (progress - 0.65) / 0.35;
           const easeIn = Math.sin((p * Math.PI) / 2);
+          logoX = easeIn * 350;
           opacity = 1 - easeIn;
-          scale = 1.0 + easeIn * 0.15; // 1.0 -> 1.15
+          scale = 1.02 + easeIn * 0.15;
         }
 
         ctx.globalAlpha = Math.max(0, Math.min(1, opacity));
+        ctx.translate(logoX, 0);
         ctx.scale(scale, scale);
 
-        // Clean draw of logo image (NO SHADOW / NO BACKDROP GLOW)
+        // Draw clean logo image
         if (img.complete && img.naturalWidth !== 0) {
           const size = 420;
           ctx.drawImage(img, -size / 2, -size / 2, size, size);
