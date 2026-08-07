@@ -1,5 +1,5 @@
 /**
- * Generates a 2-second transparent WebM Stinger Transition video with smooth Fade In -> Hold -> Fade Out animation (No rotation)
+ * Generates a 2-second transparent WebM Stinger Transition video with smooth Fade In -> Hold -> Fade Out animation (No rotation, No backdrop glow/shadow)
  */
 export async function generateStingerWebM({
   logoUrl,
@@ -15,10 +15,15 @@ export async function generateStingerWebM({
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.src = logoUrl || '/logo.PNG';
+    img.src = logoUrl || '/logo-for-jadval.png';
 
     img.onerror = () => {
-      createCanvasAnimation();
+      // Fallback try logo.png if logo-for-jadval fails
+      if (img.src !== '/logo.png') {
+        img.src = '/logo.png';
+      } else {
+        createCanvasAnimation();
+      }
     };
 
     img.onload = () => {
@@ -55,7 +60,7 @@ export async function generateStingerWebM({
         const elapsed = now - startTime;
         const progress = Math.min(1, elapsed / durationMs);
 
-        // Clear transparent canvas
+        // Clear 100% transparent canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         ctx.save();
@@ -67,7 +72,6 @@ export async function generateStingerWebM({
         if (progress < 0.35) {
           // Phase 1: Smooth Fade In (0.0s - 0.7s) with subtle scale up
           const p = progress / 0.35;
-          // Smooth ease-out curve
           const easeOut = Math.sin((p * Math.PI) / 2);
           opacity = easeOut;
           scale = 0.85 + easeOut * 0.2; // 0.85 -> 1.05
@@ -87,19 +91,9 @@ export async function generateStingerWebM({
         ctx.globalAlpha = Math.max(0, Math.min(1, opacity));
         ctx.scale(scale, scale);
 
-        // Radial backdrop glow effect
-        const gradient = ctx.createRadialGradient(0, 0, 50, 0, 0, 380);
-        gradient.addColorStop(0, 'rgba(124, 58, 237, 0.75)');
-        gradient.addColorStop(0.5, 'rgba(37, 99, 235, 0.35)');
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(0, 0, 380, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Draw Organization Logo Image
+        // Clean draw of logo image (NO SHADOW / NO BACKDROP GLOW)
         if (img.complete && img.naturalWidth !== 0) {
-          const size = 360;
+          const size = 420;
           ctx.drawImage(img, -size / 2, -size / 2, size, size);
         } else {
           // Fallback text logo
