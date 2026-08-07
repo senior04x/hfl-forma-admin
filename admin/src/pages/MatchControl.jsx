@@ -8,6 +8,7 @@ import {
   Clock, ChevronLeft, ChevronRight, Video, Wifi, WifiOff, Settings
 } from 'lucide-react';
 import { obsService } from '../services/obsService';
+import { generateStingerWebM, downloadBlob } from '../utils/stingerGenerator';
 import './MatchControl.css';
 
 const EVENT_TYPES = {
@@ -1442,6 +1443,26 @@ const MatchControl = () => {
 
               <div style={{ marginTop: '10px', fontSize: '12px', color: '#cbd5e1' }}>
                 Holat: <strong style={{ color: isObsConnected ? '#22c55e' : '#ef4444' }}>{isObsConnected ? '🟢 Ulanib turibdi' : '🔴 Ulanmagan'}</strong>
+              </div>
+
+              <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const logoUrl = currentOrg?.logo_url || '/logo-for-jadval.png';
+                      const text = currentOrg?.name || match?.league || 'AMATORA';
+                      const blob = await generateStingerWebM({ logoUrl, text });
+                      downloadBlob(blob, `stinger_logo.webm`);
+                      alert("Stinger Video (.webm) muvaffaqiyatli yaratildi va yuklab olindi!\n\nEndi OBS Stinger Transition sozlamalaridagi 'Video File' joyiga ushbu stinger_logo.webm faylini tanlab qo'ying.");
+                    } catch (err) {
+                      alert("Stinger yaratishda xatolik: " + err.message);
+                    }
+                  }}
+                  style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', padding: '8px 12px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  🎬 Stinger Video Yaratish (.webm yuklab olish)
+                </button>
               </div>
 
               <div className="modal-actions" style={{ marginTop: '20px' }}>
