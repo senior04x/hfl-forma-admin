@@ -518,12 +518,14 @@ const MatchControl = () => {
     };
   }, [isTimerRunning]);
 
-  // OBS WebSocket Auto-Connect Effect (location-based for 1-maydon / 2-maydon)
+  // OBS WebSocket Auto-Connect Effect (Strictly separated per field: 1-maydon vs 2-maydon)
   useEffect(() => {
     if (!match) return;
     const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
-    const savedAddress = localStorage.getItem(`obs_address_${locationKey}`) || localStorage.getItem('obs_websocket_address') || 'ws://localhost:4455';
-    const savedPassword = localStorage.getItem(`obs_password_${locationKey}`) || localStorage.getItem('obs_websocket_password') || '';
+    const defaultPortAddress = locationKey === 'stream2' ? 'ws://localhost:4456' : 'ws://localhost:4455';
+    const savedAddress = localStorage.getItem(`obs_address_${locationKey}`) || defaultPortAddress;
+    const savedPassword = localStorage.getItem(`obs_password_${locationKey}`) || '';
+    
     setObsAddress(savedAddress);
     setObsPassword(savedPassword);
 
@@ -531,7 +533,14 @@ const MatchControl = () => {
       setIsObsConnected(connected);
     });
 
-    obsService.connect(savedAddress, savedPassword).catch(() => {});
+    const switchFieldConnection = async () => {
+      if (obsService.isConnected()) {
+        await obsService.disconnect();
+      }
+      await obsService.connect(savedAddress, savedPassword);
+    };
+
+    switchFieldConnection().catch(() => {});
 
     return () => {
       unsub();

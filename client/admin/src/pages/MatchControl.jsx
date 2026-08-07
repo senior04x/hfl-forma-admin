@@ -83,10 +83,14 @@ const MatchControl = () => {
     alert("Boshqaruv paneli havolasi nusxalandi!\n\n" + link);
   };
 
-  // OBS WebSocket Auto-Connect Effect
+  // OBS WebSocket Auto-Connect Effect (Strictly separated per field: 1-maydon vs 2-maydon)
   useEffect(() => {
-    const savedAddress = localStorage.getItem('obs_websocket_address') || 'ws://localhost:4455';
-    const savedPassword = localStorage.getItem('obs_websocket_password') || '';
+    if (!match) return;
+    const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
+    const defaultPortAddress = locationKey === 'stream2' ? 'ws://localhost:4456' : 'ws://localhost:4455';
+    const savedAddress = localStorage.getItem(`obs_address_${locationKey}`) || defaultPortAddress;
+    const savedPassword = localStorage.getItem(`obs_password_${locationKey}`) || '';
+    
     setObsAddress(savedAddress);
     setObsPassword(savedPassword);
 
@@ -94,12 +98,19 @@ const MatchControl = () => {
       setIsObsConnected(connected);
     });
 
-    obsService.connect(savedAddress, savedPassword).catch(() => {});
+    const switchFieldConnection = async () => {
+      if (obsService.isConnected()) {
+        await obsService.disconnect();
+      }
+      await obsService.connect(savedAddress, savedPassword);
+    };
+
+    switchFieldConnection().catch(() => {});
 
     return () => {
       unsub();
     };
-  }, []);
+  }, [match?.id, match?.location]);
 
   // Timer Effect
   useEffect(() => {
