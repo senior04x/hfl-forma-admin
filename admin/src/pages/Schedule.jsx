@@ -1423,6 +1423,8 @@ const Schedule = () => {
                 {loading ? <><span className="btn-spinner"></span> Saqlanmoqda...</> : (editingMatch ? 'Yangilash' : 'Saqlash')}
               </button>
             </div>
+          </div>
+        </div>
       )}
 
       {/* 5-Second Confirmation Danger Modal */}
