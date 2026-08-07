@@ -21,23 +21,28 @@
 .match-header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   background: rgba(255, 255, 255, 0.05);
-  padding: 8px 12px;
+  padding: 6px 12px;
   border-radius: 40px;
+  flex-wrap: wrap;
 }
 
 .obs-action-btn {
   background: rgba(255, 255, 255, 0.1);
   border: none;
   color: #e2e8f0;
-  width: 36px;
   height: 36px;
-  border-radius: 50%;
-  display: flex;
+  border-radius: 20px;
+  padding: 0 14px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   cursor: pointer;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
   transition: all 0.2s;
 }
 
@@ -49,8 +54,8 @@
 .obs-text-btn {
   width: auto;
   border-radius: 20px;
-  padding: 0 16px;
-  font-size: 14px;
+  padding: 0 14px;
+  font-size: 13px;
   font-weight: 500;
 }
 
