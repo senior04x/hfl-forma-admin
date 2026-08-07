@@ -932,16 +932,82 @@ const Schedule = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (deletingMatchIds.includes(id)) return;
-    if (!window.confirm("Rostdan ham ushbu o'yinni o'chirmoqchimisiz?")) return;
+  // Delete Match Safety Modal & 5-Second Countdown State
+  const [deleteModalState, setDeleteModalState] = useState({
+    isOpen: false,
+    matchId: null,
+    matchTitle: ''
+  });
+  const [deleteCountdown, setDeleteCountdown] = useState(5);
+  const deleteTimerRef = useRef(null);
 
+  const openDeleteModal = (match) => {
+    const home = match.home_team?.name || match.home_team_name || 'Uy jamoa';
+    const away = match.away_team?.name || match.away_team_name || 'Mehmon jamoa';
+    setDeleteModalState({
+      isOpen: true,
+      matchId: match.id,
+      matchTitle: `${home} VS ${away}`
+    });
+    setDeleteCountdown(5);
+
+    if (deleteTimerRef.current) clearInterval(deleteTimerRef.current);
+    deleteTimerRef.current = setInterval(() => {
+      setDeleteCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(deleteTimerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const confirmDeleteMatch = async () => {
+    if (deleteCountdown > 0 || !deleteModalState.matchId) return;
+    const targetId = deleteModalState.matchId;
+    setDeleteModalState({ isOpen: false, matchId: null, matchTitle: '' });
+    await executeMatchDelete(targetId);
+  };
+
+  const executeMatchDelete = async (id) => {
+    if (deletingMatchIds.includes(id)) return;
     setDeletingMatchIds(prev => [...prev, id]);
 
     try {
       const matchToDelete = matches.find(m => m.id === id);
 
-      // Auto-delete live broadcast from YouTube API if youtube_link exists
+      // 1. Cascade cleanup: Delete all 20s replay video files from Supabase Storage for this match
+      try {
+        const { data: events } = await supabase
+          .from('match_events')
+          .select('id, replay_video_url')
+          .eq('match_id', id);
+
+        if (events && events.length > 0) {
+          const filesToDelete = events
+            .filter(e => e.replay_video_url)
+            .map(e => {
+              const url = e.replay_video_url;
+              if (url.includes('/replays/')) return url.split('/replays/')[1];
+              return null;
+            })
+            .filter(Boolean);
+
+          if (filesToDelete.length > 0) {
+            await supabase.storage.from('replays').remove(filesToDelete);
+            await supabase.storage.from('applications').remove(filesToDelete.map(f => `replays/${f}`));
+            console.log('Replay videolari Storage-dan toizlandi:', filesToDelete);
+          }
+
+          // Delete match events
+          await supabase.from('match_events').delete().eq('match_id', id);
+        }
+      } catch (storageErr) {
+        console.warn('Replay fayllarini o\'chirishda xatolik:', storageErr);
+      }
+
+      // 2. Auto-delete live broadcast from YouTube API if youtube_link exists
       if (matchToDelete?.youtube_link) {
         try {
           const accessToken = await getValidAccessToken();
@@ -961,7 +1027,6 @@ const Schedule = () => {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${accessToken}` }
               });
-              console.log('Successfully deleted YouTube live broadcast:', broadcastId);
             }
           }
         } catch (ytErr) {
@@ -969,6 +1034,7 @@ const Schedule = () => {
         }
       }
 
+      // 3. Delete Match Record
       const { error } = await supabase.from('matches').delete().eq('id', id);
       if (!error) {
         await fetchMatches();
@@ -1140,7 +1206,7 @@ const Schedule = () => {
                     <button className="edit-match-btn" onClick={() => handleEditMatch(match)} disabled={isDeleting} title="Tahrirlash">
                       <Pencil size={15} />
                     </button>
-                    <button className="delete-match-btn" onClick={() => handleDelete(match.id)} disabled={isDeleting} title="O'chirish">
+                    <button className="delete-match-btn" onClick={() => openDeleteModal(match)} disabled={isDeleting} title="O'chirish">
                       {isDeleting ? (
                         <span className="btn-spinner delete-spinner"></span>
                       ) : (
@@ -1355,6 +1421,60 @@ const Schedule = () => {
               <button className="btn-cancel" onClick={() => setIsModalOpen(false)}>Bekor qilish</button>
               <button className="btn-save" onClick={handleSave} disabled={loading}>
                 {loading ? <><span className="btn-spinner"></span> Saqlanmoqda...</> : (editingMatch ? 'Yangilash' : 'Saqlash')}
+              </button>
+            </div>
+      )}
+
+      {/* 5-Second Confirmation Danger Modal */}
+      {deleteModalState.isOpen && (
+        <div className="modal-overlay" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999 }}>
+          <div className="modal-content" style={{ maxWidth: '440px', border: '1px solid rgba(239, 68, 68, 0.4)', background: 'linear-gradient(145deg, #1e1b2e 0%, #0f172a 100%)', borderRadius: '18px', padding: '24px' }}>
+            <div style={{ width: '54px', height: '54px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', border: '1px solid rgba(239, 68, 68, 0.4)' }}>
+              <AlertCircle size={30} color="#ef4444" />
+            </div>
+
+            <h2 style={{ textAlign: 'center', color: '#ffffff', fontSize: '18px', fontWeight: '800', marginBottom: '8px', textTransform: 'uppercase' }}>
+              O'YINNI CHINDAN HAM O'CHIRASIZMI?
+            </h2>
+
+            <p style={{ textAlign: 'center', color: '#f87171', fontSize: '14px', fontWeight: '700', marginBottom: '14px' }}>
+              {deleteModalState.matchTitle}
+            </p>
+
+            <div style={{ background: 'rgba(239, 68, 68, 0.1)', borderRadius: '12px', padding: '12px', marginBottom: '20px', borderWidth: '1px', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+              <p style={{ color: '#cbd5e1', fontSize: '12px', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
+                ⚠️ <strong>OGOHLANTIRISH:</strong> Ushbu o'yinni o'chirsangiz, unga tegishli barcha <strong>20 soniyalik video replaylar</strong>, gollar va statistik ma'lumotlar bazadan to'liq va qaytarib bo'lmaydigan qilib tozalanadi!
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                type="button" 
+                className="btn-cancel" 
+                onClick={() => setDeleteModalState({ isOpen: false, matchId: null, matchTitle: '' })}
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Bekor qilish
+              </button>
+
+              <button 
+                type="button" 
+                disabled={deleteCountdown > 0}
+                onClick={confirmDeleteMatch}
+                style={{ 
+                  flex: 1, 
+                  padding: '12px', 
+                  borderRadius: '10px', 
+                  fontWeight: '800', 
+                  color: '#ffffff',
+                  background: deleteCountdown > 0 ? '#475569' : '#dc2626',
+                  opacity: deleteCountdown > 0 ? 0.75 : 1,
+                  cursor: deleteCountdown > 0 ? 'not-allowed' : 'pointer',
+                  border: 'none',
+                  transition: 'all 0.3s'
+                }}
+              >
+                {deleteCountdown > 0 ? `O'chirish (${deleteCountdown}s)` : "🗑️ Ha, O'chirilsin!"}
               </button>
             </div>
           </div>
