@@ -472,8 +472,7 @@ const MatchControl = () => {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="header-title">O'yin Boshqaruvi</h1>
-            <div className="header-subtext">{match.league} • {match.location || '1-Maydon'}</div>
+            <div className="header-subtext" style={{ fontSize: '14px', fontWeight: 'bold', color: '#e2e8f0' }}>{match.league} • {match.location || '1-Maydon'}</div>
           </div>
         </div>
         
