@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Pencil, CheckCircle2, Radio, AlertCircle } from 'lucide-react';
+import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Pencil, CheckCircle2, Radio, AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import { obsService } from '../services/obsService';
 import html2canvas from 'html2canvas';
 import './Schedule.css';
 
@@ -50,6 +51,55 @@ const Schedule = () => {
   const [ytChannelInfo, setYtChannelInfo] = useState(null);
   const [ytLoading, setYtLoading] = useState(false);
   const [autoCreateYtLive, setAutoCreateYtLive] = useState(false);
+
+  // OBS Organization-level connection state (1-Maydon & 2-Maydon)
+  const [isObs1Connected, setIsObs1Connected] = useState(false);
+  const [isObs2Connected, setIsObs2Connected] = useState(false);
+  const [showObsModal, setShowObsModal] = useState(false);
+  const [activeFieldStream, setActiveFieldStream] = useState('stream1');
+  const [obsModalAddress, setObsModalAddress] = useState('ws://localhost:4455');
+  const [obsModalPassword, setObsModalPassword] = useState('');
+
+  useEffect(() => {
+    const safeOrg = orgId || 'default';
+    const addr1 = localStorage.getItem(`obs_address_stream1_${safeOrg}`) || localStorage.getItem('obs_address_stream1') || 'ws://localhost:4455';
+    const pwd1 = localStorage.getItem(`obs_password_stream1_${safeOrg}`) || localStorage.getItem('obs_password_stream1') || '';
+    
+    obsService.connect(addr1, pwd1).then(res => {
+      setIsObs1Connected(res.success);
+    }).catch(() => setIsObs1Connected(false));
+  }, [orgId]);
+
+  const handleOpenObsModal = (fieldStream) => {
+    setActiveFieldStream(fieldStream);
+    const safeOrg = orgId || 'default';
+    const defaultAddr = fieldStream === 'stream2' ? 'ws://localhost:4456' : 'ws://localhost:4455';
+    const addr = localStorage.getItem(`obs_address_${fieldStream}_${safeOrg}`) || localStorage.getItem(`obs_address_${fieldStream}`) || defaultAddr;
+    const pwd = localStorage.getItem(`obs_password_${fieldStream}_${safeOrg}`) || localStorage.getItem(`obs_password_${fieldStream}`) || '';
+    setObsModalAddress(addr);
+    setObsModalPassword(pwd);
+    setShowObsModal(true);
+  };
+
+  const handleSaveObsConnection = async (e) => {
+    if (e) e.preventDefault();
+    const safeOrg = orgId || 'default';
+    const key = activeFieldStream;
+    localStorage.setItem(`obs_address_${key}_${safeOrg}`, obsModalAddress);
+    localStorage.setItem(`obs_password_${key}_${safeOrg}`, obsModalPassword);
+    localStorage.setItem(`obs_address_${key}`, obsModalAddress);
+    localStorage.setItem(`obs_password_${key}`, obsModalPassword);
+
+    const res = await obsService.connect(obsModalAddress, obsModalPassword);
+    if (res.success) {
+      if (key === 'stream1') setIsObs1Connected(true);
+      else setIsObs2Connected(true);
+      alert(`${key === 'stream1' ? '1-Maydon' : '2-Maydon'} OBS ga muvaffaqiyatli ulandi!`);
+      setShowObsModal(false);
+    } else {
+      alert(`OBS Ulanish xatoligi: ${res.error}`);
+    }
+  };
 
   const getYtTokensKey = () => `hfl_yt_tokens_${orgId || 'default'}`;
 
@@ -947,7 +997,26 @@ const Schedule = () => {
           <h1>O'yinlar Jadvali</h1>
           <p>{currentOrg?.name} ({exportLeague || 'Barcha ligalar'})</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Organization OBS Connection Buttons */}
+          <button 
+            onClick={() => handleOpenObsModal('stream1')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: isObs1Connected ? '#15803d' : '#991b1b', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '10px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+            title="1-Maydon OBS Sozlamalari"
+          >
+            {isObs1Connected ? <Wifi size={15} /> : <WifiOff size={15} />}
+            <span>1-Maydon OBS {isObs1Connected ? '🟢' : '🔴'}</span>
+          </button>
+
+          <button 
+            onClick={() => handleOpenObsModal('stream2')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: isObs2Connected ? '#15803d' : '#991b1b', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '10px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+            title="2-Maydon OBS Sozlamalari"
+          >
+            {isObs2Connected ? <Wifi size={15} /> : <WifiOff size={15} />}
+            <span>2-Maydon OBS {isObs2Connected ? '🟢' : '🔴'}</span>
+          </button>
+
           {ytChannelInfo ? (
             <div className="yt-connected-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 59, 48, 0.15)', border: '1px solid rgba(255, 59, 48, 0.4)', padding: '8px 14px', borderRadius: '10px', color: '#ff4d4d', fontSize: '13px', fontWeight: '700' }}>
               {ytChannelInfo.thumbnail && <img src={ytChannelInfo.thumbnail} alt="" style={{ width: '22px', height: '22px', borderRadius: '50%' }} />}
@@ -1565,6 +1634,47 @@ const Schedule = () => {
           );
         })()}
       </div>
+
+      {/* OBS Settings Modal for Organization */}
+      {showObsModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '420px' }}>
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Video size={24} color="#7c3aed" /> {activeFieldStream === 'stream1' ? '1-Maydon OBS Sozlamalari' : '2-Maydon OBS Sozlamalari'}
+            </h2>
+            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '15px' }}>
+              {currentOrg?.name || 'Tashkilot'} uchun {activeFieldStream === 'stream1' ? '1-Maydon' : '2-Maydon'} OBS WebSocket ulanishi.
+            </p>
+            <form onSubmit={handleSaveObsConnection}>
+              <div className="form-group">
+                <label>OBS WebSocket Manzili (Address):</label>
+                <input
+                  type="text"
+                  value={obsModalAddress}
+                  onChange={(e) => setObsModalAddress(e.target.value)}
+                  placeholder={activeFieldStream === 'stream2' ? 'ws://localhost:4456' : 'ws://localhost:4455'}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>OBS Paroli (Server Password):</label>
+                <input
+                  type="password"
+                  value={obsModalPassword}
+                  onChange={(e) => setObsModalPassword(e.target.value)}
+                  placeholder="Agar bo'sh bo'lsa, qoldiring"
+                />
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: '20px' }}>
+                <button type="button" className="btn-cancel" onClick={() => setShowObsModal(false)}>Yopish</button>
+                <button type="submit" className="btn-save" style={{ background: '#7c3aed' }}>Saqlash va Ulanish</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

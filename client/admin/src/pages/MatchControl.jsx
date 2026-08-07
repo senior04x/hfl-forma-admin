@@ -484,7 +484,7 @@ const MatchControl = () => {
           </button>
           
           <div className="match-header-actions">
-            {/* OBS Status & Trigger Buttons */}
+            {/* OBS Status Indicator Badge */}
             <button 
               className={`obs-action-btn ${isObsConnected ? 'obs-connected' : 'obs-disconnected'}`}
               onClick={() => setShowObsModal(true)}
@@ -493,17 +493,6 @@ const MatchControl = () => {
             >
               {isObsConnected ? <Wifi size={16} /> : <WifiOff size={16} />}
               <span className="btn-text-desktop">{isObsConnected ? 'OBS Ulandi' : 'OBS Sozlash'}</span>
-            </button>
-
-            <button 
-              className="obs-action-btn"
-              onClick={handleManualReplay}
-              disabled={isTriggeringReplay}
-              style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', opacity: isTriggeringReplay ? 0.7 : 1 }}
-              title="Oxirgi 20s Gol/Replay qaytarig'ini ko'rsatish"
-            >
-              <Video size={16} />
-              <span className="btn-text-desktop">{isTriggeringReplay ? 'Replay...' : '🎥 Replay (20s)'}</span>
             </button>
 
             <div className="obs-divider"></div>
