@@ -117,14 +117,19 @@ class OBSService {
       };
 
       try {
-        // 1. If dynamic organization stinger URL provided, update transition settings
+        // 1. If dynamic organization stinger URL provided, switch transition to Stinger & update path
         if (stingerUrl) {
           try {
-            await this.obs.call('SetCurrentSceneTransitionSettings', {
-              transitionSettings: {
-                path: stingerUrl
-              }
-            });
+            const transitions = await this.obs.call('GetSceneTransitionList');
+            const stingerTrans = (transitions.transitions || []).find(t => t.transitionKind === 'stinger' || t.transitionName.toLowerCase().includes('stinger'));
+            if (stingerTrans) {
+              await this.obs.call('SetCurrentSceneTransition', { transitionName: stingerTrans.transitionName });
+              await this.obs.call('SetCurrentSceneTransitionSettings', {
+                transitionSettings: {
+                  path: stingerUrl
+                }
+              });
+            }
           } catch (stingerErr) {
             console.warn('Stinger animatsiya sozlamalarini yangilashda xatolik:', stingerErr);
           }
