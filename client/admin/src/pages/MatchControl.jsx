@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { 
   ArrowLeft, Trash2, Monitor, Share2, Play, Pause, RotateCcw, 
-  Clock, ChevronLeft, ChevronRight
+  Clock, ChevronLeft, ChevronRight, Video, Wifi, WifiOff, Settings
 } from 'lucide-react';
+import { obsService } from '../services/obsService';
 import './MatchControl.css';
 
 const EVENT_TYPES = {
@@ -59,6 +60,14 @@ const MatchControl = () => {
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '' });
 
+  // OBS WebSocket Integration state
+  const [isObsConnected, setIsObsConnected] = useState(false);
+  const [obsAddress, setObsAddress] = useState('ws://localhost:4455');
+  const [obsPassword, setObsPassword] = useState('');
+  const [showObsModal, setShowObsModal] = useState(false);
+  const [isTriggeringReplay, setIsTriggeringReplay] = useState(false);
+  const [orgStingerUrl, setOrgStingerUrl] = useState('');
+
   const copyObsLink = () => {
     let streamId = 'stream1';
     if (match?.location?.includes('2-maydon')) streamId = 'stream2';
@@ -73,6 +82,24 @@ const MatchControl = () => {
     navigator.clipboard.writeText(link);
     alert("Boshqaruv paneli havolasi nusxalandi!\n\n" + link);
   };
+
+  // OBS WebSocket Auto-Connect Effect
+  useEffect(() => {
+    const savedAddress = localStorage.getItem('obs_websocket_address') || 'ws://localhost:4455';
+    const savedPassword = localStorage.getItem('obs_websocket_password') || '';
+    setObsAddress(savedAddress);
+    setObsPassword(savedPassword);
+
+    const unsub = obsService.onStatusChange((connected) => {
+      setIsObsConnected(connected);
+    });
+
+    obsService.connect(savedAddress, savedPassword).catch(() => {});
+
+    return () => {
+      unsub();
+    };
+  }, []);
 
   // Timer Effect
   useEffect(() => {
@@ -145,6 +172,18 @@ const MatchControl = () => {
       const { data: away } = await supabase.from('teams').select('*').eq('id', matchData.away_team_id).single();
       setHomeTeam(home);
       setAwayTeam(away);
+
+      // Fetch organization info for custom Stinger logo animation
+      if (matchData.organization_id) {
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('stinger_url')
+          .eq('id', matchData.organization_id)
+          .single();
+        if (orgData?.stinger_url) {
+          setOrgStingerUrl(orgData.stinger_url);
+        }
+      }
 
       // Fetch approved players for each team
       const { data: hp } = await supabase
@@ -223,6 +262,40 @@ const MatchControl = () => {
 
     const updatePayload = isHome ? { home_penalty_score: newPen } : { away_penalty_score: newPen };
     await supabase.from('matches').update(updatePayload).eq('id', id);
+  };
+
+  const handleConnectObs = async (e) => {
+    if (e) e.preventDefault();
+    localStorage.setItem('obs_websocket_address', obsAddress);
+    localStorage.setItem('obs_websocket_password', obsPassword);
+
+    const res = await obsService.connect(obsAddress, obsPassword);
+    if (res.success) {
+      alert('OBS Studio-ga muvaffaqiyatli ulandi!');
+      setShowObsModal(false);
+    } else {
+      alert(`OBS Ulanish xatoligi: ${res.error}`);
+    }
+  };
+
+  const handleManualReplay = async () => {
+    if (!isObsConnected) {
+      setShowObsModal(true);
+      return;
+    }
+    setIsTriggeringReplay(true);
+    try {
+      await obsService.triggerGoalReplay({
+        stingerUrl: orgStingerUrl || null,
+        mainScene: 'MainScene',
+        replayScene: 'ReplayScene',
+        replaySource: 'ReplaySource'
+      });
+    } catch (err) {
+      alert(`Replay xatoligi: ${err.message || 'OBS replay bajarilmadi'}`);
+    } finally {
+      setIsTriggeringReplay(false);
+    }
   };
 
   const requestStatusUpdate = (newStatus, message) => {
@@ -312,7 +385,7 @@ const MatchControl = () => {
       }]);
 
       if (!error) {
-        // If it's a goal, automatically increment the score
+        // If it's a goal, automatically increment the score and trigger OBS replay
         if (eventType === 'goal') {
           const isHome = selectedTeamId === match.home_team_id;
           const newHomeScore = (match.home_score || 0) + (isHome ? 1 : 0);
@@ -324,6 +397,13 @@ const MatchControl = () => {
           }).eq('id', id);
 
           setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
+
+          // Auto-trigger OBS Goal Replay if OBS is connected
+          if (isObsConnected) {
+            obsService.triggerGoalReplay({ stingerUrl: orgStingerUrl }).catch(err => {
+              console.warn('Avto-replay uzatishda xatolik:', err);
+            });
+          }
         }
 
         await fetchEvents();
@@ -398,6 +478,29 @@ const MatchControl = () => {
         </div>
         
         <div className="match-header-actions">
+          {/* OBS Status & Trigger Buttons */}
+          <button 
+            className={`obs-action-btn ${isObsConnected ? 'obs-connected' : 'obs-disconnected'}`}
+            onClick={() => setShowObsModal(true)}
+            style={{ background: isObsConnected ? '#15803d' : '#991b1b', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+            title="OBS WebSocket Sozlamalari"
+          >
+            {isObsConnected ? <Wifi size={16} /> : <WifiOff size={16} />}
+            <span className="btn-text-desktop">{isObsConnected ? 'OBS Ulandi' : 'OBS Sozlash'}</span>
+          </button>
+
+          <button 
+            className="obs-action-btn"
+            onClick={handleManualReplay}
+            disabled={isTriggeringReplay}
+            style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', opacity: isTriggeringReplay ? 0.7 : 1 }}
+            title="Oxirgi 20s Gol/Replay qaytarig'ini ko'rsatish"
+          >
+            <Video size={16} />
+            <span className="btn-text-desktop">{isTriggeringReplay ? 'Replay...' : '🎥 Replay (20s)'}</span>
+          </button>
+
+          <div className="obs-divider"></div>
           <button className="obs-action-btn obs-text-btn" style={{background: '#475569'}} onClick={copyControlPanelLink} title="Panelni ulashish">
             <Share2 size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">Boshqaruvni ulashish</span>
           </button>
@@ -721,6 +824,50 @@ const MatchControl = () => {
               <button className="btn-modal-cancel" onClick={() => setConfirmModal({ isOpen: false, action: null, message: '' })}>Bekor qilish</button>
               <button className="btn-modal-save" style={{background: '#ef4444'}} onClick={confirmModal.action}>Tasdiqlash</button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* OBS Settings Modal */}
+      {showObsModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '420px' }}>
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Video size={24} color="#7c3aed" /> OBS WebSocket Sozlamalari
+            </h2>
+            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '15px' }}>
+              Admin panel OBS Studio bilan WebSocket 5 (port 4455) orqali ulanadi va 20s gol takrorini efirga beradi.
+            </p>
+            <form onSubmit={handleConnectObs}>
+              <div className="form-group">
+                <label>OBS WebSocket Manzili (Address):</label>
+                <input
+                  type="text"
+                  value={obsAddress}
+                  onChange={(e) => setObsAddress(e.target.value)}
+                  placeholder="ws://localhost:4455"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>OBS Paroli (Server Password):</label>
+                <input
+                  type="password"
+                  value={obsPassword}
+                  onChange={(e) => setObsPassword(e.target.value)}
+                  placeholder="Agar bo'sh bo'lsa, qoldiring"
+                />
+              </div>
+
+              <div style={{ marginTop: '10px', fontSize: '12px', color: '#cbd5e1' }}>
+                Holat: <strong style={{ color: isObsConnected ? '#22c55e' : '#ef4444' }}>{isObsConnected ? '🟢 Ulanib turibdi' : '🔴 Ulanmagan'}</strong>
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: '20px' }}>
+                <button type="button" className="btn-cancel" onClick={() => setShowObsModal(false)}>Yopish</button>
+                <button type="submit" className="btn-save" style={{ background: '#7c3aed' }}>Ulanish</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
