@@ -161,23 +161,11 @@ class OBSService {
               sceneName: replayScene
             });
 
-            // Listen for media playback completion to return to MainScene
-            playbackFinishedUnsub = async (finishData) => {
-              if (finishData.inputName === replaySource) {
-                console.log('Replay ijrosi tugadi, MainScene-ga qaytilmoqda...');
-                await this.obs.call('SetCurrentProgramScene', {
-                  sceneName: mainScene
-                });
-                cleanup();
-                resolve({ success: true, filePath: savedFilePath });
-              }
-            };
+            // Return to MainScene 2.2 seconds earlier (at 17.8s) so Stinger transition finishes exactly as replay ends
+            const returnDelay = Math.max(5000, fallbackDurationMs - 2200);
 
-            this.obs.on('MediaInputPlaybackFinished', playbackFinishedUnsub);
-
-            // Fallback timeout in case MediaInputPlaybackFinished doesn't fire
-            timeoutId = setTimeout(async () => {
-              console.log('Fallback taymer tugadi. MainScene-ga qaytish...');
+            const triggerReturnToMain = async () => {
+              console.log(`Replay vaqti tugadi (${returnDelay}ms), MainScene-ga qaytilmoqda...`);
               try {
                 await this.obs.call('SetCurrentProgramScene', {
                   sceneName: mainScene
@@ -185,7 +173,19 @@ class OBSService {
               } catch (e) {}
               cleanup();
               resolve({ success: true, filePath: savedFilePath });
-            }, fallbackDurationMs + 2000);
+            };
+
+            // Listen for media playback completion
+            playbackFinishedUnsub = async (finishData) => {
+              if (finishData.inputName === replaySource) {
+                triggerReturnToMain();
+              }
+            };
+
+            this.obs.on('MediaInputPlaybackFinished', playbackFinishedUnsub);
+
+            // Precise return timer shortened by 2.2 seconds
+            timeoutId = setTimeout(triggerReturnToMain, returnDelay);
 
           } catch (err) {
             cleanup();
