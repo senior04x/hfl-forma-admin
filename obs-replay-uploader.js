@@ -8,7 +8,7 @@ const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz
 const REPLAY_DIR = 'C:\\Replays';
 
 console.log('================================================');
-console.log('🎬 OBS Replay Auto-Uploader Service (Aniqlik: 100%)');
+console.log('🎬 OBS Replay Auto-Uploader Service (Chronological Fix)');
 console.log(`📁 Kuzatilayotgan papka: ${REPLAY_DIR}`);
 console.log('================================================');
 
@@ -51,7 +51,7 @@ async function uploadFile(filename) {
   const filePath = path.join(REPLAY_DIR, filename);
   if (uploadedFiles.has(filename)) return;
 
-  // Wait 3 seconds to ensure OBS has completely written the MP4 file
+  // Wait 3 seconds to ensure OBS completes writing MP4 file
   await new Promise(r => setTimeout(r, 3000));
 
   try {
@@ -109,8 +109,8 @@ async function uploadFile(filename) {
 }
 
 function attachToExactMatchEvent(publicUrl) {
-  // Query exact match event that is waiting for replay_video_url (where replay_video_url IS NULL)
-  const queryPath = `/rest/v1/match_events?select=id,match_id&replay_video_url=is.null&order=id.desc&limit=1`;
+  // Query EXACT latest match_event sorted by created_at DESC (Chronological, NOT UUID string)
+  const queryPath = `/rest/v1/match_events?select=id,match_id,created_at&replay_video_url=is.null&order=created_at.desc&limit=1`;
   const req = https.request({
     hostname: SUPABASE_URL,
     path: queryPath,
@@ -129,12 +129,39 @@ function attachToExactMatchEvent(publicUrl) {
           const targetEvent = events[0];
           updateEventRecord(targetEvent.id, publicUrl);
         } else {
-          // If no pending event exists, create a goal event for the currently live match
-          createEventForActiveMatch(publicUrl);
+          // If no pending event exists, fallback to latest created match_event OR live match
+          attachToLatestAnyEvent(publicUrl);
         }
       } catch (e) {
         console.error('Event biriktirish xatosi:', e);
       }
+    });
+  });
+  req.end();
+}
+
+function attachToLatestAnyEvent(publicUrl) {
+  const queryPath = `/rest/v1/match_events?select=id,match_id,created_at&order=created_at.desc&limit=1`;
+  const req = https.request({
+    hostname: SUPABASE_URL,
+    path: queryPath,
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE}`,
+      'apikey': SUPABASE_SERVICE_ROLE
+    }
+  }, (res) => {
+    let body = '';
+    res.on('data', chunk => body += chunk);
+    res.on('end', () => {
+      try {
+        const events = JSON.parse(body);
+        if (events && events.length > 0) {
+          updateEventRecord(events[0].id, publicUrl);
+        } else {
+          createEventForActiveMatch(publicUrl);
+        }
+      } catch (e) {}
     });
   });
   req.end();
