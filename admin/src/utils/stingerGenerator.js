@@ -1,5 +1,5 @@
 /**
- * Generates a 2-second transparent WebM Stinger Transition video using HTML5 Canvas & MediaRecorder
+ * Generates a 2-second transparent WebM Stinger Transition video with smooth Fade In -> Hold -> Fade Out animation (No rotation)
  */
 export async function generateStingerWebM({
   logoUrl,
@@ -18,7 +18,6 @@ export async function generateStingerWebM({
     img.src = logoUrl || '/logo.PNG';
 
     img.onerror = () => {
-      // Fallback if image CORS fails
       createCanvasAnimation();
     };
 
@@ -56,56 +55,56 @@ export async function generateStingerWebM({
         const elapsed = now - startTime;
         const progress = Math.min(1, elapsed / durationMs);
 
+        // Clear transparent canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
 
-        let scale = 0;
-        let rotation = 0;
-        let opacity = 1;
+        let scale = 1;
+        let opacity = 0;
 
-        if (progress < 0.4) {
-          // Entrance phase (0s - 0.8s)
-          const p = progress / 0.4;
-          scale = p * 1.1;
-          rotation = (1 - p) * -Math.PI;
-          opacity = p;
-        } else if (progress < 0.6) {
-          // Hold / Cut point phase (0.8s - 1.2s)
-          scale = 1.1;
-          rotation = 0;
+        if (progress < 0.35) {
+          // Phase 1: Smooth Fade In (0.0s - 0.7s) with subtle scale up
+          const p = progress / 0.35;
+          // Smooth ease-out curve
+          const easeOut = Math.sin((p * Math.PI) / 2);
+          opacity = easeOut;
+          scale = 0.85 + easeOut * 0.2; // 0.85 -> 1.05
+        } else if (progress < 0.65) {
+          // Phase 2: Full Hold & Cut Point (0.7s - 1.3s)
           opacity = 1;
+          const p = (progress - 0.35) / 0.3;
+          scale = 1.05 - p * 0.05; // 1.05 -> 1.0
         } else {
-          // Exit phase (1.2s - 2.0s)
-          const p = (progress - 0.6) / 0.4;
-          scale = 1.1 + p * 1.2;
-          rotation = p * Math.PI;
-          opacity = 1 - p;
+          // Phase 3: Smooth Fade Out (1.3s - 2.0s) with subtle scale out
+          const p = (progress - 0.65) / 0.35;
+          const easeIn = Math.sin((p * Math.PI) / 2);
+          opacity = 1 - easeIn;
+          scale = 1.0 + easeIn * 0.15; // 1.0 -> 1.15
         }
 
         ctx.globalAlpha = Math.max(0, Math.min(1, opacity));
         ctx.scale(scale, scale);
-        ctx.rotate(rotation);
 
-        // Draw glowing background circle
-        const gradient = ctx.createRadialGradient(0, 0, 50, 0, 0, 350);
-        gradient.addColorStop(0, 'rgba(124, 58, 237, 0.8)');
-        gradient.addColorStop(0.5, 'rgba(37, 99, 235, 0.4)');
+        // Radial backdrop glow effect
+        const gradient = ctx.createRadialGradient(0, 0, 50, 0, 0, 380);
+        gradient.addColorStop(0, 'rgba(124, 58, 237, 0.75)');
+        gradient.addColorStop(0.5, 'rgba(37, 99, 235, 0.35)');
         gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(0, 0, 350, 0, Math.PI * 2);
+        ctx.arc(0, 0, 380, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw Logo Image if loaded
+        // Draw Organization Logo Image
         if (img.complete && img.naturalWidth !== 0) {
-          const size = 320;
+          const size = 360;
           ctx.drawImage(img, -size / 2, -size / 2, size, size);
         } else {
           // Fallback text logo
           ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 72px sans-serif';
+          ctx.font = 'bold 80px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(text || 'AMATORA', 0, 0);
