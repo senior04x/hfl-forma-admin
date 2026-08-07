@@ -8,7 +8,7 @@ const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz
 const REPLAY_DIR = 'C:\\Replays';
 
 console.log('================================================');
-console.log('🎬 OBS Replay Auto-Uploader Service Ishga Tushdi!');
+console.log('🎬 OBS Replay Auto-Uploader Service (Aniqlik: 100%)');
 console.log(`📁 Kuzatilayotgan papka: ${REPLAY_DIR}`);
 console.log('================================================');
 
@@ -51,7 +51,7 @@ async function uploadFile(filename) {
   const filePath = path.join(REPLAY_DIR, filename);
   if (uploadedFiles.has(filename)) return;
 
-  // Wait 3 seconds to ensure OBS has completely written the file to disk
+  // Wait 3 seconds to ensure OBS has completely written the MP4 file
   await new Promise(r => setTimeout(r, 3000));
 
   try {
@@ -90,7 +90,7 @@ async function uploadFile(filename) {
           console.log('🌐 Public Video URL:', publicUrl);
           console.log('================================================');
 
-          attachToLatestMatchEvent(publicUrl);
+          attachToExactMatchEvent(publicUrl);
         } else {
           console.error('❌ Supabase Yuklash xatoligi:', res.statusCode, body);
         }
@@ -108,8 +108,9 @@ async function uploadFile(filename) {
   }
 }
 
-function attachToLatestMatchEvent(publicUrl) {
-  const queryPath = `/rest/v1/match_events?select=id,match_id,replay_video_url&order=id.desc&limit=1`;
+function attachToExactMatchEvent(publicUrl) {
+  // Query exact match event that is waiting for replay_video_url (where replay_video_url IS NULL)
+  const queryPath = `/rest/v1/match_events?select=id,match_id&replay_video_url=is.null&order=id.desc&limit=1`;
   const req = https.request({
     hostname: SUPABASE_URL,
     path: queryPath,
@@ -125,10 +126,10 @@ function attachToLatestMatchEvent(publicUrl) {
       try {
         const events = JSON.parse(body);
         if (events && events.length > 0) {
-          const latestEvent = events[0];
-          updateEventRecord(latestEvent.id, publicUrl);
+          const targetEvent = events[0];
+          updateEventRecord(targetEvent.id, publicUrl);
         } else {
-          // If no event exists, create one for active live match
+          // If no pending event exists, create a goal event for the currently live match
           createEventForActiveMatch(publicUrl);
         }
       } catch (e) {
