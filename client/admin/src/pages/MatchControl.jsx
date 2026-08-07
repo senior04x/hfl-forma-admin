@@ -467,46 +467,47 @@ const MatchControl = () => {
     <div className="match-control">
       {/* Header */}
       <div className="match-control-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+        <div className="header-top-row">
           <button className="btn-back" onClick={() => navigate('/schedule')}>
             <ArrowLeft size={20} />
           </button>
-          <div>
-            <div className="header-subtext" style={{ fontSize: '14px', fontWeight: 'bold', color: '#e2e8f0' }}>{match.league} • {match.location || '1-Maydon'}</div>
+          
+          <div className="match-header-actions">
+            {/* OBS Status & Trigger Buttons */}
+            <button 
+              className={`obs-action-btn ${isObsConnected ? 'obs-connected' : 'obs-disconnected'}`}
+              onClick={() => setShowObsModal(true)}
+              style={{ background: isObsConnected ? '#15803d' : '#991b1b', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+              title="OBS WebSocket Sozlamalari"
+            >
+              {isObsConnected ? <Wifi size={16} /> : <WifiOff size={16} />}
+              <span className="btn-text-desktop">{isObsConnected ? 'OBS Ulandi' : 'OBS Sozlash'}</span>
+            </button>
+
+            <button 
+              className="obs-action-btn"
+              onClick={handleManualReplay}
+              disabled={isTriggeringReplay}
+              style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', opacity: isTriggeringReplay ? 0.7 : 1 }}
+              title="Oxirgi 20s Gol/Replay qaytarig'ini ko'rsatish"
+            >
+              <Video size={16} />
+              <span className="btn-text-desktop">{isTriggeringReplay ? 'Replay...' : '🎥 Replay (20s)'}</span>
+            </button>
+
+            <div className="obs-divider"></div>
+            <button className="obs-action-btn obs-text-btn" style={{background: '#475569'}} onClick={copyControlPanelLink} title="Panelni ulashish">
+              <Share2 size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">Boshqaruvni ulashish</span>
+            </button>
+            <div className="obs-divider"></div>
+            <button className="obs-action-btn obs-text-btn" style={{background: '#1e40af'}} onClick={copyObsLink} title="OBS Linkini nusxalash">
+              <Monitor size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">{match?.location?.includes('2-maydon') ? '2-Maydon (OBS)' : '1-Maydon (OBS)'}</span>
+            </button>
           </div>
         </div>
-        
-        <div className="match-header-actions">
-          {/* OBS Status & Trigger Buttons */}
-          <button 
-            className={`obs-action-btn ${isObsConnected ? 'obs-connected' : 'obs-disconnected'}`}
-            onClick={() => setShowObsModal(true)}
-            style={{ background: isObsConnected ? '#15803d' : '#991b1b', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-            title="OBS WebSocket Sozlamalari"
-          >
-            {isObsConnected ? <Wifi size={16} /> : <WifiOff size={16} />}
-            <span className="btn-text-desktop">{isObsConnected ? 'OBS Ulandi' : 'OBS Sozlash'}</span>
-          </button>
 
-          <button 
-            className="obs-action-btn"
-            onClick={handleManualReplay}
-            disabled={isTriggeringReplay}
-            style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', opacity: isTriggeringReplay ? 0.7 : 1 }}
-            title="Oxirgi 20s Gol/Replay qaytarig'ini ko'rsatish"
-          >
-            <Video size={16} />
-            <span className="btn-text-desktop">{isTriggeringReplay ? 'Replay...' : '🎥 Replay (20s)'}</span>
-          </button>
-
-          <div className="obs-divider"></div>
-          <button className="obs-action-btn obs-text-btn" style={{background: '#475569'}} onClick={copyControlPanelLink} title="Panelni ulashish">
-            <Share2 size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">Boshqaruvni ulashish</span>
-          </button>
-          <div className="obs-divider"></div>
-          <button className="obs-action-btn obs-text-btn" style={{background: '#1e40af'}} onClick={copyObsLink} title="OBS Linkini nusxalash">
-            <Monitor size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">{match?.location?.includes('2-maydon') ? '2-Maydon (OBS)' : '1-Maydon (OBS)'}</span>
-          </button>
+        <div className="header-info-subtext">
+          {match.league} • {match.location || '1-Maydon'}
         </div>
       </div>
 

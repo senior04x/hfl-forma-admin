@@ -7,15 +7,23 @@
 
 .match-control-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
-.header-subtext {
+.header-top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.header-info-subtext {
   font-size: 13px;
-  color: #94a3b8;
-  margin-top: 2px;
+  font-weight: 700;
+  color: #cbd5e1;
+  padding-left: 4px;
 }
 
 .match-header-actions {
@@ -23,9 +31,21 @@
   align-items: center;
   gap: 8px;
   background: rgba(255, 255, 255, 0.05);
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 40px;
-  flex-wrap: wrap;
+  flex: 1;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+
+.match-header-actions::-webkit-scrollbar {
+  display: none;
+}
+.match-header-actions {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .obs-action-btn {
