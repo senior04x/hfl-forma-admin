@@ -32,13 +32,9 @@ function initBucket() {
         'Content-Type': 'application/json'
       }
     }, (res) => {
-      let body = '';
-      res.on('data', chunk => body += chunk);
-      res.on('end', () => {
-        bucketReady = true;
-        console.log('📦 Supabase Replays papkasi (Bucket) tayyor!');
-        resolve();
-      });
+      bucketReady = true;
+      console.log('📦 Supabase Replays papkasi (Bucket) tayyor!');
+      resolve();
     });
 
     req.on('error', () => {
@@ -55,12 +51,21 @@ async function uploadFile(filename) {
   const filePath = path.join(REPLAY_DIR, filename);
   if (uploadedFiles.has(filename)) return;
 
+  // Wait 3 seconds to ensure OBS has completely written the file to disk
+  await new Promise(r => setTimeout(r, 3000));
+
   try {
+    const stats = fs.statSync(filePath);
+    if (stats.size === 0) {
+      console.log(`⏳ ${filename} hajmi 0 bayt, kutilmoqda...`);
+      return;
+    }
+
     uploadedFiles.add(filename);
-    console.log(`🚀 Yangi Replay topildi: ${filename}, Supabase-ga yuklanmoqda...`);
+    console.log(`🚀 Yangi Replay topildi (${(stats.size / 1024 / 1024).toFixed(2)} MB): ${filename}, Supabase-ga yuklanmoqda...`);
 
     const fileBuffer = fs.readFileSync(filePath);
-    const safeName = filename.replace(/\s+/g, '_');
+    const safeName = `${Date.now()}_${filename.replace(/\s+/g, '_')}`;
     const storagePath = `/storage/v1/object/replays/${safeName}`;
 
     const req = https.request({
@@ -104,7 +109,7 @@ async function uploadFile(filename) {
 }
 
 function attachToLatestMatchEvent(publicUrl) {
-  const queryPath = `/rest/v1/match_events?select=id,match_id&order=id.desc&limit=1`;
+  const queryPath = `/rest/v1/match_events?select=id,match_id,replay_video_url&order=id.desc&limit=1`;
   const req = https.request({
     hostname: SUPABASE_URL,
     path: queryPath,
@@ -120,8 +125,60 @@ function attachToLatestMatchEvent(publicUrl) {
       try {
         const events = JSON.parse(body);
         if (events && events.length > 0) {
-          const eventId = events[0].id;
-          updateEventRecord(eventId, publicUrl);
+          const latestEvent = events[0];
+          updateEventRecord(latestEvent.id, publicUrl);
+        } else {
+          // If no event exists, create one for active live match
+          createEventForActiveMatch(publicUrl);
+        }
+      } catch (e) {
+        console.error('Event biriktirish xatosi:', e);
+      }
+    });
+  });
+  req.end();
+}
+
+function createEventForActiveMatch(publicUrl) {
+  const queryPath = `/rest/v1/matches?select=id,home_team_id&status=in.(live,first_half,second_half,half_time,scheduled)&order=id.desc&limit=1`;
+  const req = https.request({
+    hostname: SUPABASE_URL,
+    path: queryPath,
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE}`,
+      'apikey': SUPABASE_SERVICE_ROLE
+    }
+  }, (res) => {
+    let body = '';
+    res.on('data', chunk => body += chunk);
+    res.on('end', () => {
+      try {
+        const matches = JSON.parse(body);
+        if (matches && matches.length > 0) {
+          const match = matches[0];
+          const newEventData = JSON.stringify({
+            match_id: match.id,
+            team_id: match.home_team_id,
+            event_type: 'goal',
+            minute: 1,
+            replay_video_url: publicUrl
+          });
+
+          const postReq = https.request({
+            hostname: SUPABASE_URL,
+            path: `/rest/v1/match_events`,
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE}`,
+              'apikey': SUPABASE_SERVICE_ROLE,
+              'Content-Type': 'application/json'
+            }
+          }, (postRes) => {
+            console.log(`⚽ Yangi replay voqeasi match #${match.id} ga muvaffaqiyatli qo'shildi!`);
+          });
+          postReq.write(newEventData);
+          postReq.end();
         }
       } catch (e) {}
     });
@@ -164,7 +221,7 @@ async function start() {
   await initBucket();
   fs.watch(REPLAY_DIR, (eventType, filename) => {
     if (filename) {
-      setTimeout(scanDirectory, 1000);
+      setTimeout(scanDirectory, 2000);
     }
   });
   scanDirectory();
