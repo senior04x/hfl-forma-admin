@@ -8,7 +8,7 @@ import {
   Clock, ChevronLeft, ChevronRight, Video, Wifi, WifiOff, Settings
 } from 'lucide-react';
 import { obsService } from '../services/obsService';
-import { generateStingerWebM, downloadBlob } from '../utils/stingerGenerator';
+import { generateStingerWebM, downloadBlob, ensureAutoStingerSynced } from '../utils/stingerGenerator';
 import './MatchControl.css';
 
 const EVENT_TYPES = {
@@ -707,6 +707,23 @@ const MatchControl = () => {
     }
   };
 
+  const getOrSyncStingerUrl = async () => {
+    if (orgStingerUrl) return orgStingerUrl;
+    try {
+      const syncedUrl = await ensureAutoStingerSynced({
+        supabaseAdmin,
+        orgId: match?.organization_id || currentOrg?.id,
+        orgLogo: currentOrg?.logo_url || '/logo-for-jadval.png',
+        orgName: currentOrg?.name || match?.league || 'AMATORA'
+      });
+      if (syncedUrl) {
+        setOrgStingerUrl(syncedUrl);
+        return syncedUrl;
+      }
+    } catch (e) {}
+    return null;
+  };
+
   const handleManualReplay = async () => {
     if (!isObsConnected) {
       setShowObsModal(true);
@@ -714,8 +731,9 @@ const MatchControl = () => {
     }
     setIsTriggeringReplay(true);
     try {
+      const activeStingerUrl = await getOrSyncStingerUrl();
       await obsService.triggerGoalReplay({
-        stingerUrl: orgStingerUrl || null,
+        stingerUrl: activeStingerUrl || null,
         mainScene: 'MainScene',
         replayScene: 'ReplayScene',
         replaySource: 'ReplaySource'
@@ -889,10 +907,12 @@ const MatchControl = () => {
 
           setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
 
-          // Auto-trigger OBS Goal Replay if OBS is connected
+          // Auto-trigger OBS Goal Replay if OBS is connected with automatic background stinger sync
           if (isObsConnected) {
-            obsService.triggerGoalReplay({ stingerUrl: orgStingerUrl }).catch(err => {
-              console.warn('Avto-replay uzatishda xatolik:', err);
+            getOrSyncStingerUrl().then(activeStingerUrl => {
+              obsService.triggerGoalReplay({ stingerUrl: activeStingerUrl }).catch(err => {
+                console.warn('Avto-replay uzatishda xatolik:', err);
+              });
             });
           }
         }

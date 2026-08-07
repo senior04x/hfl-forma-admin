@@ -158,3 +158,40 @@ export function downloadBlob(blob, filename = 'stinger.webm') {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * 100% Automatic Stinger Video Generator & Cloud Syncer
+ * Automatically renders transparent WebM video, uploads to Supabase Storage, and returns public URL
+ */
+export async function ensureAutoStingerSynced({ supabaseAdmin, orgId, orgLogo, orgName }) {
+  try {
+    const safeOrgId = orgId || 'default_org';
+    const fileName = `stinger_${safeOrgId}.webm`;
+    
+    // Generate WebM blob in browser memory (0.5s)
+    const blob = await generateStingerWebM({ logoUrl: orgLogo, text: orgName });
+    const file = new File([blob], fileName, { type: 'video/webm' });
+
+    // Upload to Supabase Storage automatically
+    const { data: uploadData, error } = await supabaseAdmin.storage
+      .from('applications')
+      .upload(`stingers/${fileName}`, file, { upsert: true });
+
+    if (!error) {
+      const { data: publicUrlData } = supabaseAdmin.storage
+        .from('applications')
+        .getPublicUrl(`stingers/${fileName}`);
+
+      const publicUrl = publicUrlData?.publicUrl;
+      if (publicUrl && orgId) {
+        try {
+          await supabaseAdmin.from('organizations').update({ stinger_url: publicUrl }).eq('id', orgId);
+        } catch (dbErr) {}
+      }
+      return publicUrl;
+    }
+  } catch (e) {
+    console.warn('Auto Stinger Cloud Sync error:', e);
+  }
+  return null;
+}
