@@ -196,23 +196,30 @@ const ObsScoreboard = () => {
             }
             const { data: tData } = await supabaseAdmin.from('teams').select('name, logo_url').eq('id', newEvent.team_id).maybeSingle();
             
-            setActiveEvent({ 
+            const eventPayload = { 
               playerName: pName, 
               playerPhoto: pPhoto, 
               teamName: tData?.name, 
               teamLogo: tData?.logo_url,
               eventType: newEvent.event_type 
-            });
-            setIsEventExiting(false);
-            
-            setTimeout(() => {
-              setIsEventExiting(true);
-            }, 7000);
+            };
+
+            // Goal events wait 22 seconds (20s replay + 2s delay), card events trigger immediately
+            const delayMs = newEvent.event_type === 'goal' ? 22000 : 0;
 
             setTimeout(() => {
-              setActiveEvent(null);
+              setActiveEvent(eventPayload);
               setIsEventExiting(false);
-            }, 8000);
+              
+              setTimeout(() => {
+                setIsEventExiting(true);
+              }, 7000);
+
+              setTimeout(() => {
+                setActiveEvent(null);
+                setIsEventExiting(false);
+              }, 8000);
+            }, delayMs);
           }
         }
       )
