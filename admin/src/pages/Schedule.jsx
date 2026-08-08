@@ -1212,12 +1212,29 @@ const Schedule = () => {
             })
             .map(match => {
               const isDeleting = deletingMatchIds.includes(match.id);
+              const mImportance = match.importance || 'oddiy';
+              const cardImportanceStyle = mImportance === 'markaziy'
+                ? { border: '2px solid #ffe600', boxShadow: '0 0 16px rgba(255, 230, 0, 0.45)', background: 'linear-gradient(135deg, rgba(255, 230, 0, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%)' }
+                : mImportance === 'ortacha'
+                ? { border: '2px solid #0ea5e9', boxShadow: '0 0 14px rgba(14, 165, 233, 0.35)', background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(15, 23, 42, 0.85) 100%)' }
+                : {};
+
               return (
-              <div key={match.id} className={`match-card glassmorphic-card ${isDeleting ? 'deleting-card' : ''}`}>
+              <div key={match.id} className={`match-card glassmorphic-card ${isDeleting ? 'deleting-card' : ''}`} style={cardImportanceStyle}>
                 <div className="match-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '10px' }}>
-                  <div className="match-badges-container" style={{ position: 'static', margin: 0 }}>
+                  <div className="match-badges-container" style={{ position: 'static', margin: 0, display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                      <div className="match-league-badge">{match.league}</div>
                      {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
+                     {mImportance === 'markaziy' && (
+                       <div style={{ background: 'rgba(255, 230, 0, 0.25)', color: '#ffe600', border: '1px solid #ffe600', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>
+                         ⭐ MARKAZIY
+                       </div>
+                     )}
+                     {mImportance === 'ortacha' && (
+                       <div style={{ background: 'rgba(14, 165, 233, 0.25)', color: '#38bdf8', border: '1px solid #0ea5e9', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>
+                         ⚡ SHIDDATLI
+                       </div>
+                     )}
                   </div>
                   <div className="match-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <button className="edit-match-btn" onClick={() => handleEditMatch(match)} disabled={isDeleting} title="Tahrirlash">
