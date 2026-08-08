@@ -897,6 +897,31 @@ const MatchControl = () => {
           };
           setMatch(updatedMatch);
 
+          // Broadcast cloud signal to clean C:\Replays folder on field PC
+          const fieldNum = match?.location?.includes('2-maydon') ? 2 : 1;
+          const finishSignalName = `REMOTE_FINISH_MATCH_FIELD_${fieldNum}`;
+          try {
+            const signalPayload = JSON.stringify({
+              match_id: id,
+              action: 'finish_match',
+              timestamp: Date.now()
+            });
+
+            const { data: existingSignal } = await supabaseAdmin
+              .from('sponsors')
+              .select('id')
+              .eq('name', finishSignalName)
+              .maybeSingle();
+
+            if (existingSignal) {
+              await supabaseAdmin.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
+            } else {
+              await supabaseAdmin.from('sponsors').insert({ name: finishSignalName, logo_url: signalPayload });
+            }
+          } catch (sigErr) {
+            console.warn(`[FIELD_${fieldNum}] Finish match signal error:`, sigErr);
+          }
+
           autoUpdateYouTubeThumbnail(updatedMatch);
         }
         setConfirmModal({ isOpen: false, action: null, message: '' });
