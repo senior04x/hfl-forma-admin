@@ -102,15 +102,15 @@ const News = () => {
     : newsList.filter(n => (n.category || '').toLowerCase().includes(filterCategory.toLowerCase()));
 
   return (
-    <div style={{ padding: '24px', color: '#ffffff' }}>
+    <div style={{ padding: '16px', color: '#ffffff', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '900', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Newspaper color="#00ff87" size={28} /> YANGILIKLAR BOSHQARUVI
+          <h1 style={{ fontSize: '20px', fontWeight: '900', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Newspaper color="#00ff87" size={24} /> YANGILIKLAR BOSHQARUVI
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: '13px', margin: '4px 0 0 0' }}>
-            Ilova va sayt uchun rasmiy yangiliklarni yaratish va boshqarish
+          <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0 0' }}>
+            Ilova uchun rasmiy yangiliklarni yaratish va boshqarish
           </p>
         </div>
 
@@ -120,22 +120,34 @@ const News = () => {
             background: 'linear-gradient(135deg, #00ff87 0%, #60efff 100%)',
             color: '#000000',
             border: 'none',
-            padding: '12px 20px',
+            padding: '10px 16px',
             borderRadius: '12px',
             fontWeight: '900',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            boxShadow: '0 4px 15px rgba(0, 255, 135, 0.3)'
+            fontSize: '13px',
+            boxShadow: '0 4px 15px rgba(0, 255, 135, 0.3)',
+            width: 'auto'
           }}
         >
           <Plus size={18} /> YANGI YANGILIK QO'SHISH
         </button>
       </div>
 
-      {/* Category Filter */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+      {/* Responsive Horizontal Scroll Category Filter */}
+      <div 
+        style={{ 
+          display: 'flex', 
+          gap: '8px', 
+          marginBottom: '20px', 
+          overflowX: 'auto', 
+          paddingBottom: '8px',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none'
+        }}
+      >
         {['Barchasi', ...categories].map(cat => (
           <button
             key={cat}
@@ -143,12 +155,14 @@ const News = () => {
             style={{
               padding: '8px 16px',
               borderRadius: '20px',
-              border: filterCategory === cat ? '1px solid #00ff87' : '1px solid rgba(255,255,255,0.1)',
-              background: filterCategory === cat ? 'rgba(0, 255, 135, 0.2)' : 'rgba(255,255,255,0.04)',
+              border: filterCategory === cat ? '1.5px solid #00ff87' : '1px solid rgba(255,255,255,0.1)',
+              background: filterCategory === cat ? 'rgba(0, 255, 135, 0.25)' : 'rgba(255,255,255,0.04)',
               color: filterCategory === cat ? '#00ff87' : '#94a3b8',
               fontWeight: filterCategory === cat ? '800' : '600',
               cursor: 'pointer',
-              fontSize: '12px'
+              fontSize: '12px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
             {cat.toUpperCase()}
@@ -160,13 +174,13 @@ const News = () => {
       {loading ? (
         <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Yuklanmoqda...</div>
       ) : filteredList.length === 0 ? (
-        <div style={{ padding: '60px', textAlign: 'center', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-          <Newspaper size={48} color="#475569" style={{ marginBottom: '12px' }} />
-          <h3 style={{ margin: 0, color: '#cbd5e1' }}>Hozircha yangiliklar yo'q</h3>
-          <p style={{ color: '#64748b', fontSize: '13px' }}>Tugmani bosib birinchi yangilikni e'lon qiling</p>
+        <div style={{ padding: '50px 20px', textAlign: 'center', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+          <Newspaper size={44} color="#475569" style={{ marginBottom: '12px' }} />
+          <h3 style={{ margin: 0, color: '#cbd5e1', fontSize: '16px' }}>Hozircha yangiliklar yo'q</h3>
+          <p style={{ color: '#64748b', fontSize: '12px', marginTop: '4px' }}>Tugmani bosib birinchi yangilikni e'lon qiling</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
           {filteredList.map(item => (
             <div
               key={item.id}
@@ -184,7 +198,7 @@ const News = () => {
                 alt={item.title}
                 style={{ width: '100%', height: '160px', objectFit: 'cover' }}
               />
-              <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
                   <span
                     style={{
@@ -200,7 +214,7 @@ const News = () => {
                   >
                     {(item.category || "O'YINLAR").toUpperCase()}
                   </span>
-                  <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '800', color: '#ffffff', lineHeight: 1.4 }}>
+                  <h3 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '800', color: '#ffffff', lineHeight: 1.4 }}>
                     {item.title}
                   </h3>
                   <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -208,7 +222,7 @@ const News = () => {
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                   <span style={{ color: '#64748b', fontSize: '11px' }}>
                     {new Date(item.created_at || Date.now()).toLocaleDateString('uz-UZ')}
                   </span>
@@ -225,17 +239,17 @@ const News = () => {
         </div>
       )}
 
-      {/* Add News Modal */}
+      {/* Add News Modal (Fully Mobile Responsive) */}
       {isModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
-          <div style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', width: '100%', maxWidth: '520px', borderRadius: '20px', padding: '24px' }}>
-            <h2 style={{ margin: '0 0 20px 0', color: '#ffffff', fontSize: '18px', fontWeight: '900' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '12px' }}>
+          <div style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', borderRadius: '20px', padding: '20px' }}>
+            <h2 style={{ margin: '0 0 16px 0', color: '#ffffff', fontSize: '17px', fontWeight: '900' }}>
               YANGI YANGILIK YARATISH
             </h2>
 
             <form onSubmit={handleCreateNews}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '12px', fontWeight: '700', marginBottom: '6px' }}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '11px', fontWeight: '800', marginBottom: '6px' }}>
                   YANGILIK SARLAVHASI *
                 </label>
                 <input
@@ -244,29 +258,31 @@ const News = () => {
                   placeholder="Sarlavhani kiriting..."
                   value={title}
                   onChange={e => setTitle(e.target.value)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '14px' }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '12px', fontWeight: '700', marginBottom: '6px' }}>
+              {/* Mobile Responsive Category Grid Selector */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '11px', fontWeight: '800', marginBottom: '6px' }}>
                   KATEGORIYA TANLANG *
                 </label>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
                   {categories.map(cat => (
                     <button
                       type="button"
                       key={cat}
                       onClick={() => setCategory(cat)}
                       style={{
-                        padding: '8px 14px',
-                        borderRadius: '8px',
+                        padding: '10px',
+                        borderRadius: '10px',
                         border: category === cat ? '2px solid #00ff87' : '1px solid rgba(255,255,255,0.1)',
-                        background: category === cat ? 'rgba(0, 255, 135, 0.2)' : 'rgba(255,255,255,0.04)',
-                        color: category === cat ? '#00ff87' : '#94a3b8',
-                        fontWeight: '700',
+                        background: category === cat ? 'rgba(0, 255, 135, 0.25)' : 'rgba(255,255,255,0.04)',
+                        color: category === cat ? '#00ff87' : '#cbd5e1',
+                        fontWeight: category === cat ? '900' : '600',
                         cursor: 'pointer',
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        textAlign: 'center'
                       }}
                     >
                       {cat}
@@ -275,8 +291,8 @@ const News = () => {
                 </div>
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '12px', fontWeight: '700', marginBottom: '6px' }}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '11px', fontWeight: '800', marginBottom: '6px' }}>
                   RASM HAVOLASI (URL)
                 </label>
                 <input
@@ -284,12 +300,12 @@ const News = () => {
                   placeholder="https://..."
                   value={imageUrl}
                   onChange={e => setImageUrl(e.target.value)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '14px' }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '12px', fontWeight: '700', marginBottom: '6px' }}>
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '11px', fontWeight: '800', marginBottom: '6px' }}>
                   YANGILIK MATNI
                 </label>
                 <textarea
@@ -297,22 +313,22 @@ const News = () => {
                   placeholder="Batafsil yangilik matnini kiriting..."
                   value={content}
                   onChange={e => setContent(e.target.value)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '14px', resize: 'vertical' }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', fontSize: '14px', resize: 'vertical', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  style={{ padding: '12px 20px', borderRadius: '10px', background: 'rgba(255,255,255,0.08)', color: '#fff', border: 'none', fontWeight: '700', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.08)', color: '#fff', border: 'none', fontWeight: '700', cursor: 'pointer' }}
                 >
                   Bekor qilish
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{ padding: '12px 20px', borderRadius: '10px', background: '#00ff87', color: '#000', border: 'none', fontWeight: '900', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#00ff87', color: '#000', border: 'none', fontWeight: '900', cursor: 'pointer' }}
                 >
                   {submitting ? 'Chop etilmoqda...' : 'Chop etish'}
                 </button>
