@@ -518,13 +518,13 @@ const MatchControl = () => {
     };
   }, [isTimerRunning]);
 
-  // OBS WebSocket Auto-Connect Effect (Strictly separated per field: 1-maydon vs 2-maydon)
+  // OBS WebSocket Auto-Connect Effect (Strictly routed per field: 1-maydon vs 2-maydon)
   useEffect(() => {
     if (!match) return;
     const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
     const defaultPortAddress = locationKey === 'stream2' ? 'ws://localhost:4456' : 'ws://localhost:4455';
-    const savedAddress = localStorage.getItem(`obs_address_${locationKey}`) || defaultPortAddress;
-    const savedPassword = localStorage.getItem(`obs_password_${locationKey}`) || '';
+    const savedAddress = localStorage.getItem(`obs_address_${locationKey}`) || localStorage.getItem(`obs_address_${locationKey}_${orgId}`) || defaultPortAddress;
+    const savedPassword = localStorage.getItem(`obs_password_${locationKey}`) || localStorage.getItem(`obs_password_${locationKey}_${orgId}`) || '';
     
     setObsAddress(savedAddress);
     setObsPassword(savedPassword);
@@ -744,23 +744,22 @@ const MatchControl = () => {
   };
 
   const handleManualReplay = async () => {
-    if (!isObsConnected) {
-      handleOpenObsModal();
-      return;
-    }
-
-    const matchLocation = (match?.location || '1-maydon').toLowerCase();
-    const connectedField = (localStorage.getItem('obs_connected_field') || 'stream1').toLowerCase();
-    const isMatchStream2 = matchLocation.includes('2-maydon');
-    const isObsStream2 = connectedField.includes('stream2') || connectedField.includes('2-maydon');
-
-    if (isMatchStream2 !== isObsStream2) {
-      alert(`⚠️ Replay o'tkazilmadi: Ushbu o'yin ${matchLocation.toUpperCase()}da joylashgan, lekin kompyuteringizdagi OBS ${isObsStream2 ? '2-MAYDON' : '1-MAYDON'} uchun sozlangan!`);
-      return;
-    }
+    const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
+    const defaultPortAddress = locationKey === 'stream2' ? 'ws://localhost:4456' : 'ws://localhost:4455';
+    const targetAddress = localStorage.getItem(`obs_address_${locationKey}`) || localStorage.getItem(`obs_address_${locationKey}_${orgId}`) || defaultPortAddress;
+    const targetPassword = localStorage.getItem(`obs_password_${locationKey}`) || localStorage.getItem(`obs_password_${locationKey}_${orgId}`) || '';
 
     setIsTriggeringReplay(true);
     try {
+      if (!obsService.isConnected()) {
+        const res = await obsService.connect(targetAddress, targetPassword);
+        if (!res.success) {
+          handleOpenObsModal(locationKey);
+          setIsTriggeringReplay(false);
+          return;
+        }
+      }
+
       const activeStingerUrl = await getOrSyncStingerUrl();
       await obsService.triggerGoalReplay({
         stingerUrl: activeStingerUrl || null,
@@ -769,7 +768,7 @@ const MatchControl = () => {
         replaySource: 'Media'
       });
     } catch (err) {
-      alert(`Replay xatoligi: ${err.message || 'OBS replay bajarilmadi'}`);
+      alert(`Replay xatoligi (${locationKey.toUpperCase()}): ${err.message || 'OBS replay bajarilmadi'}`);
     } finally {
       setIsTriggeringReplay(false);
     }
@@ -937,23 +936,23 @@ const MatchControl = () => {
 
           setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
 
-          // Auto-trigger OBS Goal Replay ONLY if connected OBS matches the current match field location (1-maydon vs 2-maydon)
-          if (isObsConnected) {
-            const matchLocation = (match?.location || '1-maydon').toLowerCase();
-            const connectedField = (localStorage.getItem('obs_connected_field') || 'stream1').toLowerCase();
-            const isMatchStream2 = matchLocation.includes('2-maydon');
-            const isObsStream2 = connectedField.includes('stream2') || connectedField.includes('2-maydon');
+          // Auto-trigger OBS Goal Replay routed strictly to the current match field location (1-maydon vs 2-maydon)
+          const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
+          const defaultPortAddress = locationKey === 'stream2' ? 'ws://localhost:4456' : 'ws://localhost:4455';
+          const targetAddress = localStorage.getItem(`obs_address_${locationKey}`) || localStorage.getItem(`obs_address_${locationKey}_${orgId}`) || defaultPortAddress;
+          const targetPassword = localStorage.getItem(`obs_password_${locationKey}`) || localStorage.getItem(`obs_password_${locationKey}_${orgId}`) || '';
 
-            if (isMatchStream2 === isObsStream2) {
-              getOrSyncStingerUrl().then(activeStingerUrl => {
-                obsService.triggerGoalReplay({ stingerUrl: activeStingerUrl }).catch(err => {
-                  console.warn('Avto-replay uzatishda xatolik:', err);
-                });
-              });
-            } else {
-              console.log(`Replay o'tkazilmadi: O'yin ${matchLocation}da, lekin ulangan OBS ${connectedField} uchun.`);
+          const sendGoalReplayToField = async () => {
+            if (!obsService.isConnected()) {
+              await obsService.connect(targetAddress, targetPassword);
             }
-          }
+            const activeStingerUrl = await getOrSyncStingerUrl();
+            await obsService.triggerGoalReplay({ stingerUrl: activeStingerUrl });
+          };
+
+          sendGoalReplayToField().catch(err => {
+            console.warn(`[${locationKey.toUpperCase()}] OBS Replay uzatishda xatolik:`, err);
+          });
         }
 
         await fetchEvents();
