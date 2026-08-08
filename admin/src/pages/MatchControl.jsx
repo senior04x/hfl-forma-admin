@@ -744,31 +744,37 @@ const MatchControl = () => {
   };
 
   const handleManualReplay = async () => {
-    const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
-    const defaultPortAddress = locationKey === 'stream2' ? 'ws://localhost:4456' : 'ws://localhost:4455';
-    const targetAddress = localStorage.getItem(`obs_address_${locationKey}`) || localStorage.getItem(`obs_address_${locationKey}_${orgId}`) || defaultPortAddress;
-    const targetPassword = localStorage.getItem(`obs_password_${locationKey}`) || localStorage.getItem(`obs_password_${locationKey}_${orgId}`) || '';
-
+    const fieldNum = match?.location?.includes('2-maydon') ? 2 : 1;
+    const fieldSignalName = `REMOTE_GOAL_FIELD_${fieldNum}`;
     setIsTriggeringReplay(true);
+
     try {
-      if (!obsService.isConnected()) {
-        const res = await obsService.connect(targetAddress, targetPassword);
-        if (!res.success) {
-          handleOpenObsModal(locationKey);
-          setIsTriggeringReplay(false);
-          return;
-        }
+      const signalPayload = JSON.stringify({
+        match_id: id,
+        field: fieldNum,
+        manual: true,
+        timestamp: Date.now()
+      });
+
+      const { data: existingSignal } = await supabaseAdmin
+        .from('sponsors')
+        .select('id')
+        .eq('name', fieldSignalName)
+        .maybeSingle();
+
+      if (existingSignal) {
+        await supabaseAdmin.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
+      } else {
+        await supabaseAdmin.from('sponsors').insert({ name: fieldSignalName, logo_url: signalPayload });
       }
 
-      const activeStingerUrl = await getOrSyncStingerUrl();
-      await obsService.triggerGoalReplay({
-        stingerUrl: activeStingerUrl || null,
-        mainScene: 'MainScene',
-        replayScene: 'ReplayScene',
-        replaySource: 'Media'
-      });
+      // Also trigger local OBS if connected locally
+      if (obsService.isConnected()) {
+        const activeStingerUrl = await getOrSyncStingerUrl();
+        await obsService.triggerGoalReplay({ stingerUrl: activeStingerUrl });
+      }
     } catch (err) {
-      alert(`Replay xatoligi (${locationKey.toUpperCase()}): ${err.message || 'OBS replay bajarilmadi'}`);
+      console.warn(`Manual Replay signal error:`, err);
     } finally {
       setIsTriggeringReplay(false);
     }
@@ -936,23 +942,40 @@ const MatchControl = () => {
 
           setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
 
-          // Auto-trigger OBS Goal Replay routed strictly to the current match field location (1-maydon vs 2-maydon)
-          const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
-          const defaultPortAddress = locationKey === 'stream2' ? 'ws://localhost:4456' : 'ws://localhost:4455';
-          const targetAddress = localStorage.getItem(`obs_address_${locationKey}`) || localStorage.getItem(`obs_address_${locationKey}_${orgId}`) || defaultPortAddress;
-          const targetPassword = localStorage.getItem(`obs_password_${locationKey}`) || localStorage.getItem(`obs_password_${locationKey}_${orgId}`) || '';
+          // Broadcast Cloud Signal for Remote AMATORA.exe Field Replay (100% Remote / Online Support)
+          const fieldNum = match?.location?.includes('2-maydon') ? 2 : 1;
+          const fieldSignalName = `REMOTE_GOAL_FIELD_${fieldNum}`;
+          
+          try {
+            const signalPayload = JSON.stringify({
+              match_id: id,
+              field: fieldNum,
+              timestamp: Date.now()
+            });
 
-          const sendGoalReplayToField = async () => {
-            if (!obsService.isConnected()) {
-              await obsService.connect(targetAddress, targetPassword);
+            const { data: existingSignal } = await supabaseAdmin
+              .from('sponsors')
+              .select('id')
+              .eq('name', fieldSignalName)
+              .maybeSingle();
+
+            if (existingSignal) {
+              await supabaseAdmin.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
+            } else {
+              await supabaseAdmin.from('sponsors').insert({ name: fieldSignalName, logo_url: signalPayload });
             }
-            const activeStingerUrl = await getOrSyncStingerUrl();
-            await obsService.triggerGoalReplay({ stingerUrl: activeStingerUrl });
-          };
 
-          sendGoalReplayToField().catch(err => {
-            console.warn(`[${locationKey.toUpperCase()}] OBS Replay uzatishda xatolik:`, err);
-          });
+            // Also trigger local OBS if connected
+            if (obsService.isConnected()) {
+              getOrSyncStingerUrl().then(activeStingerUrl => {
+                obsService.triggerGoalReplay({ stingerUrl: activeStingerUrl }).catch(err => {
+                  console.warn('Avto-replay uzatishda xatolik:', err);
+                });
+              });
+            }
+          } catch (sigErr) {
+            console.warn(`[FIELD_${fieldNum}] Cloud signal yuborishda xatolik:`, sigErr);
+          }
         }
 
         await fetchEvents();
