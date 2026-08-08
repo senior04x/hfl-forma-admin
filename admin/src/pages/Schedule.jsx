@@ -1092,24 +1092,6 @@ const Schedule = () => {
           <p>{currentOrg?.name} ({exportLeague || 'Barcha ligalar'})</p>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Organization OBS Connection Buttons */}
-          <button 
-            onClick={() => handleOpenObsModal('stream1')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: isObs1Connected ? '#15803d' : '#991b1b', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '10px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
-            title="1-Maydon OBS Sozlamalari"
-          >
-            {isObs1Connected ? <Wifi size={15} /> : <WifiOff size={15} />}
-            <span>1-Maydon OBS {isObs1Connected ? '🟢' : '🔴'}</span>
-          </button>
-
-          <button 
-            onClick={() => handleOpenObsModal('stream2')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: isObs2Connected ? '#15803d' : '#991b1b', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '10px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
-            title="2-Maydon OBS Sozlamalari"
-          >
-            {isObs2Connected ? <Wifi size={15} /> : <WifiOff size={15} />}
-            <span>2-Maydon OBS {isObs2Connected ? '🟢' : '🔴'}</span>
-          </button>
 
           {ytChannelInfo ? (
             <div className="yt-connected-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 59, 48, 0.15)', border: '1px solid rgba(255, 59, 48, 0.4)', padding: '8px 14px', borderRadius: '10px', color: '#ff4d4d', fontSize: '13px', fontWeight: '700' }}>
