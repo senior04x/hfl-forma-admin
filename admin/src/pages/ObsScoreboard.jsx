@@ -204,8 +204,8 @@ const ObsScoreboard = () => {
               eventType: newEvent.event_type 
             };
 
-            // Goal events wait 22 seconds (20s replay + 2s delay), card events trigger immediately
-            const delayMs = newEvent.event_type === 'goal' ? 22000 : 0;
+            // Goal events wait 25 seconds (20s replay + 5s delay), card events trigger immediately
+            const delayMs = newEvent.event_type === 'goal' ? 25000 : 0;
 
             setTimeout(() => {
               setActiveEvent(eventPayload);
