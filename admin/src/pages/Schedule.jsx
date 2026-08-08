@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
 import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Pencil, CheckCircle2, Radio, AlertCircle, Wifi, WifiOff } from 'lucide-react';
@@ -253,6 +253,14 @@ const Schedule = () => {
       const res = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
+      if (res.status === 401) {
+        // Token is expired or unauthorized, clean up YouTube tokens
+        const safeOrg = orgId || 'default';
+        localStorage.removeItem(`yt_tokens_${safeOrg}`);
+        localStorage.removeItem('yt_tokens');
+        setYtChannelInfo(null);
+        return;
+      }
       const data = await res.json();
       if (data.items && data.items.length > 0) {
         const ch = data.items[0].snippet;
@@ -857,6 +865,7 @@ const Schedule = () => {
 
     setLoading(true);
     try {
+      const dbClient = supabaseAdmin || supabase;
       const matchData = {
         league: selectedLeague,
         home_team_id: homeTeamId,
@@ -873,24 +882,28 @@ const Schedule = () => {
 
       let savedMatchId = editingMatch?.id;
       if (editingMatch) {
-        let { error } = await supabase
+        let { error } = await dbClient
           .from('matches')
           .update(matchData)
           .eq('id', editingMatch.id);
 
         if (error) {
+          // Fallback if importance or is_postponed columns don't exist in Supabase DB schema
+          delete matchData.importance;
           delete matchData.is_postponed;
-          await supabase.from('matches').update(matchData).eq('id', editingMatch.id);
+          await dbClient.from('matches').update(matchData).eq('id', editingMatch.id);
         }
       } else {
-        let { data, error } = await supabase.from('matches').insert([{
+        let { data, error } = await dbClient.from('matches').insert([{
           ...matchData,
           status: 'scheduled'
         }]).select();
 
         if (error) {
+          // Fallback if importance or is_postponed columns don't exist in Supabase DB schema
+          delete matchData.importance;
           delete matchData.is_postponed;
-          const fallbackRes = await supabase.from('matches').insert([{
+          const fallbackRes = await dbClient.from('matches').insert([{
             ...matchData,
             status: 'scheduled'
           }]).select();
