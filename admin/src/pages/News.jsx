@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { Newspaper, Plus, Trash2, Image, Tag, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Newspaper, Plus, Trash2, Image, Upload, X } from 'lucide-react';
 
 const News = () => {
   const { orgId } = useOrg();
@@ -13,9 +13,11 @@ const News = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState("O'yinlar");
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef(null);
 
   const categories = ['Turnirlar', 'Jamoalar', 'Transferlar', "O'yinlar"];
 
@@ -32,7 +34,8 @@ const News = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        if (error.code === '42P01') {
+        if (error.code === '42P01' || error.code === 'PGRST205') {
+          console.warn('News table not found. Please create it in Supabase Dashboard.');
           setNewsList([]);
         } else {
           console.warn('News fetch error:', error);
@@ -47,6 +50,59 @@ const News = () => {
     }
   };
 
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert("Faqat rasm fayllari ruxsat etilgan!");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Rasm hajmi 5MB dan oshmasligi kerak!");
+      return;
+    }
+
+    setImageFile(file);
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const uploadImage = async (file) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+    const filePath = `news/${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from('news-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      throw new Error('Rasm yuklashda xatolik: ' + error.message);
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('news-images')
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
+  };
+
   const handleCreateNews = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -56,10 +112,17 @@ const News = () => {
 
     setSubmitting(true);
     try {
+      let finalImageUrl = '';
+
+      // Upload image if selected
+      if (imageFile) {
+        finalImageUrl = await uploadImage(imageFile);
+      }
+
       const payload = {
         title: title.trim(),
         category: category,
-        image_url: imageUrl.trim() || 'https://images.unsplash.com/photo-1574629810360-7efbb6b6973f?q=80&w=1000',
+        image_url: finalImageUrl,
         content: content.trim(),
         organization_id: orgId || null,
         views: 0
@@ -74,21 +137,31 @@ const News = () => {
         setIsModalOpen(false);
         setTitle('');
         setCategory("O'yinlar");
-        setImageUrl('');
+        setImageFile(null);
+        setImagePreview(null);
         setContent('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
         fetchNews();
       }
     } catch (err) {
       console.error('Error creating news:', err);
-      alert("Yangilik yaratishda xatolik yuz berdi");
+      alert(err.message || "Yangilik yaratishda xatolik yuz berdi");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteNews = async (id) => {
+  const handleDeleteNews = async (id, imageUrl) => {
     if (!window.confirm("Chindan ham ushbu yangilikni o'chirmoqchimisiz?")) return;
     try {
+      // Delete image from storage if exists
+      if (imageUrl && imageUrl.includes('news-images')) {
+        const path = imageUrl.split('/news-images/')[1];
+        if (path) {
+          await supabase.storage.from('news-images').remove([path]);
+        }
+      }
+
       const { error } = await supabase.from('news').delete().eq('id', id);
       if (error) alert("O'chirishda xatolik: " + error.message);
       else fetchNews();
@@ -136,13 +209,13 @@ const News = () => {
         </button>
       </div>
 
-      {/* Responsive Horizontal Scroll Category Filter */}
-      <div 
-        style={{ 
-          display: 'flex', 
-          gap: '8px', 
-          marginBottom: '20px', 
-          overflowX: 'auto', 
+      {/* Category Filter */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: '20px',
+          overflowX: 'auto',
           paddingBottom: '8px',
           WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none'
@@ -193,11 +266,17 @@ const News = () => {
                 flexDirection: 'column'
               }}
             >
-              <img
-                src={item.image_url || item.imageUrl || 'https://images.unsplash.com/photo-1574629810360-7efbb6b6973f?q=80&w=1000'}
-                alt={item.title}
-                style={{ width: '100%', height: '160px', objectFit: 'cover' }}
-              />
+              {item.image_url ? (
+                <img
+                  src={item.image_url}
+                  alt={item.title}
+                  style={{ width: '100%', height: '160px', objectFit: 'cover' }}
+                />
+              ) : (
+                <div style={{ width: '100%', height: '160px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Image size={40} color="#475569" />
+                </div>
+              )}
               <div style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
                   <span
@@ -227,7 +306,7 @@ const News = () => {
                     {new Date(item.created_at || Date.now()).toLocaleDateString('uz-UZ')}
                   </span>
                   <button
-                    onClick={() => handleDeleteNews(item.id)}
+                    onClick={() => handleDeleteNews(item.id, item.image_url)}
                     style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer' }}
                   >
                     <Trash2 size={14} />
@@ -239,15 +318,24 @@ const News = () => {
         </div>
       )}
 
-      {/* Add News Modal (Fully Mobile Responsive) */}
+      {/* Add News Modal */}
       {isModalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '12px' }}>
-          <div style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', borderRadius: '20px', padding: '20px' }}>
-            <h2 style={{ margin: '0 0 16px 0', color: '#ffffff', fontSize: '17px', fontWeight: '900' }}>
-              YANGI YANGILIK YARATISH
-            </h2>
+          <div style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', borderRadius: '20px', padding: '20px', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, color: '#ffffff', fontSize: '17px', fontWeight: '900' }}>
+                YANGI YANGILIK YARATISH
+              </h2>
+              <button
+                onClick={() => { setIsModalOpen(false); removeImage(); }}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '10px', padding: '6px', cursor: 'pointer', color: '#fff' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
 
             <form onSubmit={handleCreateNews}>
+              {/* Title */}
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', color: '#cbd5e1', fontSize: '11px', fontWeight: '800', marginBottom: '6px' }}>
                   YANGILIK SARLAVHASI *
@@ -262,7 +350,7 @@ const News = () => {
                 />
               </div>
 
-              {/* Mobile Responsive Category Grid Selector */}
+              {/* Category */}
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', color: '#cbd5e1', fontSize: '11px', fontWeight: '800', marginBottom: '6px' }}>
                   KATEGORIYA TANLANG *
@@ -291,19 +379,100 @@ const News = () => {
                 </div>
               </div>
 
+              {/* Image Upload */}
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', color: '#cbd5e1', fontSize: '11px', fontWeight: '800', marginBottom: '6px' }}>
-                  RASM HAVOLASI (URL)
+                  RASM YUKLASH
                 </label>
+
+                {imagePreview ? (
+                  <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '2px solid rgba(0, 255, 135, 0.3)' }}>
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        background: 'rgba(239, 68, 68, 0.9)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '28px',
+                        height: '28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: '#fff'
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                      padding: '8px 12px',
+                      fontSize: '11px',
+                      color: '#00ff87',
+                      fontWeight: '700'
+                    }}>
+                      ✓ {imageFile?.name}
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      width: '100%',
+                      height: '140px',
+                      borderRadius: '12px',
+                      border: '2px dashed rgba(255,255,255,0.15)',
+                      background: 'rgba(255,255,255,0.03)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxSizing: 'border-box'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(0, 255, 135, 0.4)';
+                      e.currentTarget.style.background = 'rgba(0, 255, 135, 0.05)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                    }}
+                  >
+                    <Upload size={28} color="#64748b" style={{ marginBottom: '8px' }} />
+                    <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: '700' }}>
+                      Rasm tanlash uchun bosing
+                    </span>
+                    <span style={{ color: '#475569', fontSize: '10px', marginTop: '4px' }}>
+                      PNG, JPG, GIF, WEBP • Max 5MB
+                    </span>
+                  </div>
+                )}
+
                 <input
-                  type="url"
-                  placeholder="https://..."
-                  value={imageUrl}
-                  onChange={e => setImageUrl(e.target.value)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', fontSize: '14px', boxSizing: 'border-box' }}
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
                 />
               </div>
 
+              {/* Content */}
               <div style={{ marginBottom: '18px' }}>
                 <label style={{ display: 'block', color: '#cbd5e1', fontSize: '11px', fontWeight: '800', marginBottom: '6px' }}>
                   YANGILIK MATNI
@@ -317,10 +486,11 @@ const News = () => {
                 />
               </div>
 
+              {/* Buttons */}
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); removeImage(); }}
                   style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.08)', color: '#fff', border: 'none', fontWeight: '700', cursor: 'pointer' }}
                 >
                   Bekor qilish
@@ -328,15 +498,40 @@ const News = () => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#00ff87', color: '#000', border: 'none', fontWeight: '900', cursor: 'pointer' }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '10px',
+                    background: submitting ? '#555' : '#00ff87',
+                    color: '#000',
+                    border: 'none',
+                    fontWeight: '900',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
                 >
-                  {submitting ? 'Chop etilmoqda...' : 'Chop etish'}
+                  {submitting ? (
+                    <>
+                      <span style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(0,0,0,0.2)', borderTopColor: '#000', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                      Yuklanmoqda...
+                    </>
+                  ) : 'Chop etish'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Spinner animation */}
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
