@@ -11,7 +11,8 @@ import {
   Building2,
   ChevronDown,
   ArrowLeftRight,
-  RefreshCw
+  RefreshCw,
+  Newspaper
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
@@ -70,6 +71,7 @@ const Layout = () => {
     { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> },
     { path: '/standings', label: 'Turnir jadvali', icon: <LayoutDashboard size={20} /> },
     { path: '/sponsors', label: 'Homiylar', icon: <Calendar size={20} /> },
+    { path: '/news', label: 'Yangiliklar', icon: <Newspaper size={20} /> },
     { path: '/settings', label: 'Sozlamalar', icon: <SettingsIcon size={20} /> }
   ];
 

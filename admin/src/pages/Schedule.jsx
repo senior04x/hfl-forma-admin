@@ -29,6 +29,7 @@ const Schedule = () => {
   const [youtubeLink, setYoutubeLink] = useState('');
   const [matchRound, setMatchRound] = useState('');
   const [isPostponed, setIsPostponed] = useState(false);
+  const [importance, setImportance] = useState('oddiy'); // 'oddiy' | 'ortacha' | 'markaziy'
   const [deletingMatchIds, setDeletingMatchIds] = useState([]);
 
   const [exportLeague, setExportLeague] = useState('');
@@ -824,6 +825,7 @@ const Schedule = () => {
     setYoutubeLink('');
     setMatchRound('');
     setIsPostponed(false);
+    setImportance('oddiy');
     setIsModalOpen(true);
   };
 
@@ -839,6 +841,7 @@ const Schedule = () => {
     setLocation(match.location || '1-maydon');
     setStadiumName(match.stadium_name || '');
     setIsPostponed(!!match.is_postponed);
+    setImportance(match.importance || 'oddiy');
     setIsModalOpen(true);
   };
 
@@ -863,6 +866,7 @@ const Schedule = () => {
         location: location,
         youtube_link: youtubeLink,
         round: matchRound ? parseInt(matchRound) : null,
+        importance: importance,
         is_postponed: isPostponed,
         organization_id: orgId,
       };
@@ -1384,6 +1388,67 @@ const Schedule = () => {
                 value={stadiumName} 
                 onChange={(e) => setStadiumName(e.target.value)} 
               />
+            </div>
+
+            <div className="form-group" style={{ marginTop: '12px' }}>
+              <label style={{ fontWeight: '700', color: '#e2e8f0', marginBottom: '6px', display: 'block' }}>
+                O'yin Dolzarbligi Darajasi (Ilovalar uchun):
+              </label>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setImportance('oddiy')}
+                  style={{
+                    flex: 1,
+                    padding: '10px 6px',
+                    borderRadius: '8px',
+                    border: importance === 'oddiy' ? '2px solid #64748b' : '1px solid rgba(255,255,255,0.1)',
+                    background: importance === 'oddiy' ? 'rgba(100, 116, 139, 0.3)' : 'rgba(255,255,255,0.03)',
+                    color: '#ffffff',
+                    fontWeight: importance === 'oddiy' ? '800' : '500',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  ⚪ Oddiy
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setImportance('ortacha')}
+                  style={{
+                    flex: 1,
+                    padding: '10px 6px',
+                    borderRadius: '8px',
+                    border: importance === 'ortacha' ? '2px solid #0ea5e9' : '1px solid rgba(255,255,255,0.1)',
+                    background: importance === 'ortacha' ? 'rgba(14, 165, 233, 0.3)' : 'rgba(255,255,255,0.03)',
+                    color: importance === 'ortacha' ? '#38bdf8' : '#ffffff',
+                    fontWeight: importance === 'ortacha' ? '800' : '500',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  🔵 O'rtacha
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setImportance('markaziy')}
+                  style={{
+                    flex: 1,
+                    padding: '10px 6px',
+                    borderRadius: '8px',
+                    border: importance === 'markaziy' ? '2px solid #ffe600' : '1px solid rgba(255,255,255,0.1)',
+                    background: importance === 'markaziy' ? 'rgba(255, 230, 0, 0.3)' : 'rgba(255,255,255,0.03)',
+                    color: importance === 'markaziy' ? '#ffe600' : '#ffffff',
+                    fontWeight: importance === 'markaziy' ? '800' : '500',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  ⭐ Markaziy
+                </button>
+              </div>
             </div>
 
             <div 
