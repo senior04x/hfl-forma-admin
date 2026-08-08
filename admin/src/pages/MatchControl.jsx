@@ -946,15 +946,17 @@ const MatchControl = () => {
     try {
       const minuteVal = parseInt(eventMinute) || getCurrentMinute();
 
-      const { error } = await supabaseAdmin.from('match_events').insert([{
+      const { data: insertedEvents, error } = await supabaseAdmin.from('match_events').insert([{
         match_id: id,
         team_id: selectedTeamId,
         player_id: selectedPlayerId,
         event_type: eventType,
         minute: minuteVal
-      }]);
+      }]).select('*');
 
       if (!error) {
+        const newEvent = insertedEvents && insertedEvents.length > 0 ? insertedEvents[0] : null;
+
         if (eventType === 'goal') {
           const isHome = selectedTeamId === match.home_team_id;
           const newHomeScore = (match.home_score || 0) + (isHome ? 1 : 0);
@@ -967,27 +969,37 @@ const MatchControl = () => {
 
           setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
 
-          // Broadcast Cloud Signal for Remote AMATORA.exe Field Replay (100% Remote / Online Support)
+          // Broadcast Cloud Signal for Remote AMATORA.exe Field Replay (Multi-tenant org_id isolation)
           const fieldNum = match?.location?.includes('2-maydon') ? 2 : 1;
-          const fieldSignalName = `REMOTE_GOAL_FIELD_${fieldNum}`;
+          const orgId = match?.organization_id || currentOrg?.id || 'default';
           
           try {
             const signalPayload = JSON.stringify({
+              org_id: orgId,
               match_id: id,
+              event_id: newEvent?.id || '',
               field: fieldNum,
               timestamp: Date.now()
             });
 
-            const { data: existingSignal } = await supabaseAdmin
-              .from('sponsors')
-              .select('id')
-              .eq('name', fieldSignalName)
-              .maybeSingle();
+            // Scoped signal name & generic signal name for full compatibility
+            const signalNames = [
+              `REMOTE_GOAL_${orgId}_FIELD_${fieldNum}`,
+              `REMOTE_GOAL_FIELD_${fieldNum}`
+            ];
 
-            if (existingSignal) {
-              await supabaseAdmin.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
-            } else {
-              await supabaseAdmin.from('sponsors').insert({ name: fieldSignalName, logo_url: signalPayload });
+            for (const fieldSignalName of signalNames) {
+              const { data: existingSignal } = await supabaseAdmin
+                .from('sponsors')
+                .select('id')
+                .eq('name', fieldSignalName)
+                .maybeSingle();
+
+              if (existingSignal) {
+                await supabaseAdmin.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
+              } else {
+                await supabaseAdmin.from('sponsors').insert({ name: fieldSignalName, logo_url: signalPayload });
+              }
             }
 
             // Also trigger local OBS if connected
