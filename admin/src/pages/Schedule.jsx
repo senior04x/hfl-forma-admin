@@ -866,7 +866,11 @@ const Schedule = () => {
     setLoading(true);
     try {
       const dbClient = supabaseAdmin || supabase;
-      const matchData = {
+
+      const parsedOrgId = Number(orgId);
+      const validOrgId = Number.isInteger(parsedOrgId) ? parsedOrgId : undefined;
+
+      const baseMatchData = {
         league: selectedLeague,
         home_team_id: homeTeamId,
         away_team_id: awayTeamId,
@@ -875,9 +879,15 @@ const Schedule = () => {
         location: location,
         youtube_link: youtubeLink,
         round: matchRound ? parseInt(matchRound) : null,
+      };
+
+      if (validOrgId !== undefined) {
+        baseMatchData.organization_id = validOrgId;
+      }
+
+      const matchData = {
+        ...baseMatchData,
         importance: importance,
-        is_postponed: isPostponed,
-        organization_id: orgId,
       };
 
       let savedMatchId = editingMatch?.id;
@@ -888,10 +898,13 @@ const Schedule = () => {
           .eq('id', editingMatch.id);
 
         if (error) {
-          // Fallback if importance or is_postponed columns don't exist in Supabase DB schema
-          delete matchData.importance;
-          delete matchData.is_postponed;
-          await dbClient.from('matches').update(matchData).eq('id', editingMatch.id);
+          // Fallback if importance column does not exist in Supabase DB schema yet
+          let { error: err2 } = await dbClient.from('matches').update(baseMatchData).eq('id', editingMatch.id);
+          if (err2) {
+            console.error('Match update error:', err2);
+            alert('Tahrirlashda xatolik: ' + err2.message);
+            return;
+          }
         }
       } else {
         let { data, error } = await dbClient.from('matches').insert([{
@@ -900,11 +913,9 @@ const Schedule = () => {
         }]).select();
 
         if (error) {
-          // Fallback if importance or is_postponed columns don't exist in Supabase DB schema
-          delete matchData.importance;
-          delete matchData.is_postponed;
+          // Fallback if importance column does not exist in Supabase DB schema yet
           const fallbackRes = await dbClient.from('matches').insert([{
-            ...matchData,
+            ...baseMatchData,
             status: 'scheduled'
           }]).select();
           savedMatchId = fallbackRes.data ? fallbackRes.data[0]?.id : null;
