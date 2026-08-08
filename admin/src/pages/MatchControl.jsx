@@ -537,7 +537,10 @@ const MatchControl = () => {
       if (obsService.isConnected()) {
         await obsService.disconnect();
       }
-      await obsService.connect(savedAddress, savedPassword);
+      const res = await obsService.connect(savedAddress, savedPassword);
+      if (res.success) {
+        localStorage.setItem('obs_connected_field', locationKey);
+      }
     };
 
     switchFieldConnection().catch(() => {});
@@ -742,9 +745,20 @@ const MatchControl = () => {
 
   const handleManualReplay = async () => {
     if (!isObsConnected) {
-      setShowObsModal(true);
+      handleOpenObsModal();
       return;
     }
+
+    const matchLocation = (match?.location || '1-maydon').toLowerCase();
+    const connectedField = (localStorage.getItem('obs_connected_field') || 'stream1').toLowerCase();
+    const isMatchStream2 = matchLocation.includes('2-maydon');
+    const isObsStream2 = connectedField.includes('stream2') || connectedField.includes('2-maydon');
+
+    if (isMatchStream2 !== isObsStream2) {
+      alert(`⚠️ Replay o'tkazilmadi: Ushbu o'yin ${matchLocation.toUpperCase()}da joylashgan, lekin kompyuteringizdagi OBS ${isObsStream2 ? '2-MAYDON' : '1-MAYDON'} uchun sozlangan!`);
+      return;
+    }
+
     setIsTriggeringReplay(true);
     try {
       const activeStingerUrl = await getOrSyncStingerUrl();
@@ -923,13 +937,22 @@ const MatchControl = () => {
 
           setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
 
-          // Auto-trigger OBS Goal Replay if OBS is connected with automatic background stinger sync
+          // Auto-trigger OBS Goal Replay ONLY if connected OBS matches the current match field location (1-maydon vs 2-maydon)
           if (isObsConnected) {
-            getOrSyncStingerUrl().then(activeStingerUrl => {
-              obsService.triggerGoalReplay({ stingerUrl: activeStingerUrl }).catch(err => {
-                console.warn('Avto-replay uzatishda xatolik:', err);
+            const matchLocation = (match?.location || '1-maydon').toLowerCase();
+            const connectedField = (localStorage.getItem('obs_connected_field') || 'stream1').toLowerCase();
+            const isMatchStream2 = matchLocation.includes('2-maydon');
+            const isObsStream2 = connectedField.includes('stream2') || connectedField.includes('2-maydon');
+
+            if (isMatchStream2 === isObsStream2) {
+              getOrSyncStingerUrl().then(activeStingerUrl => {
+                obsService.triggerGoalReplay({ stingerUrl: activeStingerUrl }).catch(err => {
+                  console.warn('Avto-replay uzatishda xatolik:', err);
+                });
               });
-            });
+            } else {
+              console.log(`Replay o'tkazilmadi: O'yin ${matchLocation}da, lekin ulangan OBS ${connectedField} uchun.`);
+            }
           }
         }
 
