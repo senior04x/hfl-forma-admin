@@ -752,7 +752,7 @@ const MatchControl = () => {
         stingerUrl: activeStingerUrl || null,
         mainScene: 'MainScene',
         replayScene: 'ReplayScene',
-        replaySource: 'ReplaySource'
+        replaySource: 'Media'
       });
     } catch (err) {
       alert(`Replay xatoligi: ${err.message || 'OBS replay bajarilmadi'}`);

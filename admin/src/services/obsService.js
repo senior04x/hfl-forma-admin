@@ -97,7 +97,9 @@ class OBSService {
       const sceneItems = await this.obs.call('GetSceneItemList', { sceneName: replayScene });
       const inputNames = (sceneItems.sceneItems || []).map(i => i.sourceName);
       if (!inputNames.includes(replaySource)) {
-        if (inputNames.includes('Media Source')) {
+        if (inputNames.includes('Media')) {
+          replaySource = 'Media';
+        } else if (inputNames.includes('Media Source')) {
           replaySource = 'Media Source';
         } else if (inputNames.length > 0) {
           replaySource = inputNames[0];
