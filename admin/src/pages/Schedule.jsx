@@ -1005,31 +1005,47 @@ const Schedule = () => {
     try {
       const matchToDelete = matches.find(m => m.id === id);
 
-      // 1. Cascade cleanup: Delete all 20s replay video files from Supabase Storage for this match
+      // 1. Cascade cleanup: Delete ALL 20s replay video files from Supabase Storage for this match
       try {
+        const orgId = matchToDelete?.organization_id || currentOrg?.id || 1;
+        const matchFolder = `${orgId}/${id}`;
+
+        // List all files inside replays/<org_id>/<match_id>/
+        const { data: folderFiles } = await supabase.storage
+          .from('replays')
+          .list(matchFolder, { limit: 100 });
+
+        let filesToRemove = [];
+
+        if (folderFiles && folderFiles.length > 0) {
+          filesToRemove = folderFiles
+            .filter(f => f.name && !f.name.startsWith('.'))
+            .map(f => `${matchFolder}/${f.name}`);
+        }
+
+        // Also collect files from match_events.replay_video_url
         const { data: events } = await supabase
           .from('match_events')
           .select('id, replay_video_url')
           .eq('match_id', id);
 
         if (events && events.length > 0) {
-          const filesToDelete = events
-            .filter(e => e.replay_video_url)
-            .map(e => {
-              const url = e.replay_video_url;
-              if (url.includes('/replays/')) return url.split('/replays/')[1];
-              return null;
-            })
-            .filter(Boolean);
-
-          if (filesToDelete.length > 0) {
-            await supabase.storage.from('replays').remove(filesToDelete);
-            await supabase.storage.from('applications').remove(filesToDelete.map(f => `replays/${f}`));
-            console.log('Replay videolari Storage-dan toizlandi:', filesToDelete);
-          }
+          events.forEach(e => {
+            if (e.replay_video_url && e.replay_video_url.includes('/replays/')) {
+              const path = e.replay_video_url.split('/replays/')[1];
+              if (path && !filesToRemove.includes(path)) {
+                filesToRemove.push(path);
+              }
+            }
+          });
 
           // Delete match events
           await supabase.from('match_events').delete().eq('match_id', id);
+        }
+
+        if (filesToRemove.length > 0) {
+          await supabase.storage.from('replays').remove(filesToRemove);
+          console.log('Replay videolari Storage-dan 100% tozalandi:', filesToRemove);
         }
       } catch (storageErr) {
         console.warn('Replay fayllarini o\'chirishda xatolik:', storageErr);
