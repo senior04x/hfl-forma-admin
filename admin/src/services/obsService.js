@@ -163,8 +163,8 @@ class OBSService {
               sceneName: replayScene
             });
 
-            // Return to MainScene 2.2 seconds earlier (at 17.8s) so Stinger transition finishes exactly as replay ends
-            const returnDelay = Math.max(5000, fallbackDurationMs - 2200);
+            // Return to MainScene after full replay duration
+            const returnDelay = Math.max(5000, fallbackDurationMs);
 
             const triggerReturnToMain = async () => {
               console.log(`Replay vaqti tugadi (${returnDelay}ms), MainScene-ga qaytilmoqda...`);
