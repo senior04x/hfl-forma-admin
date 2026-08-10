@@ -30,6 +30,33 @@ const Dashboard = () => {
   useEffect(() => {
     loadLeaguesAndStats();
     fetchRegistrationStatus();
+
+    const activeOrgId = orgId || 1;
+    const channel = supabase
+      .channel(`web_dashboard_reg_status_${activeOrgId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'organizations' },
+        (payload) => {
+          if (payload.new && payload.new.is_registration_open !== undefined && payload.new.is_registration_open !== null) {
+            setIsRegistrationOpen(!!payload.new.is_registration_open);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sponsors' },
+        (payload) => {
+          if (payload.new && payload.new.name && payload.new.name.startsWith('REGISTRATION_OPEN')) {
+            setIsRegistrationOpen(payload.new.logo_url === 'true');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentTab, orgId]);
 
   const fetchRegistrationStatus = async () => {
