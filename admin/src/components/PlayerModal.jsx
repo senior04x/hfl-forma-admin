@@ -3,6 +3,8 @@ import { supabase } from '../supabaseClient';
 import { X, Trash2, Save, Eye, Crop, Clock } from 'lucide-react';
 import ImageCropperModal from './ImageCropperModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
+import TransferClosedModal from './TransferClosedModal';
+import { isTransferWindowOpen } from '../utils/transferUtils';
 import './Modal.css';
 
 const InstagramIcon = ({ size = 16, color = '#E1306C' }) => (
@@ -25,6 +27,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   const [cropperRawImage, setCropperRawImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showTransferClosedModal, setShowTransferClosedModal] = useState(false);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -171,7 +174,21 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
     }
   };
 
+  const handleStartEdit = async () => {
+    const windowOpen = await isTransferWindowOpen(player.organization_id || 1);
+    if (!windowOpen) {
+      setShowTransferClosedModal(true);
+      return;
+    }
+    setCurrentMode('edit');
+  };
+
   const handleSave = async () => {
+    const windowOpen = await isTransferWindowOpen(player.organization_id || 1);
+    if (!windowOpen) {
+      setShowTransferClosedModal(true);
+      return;
+    }
     setLoading(true);
     try {
       const cleanInsta = (formData.instagram_username || '').trim().replace(/^@/, '').replace(/[^a-zA-Z0-9._]/g, '');
@@ -314,7 +331,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
                   <option value="approved">Tasdiqlandi</option>
                   <option value="rejected">Rad etildi</option>
                 </select>
-                <button className="btn-edit" onClick={() => setCurrentMode('edit')}>Tahrirlash</button>
+                <button className="btn-edit" onClick={handleStartEdit}>Tahrirlash</button>
                 <button className="btn-delete" onClick={() => setShowDeleteModal(true)}><Trash2 size={16} /> O'chirish</button>
               </div>
             </div>
@@ -467,6 +484,11 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
         message="O'chirsangiz o'yinchining barcha ma'lumotlari o'chib ketadi!"
         onConfirm={handleConfirmDelete}
         onClose={() => setShowDeleteModal(false)}
+      />
+
+      <TransferClosedModal
+        isOpen={showTransferClosedModal}
+        onClose={() => setShowTransferClosedModal(false)}
       />
     </>
   );

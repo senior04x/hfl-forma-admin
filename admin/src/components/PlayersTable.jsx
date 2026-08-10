@@ -9,6 +9,8 @@ import PlayerModal from './PlayerModal';
 import CustomSelect from './CustomSelect';
 import { searchAndRankItems } from '../utils/fuzzySearch';
 import DeleteConfirmModal from './DeleteConfirmModal';
+import TransferClosedModal from './TransferClosedModal';
+import { isTransferWindowOpen } from '../utils/transferUtils';
 import './PlayersTable.css';
 
 const PlayersTable = ({ onStatusChange = () => {} }) => {
@@ -20,6 +22,7 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [modalMode, setModalMode] = useState('view');
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [showTransferClosedModal, setShowTransferClosedModal] = useState(false);
 
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -146,6 +149,16 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
       alert("Holatni o'zgartirishda xatolik yuz berdi");
       fetchPlayers(false); // revert optimistic update on error
     }
+  };
+
+  const handleEditPlayer = async (app) => {
+    const windowOpen = await isTransferWindowOpen(orgId);
+    if (!windowOpen) {
+      setShowTransferClosedModal(true);
+      return;
+    }
+    setSelectedPlayer(app);
+    setModalMode('edit');
   };
 
   const handleConfirmDelete = async () => {
@@ -279,7 +292,7 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
               actions={
                 <>
                   <button className="action-btn delete" title="O'chirish" onClick={() => setDeleteTargetId(app.id)}><Trash2 size={20} /></button>
-                  <button className="action-btn edit" title="Tahrirlash" onClick={() => { setSelectedPlayer(app); setModalMode('edit'); }}><Edit size={20} /></button>
+                  <button className="action-btn edit" title="Tahrirlash" onClick={() => handleEditPlayer(app)}><Edit size={20} /></button>
                 </>
               }
             >
@@ -315,7 +328,7 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
                 
                 {/* Desktop Actions - Only visible on large screens */}
                 <div className="list-cell desktop-actions hide-mobile">
-                  <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => { setSelectedPlayer(app); setModalMode('edit'); }}><Edit size={17} /></button>
+                  <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => handleEditPlayer(app)}><Edit size={17} /></button>
                   <button className="btn-icon text-red" title="O'chirish" onClick={() => setDeleteTargetId(app.id)}><Trash2 size={17} /></button>
                 </div>
               </div>
@@ -358,6 +371,11 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
         message="O'chirsangiz barcha ma'lumotlar o'chib ketadi!"
         onConfirm={handleConfirmDelete}
         onClose={() => setDeleteTargetId(null)}
+      />
+
+      <TransferClosedModal
+        isOpen={showTransferClosedModal}
+        onClose={() => setShowTransferClosedModal(false)}
       />
     </div>
   );

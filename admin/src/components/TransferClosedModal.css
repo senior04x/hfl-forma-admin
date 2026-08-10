@@ -1,0 +1,154 @@
+.transfer-closed-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 11, 17, 0.82);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+}
+
+.transfer-closed-modal-card {
+    background: linear-gradient(145deg, #181d27 0%, #0d1117 100%);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 450px;
+    padding: 32px 26px 28px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(245, 158, 11, 0.18), 0 0 30px rgba(245, 158, 11, 0.1);
+    animation: modalYellowPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalYellowPopIn {
+    0% {
+        transform: scale(0.88) translateY(10px);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.transfer-closed-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.transfer-closed-modal-close:hover {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.5);
+    color: #fbbf24;
+    transform: rotate(90deg);
+}
+
+.transfer-closed-icon-wrapper {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%);
+    border: 2px solid rgba(245, 158, 11, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    color: #fbbf24;
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.3);
+}
+
+.transfer-closed-warning-icon {
+    animation: pulseYellowWarning 2s infinite ease-in-out;
+}
+
+@keyframes pulseYellowWarning {
+    0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.5));
+    }
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.8));
+    }
+}
+
+.transfer-closed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.transfer-closed-title {
+    font-size: 21px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 12px;
+    letter-spacing: -0.3px;
+}
+
+.transfer-closed-message {
+    font-size: 14px;
+    font-weight: 500;
+    color: #fef08a;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px dashed rgba(245, 158, 11, 0.25);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 22px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.transfer-closed-actions {
+    display: flex;
+    justify-content: center;
+}
+
+.btn-transfer-closed-ok {
+    width: 100%;
+    padding: 12px 24px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #000000;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+}
+
+.btn-transfer-closed-ok:hover {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.5);
+}
+
+.btn-transfer-closed-ok:active {
+    transform: translateY(0);
+}
