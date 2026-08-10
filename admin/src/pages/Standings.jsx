@@ -150,7 +150,7 @@ export default function Standings() {
     const fetched = await getActiveOrgLeagues(orgId);
     const withOrgBgs = fetched.map(l => ({
       ...l,
-      export_bg_url: getLeagueBgForOrg(orgId, l.name) || l.export_bg_url
+      export_bg_url: l.export_bg_url || getLeagueBgForOrg(orgId, l.name)
     }));
     setActiveLeagues(withOrgBgs);
     if (withOrgBgs.length > 0) {

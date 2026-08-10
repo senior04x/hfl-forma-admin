@@ -119,6 +119,11 @@ const Dashboard = () => {
       console.warn('Sponsors reg toggle save notice:', e);
     }
 
+    // Also sync to organizations table
+    try {
+      await supabaseAdmin.from('organizations').update({ is_registration_open: newState }).eq('id', activeOrgId);
+    } catch (e) {}
+
     setTogglingReg(false);
   };
 
