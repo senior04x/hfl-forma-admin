@@ -108,45 +108,38 @@ const Dashboard = () => {
     setIsRegistrationOpen(newState);
     const activeOrgId = orgId || 1;
 
-    // Instantly persist to localStorage
+    // Instantly persist to localStorage for activeOrgId
     try { localStorage.setItem(`hfl_reg_open_${activeOrgId}`, newState ? 'true' : 'false'); } catch (e) {}
 
-    // Save to sponsors KV table using supabaseAdmin across all key formats
+    // Save ONLY to this organization's specific key `REGISTRATION_OPEN_${activeOrgId}`
     try {
-      const keysToUpdate = [
-        `REGISTRATION_OPEN_${activeOrgId}`,
-        `REGISTRATION_OPEN_1`,
-        `REGISTRATION_OPEN`
-      ];
+      const key = `REGISTRATION_OPEN_${activeOrgId}`;
+      const { data: existing } = await supabaseAdmin
+        .from('sponsors')
+        .select('id')
+        .eq('name', key)
+        .maybeSingle();
 
-      for (const key of keysToUpdate) {
-        const { data: existing } = await supabaseAdmin
+      if (existing?.id) {
+        await supabaseAdmin
           .from('sponsors')
-          .select('id')
-          .eq('name', key)
-          .maybeSingle();
-
-        if (existing?.id) {
-          await supabaseAdmin
-            .from('sponsors')
-            .update({ logo_url: newState ? 'true' : 'false' })
-            .eq('id', existing.id);
-        } else {
-          await supabaseAdmin
-            .from('sponsors')
-            .insert([{
-              name: key,
-              logo_url: newState ? 'true' : 'false',
-              organization_id: activeOrgId,
-              is_main: false
-            }]);
-        }
+          .update({ logo_url: newState ? 'true' : 'false' })
+          .eq('id', existing.id);
+      } else {
+        await supabaseAdmin
+          .from('sponsors')
+          .insert([{
+            name: key,
+            logo_url: newState ? 'true' : 'false',
+            organization_id: activeOrgId,
+            is_main: false
+          }]);
       }
     } catch (e) {
       console.warn('Sponsors reg toggle save notice:', e);
     }
 
-    // Also sync to organizations table
+    // Also sync to organizations table for activeOrgId
     try {
       await supabaseAdmin.from('organizations').update({ is_registration_open: newState }).eq('id', activeOrgId);
     } catch (e) {}
