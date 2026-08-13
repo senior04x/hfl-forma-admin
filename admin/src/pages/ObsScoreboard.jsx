@@ -26,17 +26,13 @@ const ObsScoreboard = () => {
     const queryParams = new URLSearchParams(window.location.search);
     const targetOrgId = queryParams.get('org_id');
 
-    // If id is not stream1 and not stream2, treat it directly as a Match ID
     if (id !== 'stream1' && id !== 'stream2') {
       setActiveMatchId(id);
       return;
     }
 
     const findLiveMatch = async () => {
-      let query = supabaseAdmin
-        .from('matches')
-        .select('*')
-        .order('id', { ascending: false });
+      let query = supabaseAdmin.from('matches').select('*').order('id', { ascending: false });
 
       if (targetOrgId) {
         query = query.eq('organization_id', targetOrgId);
@@ -47,39 +43,35 @@ const ObsScoreboard = () => {
       if (data && data.length > 0) {
         const isStream1 = id === 'stream1';
         const isStream2 = id === 'stream2';
-        const matchLocation = (m) => String(m.location || '').toLowerCase();
 
-        // 1. Live match on matching stream field (e.g. '1-maydon', 'maydon 1', '1')
-        let selectedMatch = data.find((m) => {
-          const isLive = ['first_half', 'half_time', 'second_half'].includes(m.status);
-          const loc = matchLocation(m);
-          if (!isLive) return false;
-          if (isStream1) return loc.includes('1') || loc.includes('stream1') || !loc;
-          if (isStream2) return loc.includes('2') || loc.includes('stream2');
+        const isMatchForThisStream = (m) => {
+          const loc = String(m.location || '').toLowerCase();
+          if (isStream2) {
+            return loc.includes('2') || loc.includes('stream2');
+          }
+          if (isStream1) {
+            return loc.includes('1') || loc.includes('stream1') || (!loc.includes('2') && !loc.includes('stream2'));
+          }
           return true;
-        });
+        };
 
-        // 2. Any live match for this org
+        // Filter matches strictly for this stream field
+        const fieldMatches = data.filter(isMatchForThisStream);
+        const candidateList = fieldMatches.length > 0 ? fieldMatches : data;
+
+        // 1. Prefer currently active live match on this field
+        let selectedMatch = candidateList.find((m) =>
+          ['first_half', 'half_time', 'second_half'].includes(m.status)
+        );
+
+        // 2. Fallback to latest match on this field
         if (!selectedMatch) {
-          selectedMatch = data.find((m) => ['first_half', 'half_time', 'second_half'].includes(m.status));
+          selectedMatch = candidateList[0];
         }
 
-        // 3. Match matching stream field even if scheduled
-        if (!selectedMatch) {
-          selectedMatch = data.find((m) => {
-            const loc = matchLocation(m);
-            if (isStream1) return loc.includes('1') || loc.includes('stream1');
-            if (isStream2) return loc.includes('2') || loc.includes('stream2');
-            return true;
-          });
+        if (selectedMatch) {
+          setActiveMatchId(selectedMatch.id);
         }
-
-        // 4. Latest match fallback
-        if (!selectedMatch) {
-          selectedMatch = data[0];
-        }
-
-        setActiveMatchId(selectedMatch.id);
       }
     };
 
@@ -95,10 +87,10 @@ const ObsScoreboard = () => {
             const loc = String(newMatch.location || '').toLowerCase();
 
             const isMatchForThisStream =
-              (isStream1 && (loc.includes('1') || loc.includes('stream1') || !loc)) ||
-              (isStream2 && (loc.includes('2') || loc.includes('stream2')));
+              (isStream2 && (loc.includes('2') || loc.includes('stream2'))) ||
+              (isStream1 && (loc.includes('1') || loc.includes('stream1') || (!loc.includes('2') && !loc.includes('stream2'))));
 
-            if (isMatchForThisStream && ['first_half', 'half_time', 'second_half'].includes(newMatch.status)) {
+            if (isMatchForThisStream) {
               setActiveMatchId(newMatch.id);
             }
           }
