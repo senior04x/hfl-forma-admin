@@ -271,6 +271,30 @@ const ObsScoreboard = () => {
     };
   }, [activeMatchId]);
 
+  // Subscribe to real-time league logo and background image updates
+  useEffect(() => {
+    if (!activeMatchId) return;
+
+    const leaguesSubscription = supabase
+      .channel(`obs-admin-leagues-live-${activeMatchId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leagues',
+        },
+        () => {
+          fetchData(activeMatchId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(leaguesSubscription);
+    };
+  }, [activeMatchId]);
+
   const fetchData = async (matchId) => {
     try {
       const { data: matchData } = await supabaseAdmin
@@ -282,8 +306,8 @@ const ObsScoreboard = () => {
       if (matchData) {
         setMatch(matchData);
 
-        // Fetch League Data (logo & background image)
-        if (matchData.league) {
+        // Fetch League Data (logo & background image) for THIS specific organization
+        if (matchData.league || matchData.organization_id) {
           try {
             let lQuery = supabaseAdmin.from('leagues').select('*');
             if (matchData.organization_id) {
@@ -292,7 +316,7 @@ const ObsScoreboard = () => {
             const { data: lDataList } = await lQuery;
             if (lDataList && lDataList.length > 0) {
               const matchedL = lDataList.find(
-                (l) => l.name?.toLowerCase() === matchData.league?.toLowerCase()
+                (l) => l.name?.trim().toLowerCase() === matchData.league?.trim().toLowerCase()
               );
               setLeagueData(matchedL || lDataList[0]);
             }
