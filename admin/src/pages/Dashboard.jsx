@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import PlayersTable from '../components/PlayersTable';
@@ -6,10 +7,11 @@ import TeamsTable from '../components/TeamsTable';
 import ExportPdfModal from '../components/ExportPdfModal';
 import { getActiveOrgLeagues } from '../utils/leagueUtils';
 import { fetchAllApplications, fetchAllTeams } from '../utils/supabaseHelpers';
-import { Users, Clock, CheckCircle2, XCircle, FileText } from 'lucide-react';
+import { Users, Clock, CheckCircle2, XCircle, FileText, Archive } from 'lucide-react';
 import './Dashboard.css';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [currentTab, setCurrentTab] = useState('players');
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
@@ -268,6 +270,30 @@ const Dashboard = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Archive Page Navigation Button */}
+          <button
+            onClick={() => navigate('/archive')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(245, 158, 11, 0.15)',
+              color: '#f59e0b',
+              border: '1px solid #f59e0b',
+              padding: '8px 16px',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              fontWeight: '800',
+              fontSize: '13px',
+              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
+              transition: 'all 0.2s ease'
+            }}
+            title="Arxivlangan o'yinchilar va jamoalarni ko'rish"
+          >
+            <Archive size={18} />
+            <span>Arxiv</span>
+          </button>
+
           {/* Export PDF Button */}
           <button
             onClick={() => setIsPdfModalOpen(true)}

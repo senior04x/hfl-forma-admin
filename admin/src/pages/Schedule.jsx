@@ -756,10 +756,10 @@ const Schedule = () => {
   };
 
   const fetchTeams = async (leaguesList = activeLeagues) => {
-    let query = supabase.from('teams').select('id, name, logo_url, league').eq('status', 'approved');
+    let query = supabase.from('teams').select('*').eq('status', 'approved');
     query = applyOrgAndCollabFilter(query, orgId, leaguesList);
     const { data } = await query;
-    if (data) setTeams(data);
+    if (data) setTeams((data || []).filter(t => !t.is_archived && t.status !== 'archived'));
   };
 
   const fetchMatches = async (leaguesList = activeLeagues) => {

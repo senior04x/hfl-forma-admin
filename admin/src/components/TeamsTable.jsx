@@ -51,9 +51,11 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
       
       const activeNames = (leaguesList || []).map(l => l.name);
       let orgTeams = (data || []).filter(t => 
-        t.organization_id === orgId || 
-        (t.league && t.league.split(',').some(l => activeNames.includes(l.trim()))) || 
-        (!orgId)
+        !t.is_archived && (
+          t.organization_id === orgId || 
+          (t.league && t.league.split(',').some(l => activeNames.includes(l.trim()))) || 
+          (!orgId)
+        )
       );
       setAllOrgTeams(orgTeams);
 
@@ -101,7 +103,7 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
     const id = deleteTargetId;
     setTeams(prev => prev.filter(t => t.id !== id));
     try {
-      const { error } = await supabase.from('teams').delete().eq('id', id);
+      const { error } = await supabase.from('teams').update({ is_archived: true }).eq('id', id);
       if (error) throw error;
       fetchTeams();
       onStatusChange();

@@ -217,7 +217,7 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
 
   const handleConfirmDelete = async () => {
     try {
-      await supabase.from('teams').delete().eq('id', team.id);
+      await supabase.from('teams').update({ is_archived: true }).eq('id', team.id);
       onRefresh();
       setShowDeleteModal(false);
       onClose();

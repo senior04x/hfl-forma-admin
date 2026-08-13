@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Download, Save, ShieldAlert, Upload, Sparkles, AlertCircle, X, Check, Trophy } from 'lucide-react';
+import { Download, Save, ShieldAlert, Upload, Sparkles, AlertCircle, X, Check, Trophy, Edit, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Standings.css';
 
@@ -34,6 +34,11 @@ export default function Standings() {
   const [topRedCards, setTopRedCards] = useState([]);
   
   const [penalties, setPenalties] = useState({});
+  const [standingsOverridesMap, setStandingsOverridesMap] = useState({});
+  const [editingTeam, setEditingTeam] = useState(null);
+  const [editForm, setEditForm] = useState({ played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0 });
+  const [savingOverride, setSavingOverride] = useState(false);
+
   const [savingPenalty, setSavingPenalty] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingCards, setIsExportingCards] = useState(false);
@@ -49,8 +54,9 @@ export default function Standings() {
   const fetchSponsorsData = async () => {
     try {
       let loadedSponsors = [];
+      const dbClient = supabaseAdmin || supabase;
       if (orgId) {
-        const { data: orgSponsors } = await supabase
+        const { data: orgSponsors } = await dbClient
           .from('sponsors')
           .select('*')
           .eq('organization_id', orgId)
@@ -61,7 +67,7 @@ export default function Standings() {
       }
 
       if (loadedSponsors.length === 0) {
-        let query = supabase.from('sponsors').select('*').order('created_at', { ascending: false });
+        let query = dbClient.from('sponsors').select('*').order('created_at', { ascending: false });
         if (orgId) {
           query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
         }
@@ -70,13 +76,21 @@ export default function Standings() {
       }
 
       const settingsMap = {};
+      const overridesMap = {};
       loadedSponsors.forEach(s => {
         if (s.name && s.name.startsWith('LEAGUE_SHOW_SPONSORS_')) {
           const key = s.name.replace('LEAGUE_SHOW_SPONSORS_', '');
           settingsMap[key] = s.logo_url === 'true';
         }
+        if (s.name && s.name.startsWith('STANDINGS_OVERRIDE_')) {
+          const teamId = s.name.replace('STANDINGS_OVERRIDE_', '');
+          try {
+            overridesMap[teamId] = JSON.parse(s.logo_url);
+          } catch (e) {}
+        }
       });
       setLeagueSponsorsSettingsMap(settingsMap);
+      setStandingsOverridesMap(overridesMap);
 
       const realSponsors = loadedSponsors.filter(s => 
         s.name && 
@@ -84,7 +98,8 @@ export default function Standings() {
         !s.name.startsWith('YT_BANNER_') && 
         !s.name.startsWith('YT_OAUTH_TOKENS_') &&
         !s.name.startsWith('MATCH_TIMER_') &&
-        !s.name.startsWith('LEAGUE_SHOW_SPONSORS_')
+        !s.name.startsWith('LEAGUE_SHOW_SPONSORS_') &&
+        !s.name.startsWith('STANDINGS_OVERRIDE_')
       );
 
       const mainFromDb = realSponsors.find(s => s.is_main === true);
@@ -165,7 +180,7 @@ export default function Standings() {
       // Fetch Teams with collab filter
       let teamsQuery = supabase
         .from('teams')
-        .select('id, name, logo_url, league, penalty_points')
+        .select('*')
         .in('status', ['approved', 'partially_approved']);
 
       teamsQuery = applyOrgAndCollabFilter(teamsQuery, orgId, leaguesList);
@@ -260,14 +275,13 @@ export default function Standings() {
     filteredTeams.forEach(t => {
       tableMap[t.id] = {
         ...t,
-        played: 0,
-        won: 0,
-        drawn: 0,
-        lost: 0,
-        gf: 0,
-        ga: 0,
-        gd: 0,
-        points: penalties[t.id] || 0
+        raw_played: 0,
+        raw_won: 0,
+        raw_drawn: 0,
+        raw_lost: 0,
+        raw_gf: 0,
+        raw_ga: 0,
+        raw_pts: 0,
       };
     });
 
@@ -278,44 +292,65 @@ export default function Standings() {
       const aScore = parseInt(m.away_score || 0);
 
       if (tableMap[hId]) {
-        tableMap[hId].played += 1;
-        tableMap[hId].gf += hScore;
-        tableMap[hId].ga += aScore;
+        tableMap[hId].raw_played += 1;
+        tableMap[hId].raw_gf += hScore;
+        tableMap[hId].raw_ga += aScore;
         if (hScore > aScore) {
-          tableMap[hId].won += 1;
-          tableMap[hId].points += 3;
+          tableMap[hId].raw_won += 1;
+          tableMap[hId].raw_pts += 3;
         } else if (hScore === aScore) {
-          tableMap[hId].drawn += 1;
-          tableMap[hId].points += 1;
+          tableMap[hId].raw_drawn += 1;
+          tableMap[hId].raw_pts += 1;
         } else {
-          tableMap[hId].lost += 1;
+          tableMap[hId].raw_lost += 1;
         }
       }
 
       if (tableMap[aId]) {
-        tableMap[aId].played += 1;
-        tableMap[aId].gf += aScore;
-        tableMap[aId].ga += hScore;
+        tableMap[aId].raw_played += 1;
+        tableMap[aId].raw_gf += aScore;
+        tableMap[aId].raw_ga += hScore;
         if (aScore > hScore) {
-          tableMap[aId].won += 1;
-          tableMap[aId].points += 3;
+          tableMap[aId].raw_won += 1;
+          tableMap[aId].raw_pts += 3;
         } else if (aScore === hScore) {
-          tableMap[aId].drawn += 1;
-          tableMap[aId].points += 1;
+          tableMap[aId].raw_drawn += 1;
+          tableMap[aId].raw_pts += 1;
         } else {
-          tableMap[aId].lost += 1;
+          tableMap[aId].raw_lost += 1;
         }
       }
     });
 
-    const computedStandings = Object.values(tableMap).map(t => {
-      t.gd = t.gf - t.ga;
-      return t;
-    }).sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.gd !== a.gd) return b.gd - a.gd;
-      return b.gf - a.gf;
-    });
+    const computedStandings = Object.values(tableMap)
+      .filter(t => !t.is_archived)
+      .map(t => {
+        const ovr = standingsOverridesMap[t.id] || {};
+        const played_offset = parseInt(ovr.played_offset || 0);
+        const won_offset = parseInt(ovr.won_offset || 0);
+        const draw_offset = parseInt(ovr.draw_offset || 0);
+        const lost_offset = parseInt(ovr.lost_offset || 0);
+        const gf_offset = parseInt(ovr.gf_offset || 0);
+        const ga_offset = parseInt(ovr.ga_offset || 0);
+        const pts_offset = parseInt(ovr.pts_offset || penalties[t.id] || 0);
+
+        t.played = Math.max(0, t.raw_played + played_offset);
+        t.won = Math.max(0, t.raw_won + won_offset);
+        t.drawn = Math.max(0, t.raw_drawn + draw_offset);
+        t.lost = Math.max(0, t.raw_lost + lost_offset);
+        t.gf = Math.max(0, t.raw_gf + gf_offset);
+        t.ga = Math.max(0, t.raw_ga + ga_offset);
+        t.points = t.raw_pts + pts_offset;
+        t.gd = t.gf - t.ga;
+        t.offsets = { pts_offset, played_offset, won_offset, draw_offset, lost_offset, gf_offset, ga_offset };
+        return t;
+      })
+      .sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.gd !== a.gd) return b.gd - a.gd;
+        if (b.gf !== a.gf) return b.gf - a.gf;
+        return b.won - a.won;
+      });
 
     setStandings(computedStandings);
     setRecentMatches(roundMatches.length > 0 ? roundMatches : allLeagueMatches.slice(0, 6));
@@ -389,22 +424,97 @@ export default function Standings() {
     setTopRedCards(redCardsList);
   };
 
-  const handleSavePenalty = async (teamId) => {
-    setSavingPenalty(teamId);
+  const handleOpenEditModal = (team) => {
+    setEditingTeam(team);
+    setEditForm({
+      played: team.played ?? team.raw_played ?? 0,
+      won: team.won ?? team.raw_won ?? 0,
+      drawn: team.drawn ?? team.raw_drawn ?? 0,
+      lost: team.lost ?? team.raw_lost ?? 0,
+      gf: team.gf ?? team.raw_gf ?? 0,
+      ga: team.ga ?? team.raw_ga ?? 0,
+      points: team.points ?? team.raw_pts ?? 0,
+    });
+  };
+
+  const handleSaveOverride = async () => {
+    if (!editingTeam || savingOverride) return;
+    setSavingOverride(true);
     try {
-      const pval = parseInt(penalties[teamId]) || 0;
-      const { error } = await supabase
-        .from('teams')
-        .update({ penalty_points: pval })
-        .eq('id', teamId);
-      
-      if (error) throw error;
-      alert('Muvaffaqiyatli saqlandi!');
-      setTeams(prev => prev.map(t => t.id === teamId ? { ...t, penalty_points: pval } : t));
-    } catch (error) {
-      console.error(error);
+      const dbClient = supabaseAdmin || supabase;
+      const teamId = editingTeam.id;
+
+      // Offsets relative to raw match calculations
+      const raw_played = editingTeam.raw_played || 0;
+      const raw_won = editingTeam.raw_won || 0;
+      const raw_drawn = editingTeam.raw_drawn || 0;
+      const raw_lost = editingTeam.raw_lost || 0;
+      const raw_gf = editingTeam.raw_gf || 0;
+      const raw_ga = editingTeam.raw_ga || 0;
+      const raw_pts = editingTeam.raw_pts || 0;
+
+      const played_offset = (parseInt(editForm.played) || 0) - raw_played;
+      const won_offset = (parseInt(editForm.won) || 0) - raw_won;
+      const draw_offset = (parseInt(editForm.drawn) || 0) - raw_drawn;
+      const lost_offset = (parseInt(editForm.lost) || 0) - raw_lost;
+      const gf_offset = (parseInt(editForm.gf) || 0) - raw_gf;
+      const ga_offset = (parseInt(editForm.ga) || 0) - raw_ga;
+      const pts_offset = (parseInt(editForm.points) || 0) - raw_pts;
+
+      const overridePayload = {
+        played_offset,
+        won_offset,
+        draw_offset,
+        lost_offset,
+        gf_offset,
+        ga_offset,
+        pts_offset
+      };
+
+      const key = `STANDINGS_OVERRIDE_${teamId}`;
+      const jsonStr = JSON.stringify(overridePayload);
+
+      // Check if entry exists in sponsors table
+      const { data: existing } = await dbClient
+        .from('sponsors')
+        .select('id')
+        .eq('name', key)
+        .maybeSingle();
+
+      if (existing?.id) {
+        await dbClient.from('sponsors').update({ logo_url: jsonStr }).eq('id', existing.id);
+      } else {
+        await dbClient.from('sponsors').insert([{
+          name: key,
+          logo_url: jsonStr,
+          organization_id: orgId || null,
+          is_main: false
+        }]);
+      }
+
+      // Also update penalty_points in teams for backward compatibility
+      try {
+        await dbClient.from('teams').update({ penalty_points: pts_offset }).eq('id', teamId);
+      } catch (e) {}
+
+      // Update local state
+      setStandingsOverridesMap(prev => ({
+        ...prev,
+        [teamId]: overridePayload
+      }));
+
+      setPenalties(prev => ({
+        ...prev,
+        [teamId]: pts_offset
+      }));
+
+      alert("Jamoa ko'rsatkichlari muvaffaqiyatli saqlandi! Keyingi o'yinlar ushbu bazadan hisoblanadi. ⚽");
+      setEditingTeam(null);
+    } catch (e) {
+      console.error('Error saving standings override:', e);
+      alert("Natijalarni saqlashda xatolik yuz berdi!");
     } finally {
-      setSavingPenalty(null);
+      setSavingOverride(false);
     }
   };
 
@@ -599,9 +709,14 @@ export default function Standings() {
               <th>#</th>
               <th>Jamoa</th>
               <th>O'yin</th>
+              <th>G'alaba</th>
+              <th>Durang</th>
+              <th>Mag'lubiyat</th>
+              <th>UG</th>
+              <th>OG</th>
               <th>Farq</th>
               <th>Ochko</th>
-              <th>Jarima / Bonus (Ochko)</th>
+              <th>Tahrirlash</th>
             </tr>
           </thead>
           <tbody>
@@ -619,21 +734,33 @@ export default function Standings() {
                   </div>
                 </td>
                 <td>{t.played}</td>
+                <td>{t.won}</td>
+                <td>{t.drawn}</td>
+                <td>{t.lost}</td>
+                <td>{t.gf}</td>
+                <td>{t.ga}</td>
                 <td>{t.gd > 0 ? `+${t.gd}` : t.gd}</td>
                 <td><strong>{t.points}</strong></td>
                 <td>
-                  <input 
-                    type="number" 
-                    className="penalty-input"
-                    value={penalties[t.id] ?? 0}
-                    onChange={(e) => setPenalties({...penalties, [t.id]: e.target.value})}
-                  />
                   <button 
-                    className="btn-save-penalty"
-                    onClick={() => handleSavePenalty(t.id)}
-                    disabled={savingPenalty === t.id}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      background: 'rgba(59, 130, 246, 0.15)',
+                      border: '1px solid #3b82f6',
+                      color: '#60a5fa',
+                      fontWeight: '700',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onClick={() => handleOpenEditModal(t)}
+                    title="Jamoa o'yinlari va gollar farqini tahrirlash"
                   >
-                    <Save size={14} /> Saqlash
+                    <Edit size={14} /> Tahrirlash
                   </button>
                 </td>
               </tr>
@@ -641,6 +768,116 @@ export default function Standings() {
           </tbody>
         </table>
       </div>
+
+      {/* STANDINGS EDIT OVERRIDE MODAL */}
+      {editingTeam && (
+        <div className="logout-modal-overlay" style={{ background: 'rgba(0, 0, 0, 0.75)', zIndex: 9999 }}>
+          <div className="logout-modal" style={{ maxWidth: '520px', width: '92%', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <img src={editingTeam.logo_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#ffffff' }}>
+                  {editingTeam.name} — Natijalarni Tahrirlash
+                </h3>
+              </div>
+              <button onClick={() => setEditingTeam(null)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '12.5px', color: '#94a3b8', marginBottom: '20px', lineHeight: '1.5' }}>
+              ℹ️ Bu yerda kiritilgan ko'rsatkichlar jamoa uchun bazaviy natija hisoblanadi. 
+              <strong> Keyingi bo'lib o'tadigan o'yinlar natijasi ushbu tahrirlangan raqamlarning ustiga avtomatik qo'shiladi!</strong>
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', fontWeight: '700' }}>O'ynagan o'yini (P)</label>
+                <input
+                  type="number"
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '14px' }}
+                  value={editForm.played}
+                  onChange={(e) => setEditForm({ ...editForm, played: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', fontWeight: '700' }}>Ochko (PTS)</label>
+                <input
+                  type="number"
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: '#0f172a', border: '1px solid #3b82f6', color: '#60a5fa', fontSize: '14px', fontWeight: '800' }}
+                  value={editForm.points}
+                  onChange={(e) => setEditForm({ ...editForm, points: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', fontWeight: '700' }}>G'alaba (W)</label>
+                <input
+                  type="number"
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '14px' }}
+                  value={editForm.won}
+                  onChange={(e) => setEditForm({ ...editForm, won: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', fontWeight: '700' }}>Durang (D)</label>
+                <input
+                  type="number"
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '14px' }}
+                  value={editForm.drawn}
+                  onChange={(e) => setEditForm({ ...editForm, drawn: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', fontWeight: '700' }}>Mag'lubiyat (L)</label>
+                <input
+                  type="number"
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '14px' }}
+                  value={editForm.lost}
+                  onChange={(e) => setEditForm({ ...editForm, lost: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', fontWeight: '700' }}>Urgan Goli (GF)</label>
+                <input
+                  type="number"
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '14px' }}
+                  value={editForm.gf}
+                  onChange={(e) => setEditForm({ ...editForm, gf: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', fontWeight: '700' }}>O'tkazgan Goli (GA)</label>
+                <input
+                  type="number"
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '14px' }}
+                  value={editForm.ga}
+                  onChange={(e) => setEditForm({ ...editForm, ga: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', fontWeight: '700' }}>Gollar Farqi (GD)</label>
+                <div style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#f59e0b', fontSize: '14px', fontWeight: '800' }}>
+                  {(parseInt(editForm.gf || 0) - parseInt(editForm.ga || 0)) > 0 ? `+${parseInt(editForm.gf || 0) - parseInt(editForm.ga || 0)}` : (parseInt(editForm.gf || 0) - parseInt(editForm.ga || 0))}
+                </div>
+              </div>
+            </div>
+
+            <div className="logout-modal-actions">
+              <button className="btn-cancel" onClick={() => setEditingTeam(null)}>Bekor qilish</button>
+              <button className="btn-confirm" onClick={handleSaveOverride} disabled={savingOverride} style={{ background: '#3b82f6' }}>
+                {savingOverride ? 'Saqlanmoqda...' : 'Saqlash va Hisoblash'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* HIDDEN EXPORT TEMPLATE */}
       <div style={{ position: 'fixed', left: '-9999px', top: 0, opacity: 1, pointerEvents: 'none', zIndex: -100 }}>

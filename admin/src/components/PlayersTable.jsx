@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
 import { fetchAllApplications, fetchAllTeams } from '../utils/supabaseHelpers';
-import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter, Check, X, Trash2, Trophy } from 'lucide-react';
+import { Search, Eye, Edit, ChevronLeft, ChevronRight, Filter, Check, X, Trash2, Trophy, Archive, RotateCcw } from 'lucide-react';
 import SwipeRow from './SwipeRow';
 import PlayerModal from './PlayerModal';
 import CustomSelect from './CustomSelect';
@@ -23,6 +23,7 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
   const [modalMode, setModalMode] = useState('view');
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [showTransferClosedModal, setShowTransferClosedModal] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -43,17 +44,19 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
 
   useEffect(() => {
     fetchPlayers(true);
-  }, [page, filter, leagueFilter, search, orgId, activeLeagues]);
+  }, [page, filter, leagueFilter, search, showArchived, orgId, activeLeagues]);
 
   const fetchTeams = async (leaguesList = activeLeagues) => {
     const activeNames = (leaguesList || []).map(l => l.name);
     try {
-      const data = await fetchAllTeams('id, name, league, organization_id');
+      const data = await fetchAllTeams('*');
       if (data) {
         const filteredTeams = data.filter(t => 
-          t.organization_id === orgId || 
-          (t.league && t.league.split(',').some(l => activeNames.includes(l.trim()))) || 
-          !orgId
+          !t.is_archived && t.status !== 'archived' && (
+            t.organization_id === orgId || 
+            (t.league && t.league.split(',').some(l => activeNames.includes(l.trim()))) || 
+            !orgId
+          )
         );
         setTeams(filteredTeams);
       }
@@ -84,10 +87,17 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
           app.organization_id === orgId || 
           (app.team_id && validTeamIds.has(app.team_id)) ||
           (!orgId)
-        );
+        )
+        .filter(app => {
+          if (showArchived) {
+            return app.is_archived === true || app.status === 'archived';
+          } else {
+            return !app.is_archived && app.status !== 'archived';
+          }
+        });
 
       // 1. Status Filter
-      if (filter !== 'all') {
+      if (filter !== 'all' && !showArchived) {
         filtered = filtered.filter(p => {
           if (filter === 'approved') return p.status === 'approved' || p.status === 'partially_approved';
           return p.status === filter;
@@ -166,16 +176,44 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
     const id = deleteTargetId;
     setPlayers(prev => prev.filter(p => p.id !== id));
     try {
-      const { error } = await supabase.from('applications').delete().eq('id', id);
-      if (error) throw error;
+      try {
+        await supabase.from('applications').update({ is_archived: true, status: 'archived' }).eq('id', id);
+      } catch (e) {
+        await supabase.from('applications').update({ status: 'archived' }).eq('id', id);
+      }
+      try {
+        await supabase.from('players').update({ is_archived: true }).eq('id', id);
+      } catch (e) {}
+
       fetchPlayers(false);
       onStatusChange();
     } catch (error) {
-      console.error('Error deleting player:', error);
-      alert("Zayavkani o'chirishda xatolik yuz berdi");
+      console.error('Error archiving player:', error);
+      alert("O'yinchini arxivlashda xatolik yuz berdi");
       fetchPlayers(false);
     } finally {
       setDeleteTargetId(null);
+    }
+  };
+
+  const handleRestorePlayer = async (id) => {
+    setPlayers(prev => prev.filter(p => p.id !== id));
+    try {
+      try {
+        await supabase.from('applications').update({ is_archived: false, status: 'approved' }).eq('id', id);
+      } catch (e) {
+        await supabase.from('applications').update({ status: 'approved' }).eq('id', id);
+      }
+      try {
+        await supabase.from('players').update({ is_archived: false }).eq('id', id);
+      } catch (e) {}
+
+      fetchPlayers(false);
+      onStatusChange();
+    } catch (error) {
+      console.error('Error restoring player:', error);
+      alert("O'yinchini arxivdan qaytarishda xatolik yuz berdi");
+      fetchPlayers(false);
     }
   };
 
@@ -253,6 +291,29 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
           ]}
         />
 
+        <button
+          className={`archive-toggle-btn ${showArchived ? 'active' : ''}`}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            borderRadius: '12px',
+            background: showArchived ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.06)',
+            border: showArchived ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.12)',
+            color: showArchived ? '#F59E0B' : '#FFFFFF',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: '700',
+            transition: 'all 0.2s ease',
+          }}
+          onClick={() => { setShowArchived(!showArchived); setPage(1); }}
+          title={showArchived ? "Aktiv o'yinchilarni ko'rish" : "Arxivlangan o'yinchilarni ko'rish"}
+        >
+          <Archive size={18} color={showArchived ? "#F59E0B" : "#FFFFFF"} />
+          <span>{showArchived ? "Arxivlanganlar" : "Arxiv"}</span>
+        </button>
+
         <div className="league-filter-container">
           <CustomSelect
             value={leagueFilter}
@@ -290,10 +351,14 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
             <SwipeRow 
               key={app.id} 
               actions={
-                <>
-                  <button className="action-btn delete" title="O'chirish" onClick={() => setDeleteTargetId(app.id)}><Trash2 size={20} /></button>
-                  <button className="action-btn edit" title="Tahrirlash" onClick={() => handleEditPlayer(app)}><Edit size={20} /></button>
-                </>
+                showArchived ? (
+                  <button className="action-btn approve" title="Arxivdan qaytarish" onClick={() => handleRestorePlayer(app.id)}><RotateCcw size={20} /></button>
+                ) : (
+                  <>
+                    <button className="action-btn delete" title="Arxivlash" onClick={() => setDeleteTargetId(app.id)}><Trash2 size={20} /></button>
+                    <button className="action-btn edit" title="Tahrirlash" onClick={() => handleEditPlayer(app)}><Edit size={20} /></button>
+                  </>
+                )
               }
             >
               <div className="list-cell avatar-cell">
@@ -323,13 +388,41 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
               </div>
               <div className="action-status-wrapper">
                 <div className="list-cell status-cell">
-                  {renderStatus(app)}
+                  {showArchived ? (
+                    <button
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        background: 'rgba(74, 222, 128, 0.15)',
+                        border: '1px solid #4ADE80',
+                        color: '#4ADE80',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px',
+                      }}
+                      onClick={() => handleRestorePlayer(app.id)}
+                      title="Arxivdan qaytarish"
+                    >
+                      <RotateCcw size={14} /> Qaytarish
+                    </button>
+                  ) : (
+                    renderStatus(app)
+                  )}
                 </div>
                 
                 {/* Desktop Actions - Only visible on large screens */}
                 <div className="list-cell desktop-actions hide-mobile">
-                  <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => handleEditPlayer(app)}><Edit size={17} /></button>
-                  <button className="btn-icon text-red" title="O'chirish" onClick={() => setDeleteTargetId(app.id)}><Trash2 size={17} /></button>
+                  {showArchived ? (
+                    <button className="btn-icon text-blue" title="Arxivdan qaytarish" onClick={() => handleRestorePlayer(app.id)}><RotateCcw size={17} /></button>
+                  ) : (
+                    <>
+                      <button className="btn-icon text-blue" title="Tahrirlash" onClick={() => handleEditPlayer(app)}><Edit size={17} /></button>
+                      <button className="btn-icon text-red" title="Arxivlash" onClick={() => setDeleteTargetId(app.id)}><Trash2 size={17} /></button>
+                    </>
+                  )}
                 </div>
               </div>
             </SwipeRow>
