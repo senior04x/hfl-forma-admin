@@ -83,45 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Permanent Full-Screen Search Engine
     initNavbarSearch();
 
-    // Check & Enforce Registration Status (Open / Closed)
-    async function enforceRegistrationStatus() {
-        let isOpen = true;
-        const orgId = window.currentOrg?.id || 1;
-        try {
-            const savedLocal = localStorage.getItem(`hfl_reg_open_${orgId}`) || localStorage.getItem('hfl_reg_open_1') || localStorage.getItem('hfl_reg_open');
-            if (savedLocal === 'false') isOpen = false;
-            if (savedLocal === 'true') isOpen = true;
-        } catch (e) {}
+    // Check & Enforce Registration Status (Open / Closed) for Organization ID 1
+    let originalBodyHTML = null;
 
-        try {
-            const dbClient = getSupabaseClient();
-            if (dbClient) {
-                const keysToSearch = [
-                    `REGISTRATION_OPEN_${orgId}`,
-                    `REGISTRATION_OPEN_1`,
-                    `REGISTRATION_OPEN`
-                ];
-
-                const { data: spRows } = await dbClient
-                    .from('sponsors')
-                    .select('logo_url, name')
-                    .in('name', keysToSearch);
-
-                if (spRows && spRows.length > 0) {
-                    const closedRow = spRows.find(r => r.logo_url === 'false');
-                    if (closedRow) {
-                        isOpen = false;
-                    } else {
-                        const openRow = spRows.find(r => r.logo_url === 'true');
-                        if (openRow) isOpen = true;
-                    }
-                    try { localStorage.setItem(`hfl_reg_open_${orgId}`, isOpen ? 'true' : 'false'); } catch (e) {}
-                }
-            }
-        } catch (e) {
-            console.warn('Registration status check notice:', e);
-        }
-
+    function applyRegistrationStatusUI(isOpen) {
         if (!isOpen) {
             // 1. Inject global CSS rule into <head> so browser engine automatically hides any apply link
             if (!document.getElementById('reg-closed-css')) {
@@ -147,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 3. Block direct URL access to /apply, /apply-team, /apply-individual
             const pathname = window.location.pathname.toLowerCase();
             if (pathname.includes('apply')) {
+                if (!originalBodyHTML) originalBodyHTML = document.body.innerHTML;
                 document.body.innerHTML = `
                   <div style="min-height:100vh; background:#0b0f19; display:flex; align-items:center; justify-content:center; padding:20px; font-family:'Outfit','Inter',sans-serif; color:#fff; text-align:center;">
                     <div style="max-width:480px; width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,59,48,0.3); border-radius:24px; padding:40px 24px; box-shadow:0 20px 50px rgba(0,0,0,0.6);">
@@ -167,11 +133,110 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             const existingStyle = document.getElementById('reg-closed-css');
             if (existingStyle) existingStyle.remove();
+
+            const applyLinks = document.querySelectorAll('a[href*="apply"]');
+            applyLinks.forEach(el => {
+                el.style.removeProperty('display');
+                el.style.removeProperty('visibility');
+                el.style.removeProperty('opacity');
+                el.style.removeProperty('pointer-events');
+            });
+
+            if (originalBodyHTML && window.location.pathname.toLowerCase().includes('apply')) {
+                document.body.innerHTML = originalBodyHTML;
+                window.location.reload();
+            }
         }
     }
 
-    // Run enforcement immediately and on org resolution
+    async function enforceRegistrationStatus() {
+        let isOpen = true;
+        let foundStatus = false;
+
+        try {
+            const savedLocal = localStorage.getItem('hfl_reg_open_1') || localStorage.getItem('hfl_reg_open');
+            if (savedLocal === 'false') isOpen = false;
+            if (savedLocal === 'true') isOpen = true;
+        } catch (e) {}
+
+        try {
+            const dbClient = getSupabaseClient();
+            if (dbClient) {
+                // A. Check sponsors KV table for REGISTRATION_OPEN_1 or REGISTRATION_OPEN
+                const { data: spRows } = await dbClient
+                    .from('sponsors')
+                    .select('logo_url, name')
+                    .in('name', ['REGISTRATION_OPEN_1', 'REGISTRATION_OPEN']);
+
+                if (spRows && spRows.length > 0) {
+                    const row1 = spRows.find(r => r.name === 'REGISTRATION_OPEN_1') || spRows[0];
+                    if (row1 && row1.logo_url !== undefined && row1.logo_url !== null) {
+                        isOpen = row1.logo_url === 'true';
+                        foundStatus = true;
+                    }
+                }
+
+                // B. If not found in sponsors, check organizations table for id = 1
+                if (!foundStatus) {
+                    const { data: orgData } = await dbClient
+                        .from('organizations')
+                        .select('is_registration_open')
+                        .eq('id', 1)
+                        .maybeSingle();
+
+                    if (orgData && orgData.is_registration_open !== undefined && orgData.is_registration_open !== null) {
+                        isOpen = !!orgData.is_registration_open;
+                        foundStatus = true;
+                    }
+                }
+
+                try { localStorage.setItem('hfl_reg_open_1', isOpen ? 'true' : 'false'); } catch (e) {}
+            }
+        } catch (e) {
+            console.warn('Registration status check notice:', e);
+        }
+
+        applyRegistrationStatusUI(isOpen);
+    }
+
+    function setupRealtimeRegListener() {
+        try {
+            const dbClient = getSupabaseClient();
+            if (!dbClient) return;
+
+            dbClient
+                .channel('client_global_reg_status')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'sponsors' },
+                    (payload) => {
+                        if (payload.new && payload.new.name && payload.new.name.startsWith('REGISTRATION_OPEN')) {
+                            const newIsOpen = payload.new.logo_url === 'true';
+                            try { localStorage.setItem('hfl_reg_open_1', newIsOpen ? 'true' : 'false'); } catch (e) {}
+                            applyRegistrationStatusUI(newIsOpen);
+                        }
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'organizations', filter: 'id=eq.1' },
+                    (payload) => {
+                        if (payload.new && payload.new.is_registration_open !== undefined && payload.new.is_registration_open !== null) {
+                            const newIsOpen = !!payload.new.is_registration_open;
+                            try { localStorage.setItem('hfl_reg_open_1', newIsOpen ? 'true' : 'false'); } catch (e) {}
+                            applyRegistrationStatusUI(newIsOpen);
+                        }
+                    }
+                )
+                .subscribe();
+        } catch (e) {
+            console.warn('Realtime reg listener notice:', e);
+        }
+    }
+
+    // Run enforcement & setup real-time listener immediately
     enforceRegistrationStatus();
+    setupRealtimeRegListener();
     if (typeof window.resolveOrg === 'function') {
         window.resolveOrg().then(enforceRegistrationStatus).catch(enforceRegistrationStatus);
     } else {

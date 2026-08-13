@@ -8,6 +8,17 @@
   const DEFAULT_ORG_ID = 1;
   const DEFAULT_ORG_NAME = 'Havas Futbol Ligasi';
 
+  function getSupabaseClient() {
+    if (window.db) return window.db;
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      const url = 'https://xzzyhfyazwohdqqbjiiy.supabase.co';
+      const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6enloZnlhendvaGRxcWJqaWl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxMDM1NTEsImV4cCI6MjA5ODY3OTU1MX0.8KPZxd060ps2pc3oeDzBA9UG3fdHj_lPjnLhq0Q5eaM';
+      window.db = window.supabase.createClient(url, key);
+      return window.db;
+    }
+    return null;
+  }
+
   const RESERVED_PATHS = new Set([
     '', 'index', 'index.html', 'teams', 'teams.html', 'matches', 'matches.html',
     'standings', 'standings.html', 'apply', 'apply.html', 'apply-team', 'apply-team.html',
@@ -47,12 +58,13 @@
   window.resolveOrg = async function () {
     try {
       let org = null;
+      const dbClient = (window.db || (window.supabase && typeof window.supabase.createClient === 'function')) ? getSupabaseClient() : null;
 
-      if (orgSlug) {
-        const { data, error } = await db
+      if (dbClient) {
+        const { data, error } = await dbClient
           .from('organizations')
           .select('*')
-          .eq('slug', orgSlug)
+          .eq('id', DEFAULT_ORG_ID)
           .maybeSingle();
 
         if (!error && data) {
@@ -61,28 +73,22 @@
       }
 
       if (!org) {
-        const { data, error } = await db
-          .from('organizations')
-          .select('*')
-          .eq('id', DEFAULT_ORG_ID)
-          .maybeSingle();
-
-        if (!error && data) {
-          org = data;
-        } else {
-          org = { id: DEFAULT_ORG_ID, name: DEFAULT_ORG_NAME, slug: 'hfl', logo_url: null };
-        }
+        org = { id: DEFAULT_ORG_ID, name: DEFAULT_ORG_NAME, slug: 'hfl', logo_url: null };
       }
 
       window.currentOrg = org;
 
-      const { data: leagues } = await db
-        .from('leagues')
-        .select('id, name, logo_url, is_junior, organization_id')
-        .eq('organization_id', org.id)
-        .order('name');
+      if (dbClient) {
+        const { data: leagues } = await dbClient
+          .from('leagues')
+          .select('id, name, logo_url, is_junior, organization_id')
+          .eq('organization_id', DEFAULT_ORG_ID)
+          .order('name');
 
-      window.orgLeagues = leagues || [];
+        window.orgLeagues = leagues || [];
+      } else {
+        window.orgLeagues = [];
+      }
       window.orgReady = true;
 
       window.dispatchEvent(new CustomEvent('orgResolved', { detail: { org, leagues: window.orgLeagues } }));
