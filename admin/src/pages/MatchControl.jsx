@@ -864,10 +864,18 @@ const MatchControl = () => {
 
         await updateTimerDBAndState(newBaseSec, nowIso, newRunning);
 
-        const { error: err1 } = await supabaseAdmin.from('matches').update(updateData).eq('id', id);
-        if (err1) {
-          await supabase.from('matches').update(updateData).eq('id', id);
+        let { data: resData } = await supabaseAdmin.from('matches').update(updateData).eq('id', id).select();
+        if ((!resData || resData.length === 0) && !isNaN(Number(id))) {
+          resData = (await supabaseAdmin.from('matches').update(updateData).eq('id', Number(id)).select()).data;
         }
+
+        if (!resData || resData.length === 0) {
+          let res = await supabase.from('matches').update(updateData).eq('id', id).select();
+          if ((!res.data || res.data.length === 0) && !isNaN(Number(id))) {
+            await supabase.from('matches').update(updateData).eq('id', Number(id)).select();
+          }
+        }
+
         setMatch(prev => ({ ...prev, ...updateData }));
         setConfirmModal({ isOpen: false, action: null, message: '' });
       }
