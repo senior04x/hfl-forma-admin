@@ -77,20 +77,20 @@ const ObsScoreboard = () => {
         const fieldMatches = data.filter(isMatchForThisStream);
         const candidateList = fieldMatches.length > 0 ? fieldMatches : data;
 
-        // ONLY pick currently active playing match on this field ('first_half', 'second_half')
+        // 1. Prefer currently active playing match on this field ('first_half', 'second_half')
         let selectedMatch = candidateList.find((m) =>
           ['first_half', 'second_half'].includes(m.status)
         );
 
+        // 2. Fallback to latest match on this field so realtime connection stays active
+        if (!selectedMatch) {
+          selectedMatch = candidateList[0];
+        }
+
         if (selectedMatch) {
           setActiveMatchId(selectedMatch.id);
-        } else {
-          setActiveMatchId(null);
-          setMatch(null);
+          setMatch(selectedMatch);
         }
-      } else {
-        setActiveMatchId(null);
-        setMatch(null);
       }
     };
 
@@ -110,12 +110,8 @@ const ObsScoreboard = () => {
               (isStream1 && (loc.includes('1') || loc.includes('stream1') || (!loc.includes('2') && !loc.includes('stream2'))));
 
             if (isMatchForThisStream) {
-              if (['first_half', 'second_half'].includes(newMatch.status)) {
-                setActiveMatchId(newMatch.id);
-              } else {
-                setActiveMatchId(null);
-                setMatch(null);
-              }
+              setActiveMatchId(newMatch.id);
+              setMatch(newMatch);
             }
           }
         }
