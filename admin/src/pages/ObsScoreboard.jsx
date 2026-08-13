@@ -32,13 +32,10 @@ const ObsScoreboard = () => {
       return;
     }
 
-    const locationFilter = id === 'stream1' ? '1-maydon' : '2-maydon';
-
     const findLiveMatch = async () => {
       let query = supabaseAdmin
         .from('matches')
-        .select('id, status')
-        .ilike('location', `%${locationFilter}%`)
+        .select('*')
         .order('id', { ascending: false });
 
       if (targetOrgId) {
@@ -48,22 +45,52 @@ const ObsScoreboard = () => {
       const { data } = await query;
 
       if (data && data.length > 0) {
-        // Prefer currently active live match if available
-        const liveMatch = data.find(m => ['first_half', 'half_time', 'second_half'].includes(m.status));
-        setActiveMatchId(liveMatch ? liveMatch.id : data[0].id);
+        const isStream1 = id === 'stream1';
+        const isStream2 = id === 'stream2';
+        const matchLocation = (m) => String(m.location || '').toLowerCase();
+
+        // 1. Live match on matching stream field (e.g. '1-maydon', 'maydon 1', '1')
+        let selectedMatch = data.find((m) => {
+          const isLive = ['first_half', 'half_time', 'second_half'].includes(m.status);
+          const loc = matchLocation(m);
+          if (!isLive) return false;
+          if (isStream1) return loc.includes('1') || loc.includes('stream1') || !loc;
+          if (isStream2) return loc.includes('2') || loc.includes('stream2');
+          return true;
+        });
+
+        // 2. Any live match for this org
+        if (!selectedMatch) {
+          selectedMatch = data.find((m) => ['first_half', 'half_time', 'second_half'].includes(m.status));
+        }
+
+        // 3. Match matching stream field even if scheduled
+        if (!selectedMatch) {
+          selectedMatch = data.find((m) => {
+            const loc = matchLocation(m);
+            if (isStream1) return loc.includes('1') || loc.includes('stream1');
+            if (isStream2) return loc.includes('2') || loc.includes('stream2');
+            return true;
+          });
+        }
+
+        // 4. Latest match fallback
+        if (!selectedMatch) {
+          selectedMatch = data[0];
+        }
+
+        setActiveMatchId(selectedMatch.id);
       }
     };
 
     findLiveMatch();
 
     const streamChannel = supabase.channel(`global-matches-${id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (payload) => {
         const newMatch = payload.new;
-        if (newMatch.location && newMatch.location.includes(locationFilter)) {
+        if (newMatch) {
           if (!targetOrgId || String(newMatch.organization_id) === String(targetOrgId)) {
-            if (['first_half', 'half_time', 'second_half'].includes(newMatch.status)) {
-              setActiveMatchId(newMatch.id);
-            }
+            setActiveMatchId(newMatch.id);
           }
         }
       })
@@ -238,16 +265,38 @@ const ObsScoreboard = () => {
         .from('matches')
         .select('*')
         .eq('id', matchId)
-        .single();
+        .maybeSingle();
       
       if (matchData) {
         setMatch(matchData);
-        
-        const { data: hTeam } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.home_team_id).single();
-        const { data: aTeam } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.away_team_id).single();
-        
-        setHomeTeam(hTeam);
-        setAwayTeam(aTeam);
+
+        let homeObj = null;
+        let awayObj = null;
+
+        if (matchData.home_team_id) {
+          const { data: h } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.home_team_id).maybeSingle();
+          homeObj = h;
+        }
+        if (!homeObj) {
+          homeObj = {
+            name: matchData.home_team_name || 'Mezbon',
+            logo_url: matchData.home_team_logo || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100&auto=format&fit=crop'
+          };
+        }
+
+        if (matchData.away_team_id) {
+          const { data: a } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.away_team_id).maybeSingle();
+          awayObj = a;
+        }
+        if (!awayObj) {
+          awayObj = {
+            name: matchData.away_team_name || 'Mehmon',
+            logo_url: matchData.away_team_logo || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100&auto=format&fit=crop'
+          };
+        }
+
+        setHomeTeam(homeObj);
+        setAwayTeam(awayObj);
 
         // Fetch timer state
         const { data: timerSp } = await supabaseAdmin
@@ -272,7 +321,7 @@ const ObsScoreboard = () => {
     }
   };
 
-  if (!activeMatchId || !match || !homeTeam || !awayTeam) {
+  if (!activeMatchId || !match) {
     return null; // Empty transparent background until a match is loaded
   }
 
@@ -290,6 +339,7 @@ const ObsScoreboard = () => {
     if (status === 'first_half') return '1-TAYM';
     if (status === 'second_half') return '2-TAYM';
     if (status === 'half_time') return 'TANAFFUS';
+    if (status === 'scheduled') return 'REJALASHTIRILGAN';
     if (status === 'finished') return 'YAKUNLANDI';
     return '';
   };
@@ -303,7 +353,7 @@ const ObsScoreboard = () => {
 
   const statusText = formatStatus(match.status);
 
-  const isHidden = match.status === 'half_time' || match.status === 'finished' || match.status === 'scheduled';
+  const isHidden = match.status === 'finished';
   const visibilityClass = isHidden ? 'transformer-exit' : 'transformer-enter';
 
   return (
