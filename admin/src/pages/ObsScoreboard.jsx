@@ -77,9 +77,9 @@ const ObsScoreboard = () => {
         const fieldMatches = data.filter(isMatchForThisStream);
         const candidateList = fieldMatches.length > 0 ? fieldMatches : data;
 
-        // ONLY pick currently active live match on this field ('first_half', 'half_time', 'second_half')
+        // ONLY pick currently active playing match on this field ('first_half', 'second_half')
         let selectedMatch = candidateList.find((m) =>
-          ['first_half', 'half_time', 'second_half'].includes(m.status)
+          ['first_half', 'second_half'].includes(m.status)
         );
 
         if (selectedMatch) {
@@ -110,10 +110,11 @@ const ObsScoreboard = () => {
               (isStream1 && (loc.includes('1') || loc.includes('stream1') || (!loc.includes('2') && !loc.includes('stream2'))));
 
             if (isMatchForThisStream) {
-              if (['first_half', 'half_time', 'second_half'].includes(newMatch.status)) {
+              if (['first_half', 'second_half'].includes(newMatch.status)) {
                 setActiveMatchId(newMatch.id);
               } else {
-                findLiveMatch();
+                setActiveMatchId(null);
+                setMatch(null);
               }
             }
           }
@@ -387,8 +388,8 @@ const ObsScoreboard = () => {
     }
   };
 
-  if (!activeMatchId || !match || !['first_half', 'half_time', 'second_half'].includes(match.status)) {
-    return null; // Empty transparent background when no match is live
+  if (!activeMatchId || !match || !['first_half', 'second_half'].includes(match.status)) {
+    return null; // Empty transparent background during half time, finished, or scheduled
   }
 
   // Determine gradient based on league
