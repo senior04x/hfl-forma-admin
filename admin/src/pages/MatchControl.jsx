@@ -475,12 +475,13 @@ const MatchControl = () => {
 
     try {
       const nameKey = `MATCH_TIMER_${id}`;
+      const targetOrgId = match?.organization_id || orgId || null;
       const payloadStr = JSON.stringify(timerPayload);
       const { data: existing } = await supabaseAdmin.from('sponsors').select('id').eq('name', nameKey).maybeSingle();
       if (existing) {
-        await supabaseAdmin.from('sponsors').update({ logo_url: payloadStr }).eq('id', existing.id);
+        await supabaseAdmin.from('sponsors').update({ logo_url: payloadStr, organization_id: targetOrgId }).eq('id', existing.id);
       } else {
-        await supabaseAdmin.from('sponsors').insert({ name: nameKey, logo_url: payloadStr });
+        await supabaseAdmin.from('sponsors').insert({ name: nameKey, logo_url: payloadStr, organization_id: targetOrgId });
       }
     } catch (e) {
       console.warn('Sponsors timer save error:', e);
