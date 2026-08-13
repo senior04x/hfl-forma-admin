@@ -864,8 +864,11 @@ const MatchControl = () => {
 
         await updateTimerDBAndState(newBaseSec, nowIso, newRunning);
 
-        const { error } = await supabaseAdmin.from('matches').update(updateData).eq('id', id);
-        if (!error) setMatch(prev => ({ ...prev, ...updateData }));
+        const { error: err1 } = await supabaseAdmin.from('matches').update(updateData).eq('id', id);
+        if (err1) {
+          await supabase.from('matches').update(updateData).eq('id', id);
+        }
+        setMatch(prev => ({ ...prev, ...updateData }));
         setConfirmModal({ isOpen: false, action: null, message: '' });
       }
     });
@@ -884,25 +887,27 @@ const MatchControl = () => {
 
         await updateTimerDBAndState(timerSeconds, null, false);
 
-        const { error } = await supabaseAdmin
-          .from('matches')
-          .update({ 
-            status: 'finished', 
-            home_score: finalHomeScore, 
-            away_score: finalAwayScore 
-          })
-          .eq('id', id);
-        
-        if (!error) {
-          const updatedMatch = { 
-            ...match, 
-            status: 'finished', 
-            home_score: finalHomeScore, 
-            away_score: finalAwayScore,
-            home_team: homeTeam,
-            away_team: awayTeam
-          };
-          setMatch(updatedMatch);
+        const finishData = {
+          status: 'finished',
+          home_score: finalHomeScore,
+          away_score: finalAwayScore,
+          timer_seconds: timerSeconds,
+          timer_started_at: null,
+          is_timer_running: false,
+        };
+
+        const { error: fErr1 } = await supabaseAdmin.from('matches').update(finishData).eq('id', id);
+        if (fErr1) {
+          await supabase.from('matches').update(finishData).eq('id', id);
+        }
+
+        const updatedMatch = { 
+          ...match, 
+          ...finishData,
+          home_team: homeTeam,
+          away_team: awayTeam
+        };
+        setMatch(updatedMatch);
 
           // Broadcast cloud signal to clean C:\Replays folder on field PC
           const fieldNum = match?.location?.includes('2-maydon') ? 2 : 1;
