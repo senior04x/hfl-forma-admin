@@ -1211,14 +1211,14 @@ const MatchControl = () => {
             <Play size={16} /> 2-Taym Boshlash
           </button>
         )}
-        {(match.status === 'first_half' || match.status === 'second_half') && (
+        {match.status === 'second_half' && (
           <button className="control-btn finish" onClick={requestFinishMatch}>
-            🏁 Yakunlash
+            🏁 O'yinni Yakunlash
           </button>
         )}
         {match.status === 'finished' && (
-          <button className="control-btn reset-status" onClick={() => requestStatusUpdate('scheduled', "O'yin holatini orqaga qaytarishni tasdiqlaysizmi?")}>
-            <RotateCcw size={14} /> Holatni qayta tiklash
+          <button className="control-btn reset-status" onClick={() => requestStatusUpdate('scheduled', "O'yinni 1-taym boshlash holatiga qaytarishni tasdiqlaysizmi?")}>
+            <RotateCcw size={14} /> 1-Taym Boshlash Holatiga Qaytarish
           </button>
         )}
 
