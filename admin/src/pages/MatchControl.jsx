@@ -835,7 +835,6 @@ const MatchControl = () => {
       isOpen: true,
       message,
       action: async () => {
-        let updateData = { status: newStatus };
         let newBaseSec = timerSeconds;
         let newRunning = isTimerRunning;
         let nowIso = new Date().toISOString();
@@ -854,6 +853,13 @@ const MatchControl = () => {
           newRunning = false;
           nowIso = null;
         }
+
+        let updateData = {
+          status: newStatus,
+          timer_seconds: newBaseSec,
+          timer_started_at: nowIso,
+          is_timer_running: newRunning,
+        };
 
         await updateTimerDBAndState(newBaseSec, nowIso, newRunning);
 
