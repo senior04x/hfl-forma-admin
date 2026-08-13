@@ -3,10 +3,20 @@ import { useParams } from 'react-router-dom';
 import { supabase, supabaseAdmin } from '../supabaseClient';
 import './ObsScoreboard.css';
 
+const DEFAULT_LEAGUE_LOGOS = {
+  'Super liga': '/super-liga.PNG',
+  'Pro liga': '/Pro-liga.PNG',
+  '3-liga': '/3-liga.PNG',
+  'Europa ligasi': '/europen-liga.PNG',
+  'Chempionlar ligasi': '/chemp-liga.PNG',
+  '7x7 liga': '/7x7-liga.png',
+};
+
 const ObsScoreboard = () => {
   const { id } = useParams();
   const [activeMatchId, setActiveMatchId] = useState(null);
   const [match, setMatch] = useState(null);
+  const [leagueData, setLeagueData] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
   const [activeEvent, setActiveEvent] = useState(null);
@@ -272,6 +282,23 @@ const ObsScoreboard = () => {
       if (matchData) {
         setMatch(matchData);
 
+        // Fetch League Data (logo & background image)
+        if (matchData.league) {
+          try {
+            let lQuery = supabaseAdmin.from('leagues').select('*');
+            if (matchData.organization_id) {
+              lQuery = lQuery.eq('organization_id', matchData.organization_id);
+            }
+            const { data: lDataList } = await lQuery;
+            if (lDataList && lDataList.length > 0) {
+              const matchedL = lDataList.find(
+                (l) => l.name?.toLowerCase() === matchData.league?.toLowerCase()
+              );
+              setLeagueData(matchedL || lDataList[0]);
+            }
+          } catch (e) {}
+        }
+
         let homeObj = null;
         let awayObj = null;
 
@@ -336,6 +363,19 @@ const ObsScoreboard = () => {
   else if (match.league === 'Chempionlar ligasi') gradientClass = 'theme-chemp';
   else if (match.league === '7x7 liga') gradientClass = 'theme-7x7';
 
+  const leagueLogoUrl =
+    leagueData?.logo_url ||
+    (match.league ? DEFAULT_LEAGUE_LOGOS[match.league] : null) ||
+    match.league_logo ||
+    null;
+
+  const leagueBgUrl =
+    leagueData?.export_bg_url ||
+    leagueData?.background_url ||
+    leagueData?.bg_url ||
+    leagueData?.banner_url ||
+    null;
+
   // Format status for top bar
   const formatStatus = (status) => {
     if (status === 'first_half') return '1-TAYM';
@@ -362,29 +402,46 @@ const ObsScoreboard = () => {
     <div className={`obs-container ${gradientClass}`}>
       <div className={`obs-scoreboard transformer-wrapper ${visibilityClass}`}>
         
+        {/* Top League Emblem Logo Header */}
+        {leagueLogoUrl && (
+          <div className="obs-league-logo-top-container">
+            <img src={leagueLogoUrl} className="obs-league-logo-top-img" alt={match.league || 'Liga'} />
+          </div>
+        )}
+
         <div className="obs-top-row">
           <div className="obs-team obs-home-team">
             <div className="obs-team-content" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <img src={homeTeam.logo_url || '/images/default-team.png'} className="obs-scoreboard-logo" alt="" />
-              {homeTeam.name}
+              <img src={homeTeam?.logo_url || '/images/default-team.png'} className="obs-scoreboard-logo" alt="" />
+              {homeTeam?.name || 'Mezbon'}
             </div>
           </div>
           
           <div className="obs-score">
+            {leagueBgUrl && (
+              <>
+                <div className="obs-score-bg-overlay" style={{ backgroundImage: `url(${leagueBgUrl})` }} />
+                <div className="obs-score-darken-shade" />
+              </>
+            )}
             <div className="obs-score-content">
-              {match.home_score} - {match.away_score}
+              {match.home_score ?? 0} - {match.away_score ?? 0}
             </div>
           </div>
           
           <div className="obs-team obs-away-team">
             <div className="obs-team-content" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {awayTeam.name}
-              <img src={awayTeam.logo_url || '/images/default-team.png'} className="obs-scoreboard-logo" alt="" />
+              {awayTeam?.name || 'Mehmon'}
+              <img src={awayTeam?.logo_url || '/images/default-team.png'} className="obs-scoreboard-logo" alt="" />
             </div>
           </div>
         </div>
 
-        <div className="obs-separator"></div>
+        <div className="obs-separator">
+          {leagueBgUrl && (
+            <div className="obs-separator-bg-overlay" style={{ backgroundImage: `url(${leagueBgUrl})` }} />
+          )}
+        </div>
 
         <div className="obs-bottom-row">
           <div className="obs-league-name">
@@ -401,7 +458,10 @@ const ObsScoreboard = () => {
         <div className={`obs-lower-third-container transformer-wrapper ${isEventExiting ? 'transformer-exit' : 'transformer-enter'}`}>
           <div style={{ display: 'flex', gap: '6px' }}>
             <div className="obs-lt-top-bar">
-               <div className="obs-lt-content">
+              {leagueBgUrl && (
+                <div className="obs-separator-bg-overlay" style={{ backgroundImage: `url(${leagueBgUrl})` }} />
+              )}
+               <div className="obs-lt-content" style={{ position: 'relative', zIndex: 2 }}>
                  {activeEvent.teamName?.toUpperCase()}
                </div>
             </div>
