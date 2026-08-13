@@ -36,7 +36,15 @@ const ObsScoreboard = () => {
     const queryParams = new URLSearchParams(window.location.search);
     const targetOrgId = queryParams.get('org_id');
 
-    if (id !== 'stream1' && id !== 'stream2') {
+    // If id is stream1 or stream2, require a valid Organization Slug or Org ID!
+    if (id === 'stream1' || id === 'stream2') {
+      if (!targetOrgId) {
+        setActiveMatchId(null);
+        setMatch(null);
+        return;
+      }
+    } else {
+      // Direct Match ID
       setActiveMatchId(id);
       return;
     }
