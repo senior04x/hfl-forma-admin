@@ -831,53 +831,98 @@ const MatchControl = () => {
     } catch (e) {}
   };
 
+  const executeStatusChange = async (newStatus) => {
+    let newBaseSec = timerSeconds;
+    let newRunning = isTimerRunning;
+    let nowIso = new Date().toISOString();
+
+    if (newStatus === 'first_half') {
+      newBaseSec = 0;
+      newRunning = true;
+    } else if (newStatus === 'half_time') {
+      newRunning = false;
+      nowIso = null;
+    } else if (newStatus === 'second_half') {
+      newBaseSec = timerSeconds < halfDurationSecs ? halfDurationSecs : timerSeconds;
+      newRunning = true;
+    } else if (newStatus === 'scheduled') {
+      newBaseSec = 0;
+      newRunning = false;
+      nowIso = null;
+    }
+
+    const updatedState = {
+      status: newStatus,
+      timer_seconds: newBaseSec,
+      timer_started_at: nowIso,
+      is_timer_running: newRunning,
+    };
+
+    // 1. Optimistically update local state immediately so UI changes without delay
+    setMatch(prev => ({ ...prev, ...updatedState }));
+    setTimerSeconds(newBaseSec);
+    setIsTimerRunning(newRunning);
+    baseTimerSecondsRef.current = newBaseSec;
+    timerStartedAtRef.current = nowIso;
+
+    // 2. Persist timer to sponsors table & match
+    try {
+      await updateTimerDBAndState(newBaseSec, nowIso, newRunning);
+    } catch (tErr) {
+      console.warn('Timer DB update warning:', tErr);
+    }
+
+    // 3. Persist status to matches table
+    const targetId = match?.id || id;
+    const baseStatusUpdate = { status: newStatus };
+    const fullStatusUpdate = {
+      status: newStatus,
+      timer_seconds: newBaseSec,
+      timer_started_at: nowIso,
+      is_timer_running: newRunning,
+    };
+
+    try {
+      let { error: err1 } = await supabaseAdmin.from('matches').update(fullStatusUpdate).eq('id', targetId);
+      if (err1) {
+        await supabaseAdmin.from('matches').update(baseStatusUpdate).eq('id', targetId);
+      }
+      if (!isNaN(Number(targetId))) {
+        let { error: errNum } = await supabaseAdmin.from('matches').update(fullStatusUpdate).eq('id', Number(targetId));
+        if (errNum) {
+          await supabaseAdmin.from('matches').update(baseStatusUpdate).eq('id', Number(targetId));
+        }
+      }
+    } catch (e1) {
+      console.warn('Admin status update error:', e1);
+    }
+
+    try {
+      let { error: err2 } = await supabase.from('matches').update(fullStatusUpdate).eq('id', targetId);
+      if (err2) {
+        await supabase.from('matches').update(baseStatusUpdate).eq('id', targetId);
+      }
+      if (!isNaN(Number(targetId))) {
+        let { error: errNum2 } = await supabase.from('matches').update(fullStatusUpdate).eq('id', Number(targetId));
+        if (errNum2) {
+          await supabase.from('matches').update(baseStatusUpdate).eq('id', Number(targetId));
+        }
+      }
+    } catch (e2) {}
+  };
+
   const requestStatusUpdate = (newStatus, message) => {
     setConfirmModal({
       isOpen: true,
       message,
       action: async () => {
-        let newBaseSec = timerSeconds;
-        let newRunning = isTimerRunning;
-        let nowIso = new Date().toISOString();
-
-        if (newStatus === 'first_half') {
-          newBaseSec = 0;
-          newRunning = true;
-        } else if (newStatus === 'half_time') {
-          newRunning = false;
-          nowIso = null;
-        } else if (newStatus === 'second_half') {
-          newBaseSec = timerSeconds < halfDurationSecs ? halfDurationSecs : timerSeconds;
-          newRunning = true;
-        } else if (newStatus === 'scheduled') {
-          newBaseSec = 0;
-          newRunning = false;
-          nowIso = null;
+        try {
+          await executeStatusChange(newStatus);
+        } catch (err) {
+          console.error('Error updating match status:', err);
+        } finally {
+          setConfirmModal({ isOpen: false, action: null, message: '' });
         }
-
-        let updateData = {
-          status: newStatus,
-          timer_seconds: newBaseSec,
-          timer_started_at: nowIso,
-          is_timer_running: newRunning,
-        };
-
-        await updateTimerDBAndState(newBaseSec, nowIso, newRunning);
-
-        let { data: resData } = await supabaseAdmin.from('matches').update(updateData).eq('id', id).select();
-        if ((!resData || resData.length === 0) && !isNaN(Number(id))) {
-          resData = (await supabaseAdmin.from('matches').update(updateData).eq('id', Number(id)).select()).data;
-        }
-
-        if (!resData || resData.length === 0) {
-          let res = await supabase.from('matches').update(updateData).eq('id', id).select();
-          if ((!res.data || res.data.length === 0) && !isNaN(Number(id))) {
-            await supabase.from('matches').update(updateData).eq('id', Number(id)).select();
-          }
-        }
-
-        setMatch(prev => ({ ...prev, ...updateData }));
-        setConfirmModal({ isOpen: false, action: null, message: '' });
       }
     });
   };
@@ -887,42 +932,81 @@ const MatchControl = () => {
       isOpen: true,
       message: "O'yinni yakunlashni tasdiqlaysizmi?",
       action: async () => {
-        const homeGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.home_team_id).length;
-        const awayGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.away_team_id).length;
+        try {
+          const homeGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.home_team_id).length;
+          const awayGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.away_team_id).length;
 
-        const finalHomeScore = homeGoals > 0 ? homeGoals : (match.home_score || 0);
-        const finalAwayScore = awayGoals > 0 ? awayGoals : (match.away_score || 0);
+          const finalHomeScore = homeGoals > 0 ? homeGoals : (match.home_score || 0);
+          const finalAwayScore = awayGoals > 0 ? awayGoals : (match.away_score || 0);
 
-        await updateTimerDBAndState(timerSeconds, null, false);
+          const finishData = {
+            status: 'finished',
+            home_score: finalHomeScore,
+            away_score: finalAwayScore,
+            timer_seconds: timerSeconds,
+            timer_started_at: null,
+            is_timer_running: false,
+          };
 
-        const finishData = {
-          status: 'finished',
-          home_score: finalHomeScore,
-          away_score: finalAwayScore,
-          timer_seconds: timerSeconds,
-          timer_started_at: null,
-          is_timer_running: false,
-        };
+          const baseFinishData = {
+            status: 'finished',
+            home_score: finalHomeScore,
+            away_score: finalAwayScore,
+          };
 
-        const { error: fErr1 } = await supabaseAdmin.from('matches').update(finishData).eq('id', id);
-        if (fErr1) {
-          await supabase.from('matches').update(finishData).eq('id', id);
-        }
+          const targetId = match?.id || id;
 
-        const updatedMatch = { 
-          ...match, 
-          ...finishData,
-          home_team: homeTeam,
-          away_team: awayTeam
-        };
-        setMatch(updatedMatch);
+          setMatch(prev => ({ 
+            ...prev, 
+            ...finishData,
+            home_team: homeTeam,
+            away_team: awayTeam
+          }));
+          setIsTimerRunning(false);
+
+          await updateTimerDBAndState(timerSeconds, null, false);
+
+          try {
+            const { error: fErr1 } = await supabaseAdmin.from('matches').update(finishData).eq('id', targetId);
+            if (fErr1) {
+              await supabaseAdmin.from('matches').update(baseFinishData).eq('id', targetId);
+            }
+            if (!isNaN(Number(targetId))) {
+              let { error: fErrNum } = await supabaseAdmin.from('matches').update(finishData).eq('id', Number(targetId));
+              if (fErrNum) {
+                await supabaseAdmin.from('matches').update(baseFinishData).eq('id', Number(targetId));
+              }
+            }
+          } catch (errAdmin) {
+            console.warn('Admin finish update error:', errAdmin);
+          }
+
+          try {
+            const { error: fErr2 } = await supabase.from('matches').update(finishData).eq('id', targetId);
+            if (fErr2) {
+              await supabase.from('matches').update(baseFinishData).eq('id', targetId);
+            }
+            if (!isNaN(Number(targetId))) {
+              let { error: fErrNum2 } = await supabase.from('matches').update(finishData).eq('id', Number(targetId));
+              if (fErrNum2) {
+                await supabase.from('matches').update(baseFinishData).eq('id', Number(targetId));
+              }
+            }
+          } catch (e) {}
+
+          const updatedMatch = { 
+            ...match, 
+            ...finishData,
+            home_team: homeTeam,
+            away_team: awayTeam
+          };
 
           // Broadcast cloud signal to clean C:\Replays folder on field PC
           const fieldNum = match?.location?.includes('2-maydon') ? 2 : 1;
           const finishSignalName = `REMOTE_FINISH_MATCH_FIELD_${fieldNum}`;
           try {
             const signalPayload = JSON.stringify({
-              match_id: id,
+              match_id: targetId,
               action: 'finish_match',
               timestamp: Date.now()
             });
@@ -943,8 +1027,11 @@ const MatchControl = () => {
           }
 
           autoUpdateYouTubeThumbnail(updatedMatch);
+        } catch (err) {
+          console.error('Error finishing match:', err);
+        } finally {
+          setConfirmModal({ isOpen: false, action: null, message: '' });
         }
-        setConfirmModal({ isOpen: false, action: null, message: '' });
       }
     });
   };
@@ -1209,22 +1296,22 @@ const MatchControl = () => {
 
       {/* Match Status Controls */}
       <div className="match-controls">
-        {match.status === 'scheduled' && (
+        {(!match.status || match.status === 'scheduled' || match.status === 'not_started' || match.status === 'pending' || match.status === 'upcoming') && (
           <button className="control-btn start" onClick={() => requestStatusUpdate('first_half', "1-Taymni boshlashni tasdiqlaysizmi?")}>
             <Play size={16} /> 1-Taym Boshlash
           </button>
         )}
-        {match.status === 'first_half' && (
+        {(match.status === 'first_half' || match.status === 'live' || match.status === 'in_progress') && (
           <button className="control-btn halftime" onClick={() => requestStatusUpdate('half_time', "Tanaffusni boshlashni tasdiqlaysizmi?")}>
             <Pause size={16} /> Tanaffus
           </button>
         )}
-        {match.status === 'half_time' && (
+        {(match.status === 'half_time' || match.status === 'break') && (
           <button className="control-btn start" onClick={() => requestStatusUpdate('second_half', "2-Taymni boshlashni tasdiqlaysizmi?")}>
             <Play size={16} /> 2-Taym Boshlash
           </button>
         )}
-        {match.status === 'second_half' && (
+        {(match.status === 'second_half' || match.status === 'extra_time') && (
           <button className="control-btn finish" onClick={requestFinishMatch}>
             🏁 O'yinni Yakunlash
           </button>

@@ -320,27 +320,45 @@ const MatchControl = () => {
     }
   };
 
+  const executeStatusChange = async (newStatus) => {
+    let updateData = { status: newStatus };
+    if (newStatus === 'first_half') {
+      setIsTimerRunning(true);
+    } else if (newStatus === 'half_time') {
+      setIsTimerRunning(false);
+    } else if (newStatus === 'second_half') {
+      setIsTimerRunning(true);
+      setTimerSeconds(prev => (prev < 2700 ? 2700 : prev));
+    } else if (newStatus === 'scheduled') {
+      setIsTimerRunning(false);
+      setTimerSeconds(0);
+    }
+
+    setMatch(prev => ({ ...prev, ...updateData }));
+
+    const targetId = match?.id || id;
+    try {
+      await supabase.from('matches').update(updateData).eq('id', targetId);
+      if (!isNaN(Number(targetId))) {
+        await supabase.from('matches').update(updateData).eq('id', Number(targetId));
+      }
+    } catch (e) {
+      console.warn('Status update error:', e);
+    }
+  };
+
   const requestStatusUpdate = (newStatus, message) => {
     setConfirmModal({
       isOpen: true,
       message,
       action: async () => {
-        let updateData = { status: newStatus };
-        if (newStatus === 'first_half') {
-          setIsTimerRunning(true);
-        } else if (newStatus === 'half_time') {
-          setIsTimerRunning(false);
-        } else if (newStatus === 'second_half') {
-          setIsTimerRunning(true);
-          setTimerSeconds(prev => (prev < 2700 ? 2700 : prev));
-        } else if (newStatus === 'scheduled') {
-          setIsTimerRunning(false);
-          setTimerSeconds(0);
+        try {
+          await executeStatusChange(newStatus);
+        } catch (err) {
+          console.error('Status change error:', err);
+        } finally {
+          setConfirmModal({ isOpen: false, action: null, message: '' });
         }
-
-        const { error } = await supabase.from('matches').update(updateData).eq('id', id);
-        if (!error) setMatch(prev => ({ ...prev, ...updateData }));
-        setConfirmModal({ isOpen: false, action: null, message: '' });
       }
     });
   };
@@ -350,33 +368,36 @@ const MatchControl = () => {
       isOpen: true,
       message: "O'yinni yakunlashni tasdiqlaysizmi?",
       action: async () => {
-        const homeGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.home_team_id).length;
-        const awayGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.away_team_id).length;
+        try {
+          const homeGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.home_team_id).length;
+          const awayGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.away_team_id).length;
 
-        // Use events count if goals exist, otherwise preserve manually adjusted score
-        const finalHomeScore = homeGoals > 0 ? homeGoals : (match.home_score || 0);
-        const finalAwayScore = awayGoals > 0 ? awayGoals : (match.away_score || 0);
+          const finalHomeScore = homeGoals > 0 ? homeGoals : (match.home_score || 0);
+          const finalAwayScore = awayGoals > 0 ? awayGoals : (match.away_score || 0);
 
-        setIsTimerRunning(false);
+          setIsTimerRunning(false);
 
-        const { error } = await supabase
-          .from('matches')
-          .update({ 
+          const finishData = { 
             status: 'finished', 
             home_score: finalHomeScore, 
             away_score: finalAwayScore 
-          })
-          .eq('id', id);
-        
-        if (!error) {
+          };
+
           setMatch(prev => ({ 
             ...prev, 
-            status: 'finished', 
-            home_score: finalHomeScore, 
-            away_score: finalAwayScore 
+            ...finishData 
           }));
+
+          const targetId = match?.id || id;
+          await supabase.from('matches').update(finishData).eq('id', targetId);
+          if (!isNaN(Number(targetId))) {
+            await supabase.from('matches').update(finishData).eq('id', Number(targetId));
+          }
+        } catch (err) {
+          console.error('Finish match error:', err);
+        } finally {
+          setConfirmModal({ isOpen: false, action: null, message: '' });
         }
-        setConfirmModal({ isOpen: false, action: null, message: '' });
       }
     });
   };
@@ -595,22 +616,22 @@ const MatchControl = () => {
 
       {/* Match Status Controls */}
       <div className="match-controls">
-        {match.status === 'scheduled' && (
+        {(!match.status || match.status === 'scheduled' || match.status === 'not_started' || match.status === 'pending' || match.status === 'upcoming') && (
           <button className="control-btn start" onClick={() => requestStatusUpdate('first_half', "1-Taymni boshlashni tasdiqlaysizmi?")}>
             <Play size={16} /> 1-Taym Boshlash
           </button>
         )}
-        {match.status === 'first_half' && (
+        {(match.status === 'first_half' || match.status === 'live' || match.status === 'in_progress') && (
           <button className="control-btn halftime" onClick={() => requestStatusUpdate('half_time', "Tanaffusni boshlashni tasdiqlaysizmi?")}>
             <Pause size={16} /> Tanaffus
           </button>
         )}
-        {match.status === 'half_time' && (
+        {(match.status === 'half_time' || match.status === 'break') && (
           <button className="control-btn start" onClick={() => requestStatusUpdate('second_half', "2-Taymni boshlashni tasdiqlaysizmi?")}>
             <Play size={16} /> 2-Taym Boshlash
           </button>
         )}
-        {(match.status === 'first_half' || match.status === 'second_half') && (
+        {(match.status === 'second_half' || match.status === 'extra_time') && (
           <button className="control-btn finish" onClick={requestFinishMatch}>
             🏁 Yakunlash
           </button>
