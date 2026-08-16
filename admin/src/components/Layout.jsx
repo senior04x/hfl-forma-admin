@@ -13,7 +13,8 @@ import {
   ArrowLeftRight,
   RefreshCw,
   Newspaper,
-  Archive
+  Archive,
+  ShieldAlert
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
@@ -71,6 +72,7 @@ const Layout = () => {
     { path: '/profile-updates', label: "Ma'lumotlar almashinuvi", icon: <RefreshCw size={20} /> },
     { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> },
     { path: '/standings', label: 'Turnir jadvali', icon: <LayoutDashboard size={20} /> },
+    { path: '/cards', label: 'Kartochkalar', icon: <ShieldAlert size={20} /> },
     { path: '/sponsors', label: 'Homiylar', icon: <Calendar size={20} /> },
     { path: '/news', label: 'Yangiliklar', icon: <Newspaper size={20} /> },
     { path: '/archive', label: 'Arxiv', icon: <Archive size={20} /> },

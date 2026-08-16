@@ -5,6 +5,7 @@ import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Schedule from './pages/Schedule';
 import Standings from './pages/Standings';
+import Cards from './pages/Cards';
 import Sponsors from './pages/Sponsors';
 import MatchControl from './pages/MatchControl';
 import Transfers from './pages/Transfers';
@@ -38,6 +39,7 @@ function App() {
           <Route path="/profile-updates" element={<ProfileUpdates />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/standings" element={<Standings />} />
+          <Route path="/cards" element={<Cards />} />
           <Route path="/sponsors" element={<Sponsors />} />
           <Route path="/news" element={<News />} />
           <Route path="/archive" element={<Archive />} />

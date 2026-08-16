@@ -41,7 +41,6 @@ export default function Standings() {
 
   const [savingPenalty, setSavingPenalty] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [isExportingCards, setIsExportingCards] = useState(false);
 
   const [mainSponsor, setMainSponsor] = useState(null);
   const [selectedSponsors, setSelectedSponsors] = useState([]);
@@ -147,7 +146,6 @@ export default function Standings() {
   };
 
   const exportRef = useRef(null);
-  const cardsExportRef = useRef(null);
 
   useEffect(() => {
     loadLeaguesAndData();
@@ -518,55 +516,31 @@ export default function Standings() {
     }
   };
 
-  const handleExportWithCheck = (type) => {
-    executeExport(type);
+  const handleExportWithCheck = () => {
+    executeExport();
   };
 
-  const executeExport = async (type) => {
-    if (type === 'standings') {
-      if (!exportRef.current || isExporting) return;
-      setIsExporting(true);
-      try {
-        const canvas = await html2canvas(exportRef.current, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: null
-        });
-        const dataUrl = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `turnir_jadvali_${selectedLeague}_${selectedRound}.png`;
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (err) {
-        console.error("Export error:", err);
-        alert("Rasmni yuklab olishda xatolik yuz berdi.");
-      } finally {
-        setIsExporting(false);
-      }
-    } else if (type === 'cards') {
-      if (!cardsExportRef.current || isExportingCards) return;
-      setIsExportingCards(true);
-      try {
-        const canvas = await html2canvas(cardsExportRef.current, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: null
-        });
-        const dataUrl = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `kartochkalar_${selectedLeague}_${selectedRound}.png`;
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (err) {
-        console.error("Export cards error:", err);
-        alert("Kartochkalar rasmini yuklab olishda xatolik yuz berdi.");
-      } finally {
-        setIsExportingCards(false);
-      }
+  const executeExport = async () => {
+    if (!exportRef.current || isExporting) return;
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(exportRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `turnir_jadvali_${selectedLeague}_${selectedRound}.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Export error:", err);
+      alert("Rasmni yuklab olishda xatolik yuz berdi.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -694,9 +668,6 @@ export default function Standings() {
           <div style={{ display: 'flex', gap: '12px', width: '100%', flexWrap: 'wrap' }}>
             <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
               <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish'}</span>
-            </button>
-            <button className="btn-download cards-btn" onClick={() => handleExportWithCheck('cards')} disabled={isExportingCards} style={{ flex: 1, minWidth: '180px' }}>
-              <ShieldAlert size={18} /> <span>{isExportingCards ? 'Yuklanmoqda...' : 'Kartochkalarni yuklab olish'}</span>
             </button>
           </div>
         </div>
@@ -1120,162 +1091,8 @@ export default function Standings() {
 
               </div>
             </div>
-            );
-          })()}
-          </div>
-
-          {/* 2. CARDS EXPORT TEMPLATE (YELLOW & RED CARDS GLASSMORPHISM DESIGN) */}
-          <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
-            {(() => {
-              const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
-              const isCollab = currentLeagueObj?.isCollab;
-
-              return (
-                <div 
-                  className={`export-wrapper ${exportThemeClass}`} 
-                  ref={cardsExportRef}
-                  style={currentLeagueObj?.export_bg_url ? {
-                    backgroundImage: `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${currentLeagueObj.export_bg_url})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat'
-                  } : {}}
-                >
-                  <div className="export-container">
-                    <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', width: '100%' }}>
-                      <div className="export-logo-left" style={{ width: '250px', minWidth: '250px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
-                        {isCollab ? (
-                          <>
-                            <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '85px', objectFit: 'contain', background: 'transparent' }} />
-                            <img src="/x.png" crossOrigin="anonymous" style={{ height: '16px', objectFit: 'contain', opacity: 0.7, background: 'transparent' }} />
-                            <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain', background: 'transparent' }} />
-                          </>
-                        ) : (
-                          <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '90px', objectFit: 'contain', background: 'transparent' }} />
-                        )}
-                      </div>
-
-                      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-                        {currentLeagueObj?.logo_url ? (
-                          <img src={currentLeagueObj.logo_url} alt={selectedLeague} style={{ maxHeight: '95px', maxWidth: '380px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
-                        ) : (
-                          <h2 style={{ color: '#fff', fontSize: '36px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>{selectedLeague}</h2>
-                        )}
-                      </div>
-
-                      <div className="export-logo-right" style={{ width: '250px', minWidth: '250px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        {mainSponsorLogo ? (
-                          <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: '85px', maxWidth: '240px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', margin: '0 0 0 auto', display: 'block' }} />
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="export-main-content">
-                      <div className="cards-export-title-banner">
-                        <span>🟨 🟥 SARIQ VA QIZIL KARTOCHKALAR</span>
-                      </div>
-
-                      {/* Glassmorphism Yellow & Red Card Tables */}
-                      <div className="export-body" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                        
-                        {/* Yellow Cards Table */}
-                        <div className="export-card cards-glass-card">
-                          <div className="export-card-title yellow-title">
-                            🟨 SARIQ KARTOCHKALAR <span style={{ float: 'right', fontSize: '16px' }}>SONI</span>
-                          </div>
-                          <div>
-                            {topYellowCards.length === 0 ? (
-                              <div className="cards-empty">Sariq kartochka olganlar yo'q</div>
-                            ) : (
-                              topYellowCards.map(p => (
-                                <div className="export-stats-row card-player-row" key={p.id}>
-                                  <img 
-                                    src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
-                                    className="stat-img" 
-                                    alt="" 
-                                    crossOrigin="anonymous" 
-                                    onError={(e) => { e.target.onerror = null; e.target.src = p.teamLogo || ''; }} 
-                                  />
-                                  <div style={{ flex: 1, textTransform: 'uppercase' }}>
-                                    <div style={{ fontWeight: '800', fontSize: '17px' }}>{p.name}</div>
-                                  </div>
-                                  {p.teamLogo && (
-                                    <img src={p.teamLogo} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', marginRight: '10px' }} crossOrigin="anonymous" />
-                                  )}
-                                  <div className="card-badge yellow-badge">
-                                    🟨 {p.yellowCards}
-                                  </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Red Cards Table */}
-                        <div className="export-card cards-glass-card">
-                          <div className="export-card-title red-title">
-                            🟥 QIZIL KARTOCHKALAR <span style={{ float: 'right', fontSize: '16px' }}>SONI</span>
-                          </div>
-                          <div>
-                            {topRedCards.length === 0 ? (
-                              <div className="cards-empty">Qizil kartochka olganlar yo'q</div>
-                            ) : (
-                              topRedCards.map(p => (
-                                <div className="export-stats-row card-player-row" key={p.id}>
-                                  <img 
-                                    src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
-                                    className="stat-img" 
-                                    alt="" 
-                                    crossOrigin="anonymous" 
-                                    onError={(e) => { e.target.onerror = null; e.target.src = p.teamLogo || ''; }} 
-                                  />
-                                  <div style={{ flex: 1, textTransform: 'uppercase' }}>
-                                    <div style={{ fontWeight: '800', fontSize: '17px' }}>{p.name}</div>
-                                  </div>
-                                  {p.teamLogo && (
-                                    <img src={p.teamLogo} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', marginRight: '10px' }} crossOrigin="anonymous" />
-                                  )}
-                                  <div className="card-badge red-badge">
-                                    🟥 {p.redCards}
-                                  </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-
-                      </div>
-                    </div>
-
-                    {/* Footer Group (Secondary Sponsors) */}
-                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: '20px' }}>
-                      {(() => {
-                        const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
-                        const isShowSponsors = checkIsShowSponsors(currentLeagueObj, selectedLeague);
-                        if (!isShowSponsors) return null;
-                        const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
-                        if (secondarySponsors.length === 0) return null;
-                        return (
-                          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', boxSizing: 'border-box' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '36px' }}>
-                              {secondarySponsors.map((s, idx) => (
-                                <React.Fragment key={s.id || idx}>
-                                  <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '44px', maxWidth: '140px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.85 }} />
-                                  {idx < secondarySponsors.length - 1 && (
-                                    <div style={{ height: '24px', width: '1.5px', backgroundColor: '#ffffff', opacity: 0.4 }}></div>
-                                  )}
-                                </React.Fragment>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-
-          </div>
-        </div>
-        );
-      })()}
+          );
+        })()}
       </div>
 
     </div>
