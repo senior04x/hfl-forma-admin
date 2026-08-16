@@ -4,9 +4,7 @@ import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
 import { 
   ShieldAlert, 
-  Download, 
   Search, 
-  Filter, 
   ShieldCheck, 
   FileText
 } from 'lucide-react';
@@ -45,7 +43,6 @@ export default function Cards() {
   const [selectedLeague, setSelectedLeague] = useState('');
   const [selectedRound, setSelectedRound] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [cardTypeFilter, setCardTypeFilter] = useState('all'); // 'all', 'yellow', 'red'
 
   const [teams, setTeams] = useState([]);
   const [matches, setMatches] = useState([]);
@@ -208,7 +205,7 @@ export default function Cards() {
           name: fullName,
           firstName,
           lastName,
-          photoUrl: photoUrl || '', // Strict: NO team logo fallback!
+          photoUrl: photoUrl || '',
           playerNumber: playerNumber ? `#${playerNumber}` : '',
           teamId: e.team_id,
           teamName: eventTeam?.name || 'Noma\'lum jamoa',
@@ -230,15 +227,6 @@ export default function Cards() {
 
     let list = Object.values(cardMap);
 
-    // Apply Card Type Tab Filter
-    if (cardTypeFilter === 'yellow') {
-      list = list.filter(p => p.yellowCards > 0);
-    } else if (cardTypeFilter === 'red') {
-      list = list.filter(p => p.redCards > 0);
-    } else {
-      list = list.filter(p => p.totalCards > 0);
-    }
-
     // Apply Search Filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -259,7 +247,7 @@ export default function Cards() {
     return list;
   })();
 
-  // Export Clean PDF (No clipping, standard A4 table)
+  // Export Clean PDF
   const handleExportPDF = async () => {
     if (isExportingPDF) return;
     setIsExportingPDF(true);
@@ -271,7 +259,7 @@ export default function Cards() {
       const orgName = currentOrg?.name || 'Havas Futbol Ligasi';
 
       // Header Banner
-      doc.setFillColor(15, 23, 42); // #0f172a
+      doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, 210, 24, 'F');
 
       doc.setTextColor(255, 255, 255);
@@ -310,19 +298,19 @@ export default function Cards() {
           overflow: 'linebreak'
         },
         headStyles: {
-          fillColor: [30, 41, 59], // #1e293b
+          fillColor: [30, 41, 59],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
           halign: 'center'
         },
         columnStyles: {
-          0: { cellWidth: 10, halign: 'center' }, // #
-          1: { cellWidth: 62, halign: 'left' },   // Name
-          2: { cellWidth: 16, halign: 'center' }, // Kit number
-          3: { cellWidth: 58, halign: 'left' },   // Team
-          4: { cellWidth: 16, halign: 'center' }, // Yellow
-          5: { cellWidth: 16, halign: 'center' }, // Red
-          6: { cellWidth: 12, halign: 'center' }  // Total
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 62, halign: 'left' },
+          2: { cellWidth: 16, halign: 'center' },
+          3: { cellWidth: 58, halign: 'left' },
+          4: { cellWidth: 16, halign: 'center' },
+          5: { cellWidth: 16, halign: 'center' },
+          6: { cellWidth: 12, halign: 'center' }
         },
         alternateRowStyles: {
           fillColor: [248, 250, 252]
@@ -343,9 +331,9 @@ export default function Cards() {
     return (
       <div className="cards-page">
         <div className="cards-header">
-          <div className="skeleton-pulse skeleton-title" style={{ width: '180px', height: '30px' }}></div>
+          <div className="skeleton-pulse skeleton-title" style={{ width: '160px', height: '30px' }}></div>
         </div>
-        <div className="skeleton-pulse skeleton-filter-box" style={{ height: '100px', borderRadius: '14px', marginBottom: '16px' }}></div>
+        <div className="skeleton-pulse skeleton-filter-box" style={{ height: '80px', borderRadius: '12px', marginBottom: '14px' }}></div>
         <div className="cards-table-card">
           <div className="skeleton-pulse" style={{ height: '350px', width: '100%' }}></div>
         </div>
@@ -355,12 +343,20 @@ export default function Cards() {
 
   return (
     <div className="cards-page">
-      {/* Simplified Clean Header */}
+      {/* Header with Title and PDF Export Button */}
       <div className="cards-header">
         <div className="cards-title-box">
-          <ShieldAlert size={26} className="cards-title-icon" />
+          <ShieldAlert size={24} className="cards-title-icon" />
           <h1>Kartochkalar</h1>
         </div>
+        <button 
+          className="btn-export-pdf"
+          onClick={handleExportPDF}
+          disabled={isExportingPDF}
+        >
+          <FileText size={15} />
+          <span>{isExportingPDF ? 'Yuklanmoqda...' : 'PDF Yuklab Olish'}</span>
+        </button>
       </div>
 
       {/* Filter & Controls Card */}
@@ -405,41 +401,6 @@ export default function Cards() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-          </div>
-        </div>
-
-        {/* Tab filters and PDF Export button */}
-        <div className="cards-actions-row">
-          <div className="card-type-tabs">
-            <button 
-              className={`tab-btn ${cardTypeFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setCardTypeFilter('all')}
-            >
-              Barchasi ({processedCardPlayers.length})
-            </button>
-            <button 
-              className={`tab-btn yellow-tab ${cardTypeFilter === 'yellow' ? 'active' : ''}`}
-              onClick={() => setCardTypeFilter('yellow')}
-            >
-              🟨 Sariq ({processedCardPlayers.filter(p => p.yellowCards > 0).length})
-            </button>
-            <button 
-              className={`tab-btn red-tab ${cardTypeFilter === 'red' ? 'active' : ''}`}
-              onClick={() => setCardTypeFilter('red')}
-            >
-              🟥 Qizil ({processedCardPlayers.filter(p => p.redCards > 0).length})
-            </button>
-          </div>
-
-          <div className="cards-export-buttons">
-            <button 
-              className="btn-export-pdf"
-              onClick={handleExportPDF}
-              disabled={isExportingPDF}
-            >
-              <FileText size={15} />
-              <span>{isExportingPDF ? 'Yuklanmoqda...' : 'PDF Yuklab Olish'}</span>
-            </button>
           </div>
         </div>
       </div>

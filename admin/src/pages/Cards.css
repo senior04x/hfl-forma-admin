@@ -1,9 +1,9 @@
 /* ============================================================ */
-/* CARDS & DISCIPLINE PAGE STYLES — CLEAN, COMPACT & NO SCROLL */
+/* CARDS & DISCIPLINE PAGE STYLES — ULTRA CLEAN & COMPACT */
 /* ============================================================ */
 
 .cards-page {
-  padding: 18px 20px;
+  padding: 16px 18px;
   background-color: #0b1221;
   min-height: 100vh;
   color: #fff;
@@ -18,15 +18,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+  margin-bottom: 12px;
   gap: 10px;
 }
 
 .cards-title-box {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .cards-title-icon {
@@ -37,10 +36,38 @@
 
 .cards-title-box h1 {
   margin: 0;
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 800;
   color: #ffffff;
   letter-spacing: -0.3px;
+}
+
+.btn-export-pdf {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3);
+  white-space: nowrap;
+}
+
+.btn-export-pdf:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.45);
+}
+
+.btn-export-pdf:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ============================================================ */
@@ -49,10 +76,10 @@
 .cards-filter-card {
   background: rgba(17, 24, 39, 0.85);
   backdrop-filter: blur(16px);
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 14px 16px;
-  margin-bottom: 16px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
   width: 100%;
@@ -62,7 +89,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr 1.6fr;
   gap: 10px;
-  margin-bottom: 12px;
 }
 
 .filter-field {
@@ -73,7 +99,7 @@
 }
 
 .filter-field label {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   color: #94a3b8;
   text-transform: uppercase;
@@ -88,12 +114,12 @@
 .custom-select-wrapper select,
 .filter-search-input {
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 10px;
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   color: #ffffff;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   outline: none;
   transition: all 0.2s ease;
@@ -124,99 +150,13 @@
   padding-left: 28px;
 }
 
-/* Tabs & PDF Export Button */
-.cards-actions-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.card-type-tabs {
-  display: flex;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 2px;
-  gap: 2px;
-}
-
-.tab-btn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  padding: 5px 10px;
-  border-radius: 6px;
-  font-size: 11.5px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.tab-btn.active {
-  background: rgba(255, 255, 255, 0.14);
-  color: #ffffff;
-}
-
-.tab-btn.yellow-tab.active {
-  background: rgba(234, 179, 8, 0.25);
-  color: #fef08a;
-  border: 1px solid rgba(234, 179, 8, 0.4);
-}
-
-.tab-btn.red-tab.active {
-  background: rgba(239, 68, 68, 0.25);
-  color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-}
-
-.cards-export-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-export-pdf {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 7px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3);
-  white-space: nowrap;
-}
-
-.btn-export-pdf:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.45);
-}
-
-.btn-export-pdf:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 /* ============================================================ */
 /* ULTRA-CLEAN TABLE (NO HORIZONTAL SCROLL) */
 /* ============================================================ */
 .cards-table-card {
   background: rgba(17, 24, 39, 0.85);
   backdrop-filter: blur(16px);
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
@@ -238,7 +178,7 @@
 
 .cards-table th {
   background: rgba(15, 23, 42, 0.98);
-  padding: 10px 8px;
+  padding: 9px 8px;
   color: #94a3b8;
   font-weight: 700;
   font-size: 11px;
@@ -249,14 +189,14 @@
 
 /* Precise Column Widths */
 .th-rank, .td-rank {
-  width: 32px;
+  width: 30px;
   text-align: center;
   padding-left: 6px;
   padding-right: 2px;
 }
 
 .th-player, .td-player {
-  /* Takes ALL remaining width */
+  /* Takes ALL remaining space */
   padding-left: 6px;
   padding-right: 6px;
 }
@@ -288,8 +228,8 @@
 }
 
 .cards-table td {
-  padding-top: 9px;
-  padding-bottom: 9px;
+  padding-top: 8px;
+  padding-bottom: 8px;
   vertical-align: middle;
 }
 
@@ -298,11 +238,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 21px;
+  height: 21px;
   border-radius: 50%;
   font-weight: 800;
-  font-size: 11px;
+  font-size: 10.5px;
   background: rgba(255, 255, 255, 0.08);
   color: #cbd5e1;
 }
@@ -381,7 +321,7 @@
   border: 1px solid rgba(59, 130, 246, 0.4);
   color: #93c5fd;
   font-weight: 800;
-  font-size: 10px;
+  font-size: 9.5px;
   flex-shrink: 0;
 }
 
@@ -493,52 +433,31 @@
   }
   
   .cards-header {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
 
   .cards-title-box h1 {
-    font-size: 18px;
+    font-size: 17px;
+  }
+
+  .btn-export-pdf {
+    padding: 5px 10px;
+    font-size: 11px;
   }
 
   .cards-filter-card {
-    padding: 10px 12px;
+    padding: 8px 10px;
     margin-bottom: 10px;
-    border-radius: 12px;
+    border-radius: 10px;
   }
 
   .cards-filter-row {
     grid-template-columns: 1fr 1fr;
     gap: 6px;
-    margin-bottom: 8px;
   }
 
   .cards-filter-row .filter-field:last-child {
     grid-column: span 2;
-  }
-
-  .cards-actions-row {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    gap: 6px;
-    padding-top: 8px;
-  }
-
-  .card-type-tabs {
-    flex: 1;
-    display: flex;
-  }
-
-  .tab-btn {
-    flex: 1;
-    justify-content: center;
-    padding: 5px 3px;
-    font-size: 10.5px;
-  }
-
-  .btn-export-pdf {
-    padding: 6px 10px;
-    font-size: 11px;
   }
 
   /* Table column optimizations */
