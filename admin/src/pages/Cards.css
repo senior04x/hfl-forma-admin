@@ -1,9 +1,9 @@
 /* ============================================================ */
-/* CARDS & DISCIPLINE PAGE STYLES — FULL RESPONSIVE NO-OVERFLOW */
+/* CARDS & DISCIPLINE PAGE STYLES — CLEAN, COMPACT & NO SCROLL */
 /* ============================================================ */
 
 .cards-page {
-  padding: 20px;
+  padding: 18px 20px;
   background-color: #0b1221;
   min-height: 100vh;
   color: #fff;
@@ -18,169 +18,57 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
 
 .cards-title-box {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .cards-title-icon {
   color: #f59e0b;
-  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.5));
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.4));
   flex-shrink: 0;
 }
 
 .cards-title-box h1 {
   margin: 0;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   color: #ffffff;
   letter-spacing: -0.3px;
 }
 
-.cards-title-box p {
-  margin: 2px 0 0 0;
-  font-size: 12.5px;
-  color: #94a3b8;
-}
-
 /* ============================================================ */
-/* STATS SUMMARY WIDGETS */
-/* ============================================================ */
-.cards-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  background: rgba(17, 24, 39, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: all 0.2s ease;
-  min-width: 0;
-}
-
-.stat-card-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.stat-card.yellow .stat-card-icon {
-  background: rgba(234, 179, 8, 0.15);
-  border: 1px solid rgba(234, 179, 8, 0.3);
-  color: #eab308;
-}
-
-.stat-card.red .stat-card-icon {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-}
-
-.stat-card.players .stat-card-icon {
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: #60a5fa;
-}
-
-.stat-card.danger .stat-card-icon {
-  background: rgba(168, 85, 247, 0.15);
-  border: 1px solid rgba(168, 85, 247, 0.3);
-  color: #c084fc;
-}
-
-.stat-card-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.stat-card-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.stat-card-value {
-  font-size: 19px;
-  font-weight: 800;
-  color: #ffffff;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ============================================================ */
-/* FILTER BANNER CARD */
+/* FILTER BAR CARD */
 /* ============================================================ */
 .cards-filter-card {
-  background: rgba(17, 24, 39, 0.8);
+  background: rgba(17, 24, 39, 0.85);
   backdrop-filter: blur(16px);
-  border-radius: 16px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 16px 18px;
-  margin-bottom: 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
   width: 100%;
 }
 
-.cards-filter-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.cards-filter-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14.5px;
-  font-weight: 700;
-  color: #f1f5f9;
-}
-
 .cards-filter-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 2fr;
-  gap: 12px;
-  margin-bottom: 14px;
+  grid-template-columns: 1fr 1fr 1.6fr;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .filter-field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -200,12 +88,12 @@
 .custom-select-wrapper select,
 .filter-search-input {
   width: 100%;
-  padding: 8px 12px;
-  background: rgba(15, 23, 42, 0.85);
+  padding: 8px 10px;
+  background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9px;
+  border-radius: 8px;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   outline: none;
   transition: all 0.2s ease;
@@ -214,8 +102,8 @@
 
 .custom-select-wrapper select:focus,
 .filter-search-input:focus {
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
 .filter-search-box {
@@ -227,23 +115,23 @@
 
 .filter-search-icon {
   position: absolute;
-  left: 10px;
+  left: 9px;
   color: #64748b;
   pointer-events: none;
 }
 
 .filter-search-input {
-  padding-left: 32px;
+  padding-left: 28px;
 }
 
-/* Tabs & Export Buttons Row */
+/* Tabs & PDF Export Button */
 .cards-actions-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  padding-top: 12px;
+  padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -251,18 +139,18 @@
   display: flex;
   background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 9px;
-  padding: 3px;
-  gap: 3px;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
 }
 
 .tab-btn {
   background: transparent;
   border: none;
   color: #94a3b8;
-  padding: 5px 11px;
-  border-radius: 7px;
-  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -294,40 +182,41 @@
   gap: 8px;
 }
 
-.btn-export-poster {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #000;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 9px;
-  font-size: 12.5px;
-  font-weight: 800;
+.btn-export-pdf {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
   transition: all 0.2s ease;
-  box-shadow: 0 3px 10px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3);
   white-space: nowrap;
 }
 
-.btn-export-poster:hover:not(:disabled) {
+.btn-export-pdf:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 5px 14px rgba(245, 158, 11, 0.4);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.45);
 }
 
-.btn-export-poster:disabled {
+.btn-export-pdf:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 /* ============================================================ */
-/* ULTRA-RESPONSIVE CARDS TABLE (NO HORIZONTAL SCROLL) */
+/* ULTRA-CLEAN TABLE (NO HORIZONTAL SCROLL) */
 /* ============================================================ */
 .cards-table-card {
   background: rgba(17, 24, 39, 0.85);
   backdrop-filter: blur(16px);
-  border-radius: 16px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
@@ -344,7 +233,7 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  table-layout: fixed; /* Ensures strict fitting */
+  table-layout: fixed; /* Ensures strict fit without overflow */
 }
 
 .cards-table th {
@@ -358,41 +247,35 @@
   border-bottom: 1.5px solid rgba(255, 255, 255, 0.14);
 }
 
-/* Column Width Allocations */
+/* Precise Column Widths */
 .th-rank, .td-rank {
-  width: 38px;
+  width: 32px;
   text-align: center;
   padding-left: 6px;
-  padding-right: 4px;
+  padding-right: 2px;
 }
 
 .th-player, .td-player {
-  /* Takes all remaining space */
+  /* Takes ALL remaining width */
   padding-left: 6px;
   padding-right: 6px;
 }
 
 .th-yellow, .td-yellow {
-  width: 62px;
+  width: 52px;
   text-align: center;
   padding: 6px 2px;
 }
 
 .th-red, .td-red {
-  width: 60px;
+  width: 48px;
   text-align: center;
-  padding: 6px 2px;
+  padding: 6px 4px 6px 2px;
 }
 
-.th-status, .td-status {
-  width: 95px;
-  text-align: center;
-  padding: 6px 4px;
-}
-
-/* Row Separator - clear crisp line */
+/* Distinct Row Separator Line */
 .cards-table tbody tr {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12); /* Clean distinct separator */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   transition: background 0.15s ease;
 }
 
@@ -405,8 +288,8 @@
 }
 
 .cards-table td {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-top: 9px;
+  padding-bottom: 9px;
   vertical-align: middle;
 }
 
@@ -415,11 +298,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   font-weight: 800;
-  font-size: 11.5px;
+  font-size: 11px;
   background: rgba(255, 255, 255, 0.08);
   color: #cbd5e1;
 }
@@ -441,19 +324,19 @@
 }
 
 /* ============================================================ */
-/* COMBINED PLAYER & TEAM COMPOUND CELL */
+/* PLAYER & TEAM COMPOUND CELL */
 /* ============================================================ */
 .player-info-compound {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  overflow: hidden;
+  width: 100%;
 }
 
 .player-avatar {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
   background: rgba(255, 255, 255, 0.06);
@@ -466,22 +349,23 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  overflow: hidden;
+  flex: 1;
 }
 
-/* Top line: Player Name + Number */
+/* Top line: Player Name + Kit Number */
 .player-top-line {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
-  overflow: hidden;
+  flex-wrap: nowrap;
 }
 
 .player-full-name {
   font-weight: 700;
   color: #ffffff;
   font-size: 13px;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -491,7 +375,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: 4px;
   background: rgba(59, 130, 246, 0.2);
   border: 1px solid rgba(59, 130, 246, 0.4);
@@ -507,12 +391,11 @@
   align-items: center;
   gap: 4px;
   min-width: 0;
-  overflow: hidden;
 }
 
 .team-micro-logo {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -532,8 +415,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 3px 7px;
+  gap: 2px;
+  padding: 3px 6px;
   border-radius: 6px;
   background: rgba(234, 179, 8, 0.2);
   border: 1px solid rgba(234, 179, 8, 0.45);
@@ -547,8 +430,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 3px 7px;
+  gap: 2px;
+  padding: 3px 6px;
   border-radius: 6px;
   background: rgba(239, 68, 68, 0.2);
   border: 1px solid rgba(239, 68, 68, 0.45);
@@ -564,43 +447,9 @@
   font-size: 12px;
 }
 
-/* Status / Discipline Badge */
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3px 6px;
-  border-radius: 5px;
-  font-size: 10px;
-  font-weight: 800;
-  white-space: nowrap;
-  text-transform: uppercase;
-  letter-spacing: 0.2px;
-}
-
-.status-pill.banned {
-  background: rgba(239, 68, 68, 0.22);
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  color: #f87171;
-}
-
-.status-pill.warned {
-  background: rgba(234, 179, 8, 0.22);
-  border: 1px solid rgba(234, 179, 8, 0.5);
-  color: #fde047;
-}
-
-.status-pill.active-status {
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #6ee7b7;
-}
-
-/* ============================================================ */
-/* EMPTY STATE */
-/* ============================================================ */
+/* Empty State */
 .cards-empty-container {
-  padding: 40px 16px;
+  padding: 36px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -610,81 +459,57 @@
 }
 
 .cards-empty-icon {
-  width: 50px;
-  height: 50px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.04);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   color: #64748b;
 }
 
 .cards-empty-container h3 {
   margin: 0 0 4px 0;
   color: #e2e8f0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .cards-empty-container p {
   margin: 0;
-  font-size: 12.5px;
-  max-width: 360px;
+  font-size: 12px;
+  max-width: 320px;
   line-height: 1.4;
 }
 
 /* ============================================================ */
-/* MOBILE ADAPTIVE RESPONSIVENESS */
+/* MOBILE ADAPTIVE RESPONSIVENESS (< 768px) */
 /* ============================================================ */
 @media (max-width: 768px) {
   .cards-page {
-    padding: 12px;
+    padding: 10px;
   }
   
   .cards-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
   }
 
   .cards-title-box h1 {
-    font-size: 19px;
-  }
-
-  /* 2 columns for stats on mobile */
-  .cards-stats-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-
-  .stat-card {
-    padding: 10px 12px;
-    border-radius: 12px;
-    gap: 8px;
-  }
-
-  .stat-card-icon {
-    width: 32px;
-    height: 32px;
-    font-size: 15px;
-  }
-
-  .stat-card-value {
-    font-size: 16px;
+    font-size: 18px;
   }
 
   .cards-filter-card {
-    padding: 12px 14px;
-    margin-bottom: 14px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border-radius: 12px;
   }
 
   .cards-filter-row {
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 6px;
+    margin-bottom: 8px;
   }
 
   .cards-filter-row .filter-field:last-child {
@@ -692,40 +517,40 @@
   }
 
   .cards-actions-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    padding-top: 8px;
   }
 
   .card-type-tabs {
-    width: 100%;
+    flex: 1;
     display: flex;
-    box-sizing: border-box;
   }
 
   .tab-btn {
     flex: 1;
     justify-content: center;
-    padding: 6px 4px;
+    padding: 5px 3px;
+    font-size: 10.5px;
+  }
+
+  .btn-export-pdf {
+    padding: 6px 10px;
     font-size: 11px;
   }
 
-  .btn-export-poster {
-    width: 100%;
-    justify-content: center;
-    padding: 9px;
-  }
-
-  /* Optimize Table Column Widths for Mobile */
+  /* Table column optimizations */
   .th-rank, .td-rank {
-    width: 28px;
-    padding: 4px 2px;
+    width: 24px;
+    padding: 4px 1px;
   }
 
   .rank-pill {
-    width: 20px;
-    height: 20px;
-    font-size: 10px;
+    width: 18px;
+    height: 18px;
+    font-size: 9.5px;
   }
 
   .player-avatar {
@@ -734,37 +559,26 @@
   }
 
   .player-full-name {
-    font-size: 11.5px;
+    font-size: 12px;
   }
 
   .team-micro-name {
-    font-size: 10px;
+    font-size: 10.5px;
   }
 
   .th-yellow, .td-yellow {
-    width: 46px;
+    width: 44px;
     padding: 4px 1px;
   }
 
   .th-red, .td-red {
-    width: 44px;
-    padding: 4px 1px;
+    width: 42px;
+    padding: 4px 2px 4px 1px;
   }
 
   .badge-yellow-compact,
   .badge-red-compact {
     padding: 2px 4px;
     font-size: 10.5px;
-    gap: 2px;
-  }
-
-  .th-status, .td-status {
-    width: 68px;
-    padding: 4px 2px;
-  }
-
-  .status-pill {
-    font-size: 8.5px;
-    padding: 2px 4px;
   }
 }
