@@ -12,8 +12,7 @@ import {
   AlertTriangle, 
   ShieldCheck, 
   CheckCircle,
-  X,
-  RefreshCw
+  X
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Cards.css';
@@ -191,7 +190,6 @@ export default function Cards() {
 
       if (eventsError) {
         console.error("Events fetch error:", eventsError);
-        // Fallback simple query
         const { data: fallbackEvents } = await dbClient
           .from('match_events')
           .select('*')
@@ -422,12 +420,12 @@ export default function Cards() {
         </div>
         <div className="cards-stats-grid">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="skeleton-pulse" style={{ height: '90px', borderRadius: '16px' }}></div>
+            <div key={i} className="skeleton-pulse" style={{ height: '70px', borderRadius: '14px' }}></div>
           ))}
         </div>
-        <div className="skeleton-pulse skeleton-filter-box" style={{ height: '140px', borderRadius: '18px', marginBottom: '24px' }}></div>
+        <div className="skeleton-pulse skeleton-filter-box" style={{ height: '120px', borderRadius: '16px', marginBottom: '20px' }}></div>
         <div className="cards-table-card">
-          <div className="skeleton-pulse" style={{ height: '400px', width: '100%' }}></div>
+          <div className="skeleton-pulse" style={{ height: '350px', width: '100%' }}></div>
         </div>
       </div>
     );
@@ -438,7 +436,7 @@ export default function Cards() {
       {/* Header */}
       <div className="cards-header">
         <div className="cards-title-box">
-          <ShieldAlert size={32} className="cards-title-icon" />
+          <ShieldAlert size={28} className="cards-title-icon" />
           <div>
             <h1>Qoidabuzarliklar va Kartochkalar</h1>
             <p>Sariq va qizil kartochka olgan barcha o'yinchilarning to'liq intizom ro'yxati</p>
@@ -466,7 +464,7 @@ export default function Cards() {
 
         <div className="stat-card players">
           <div className="stat-card-icon">
-            <Users size={22} />
+            <Users size={18} />
           </div>
           <div className="stat-card-info">
             <span className="stat-card-label">O'yinchilar soni</span>
@@ -476,11 +474,11 @@ export default function Cards() {
 
         <div className="stat-card danger">
           <div className="stat-card-icon">
-            <AlertTriangle size={22} />
+            <AlertTriangle size={18} />
           </div>
           <div className="stat-card-info">
             <span className="stat-card-label">Eng ko'p qoidabuzar</span>
-            <span className="stat-card-value" style={{ fontSize: '16px', fontWeight: '700' }}>
+            <span className="stat-card-value" style={{ fontSize: '13px', fontWeight: '700' }}>
               {mostCardedTeamName}
             </span>
           </div>
@@ -491,7 +489,7 @@ export default function Cards() {
       <div className="cards-filter-card">
         <div className="cards-filter-header">
           <div className="cards-filter-title">
-            <Filter size={18} style={{ color: '#f59e0b' }} />
+            <Filter size={16} style={{ color: '#f59e0b' }} />
             <span>Filtr va Qidiruv ({selectedLeague || 'Barcha ligalar'})</span>
           </div>
         </div>
@@ -524,14 +522,14 @@ export default function Cards() {
           </div>
 
           {/* Search Input */}
-          <div className="filter-field" style={{ gridColumn: 'span 2' }}>
+          <div className="filter-field">
             <label>O'yinchi yoki jamoani qidirish</label>
             <div className="filter-search-box">
-              <Search size={18} className="filter-search-icon" />
+              <Search size={16} className="filter-search-icon" />
               <input
                 type="text"
                 className="filter-search-input"
-                placeholder="Ism, familiya, forma raqami yoki jamoa nomi..."
+                placeholder="Ism, forma raqami yoki jamoa..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -546,7 +544,7 @@ export default function Cards() {
               className={`tab-btn ${cardTypeFilter === 'all' ? 'active' : ''}`}
               onClick={() => setCardTypeFilter('all')}
             >
-              Barcha kartochkalar ({processedCardPlayers.length})
+              Barchasi ({processedCardPlayers.length})
             </button>
             <button 
               className={`tab-btn yellow-tab ${cardTypeFilter === 'yellow' ? 'active' : ''}`}
@@ -568,19 +566,19 @@ export default function Cards() {
               onClick={handleExportPoster}
               disabled={isExportingPoster}
             >
-              <Download size={16} />
-              <span>{isExportingPoster ? 'Tayyorlanmoqda...' : 'Kartochkalar Rasmini Yuklab Olish'}</span>
+              <Download size={15} />
+              <span>{isExportingPoster ? 'Tayyorlanmoqda...' : 'Rasmni Yuklab Olish'}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Table */}
+      {/* Main Table (Ultra-responsive, no side scroll, clear separators, team below player name) */}
       <div className="cards-table-card">
         {processedCardPlayers.length === 0 ? (
           <div className="cards-empty-container">
             <div className="cards-empty-icon">
-              <ShieldCheck size={36} />
+              <ShieldCheck size={32} />
             </div>
             <h3>Kartochkalar mavjud emas</h3>
             <p>
@@ -595,13 +593,11 @@ export default function Cards() {
             <table className="cards-table">
               <thead>
                 <tr>
-                  <th className="col-rank">#</th>
-                  <th>O'yinchi</th>
-                  <th>Jamoa</th>
-                  <th style={{ textAlign: 'center' }}>Forma raqami</th>
-                  <th style={{ textAlign: 'center' }}>Sariq (🟨)</th>
-                  <th style={{ textAlign: 'center' }}>Qizil (🟥)</th>
-                  <th style={{ textAlign: 'center' }}>Holati / Intizom</th>
+                  <th className="th-rank">#</th>
+                  <th className="th-player">O'yinchi va Jamoasi</th>
+                  <th className="th-yellow">🟨 Sariq</th>
+                  <th className="th-red">🟥 Qizil</th>
+                  <th className="th-status">Holati</th>
                 </tr>
               </thead>
               <tbody>
@@ -611,14 +607,14 @@ export default function Cards() {
 
                   return (
                     <tr key={player.id || idx}>
-                      <td className="col-rank">
+                      <td className="td-rank">
                         <span className={`rank-pill ${idx === 0 ? 'top-1' : idx === 1 ? 'top-2' : idx === 2 ? 'top-3' : ''}`}>
                           {idx + 1}
                         </span>
                       </td>
 
-                      <td>
-                        <div className="player-cell">
+                      <td className="td-player">
+                        <div className="player-info-compound">
                           <img 
                             src={player.photoUrl || player.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23334155' rx='15'/%3E%3C/svg%3E"}
                             alt={player.name}
@@ -628,64 +624,61 @@ export default function Cards() {
                               e.target.src = player.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23334155' rx='15'/%3E%3C/svg%3E";
                             }}
                           />
-                          <div className="player-name-wrapper">
-                            <span className="player-full-name">{player.name}</span>
-                            <span className="player-sub-info">{player.teamName}</span>
+                          <div className="player-text-details">
+                            {/* Top Line: Player Name + Kit Number */}
+                            <div className="player-top-line">
+                              <span className="player-full-name">{player.name}</span>
+                              {player.playerNumber !== '-' && (
+                                <span className="player-kit-tag">{player.playerNumber}</span>
+                              )}
+                            </div>
+                            {/* Bottom Line: Team Logo + Team Name right below name */}
+                            <div className="player-team-line">
+                              {player.teamLogo && (
+                                <img 
+                                  src={player.teamLogo} 
+                                  alt="" 
+                                  className="team-micro-logo" 
+                                  onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                              )}
+                              <span className="team-micro-name">{player.teamName}</span>
+                            </div>
                           </div>
                         </div>
                       </td>
 
-                      <td>
-                        <div className="team-cell">
-                          {player.teamLogo && (
-                            <img 
-                              src={player.teamLogo} 
-                              alt={player.teamName} 
-                              className="team-badge-logo" 
-                              onError={(e) => { e.target.style.display = 'none'; }}
-                            />
-                          )}
-                          <span>{player.teamName}</span>
-                        </div>
-                      </td>
-
-                      <td style={{ textAlign: 'center' }}>
-                        <span className="kit-number-badge">
-                          {player.playerNumber}
-                        </span>
-                      </td>
-
-                      <td style={{ textAlign: 'center' }}>
+                      <td className="td-yellow">
                         {player.yellowCards > 0 ? (
-                          <span className="badge-yellow">
+                          <span className="badge-yellow-compact">
                             🟨 {player.yellowCards}
                           </span>
                         ) : (
-                          <span className="badge-none">—</span>
+                          <span className="badge-zero">—</span>
                         )}
                       </td>
 
-                      <td style={{ textAlign: 'center' }}>
+                      <td className="td-red">
                         {player.redCards > 0 ? (
-                          <span className="badge-red">
+                          <span className="badge-red-compact">
                             🟥 {player.redCards}
                           </span>
                         ) : (
-                          <span className="badge-none">—</span>
+                          <span className="badge-zero">—</span>
                         )}
                       </td>
 
-                      <td style={{ textAlign: 'center' }}>
+                      <td className="td-status">
                         {isRedBanned ? (
-                          <span className="status-badge banned">
-                            🟥 Diskvalifikatsiya
+                          <span className="status-pill banned">
+                            🟥 Chetlash
                           </span>
                         ) : isYellowWarned ? (
-                          <span className="status-badge warned">
-                            ⚠️ Ko'p sariq ({player.yellowCards} ta)
+                          <span className="status-pill warned">
+                            ⚠️ {player.yellowCards} ta
                           </span>
                         ) : (
-                          <span className="status-badge" style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}>
+                          <span className="status-pill active-status">
                             Faol
                           </span>
                         )}
