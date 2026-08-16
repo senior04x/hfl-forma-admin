@@ -11,9 +11,9 @@ import {
   Users, 
   AlertTriangle, 
   ShieldCheck, 
-  FileSpreadsheet,
   CheckCircle,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Cards.css';
@@ -34,14 +34,12 @@ export default function Cards() {
   const [playersList, setPlayersList] = useState([]);
 
   const [isExportingPoster, setIsExportingPoster] = useState(false);
-  const [isExportingTable, setIsExportingTable] = useState(false);
 
   const [mainSponsor, setMainSponsor] = useState(null);
   const [selectedSponsors, setSelectedSponsors] = useState([]);
   const [leagueSponsorsSettingsMap, setLeagueSponsorsSettingsMap] = useState({});
 
   const posterExportRef = useRef(null);
-  const tableExportRef = useRef(null);
 
   useEffect(() => {
     fetchSponsorsData();
@@ -142,7 +140,7 @@ export default function Cards() {
       export_bg_url: l.export_bg_url || getLeagueBgForOrg(orgId, l.name)
     }));
     setActiveLeagues(withOrgBgs);
-    if (withOrgBgs.length > 0) {
+    if (withOrgBgs.length > 0 && !selectedLeague) {
       setSelectedLeague(withOrgBgs[0].name);
     }
     fetchData(withOrgBgs);
@@ -156,23 +154,26 @@ export default function Cards() {
       // 1. Fetch Teams
       let teamsQuery = dbClient
         .from('teams')
-        .select('*')
-        .in('status', ['approved', 'partially_approved']);
-      teamsQuery = applyOrgAndCollabFilter(teamsQuery, orgId, leaguesList);
+        .select('*');
+      if (orgId) {
+        teamsQuery = applyOrgAndCollabFilter(teamsQuery, orgId, leaguesList);
+      }
       const { data: teamsData, error: teamsError } = await teamsQuery;
-      if (teamsError) throw teamsError;
+      if (teamsError) console.warn("Teams fetch warning:", teamsError);
       setTeams(teamsData || []);
 
       // 2. Fetch Matches
       let matchesQuery = dbClient
         .from('matches')
         .select('*');
-      matchesQuery = applyOrgAndCollabFilter(matchesQuery, orgId, leaguesList);
+      if (orgId) {
+        matchesQuery = applyOrgAndCollabFilter(matchesQuery, orgId, leaguesList);
+      }
       const { data: matchesData, error: matchesError } = await matchesQuery;
-      if (matchesError) throw matchesError;
+      if (matchesError) console.warn("Matches fetch warning:", matchesError);
       setMatches(matchesData || []);
 
-      // 3. Fetch Events (yellow and red cards)
+      // 3. Fetch Events (yellow and red cards) with joined player, team, and match round
       const { data: eventsData, error: eventsError } = await dbClient
         .from('match_events')
         .select(`
@@ -182,19 +183,28 @@ export default function Cards() {
           player_id, 
           team_id, 
           match_id, 
-          player:player_id(id, first_name, last_name, photo_url, player_number, number), 
-          team:team_id(id, name, logo_url, league)
+          player:player_id(id, first_name, last_name, photo_url, player_number), 
+          team:team_id(id, name, logo_url, league),
+          match:match_id(id, round, league)
         `)
         .in('event_type', ['yellow_card', 'red_card']);
 
-      if (eventsError) throw eventsError;
-      setEvents(eventsData || []);
+      if (eventsError) {
+        console.error("Events fetch error:", eventsError);
+        // Fallback simple query
+        const { data: fallbackEvents } = await dbClient
+          .from('match_events')
+          .select('*')
+          .in('event_type', ['yellow_card', 'red_card']);
+        setEvents(fallbackEvents || []);
+      } else {
+        setEvents(eventsData || []);
+      }
 
-      // 4. Fetch Approved Players (Applications) for fallback info (kit number, full name)
+      // 4. Fetch Approved Players (Applications) for full data enrichment
       const { data: appsData } = await dbClient
         .from('applications')
-        .select('id, first_name, last_name, player_number, photo_url, team_id')
-        .eq('status', 'approved');
+        .select('id, first_name, last_name, player_number, photo_url, team_id');
       setPlayersList(appsData || []);
 
     } catch (err) {
@@ -203,20 +213,6 @@ export default function Cards() {
       setLoading(false);
     }
   };
-
-  // Compute dynamic rounds for the selected league
-  const activeLeagueTeams = teams.filter(t => (t.league || '').includes(selectedLeague));
-  const activeLeagueTeamIds = new Set(activeLeagueTeams.map(t => t.id));
-  const activeLeagueMatches = matches.filter(m => activeLeagueTeamIds.has(m.home_team_id));
-
-  let maxRound = 0;
-  activeLeagueMatches.forEach(m => {
-    if (m.round && parseInt(m.round) > maxRound) maxRound = parseInt(m.round);
-  });
-  if (maxRound === 0) maxRound = 1;
-
-  const roundOptions = [];
-  for (let i = 1; i <= maxRound; i++) roundOptions.push(i);
 
   // Map match_id to match object for fast round lookup
   const matchMap = {};
@@ -230,6 +226,37 @@ export default function Cards() {
     playerAppMap[p.id] = p;
   });
 
+  // Map team_id to team object for fast lookup
+  const teamMap = {};
+  teams.forEach(t => {
+    teamMap[t.id] = t;
+  });
+
+  // Compute dynamic rounds specifically for the active selected league
+  let maxRound = 0;
+  matches.forEach(m => {
+    const isLeagueMatch = (m.league || '').includes(selectedLeague) || 
+      (teamMap[m.home_team_id]?.league || '').includes(selectedLeague);
+    if (isLeagueMatch && m.round && parseInt(m.round) > maxRound) {
+      maxRound = parseInt(m.round);
+    }
+  });
+
+  events.forEach(e => {
+    const teamLeague = e.team?.league || teamMap[e.team_id]?.league || e.match?.league || '';
+    if (selectedLeague && teamLeague.includes(selectedLeague)) {
+      const r = e.match?.round || matchMap[e.match_id]?.round;
+      if (r && parseInt(r) > maxRound) {
+        maxRound = parseInt(r);
+      }
+    }
+  });
+
+  if (maxRound === 0) maxRound = 1;
+
+  const roundOptions = [];
+  for (let i = 1; i <= maxRound; i++) roundOptions.push(i);
+
   // Process and Filter Cards
   const processedCardPlayers = (() => {
     const cardMap = {};
@@ -238,15 +265,19 @@ export default function Cards() {
       if (!e.player_id) return;
       if (e.event_type !== 'yellow_card' && e.event_type !== 'red_card') return;
 
-      // 1. League Filter: Check team league or match league
-      const eventTeam = teams.find(t => t.id === e.team_id) || e.team;
-      const isLeagueMatch = (eventTeam?.league || '').includes(selectedLeague);
-      if (!isLeagueMatch && selectedLeague) return;
+      // 1. League Filter: Check event's team league or match league
+      const eventTeam = teamMap[e.team_id] || e.team;
+      const teamLeague = eventTeam?.league || e.match?.league || '';
+      
+      const isLeagueMatch = !selectedLeague || teamLeague.includes(selectedLeague);
+      if (!isLeagueMatch) return;
 
       // 2. Round Filter
       if (selectedRound && selectedRound !== 'all') {
-        const evMatch = matchMap[e.match_id];
-        if (evMatch && String(evMatch.round) !== String(selectedRound)) {
+        const evRound = e.match?.round !== undefined && e.match?.round !== null 
+          ? e.match.round 
+          : matchMap[e.match_id]?.round;
+        if (evRound !== undefined && evRound !== null && String(evRound) !== String(selectedRound)) {
           return;
         }
       }
@@ -260,7 +291,7 @@ export default function Cards() {
         const lastName = pObj.last_name || appInfo?.last_name || '';
         const fullName = `${firstName} ${lastName}`.trim() || "Noma'lum o'yinchi";
         const photoUrl = pObj.photo_url || appInfo?.photo_url || '';
-        const playerNumber = pObj.player_number || pObj.number || appInfo?.player_number || '';
+        const playerNumber = pObj.player_number || appInfo?.player_number || '';
 
         cardMap[e.player_id] = {
           id: e.player_id,
@@ -470,7 +501,7 @@ export default function Cards() {
           <div className="filter-field">
             <label>Liga tanlang</label>
             <div className="custom-select-wrapper">
-              <select value={selectedLeague} onChange={(e) => setSelectedLeague(e.target.value)}>
+              <select value={selectedLeague} onChange={(e) => { setSelectedLeague(e.target.value); setSelectedRound('all'); }}>
                 {activeLeagues.map(l => (
                   <option key={l.id} value={l.name}>{l.name} {l.isCollab ? '(Co-Host)' : ''}</option>
                 ))}
@@ -560,7 +591,7 @@ export default function Cards() {
             </p>
           </div>
         ) : (
-          <div className="cards-table-wrapper" ref={tableExportRef}>
+          <div className="cards-table-wrapper">
             <table className="cards-table">
               <thead>
                 <tr>
