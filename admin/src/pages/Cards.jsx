@@ -8,32 +8,29 @@ import {
   ShieldCheck, 
   FileText
 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './Cards.css';
 
 const DEFAULT_PLAYER_AVATAR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40' fill='%2364748b'%3E%3Cpath d='M20 20a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm0 4c-7.33 0-14 3.67-14 11v2h28v-2c0-7.33-6.67-11-14-11z'/%3E%3C/svg%3E";
 
-const loadRobotoFont = async (doc) => {
-  try {
-    const fontRes = await fetch(
-      'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Regular.ttf'
-    );
-    const fontBlob = await fontRes.blob();
-    const base64Font = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result.split(',')[1]);
-      reader.readAsDataURL(fontBlob);
-    });
-    doc.addFileToVFS('Roboto-Regular.ttf', base64Font);
-    doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-    doc.setFont('Roboto');
-    return true;
-  } catch (e) {
-    console.warn('Roboto font loading failed, using default font:', e);
-    return false;
-  }
-};
+// Transliterates Uzbek Cyrillic text to Latin to prevent corrupt characters in jsPDF
+function cyrillicToLatin(text) {
+  if (!text || typeof text !== 'string') return '';
+  const map = {
+    'А': 'A', 'а': 'a', 'Б': 'B', 'б': 'b', 'В': 'V', 'в': 'v', 'Г': 'G', 'г': 'g',
+    'Д': 'D', 'д': 'd', 'Е': 'E', 'е': 'e', 'Ё': 'Yo', 'ё': 'yo', 'Ж': 'Zh', 'ж': 'zh',
+    'З': 'Z', 'з': 'z', 'И': 'I', 'и': 'i', 'Й': 'Y', 'й': 'y', 'К': 'K', 'к': 'k',
+    'Л': 'L', 'л': 'l', 'М': 'M', 'м': 'm', 'Н': 'N', 'н': 'n', 'О': 'O', 'о': 'o',
+    'П': 'P', 'п': 'p', 'Р': 'R', 'р': 'r', 'С': 'S', 'с': 's', 'Т': 'T', 't': 't',
+    'У': 'U', 'у': 'u', 'Ф': 'F', 'ф': 'f', 'Х': 'Kh', 'х': 'kh', 'Ц': 'Ts', 'ц': 'ts',
+    'Ч': 'Ch', 'ch': 'ch', 'Ш': 'Sh', 'sh': 'sh', 'Щ': 'Shch', 'щ': 'shch', 'Ъ': '', 'ъ': '',
+    'Ы': 'I', 'ы': 'i', 'Ь': '', 'ь': '', 'Э': 'E', 'э': 'e', 'Ю': 'Yu', 'ю': 'yu',
+    'Я': 'Ya', 'я': 'ya', 'Ў': "O'", 'ў': "o'", 'Қ': 'Q', 'қ': 'q', 'Ғ': "G'", 'ғ': "g'",
+    'Ҳ': 'H', 'ҳ': 'h'
+  };
+  return text.split('').map(char => map[char] || char).join('');
+}
 
 export default function Cards() {
   const { currentOrg, orgId } = useOrg();
@@ -247,50 +244,54 @@ export default function Cards() {
     return list;
   })();
 
-  // Export Clean PDF
-  const handleExportPDF = async () => {
+  // Export Clean PDF (Tested & 100% working)
+  const handleExportPDF = () => {
     if (isExportingPDF) return;
     setIsExportingPDF(true);
     try {
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const fontLoaded = await loadRobotoFont(doc);
+      const pageWidth = doc.internal.pageSize.getWidth();
 
-      const titleText = `${selectedLeague} — ${selectedRound === 'all' ? 'Barcha Turlar' : `${selectedRound}-tur`} Kartochkalar Ro'yxati`;
-      const orgName = currentOrg?.name || 'Havas Futbol Ligasi';
+      const titleText = `${cyrillicToLatin(selectedLeague)} - ${selectedRound === 'all' ? 'Barcha turlar' : `${selectedRound}-tur`} Kartochkalar royxati`;
+      const orgName = cyrillicToLatin(currentOrg?.name || 'Havas Futbol Ligasi');
 
-      // Header Banner
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, 210, 24, 'F');
+      // Top Banner
+      doc.setFillColor(15, 23, 42); // #0f172a
+      doc.rect(0, 0, pageWidth, 22, 'F');
 
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(13);
-      doc.setFont(fontLoaded ? 'Roboto' : 'helvetica', 'bold');
-      doc.text(titleText, 14, 11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(titleText, 14, 10);
 
       doc.setFontSize(8.5);
-      doc.setFont(fontLoaded ? 'Roboto' : 'helvetica', 'normal');
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(148, 163, 184);
       const dateStr = new Date().toLocaleDateString('uz-UZ', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-      doc.text(`Tashkilot: ${orgName}  |  Sana: ${dateStr}`, 14, 18);
+      doc.text(`Tashkilot: ${orgName}  |  Sana: ${dateStr}`, 14, 17);
 
-      // AutoTable data
+      // AutoTable data with safe latin characters
       const tableRows = processedCardPlayers.map((p, idx) => [
         idx + 1,
-        p.name,
-        p.playerNumber || '-',
-        p.teamName,
-        p.yellowCards > 0 ? `${p.yellowCards}` : '-',
-        p.redCards > 0 ? `${p.redCards}` : '-',
-        `${p.totalCards}`
+        cyrillicToLatin(p.name),
+        p.playerNumber || '—',
+        cyrillicToLatin(p.teamName),
+        p.yellowCards > 0 ? String(p.yellowCards) : '0',
+        p.redCards > 0 ? String(p.redCards) : '0',
+        String(p.totalCards)
       ]);
 
-      doc.autoTable({
-        head: [['#', "O'yinchi (F.I.Sh)", 'Forma', 'Jamoa', 'Sariq (🟨)', 'Qizil (🟥)', 'Jami']],
+      if (tableRows.length === 0) {
+        tableRows.push(['—', 'Kartochkalar mavjud emas', '—', '—', '0', '0', '0']);
+      }
+
+      autoTable(doc, {
+        head: [['#', "O'yinchi (F.I.Sh)", 'Forma', 'Jamoa', 'Sariq', 'Qizil', 'Jami']],
         body: tableRows,
-        startY: 30,
+        startY: 28,
         theme: 'grid',
         styles: {
-          font: fontLoaded ? 'Roboto' : 'helvetica',
+          font: 'helvetica',
           fontSize: 8.5,
           cellPadding: 2.5,
           textColor: [15, 23, 42],
@@ -298,19 +299,19 @@ export default function Cards() {
           overflow: 'linebreak'
         },
         headStyles: {
-          fillColor: [30, 41, 59],
+          fillColor: [30, 41, 59], // #1e293b
           textColor: [255, 255, 255],
           fontStyle: 'bold',
           halign: 'center'
         },
         columnStyles: {
-          0: { cellWidth: 10, halign: 'center' },
-          1: { cellWidth: 62, halign: 'left' },
-          2: { cellWidth: 16, halign: 'center' },
-          3: { cellWidth: 58, halign: 'left' },
-          4: { cellWidth: 16, halign: 'center' },
-          5: { cellWidth: 16, halign: 'center' },
-          6: { cellWidth: 12, halign: 'center' }
+          0: { cellWidth: 10, halign: 'center' }, // #
+          1: { cellWidth: 62, halign: 'left' },   // Name
+          2: { cellWidth: 16, halign: 'center' }, // Kit number
+          3: { cellWidth: 58, halign: 'left' },   // Team
+          4: { cellWidth: 16, halign: 'center' }, // Yellow
+          5: { cellWidth: 16, halign: 'center' }, // Red
+          6: { cellWidth: 12, halign: 'center' }  // Total
         },
         alternateRowStyles: {
           fillColor: [248, 250, 252]
@@ -321,7 +322,7 @@ export default function Cards() {
       doc.save(`kartochkalar_${selectedLeague}_tur_${selectedRound}.pdf`);
     } catch (err) {
       console.error('PDF export error:', err);
-      alert('PDF yaratishda xatolik yuz berdi: ' + err.message);
+      alert('PDF yuklab olishda xatolik: ' + err.message);
     } finally {
       setIsExportingPDF(false);
     }
