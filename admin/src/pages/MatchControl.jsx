@@ -603,24 +603,41 @@ const MatchControl = () => {
             .ilike('name', matchData.league.trim())
             .maybeSingle();
             
-          let dur = lData?.match_duration;
+          let halfDur = lData?.half_duration || lData?.half_minutes;
+          let matchDur = lData?.match_duration;
 
-          if (!dur && lData?.id) {
+          if (!halfDur && matchDur) {
+            halfDur = Math.round(matchDur / 2);
+          } else if (halfDur && !matchDur) {
+            matchDur = halfDur * 2;
+          }
+
+          if (!matchDur && lData?.id) {
             const { data: spDur } = await supabaseAdmin
               .from('sponsors')
               .select('logo_url')
               .eq('name', `LEAGUE_DURATION_${lData.id}`)
               .maybeSingle();
-            if (spDur?.logo_url) dur = Number(spDur.logo_url);
+            if (spDur?.logo_url) {
+              matchDur = Number(spDur.logo_url);
+              halfDur = Math.round(matchDur / 2);
+            }
           }
 
-          if (!dur && lData?.id) {
+          if (!matchDur && lData?.id) {
             const localDur = localStorage.getItem(`hfl_league_duration_${lData.id}`);
-            if (localDur) dur = Number(localDur);
+            if (localDur) {
+              matchDur = Number(localDur);
+              halfDur = Math.round(matchDur / 2);
+            }
           }
 
           if (lData) {
-            setLeagueData({ ...lData, match_duration: dur || 90 });
+            setLeagueData({ 
+              ...lData, 
+              half_duration: halfDur || 30,
+              match_duration: matchDur || ((halfDur || 30) * 2)
+            });
           }
         } catch (lErr) {}
       }
@@ -787,9 +804,15 @@ const MatchControl = () => {
     updateTimerDBAndState(timerSeconds, nowIso, newRunning);
   };
 
+  const adjustTimerSeconds = (deltaSec) => {
+    const newSec = Math.max(0, timerSeconds + deltaSec);
+    const nowIso = isTimerRunning ? new Date().toISOString() : null;
+    updateTimerDBAndState(newSec, nowIso, isTimerRunning);
+  };
+
   // Dynamic Match Duration calculation from League / Match settings
-  const matchDurationMins = Number(match?.match_duration || leagueData?.match_duration || 90);
-  const halfDurationMins = Math.round(matchDurationMins / 2);
+  const halfDurationMins = Number(match?.half_duration || leagueData?.half_duration || (match?.match_duration ? Math.round(match.match_duration / 2) : (leagueData?.match_duration ? Math.round(leagueData.match_duration / 2) : 30)));
+  const matchDurationMins = Number(match?.match_duration || leagueData?.match_duration || (halfDurationMins * 2) || 60);
   const halfDurationSecs = halfDurationMins * 60;
 
   const resetTimerManual = () => {
@@ -1464,6 +1487,54 @@ const MatchControl = () => {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Sticky Bottom Timer Control Bar */}
+      <div className="sticky-bottom-timer-bar">
+        <div className="sticky-timer-info">
+          <Clock size={20} className={isTimerRunning ? 'timer-icon-pulsing' : ''} style={{ color: isTimerRunning ? '#22c55e' : '#f59e0b' }} />
+          <span className="sticky-timer-time">{formatTimer(timerSeconds)}</span>
+          <span className="sticky-timer-min">({getCurrentMinute()}')</span>
+          <span className={`match-status-badge ${match.status}`} style={{ margin: 0, padding: '4px 10px', fontSize: '12px' }}>
+            {STATUS_LABELS[match.status] || match.status}
+          </span>
+          <span className="sticky-timer-duration" style={{ fontSize: '11px', color: '#94a3b8' }}>
+            ⏱️ {halfDurationMins} daq x 2 ({matchDurationMins} daq)
+          </span>
+        </div>
+
+        <div className="sticky-timer-actions">
+          <button 
+            className="btn-sticky-adjust" 
+            onClick={() => adjustTimerSeconds(-60)} 
+            title="1 daqiqa kamaytirish"
+          >
+            -1m
+          </button>
+          <button 
+            className="btn-sticky-adjust" 
+            onClick={() => adjustTimerSeconds(60)} 
+            title="1 daqiqa qo'shish"
+          >
+            +1m
+          </button>
+          
+          <button 
+            className={`btn-sticky-toggle ${isTimerRunning ? 'pause' : 'play'}`}
+            onClick={toggleTimerManual}
+            title={isTimerRunning ? "Vaqtni to'xtatish (Pause)" : "Vaqtni davom ettirish (Start)"}
+          >
+            {isTimerRunning ? (
+              <>
+                <Pause size={18} /> <span>Vaqtni to'xtatish</span>
+              </>
+            ) : (
+              <>
+                <Play size={18} /> <span>Vaqtni davom ettirish</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Event Modal */}

@@ -1057,3 +1057,124 @@
     text-overflow: ellipsis;
   }
 }
+
+/* ========================================================================= */
+/* STICKY BOTTOM TIMER CONTROL BAR                                           */
+/* ========================================================================= */
+.sticky-bottom-timer-bar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 12px 24px;
+  margin: 30px -20px -20px -20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sticky-timer-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sticky-timer-time {
+  font-size: 26px;
+  font-weight: 900;
+  font-family: monospace, sans-serif;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+.sticky-timer-min {
+  font-size: 16px;
+  font-weight: 800;
+  color: #60a5fa;
+}
+
+.sticky-timer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-sticky-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 12px;
+  border: none;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn-sticky-toggle.pause {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.btn-sticky-toggle.pause:hover {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  transform: translateY(-1px);
+}
+
+.btn-sticky-toggle.play {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+}
+
+.btn-sticky-toggle.play:hover {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  transform: translateY(-1px);
+}
+
+.btn-sticky-adjust {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sticky-adjust:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+@media (max-width: 640px) {
+  .sticky-bottom-timer-bar {
+    padding: 10px 14px;
+    justify-content: center;
+  }
+  .sticky-timer-info {
+    justify-content: center;
+    width: 100%;
+  }
+  .sticky-timer-actions {
+    width: 100%;
+    justify-content: center;
+  }
+  .btn-sticky-toggle {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
