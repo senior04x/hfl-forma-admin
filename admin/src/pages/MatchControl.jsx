@@ -435,12 +435,17 @@ const MatchControl = () => {
     alert("Boshqaruv paneli havolasi nusxalandi!\n\n" + link);
   };
 
-  // Helper to apply persistent timer payload
+  // Helper to apply persistent timer payload in countdown mode (30:00 -> 00:00)
   const applyTimerPayload = (payload) => {
     if (!payload) return;
-    const baseSec = payload.timer_seconds !== undefined ? Number(payload.timer_seconds) : 0;
     const isRunning = !!payload.is_timer_running;
     const startedAt = payload.timer_started_at;
+    const halfSec = halfDurationSecs || 1800;
+    let baseSec = payload.timer_seconds !== undefined && payload.timer_seconds !== null ? Number(payload.timer_seconds) : halfSec;
+
+    if (baseSec === 0 && (payload.status === 'scheduled' || !isRunning)) {
+      baseSec = halfSec;
+    }
 
     setIsTimerRunning(isRunning);
     baseTimerSecondsRef.current = baseSec;
@@ -450,7 +455,8 @@ const MatchControl = () => {
       const startedMs = new Date(startedAt).getTime();
       if (!isNaN(startedMs)) {
         const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
-        setTimerSeconds(baseSec + elapsedSec);
+        const remaining = Math.max(0, baseSec - elapsedSec);
+        setTimerSeconds(remaining);
       } else {
         setTimerSeconds(baseSec);
       }
@@ -496,7 +502,7 @@ const MatchControl = () => {
     } catch (e) {}
   };
 
-  // Realtime Accurate Timer Interval
+  // Realtime Accurate Countdown Timer Interval (30:00 -> 00:00)
   useEffect(() => {
     if (isTimerRunning) {
       timerRef.current = setInterval(() => {
@@ -504,11 +510,23 @@ const MatchControl = () => {
           const startedMs = new Date(timerStartedAtRef.current).getTime();
           if (!isNaN(startedMs)) {
             const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
-            setTimerSeconds(baseTimerSecondsRef.current + elapsedSec);
+            const remaining = Math.max(0, baseTimerSecondsRef.current - elapsedSec);
+            setTimerSeconds(remaining);
+            if (remaining === 0) {
+              setIsTimerRunning(false);
+              updateTimerDBAndState(0, null, false);
+            }
             return;
           }
         }
-        setTimerSeconds(prev => prev + 1);
+        setTimerSeconds(prev => {
+          if (prev <= 1) {
+            setIsTimerRunning(false);
+            updateTimerDBAndState(0, null, false);
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
     } else if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -706,16 +724,23 @@ const MatchControl = () => {
     setEvents(data || []);
   };
 
-  // Current calculated match minute
+  // Dynamic Match Duration calculation from League / Match settings
+  const halfDurationMins = Number(match?.half_duration || leagueData?.half_duration || (match?.match_duration ? Math.round(match.match_duration / 2) : (leagueData?.match_duration ? Math.round(leagueData.match_duration / 2) : 30)));
+  const matchDurationMins = Number(match?.match_duration || leagueData?.match_duration || (halfDurationMins * 2) || 60);
+  const halfDurationSecs = halfDurationMins * 60;
+
+  // Current calculated match minute in countdown mode
   const getCurrentMinute = () => {
-    const currentMin = Math.floor(timerSeconds / 60) + 1;
-    return Math.max(1, currentMin);
+    const elapsedSec = Math.max(0, halfDurationSecs - timerSeconds);
+    const currentMin = Math.floor(elapsedSec / 60) + 1;
+    return Math.min(halfDurationMins, Math.max(1, currentMin));
   };
 
   // Format Timer MM:SS
   const formatTimer = (totalSeconds) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
+    const validSec = Math.max(0, Number(totalSeconds) || 0);
+    const mins = Math.floor(validSec / 60);
+    const secs = validSec % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -800,23 +825,20 @@ const MatchControl = () => {
 
   const toggleTimerManual = () => {
     const newRunning = !isTimerRunning;
+    let curRemaining = timerSeconds;
+    if (curRemaining <= 0) curRemaining = halfDurationSecs;
     const nowIso = newRunning ? new Date().toISOString() : null;
-    updateTimerDBAndState(timerSeconds, nowIso, newRunning);
+    updateTimerDBAndState(curRemaining, nowIso, newRunning);
   };
 
   const adjustTimerSeconds = (deltaSec) => {
-    const newSec = Math.max(0, timerSeconds + deltaSec);
+    const newSec = Math.max(0, Math.min(halfDurationSecs, timerSeconds + deltaSec));
     const nowIso = isTimerRunning ? new Date().toISOString() : null;
     updateTimerDBAndState(newSec, nowIso, isTimerRunning);
   };
 
-  // Dynamic Match Duration calculation from League / Match settings
-  const halfDurationMins = Number(match?.half_duration || leagueData?.half_duration || (match?.match_duration ? Math.round(match.match_duration / 2) : (leagueData?.match_duration ? Math.round(leagueData.match_duration / 2) : 30)));
-  const matchDurationMins = Number(match?.match_duration || leagueData?.match_duration || (halfDurationMins * 2) || 60);
-  const halfDurationSecs = halfDurationMins * 60;
-
   const resetTimerManual = () => {
-    const defaultSec = match?.status === 'second_half' ? halfDurationSecs : 0;
+    const defaultSec = halfDurationSecs;
     const nowIso = isTimerRunning ? new Date().toISOString() : null;
     updateTimerDBAndState(defaultSec, nowIso, isTimerRunning);
   };
@@ -860,16 +882,17 @@ const MatchControl = () => {
     let nowIso = new Date().toISOString();
 
     if (newStatus === 'first_half') {
-      newBaseSec = 0;
+      newBaseSec = halfDurationSecs;
       newRunning = true;
     } else if (newStatus === 'half_time') {
+      newBaseSec = timerSeconds;
       newRunning = false;
       nowIso = null;
     } else if (newStatus === 'second_half') {
-      newBaseSec = timerSeconds < halfDurationSecs ? halfDurationSecs : timerSeconds;
+      newBaseSec = halfDurationSecs;
       newRunning = true;
     } else if (newStatus === 'scheduled') {
-      newBaseSec = 0;
+      newBaseSec = halfDurationSecs;
       newRunning = false;
       nowIso = null;
     }
