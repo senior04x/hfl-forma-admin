@@ -497,7 +497,8 @@ const MatchControl = () => {
       await supabaseAdmin.from('matches').update({
         timer_seconds: baseSec,
         timer_started_at: startedAtIso,
-        is_timer_running: isRunning
+        is_timer_running: isRunning,
+        updated_at: new Date().toISOString()
       }).eq('id', id);
     } catch (e) {}
   };
