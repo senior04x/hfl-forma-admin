@@ -465,12 +465,15 @@ const MatchControl = () => {
     }
   };
 
-  // Helper to update persistent timer state across all devices
-  const updateTimerDBAndState = async (baseSec, startedAtIso, isRunning) => {
+  // Helper to update persistent timer state across all devices with zero latency
+  const updateTimerDBAndState = async (baseSec, startedAtIso, isRunning, newStatus) => {
     setTimerSeconds(baseSec);
     setIsTimerRunning(isRunning);
     baseTimerSecondsRef.current = baseSec;
     timerStartedAtRef.current = startedAtIso;
+
+    const targetId = match?.id || id;
+    const targetOrgId = match?.organization_id || orgId || null;
 
     const timerPayload = {
       timer_seconds: baseSec,
@@ -478,29 +481,30 @@ const MatchControl = () => {
       is_timer_running: isRunning,
       updated_at: new Date().toISOString()
     };
+    if (newStatus) timerPayload.status = newStatus;
+
+    const matchUpdate = {
+      timer_seconds: baseSec,
+      timer_started_at: startedAtIso,
+      is_timer_running: isRunning,
+      updated_at: new Date().toISOString()
+    };
+    if (newStatus) matchUpdate.status = newStatus;
+
+    const payloadStr = JSON.stringify(timerPayload);
+    const nameKey = `MATCH_TIMER_${targetId}`;
 
     try {
-      const nameKey = `MATCH_TIMER_${id}`;
-      const targetOrgId = match?.organization_id || orgId || null;
-      const payloadStr = JSON.stringify(timerPayload);
-      const { data: existing } = await supabaseAdmin.from('sponsors').select('id').eq('name', nameKey).maybeSingle();
-      if (existing) {
-        await supabaseAdmin.from('sponsors').update({ logo_url: payloadStr, organization_id: targetOrgId }).eq('id', existing.id);
-      } else {
-        await supabaseAdmin.from('sponsors').insert({ name: nameKey, logo_url: payloadStr, organization_id: targetOrgId });
-      }
+      await Promise.allSettled([
+        supabaseAdmin.from('matches').update(matchUpdate).eq('id', targetId),
+        supabaseAdmin.from('sponsors').upsert(
+          { name: nameKey, logo_url: payloadStr, organization_id: targetOrgId },
+          { onConflict: 'name' }
+        )
+      ]);
     } catch (e) {
-      console.warn('Sponsors timer save error:', e);
+      console.warn('Fast timer sync error:', e);
     }
-
-    try {
-      await supabaseAdmin.from('matches').update({
-        timer_seconds: baseSec,
-        timer_started_at: startedAtIso,
-        is_timer_running: isRunning,
-        updated_at: new Date().toISOString()
-      }).eq('id', id);
-    } catch (e) {}
   };
 
   // Realtime Accurate Countdown Timer Interval (30:00 -> 00:00)
@@ -878,22 +882,23 @@ const MatchControl = () => {
   };
 
   const executeStatusChange = async (newStatus) => {
+    const halfSec = halfDurationSecs || 1800;
     let newBaseSec = timerSeconds;
     let newRunning = isTimerRunning;
     let nowIso = new Date().toISOString();
 
     if (newStatus === 'first_half') {
-      newBaseSec = halfDurationSecs;
+      newBaseSec = halfSec;
       newRunning = true;
     } else if (newStatus === 'half_time') {
       newBaseSec = timerSeconds;
       newRunning = false;
       nowIso = null;
     } else if (newStatus === 'second_half') {
-      newBaseSec = halfDurationSecs;
+      newBaseSec = halfSec;
       newRunning = true;
     } else if (newStatus === 'scheduled') {
-      newBaseSec = halfDurationSecs;
+      newBaseSec = halfSec;
       newRunning = false;
       nowIso = null;
     }
@@ -905,57 +910,11 @@ const MatchControl = () => {
       is_timer_running: newRunning,
     };
 
-    // 1. Optimistically update local state immediately so UI changes without delay
+    // 1. Optimistically update local state immediately (0ms instant UI change)
     setMatch(prev => ({ ...prev, ...updatedState }));
-    setTimerSeconds(newBaseSec);
-    setIsTimerRunning(newRunning);
-    baseTimerSecondsRef.current = newBaseSec;
-    timerStartedAtRef.current = nowIso;
 
-    // 2. Persist timer to sponsors table & match
-    try {
-      await updateTimerDBAndState(newBaseSec, nowIso, newRunning);
-    } catch (tErr) {
-      console.warn('Timer DB update warning:', tErr);
-    }
-
-    // 3. Persist status to matches table
-    const targetId = match?.id || id;
-    const baseStatusUpdate = { status: newStatus };
-    const fullStatusUpdate = {
-      status: newStatus,
-      timer_seconds: newBaseSec,
-      timer_started_at: nowIso,
-      is_timer_running: newRunning,
-    };
-
-    try {
-      let { error: err1 } = await supabaseAdmin.from('matches').update(fullStatusUpdate).eq('id', targetId);
-      if (err1) {
-        await supabaseAdmin.from('matches').update(baseStatusUpdate).eq('id', targetId);
-      }
-      if (!isNaN(Number(targetId))) {
-        let { error: errNum } = await supabaseAdmin.from('matches').update(fullStatusUpdate).eq('id', Number(targetId));
-        if (errNum) {
-          await supabaseAdmin.from('matches').update(baseStatusUpdate).eq('id', Number(targetId));
-        }
-      }
-    } catch (e1) {
-      console.warn('Admin status update error:', e1);
-    }
-
-    try {
-      let { error: err2 } = await supabase.from('matches').update(fullStatusUpdate).eq('id', targetId);
-      if (err2) {
-        await supabase.from('matches').update(baseStatusUpdate).eq('id', targetId);
-      }
-      if (!isNaN(Number(targetId))) {
-        let { error: errNum2 } = await supabase.from('matches').update(fullStatusUpdate).eq('id', Number(targetId));
-        if (errNum2) {
-          await supabase.from('matches').update(baseStatusUpdate).eq('id', Number(targetId));
-        }
-      }
-    } catch (e2) {}
+    // 2. Persist in a single consolidated lightweight call (0 lag!)
+    await updateTimerDBAndState(newBaseSec, nowIso, newRunning, newStatus);
   };
 
   const requestStatusUpdate = (newStatus, message) => {
