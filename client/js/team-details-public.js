@@ -78,27 +78,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             tdLeagues.innerHTML = badgesHTML;
         }
 
-        // Fetch Approved Players
+        // Fetch Approved Players (excluding archived)
         const { data: playersData, error: playersError } = await db
             .from('applications')
-            .select('id, first_name, last_name, photo_url, player_number, position, birth_date')
+            .select('id, first_name, last_name, photo_url, player_number, position, birth_date, is_archived')
             .eq('team_id', teamId)
             .eq('status', 'approved');
 
         if (playersError) throw playersError;
 
+        const activePlayers = (playersData || []).filter(p => !p.is_archived);
+
         loadingEl.classList.add('hidden');
         teamContent.classList.remove('hidden');
 
-        document.getElementById('tdCount').textContent = `${playersData ? playersData.length : 0} ta o'yinchi`;
+        document.getElementById('tdCount').textContent = `${activePlayers.length} ta o'yinchi`;
 
-        if (!playersData || playersData.length === 0) {
+        if (activePlayers.length === 0) {
             playersGrid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-muted);">Hali tasdiqlangan o\'yinchilar yo\'q.</div>';
             return;
         }
 
         // Render Players
-        playersData.forEach(player => {
+        activePlayers.forEach(player => {
             const card = document.createElement('div');
             card.className = 'player-card-public';
             

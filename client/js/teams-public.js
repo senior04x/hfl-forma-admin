@@ -8,25 +8,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         const currentOrgId = (window.currentOrg && window.currentOrg.id) ? window.currentOrg.id : 1;
 
-        // Fetch approved teams from Supabase
+        // Fetch approved teams from Supabase (excluding archived)
         const { data, error } = await db
             .from('teams')
-            .select('id, name, logo_url, league, organization_id')
+            .select('id, name, logo_url, league, organization_id, is_archived')
             .eq('organization_id', currentOrgId)
             .in('status', ['approved', 'partially_approved'])
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
+        const activeTeams = (data || []).filter(t => !t.is_archived);
+
         loadingEl.classList.add('hidden');
         teamsGrid.classList.remove('hidden');
 
-        if (!data || data.length === 0) {
+        if (activeTeams.length === 0) {
             teamsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">Hali tasdiqlangan jamoalar mavjud emas.</div>';
             return;
         }
 
-        window.allTeamsData = data;
+        window.allTeamsData = activeTeams;
 
         // Temporary fallback: return original url to fix broken images
         function optimizeImage(url) {

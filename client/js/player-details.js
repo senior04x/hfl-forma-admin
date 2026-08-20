@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .eq('id', playerId)
             .single();
 
-        if (playerError || !player) {
+        if (playerError || !player || player.is_archived) {
             throw new Error('O\'yinchi topilmadi');
         }
 
@@ -92,17 +92,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.location.href = teamUrl;
             });
 
-            // Fetch teammates
+            // Fetch teammates (excluding archived)
             const { data: teammates, error: tmError } = await db
                 .from('applications')
-                .select('id, first_name, last_name, full_name, photo_url, position, player_number')
+                .select('id, first_name, last_name, full_name, photo_url, position, player_number, is_archived')
                 .eq('team_id', player.team_id)
                 .eq('status', 'approved')
                 .neq('id', playerId);
 
-            if (!tmError && teammates && teammates.length > 0) {
+            const activeTeammates = (teammates || []).filter(tm => !tm.is_archived);
+
+            if (!tmError && activeTeammates && activeTeammates.length > 0) {
                 const grid = document.getElementById('teammatesGrid');
-                grid.innerHTML = teammates.map(tm => {
+                grid.innerHTML = activeTeammates.map(tm => {
                     const tmName = tm.full_name || `${tm.first_name || ''} ${tm.last_name || ''}`.trim() || 'Futbolchi';
                     const tmPhoto = tm.photo_url || 'https://via.placeholder.com/80x80?text=%E2%9A%BD';
                     const tmPos = tm.position || 'Futbolchi';

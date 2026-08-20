@@ -313,8 +313,8 @@ function initNavbarSearch() {
             ]);
 
             cachedData = {
-                players: pRes.data || [],
-                teams: tRes.data || [],
+                players: (pRes.data || []).filter(p => !p.is_archived && p.status === 'approved'),
+                teams: (tRes.data || []).filter(t => !t.is_archived && ['approved', 'partially_approved'].includes(t.status)),
                 leagues: lRes.data || []
             };
             return cachedData;

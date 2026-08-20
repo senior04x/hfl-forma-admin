@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentOrgId = (window.currentOrg && window.currentOrg.id) ? window.currentOrg.id : 1;
             const { data, error } = await db
                 .from('teams')
-                .select('id, name, league, organization_id')
+                .select('id, name, league, organization_id, is_archived')
                 .eq('organization_id', currentOrgId)
                 .in('status', ['approved', 'partially_approved'])
                 .order('name');
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) throw error;
             
             if (data) {
-                allTeams = data;
+                allTeams = data.filter(t => !t.is_archived);
             }
         } catch (err) {
             console.error('Error fetching teams:', err);
