@@ -244,11 +244,9 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
 
   const handleConfirmDelete = async () => {
     try {
-      try {
-        await supabaseAdmin.from('applications').update({ is_archived: true, status: 'archived' }).eq('id', player.id);
-      } catch (e) {
-        await supabaseAdmin.from('applications').update({ status: 'archived' }).eq('id', player.id);
-      }
+      const { error: appErr } = await supabaseAdmin.from('applications').update({ is_archived: true }).eq('id', player.id);
+      if (appErr) throw appErr;
+
       try {
         await supabaseAdmin.from('players').update({ is_archived: true }).eq('id', player.id);
       } catch (e) {}
@@ -258,7 +256,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
       onClose();
     } catch (error) {
       console.error(error);
-      alert("Arxivlashda xatolik yuz berdi");
+      alert("Arxivlashda xatolik yuz berdi: " + (error.message || ''));
     }
   };
 

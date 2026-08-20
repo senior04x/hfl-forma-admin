@@ -105,11 +105,18 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
     try {
       const { error } = await supabaseAdmin.from('teams').update({ is_archived: true }).eq('id', id);
       if (error) throw error;
+
+      // Also cascade archive to all players of this team
+      try {
+        await supabaseAdmin.from('applications').update({ is_archived: true }).eq('team_id', id);
+        await supabaseAdmin.from('players').update({ is_archived: true }).eq('team_id', id);
+      } catch (e) {}
+
       fetchTeams();
       onStatusChange();
     } catch (error) {
       console.error('Error deleting team:', error);
-      alert("Jamoani o'chirishda xatolik yuz berdi");
+      alert("Jamoani arxivlashda xatolik yuz berdi: " + (error.message || ''));
       fetchTeams();
     } finally {
       setDeleteTargetId(null);

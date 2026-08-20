@@ -176,11 +176,9 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
     const id = deleteTargetId;
     setPlayers(prev => prev.filter(p => p.id !== id));
     try {
-      try {
-        await supabaseAdmin.from('applications').update({ is_archived: true, status: 'archived' }).eq('id', id);
-      } catch (e) {
-        await supabaseAdmin.from('applications').update({ status: 'archived' }).eq('id', id);
-      }
+      const { error: appErr } = await supabaseAdmin.from('applications').update({ is_archived: true }).eq('id', id);
+      if (appErr) throw appErr;
+
       try {
         await supabaseAdmin.from('players').update({ is_archived: true }).eq('id', id);
       } catch (e) {}
@@ -189,7 +187,7 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
       onStatusChange();
     } catch (error) {
       console.error('Error archiving player:', error);
-      alert("O'yinchini arxivlashda xatolik yuz berdi");
+      alert("O'yinchini arxivlashda xatolik yuz berdi: " + (error.message || ''));
       fetchPlayers(false);
     } finally {
       setDeleteTargetId(null);
@@ -199,11 +197,9 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
   const handleRestorePlayer = async (id) => {
     setPlayers(prev => prev.filter(p => p.id !== id));
     try {
-      try {
-        await supabaseAdmin.from('applications').update({ is_archived: false, status: 'approved' }).eq('id', id);
-      } catch (e) {
-        await supabaseAdmin.from('applications').update({ status: 'approved' }).eq('id', id);
-      }
+      const { error: appErr } = await supabaseAdmin.from('applications').update({ is_archived: false }).eq('id', id);
+      if (appErr) throw appErr;
+
       try {
         await supabaseAdmin.from('players').update({ is_archived: false }).eq('id', id);
       } catch (e) {}
@@ -212,7 +208,7 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
       onStatusChange();
     } catch (error) {
       console.error('Error restoring player:', error);
-      alert("O'yinchini arxivdan qaytarishda xatolik yuz berdi");
+      alert("O'yinchini arxivdan qaytarishda xatolik yuz berdi: " + (error.message || ''));
       fetchPlayers(false);
     }
   };

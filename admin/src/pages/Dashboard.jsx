@@ -162,17 +162,18 @@ const Dashboard = () => {
 
       if (currentTab === 'players') {
         const [allApps, allTeams] = await Promise.all([
-          fetchAllApplications('id, status, team_id, organization_id, comment'),
-          fetchAllTeams('id, league, organization_id')
+          fetchAllApplications('id, status, team_id, organization_id, comment, is_archived'),
+          fetchAllTeams('id, league, organization_id, is_archived')
         ]);
 
         const validTeamIds = new Set(
           (allTeams || [])
-            .filter(t => t.organization_id === orgId || activeLeagueNames.includes(t.league))
+            .filter(t => !t.is_archived && (t.organization_id === orgId || activeLeagueNames.includes(t.league)))
             .map(t => t.id)
         );
 
         const filteredApps = (allApps || [])
+          .filter(app => !app.is_archived)
           .filter(app => !app.comment || !app.comment.includes('[PROFILE_UPDATE]'))
           .filter(app => 
             app.organization_id === orgId || 
@@ -194,9 +195,9 @@ const Dashboard = () => {
 
         setStats({ total, pending, approved, rejected });
       } else {
-        const allTeams = await fetchAllTeams('id, status, league, organization_id');
+        const allTeams = await fetchAllTeams('id, status, league, organization_id, is_archived');
         const filteredTeams = (allTeams || []).filter(t => 
-          t.organization_id === orgId || activeLeagueNames.includes(t.league)
+          !t.is_archived && (t.organization_id === orgId || activeLeagueNames.includes(t.league))
         );
 
         let total = filteredTeams.length;

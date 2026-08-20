@@ -41,7 +41,7 @@ export default function ArchivePage() {
       const appsData = await fetchAllApplications('*');
       const archivedP = (appsData || []).filter(app => {
         if (orgId && app.organization_id !== orgId) return false;
-        return app.is_archived === true || app.status === 'archived';
+        return app.is_archived === true;
       });
       setArchivedPlayers(archivedP);
     } catch (e) {
@@ -56,22 +56,27 @@ export default function ArchivePage() {
     try {
       const { error } = await supabaseAdmin.from('teams').update({ is_archived: false }).eq('id', teamId);
       if (error) throw error;
+
+      // Also cascade unarchive to all players of this team
+      try {
+        await supabaseAdmin.from('applications').update({ is_archived: false }).eq('team_id', teamId);
+        await supabaseAdmin.from('players').update({ is_archived: false }).eq('team_id', teamId);
+      } catch (e) {}
+
       setArchivedTeams(prev => prev.filter(t => t.id !== teamId));
       alert("Jamoa muvaffaqiyatli qaytarildi! ⚽");
     } catch (e) {
       console.error('Error restoring team:', e);
-      alert("Jamoani qaytarishda xatolik yuz berdi");
+      alert("Jamoani qaytarishda xatolik yuz berdi: " + (e.message || ''));
     }
   };
 
   const handleRestorePlayer = async (playerId) => {
     if (!window.confirm("Ushbu o'yinchini arxivdan qaytarishni tasdiqlaysizmi?")) return;
     try {
-      try {
-        await supabaseAdmin.from('applications').update({ is_archived: false, status: 'approved' }).eq('id', playerId);
-      } catch (e) {
-        await supabaseAdmin.from('applications').update({ status: 'approved' }).eq('id', playerId);
-      }
+      const { error: appErr } = await supabaseAdmin.from('applications').update({ is_archived: false }).eq('id', playerId);
+      if (appErr) throw appErr;
+
       try {
         await supabaseAdmin.from('players').update({ is_archived: false }).eq('id', playerId);
       } catch (e) {}
@@ -80,7 +85,7 @@ export default function ArchivePage() {
       alert("O'yinchi muvaffaqiyatli qaytarildi! 👤");
     } catch (e) {
       console.error('Error restoring player:', e);
-      alert("O'yinchini qaytarishda xatolik yuz berdi");
+      alert("O'yinchini qaytarishda xatolik yuz berdi: " + (e.message || ''));
     }
   };
 

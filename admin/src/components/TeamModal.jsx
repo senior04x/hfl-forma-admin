@@ -217,13 +217,21 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
 
   const handleConfirmDelete = async () => {
     try {
-      await supabaseAdmin.from('teams').update({ is_archived: true }).eq('id', team.id);
+      const { error } = await supabaseAdmin.from('teams').update({ is_archived: true }).eq('id', team.id);
+      if (error) throw error;
+
+      // Also cascade archive to all players of this team
+      try {
+        await supabaseAdmin.from('applications').update({ is_archived: true }).eq('team_id', team.id);
+        await supabaseAdmin.from('players').update({ is_archived: true }).eq('team_id', team.id);
+      } catch (e) {}
+
       onRefresh();
       setShowDeleteModal(false);
       onClose();
     } catch (error) {
       console.error(error);
-      alert("Jamoani arxivlashda xatolik yuz berdi");
+      alert("Jamoani arxivlashda xatolik yuz berdi: " + (error.message || ''));
     }
   };
 
