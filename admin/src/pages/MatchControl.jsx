@@ -1168,21 +1168,33 @@ const MatchControl = () => {
   const handleDeleteEvent = async (event) => {
     if (!window.confirm("Bu voqeani o'chirishni tasdiqlaysizmi?")) return;
 
-    const { error } = await supabaseAdmin.from('match_events').delete().eq('id', event.id);
-    if (!error) {
-      if (event.event_type === 'goal') {
-        const isHome = event.team_id === match.home_team_id;
-        const newHomeScore = Math.max(0, (match.home_score || 0) - (isHome ? 1 : 0));
-        const newAwayScore = Math.max(0, (match.away_score || 0) - (isHome ? 0 : 1));
-        
+    // 1. Instant optimistic local UI update
+    setEvents(prev => prev.filter(e => String(e.id) !== String(event.id)));
+
+    const isGoal = event.event_type === 'goal' || event.type === 'goal';
+    const isHome = String(event.team_id) === String(match?.home_team_id);
+    let newHomeScore = match?.home_score || 0;
+    let newAwayScore = match?.away_score || 0;
+
+    if (isGoal) {
+      newHomeScore = Math.max(0, newHomeScore - (isHome ? 1 : 0));
+      newAwayScore = Math.max(0, newAwayScore - (isHome ? 0 : 1));
+      setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
+    }
+
+    try {
+      // 2. Direct delete via supabaseAdmin
+      await supabaseAdmin.from('match_events').delete().eq('id', event.id);
+
+      if (isGoal) {
         await supabaseAdmin.from('matches').update({
           home_score: newHomeScore,
-          away_score: newAwayScore
+          away_score: newAwayScore,
+          updated_at: new Date().toISOString()
         }).eq('id', id);
-
-        setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
       }
-      await fetchEvents();
+    } catch (err) {
+      console.error('Delete event error:', err);
     }
   };
 
