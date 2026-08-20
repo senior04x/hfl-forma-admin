@@ -465,8 +465,8 @@ const MatchControl = () => {
     }
   };
 
-  // Helper to update persistent timer state across all devices with zero latency
-  const updateTimerDBAndState = async (baseSec, startedAtIso, isRunning, newStatus) => {
+  // Helper to update persistent timer state across all devices with zero latency (Non-blocking background DB write)
+  const updateTimerDBAndState = (baseSec, startedAtIso, isRunning, newStatus) => {
     setTimerSeconds(baseSec);
     setIsTimerRunning(isRunning);
     baseTimerSecondsRef.current = baseSec;
@@ -483,55 +483,58 @@ const MatchControl = () => {
       updated_at: new Date().toISOString()
     };
 
-    const matchUpdate = {
-      updated_at: new Date().toISOString()
-    };
-    if (newStatus) matchUpdate.status = newStatus;
-
-    const payloadStr = JSON.stringify(timerPayload);
-    const nameKey = `MATCH_TIMER_${targetId}`;
+    // 1. Fast instant broadcast (0ms latency for OBS / browser)
+    try {
+      if (broadcastChannelRef.current?.bc) {
+        broadcastChannelRef.current.bc.postMessage(timerPayload);
+      }
+    } catch (bcErr) {}
 
     try {
-      if (targetId) {
-        await supabaseAdmin.from('matches').update(matchUpdate).eq('id', targetId);
+      if (broadcastChannelRef.current?.fastChannel) {
+        broadcastChannelRef.current.fastChannel.send({
+          type: 'broadcast',
+          event: 'timer_update',
+          payload: timerPayload
+        });
       }
+    } catch (rtErr) {}
 
-      // Fast instant broadcast (0ms latency for OBS / browser)
+    // 2. Non-blocking Background DB Persistence
+    (async () => {
       try {
-        if (broadcastChannelRef.current?.bc) {
-          broadcastChannelRef.current.bc.postMessage(timerPayload);
+        const matchUpdate = {
+          updated_at: new Date().toISOString()
+        };
+        if (newStatus) matchUpdate.status = newStatus;
+
+        const payloadStr = JSON.stringify(timerPayload);
+        const nameKey = `MATCH_TIMER_${targetId}`;
+
+        if (targetId) {
+          await supabaseAdmin.from('matches').update(matchUpdate).eq('id', targetId);
         }
-      } catch (bcErr) {}
 
-      try {
-        if (broadcastChannelRef.current?.fastChannel) {
-          broadcastChannelRef.current.fastChannel.send({
-            type: 'broadcast',
-            event: 'timer_update',
-            payload: timerPayload
-          });
+        const { data: existingTimer } = await supabaseAdmin
+          .from('sponsors')
+          .select('id')
+          .eq('name', nameKey)
+          .maybeSingle();
+
+        if (existingTimer) {
+          await supabaseAdmin.from('sponsors').update({ logo_url: payloadStr }).eq('id', existingTimer.id);
+        } else {
+          await supabaseAdmin.from('sponsors').insert([{ 
+            name: nameKey, 
+            logo_url: payloadStr, 
+            organization_id: targetOrgId, 
+            is_main: false 
+          }]);
         }
-      } catch (rtErr) {}
-
-      const { data: existingTimer } = await supabaseAdmin
-        .from('sponsors')
-        .select('id')
-        .eq('name', nameKey)
-        .maybeSingle();
-
-      if (existingTimer) {
-        await supabaseAdmin.from('sponsors').update({ logo_url: payloadStr }).eq('id', existingTimer.id);
-      } else {
-        await supabaseAdmin.from('sponsors').insert([{ 
-          name: nameKey, 
-          logo_url: payloadStr, 
-          organization_id: targetOrgId, 
-          is_main: false 
-        }]);
+      } catch (e) {
+        console.warn('Fast timer sync error:', e);
       }
-    } catch (e) {
-      console.warn('Fast timer sync error:', e);
-    }
+    })();
   };
 
   // Realtime Accurate Countdown Timer Interval (30:00 -> 00:00)
