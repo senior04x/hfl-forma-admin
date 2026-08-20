@@ -538,7 +538,11 @@ const ObsScoreboard = () => {
           <div className="obs-league-name">
             <div className="obs-league-content">
               {displayMatch.league ? displayMatch.league.toUpperCase() : 'HFL'}
-              {statusText && <span className="obs-status-text"> • {statusText} ({formatTimer(timerSeconds)})</span>}
+              {statusText && (
+                <span className="obs-status-text">
+                  {' '}• {statusText} (<span className={`obs-timer-display ${!isTimerRunning ? 'obs-timer-paused' : ''}`}>{formatTimer(timerSeconds)}</span>)
+                </span>
+              )}
             </div>
           </div>
         </div>
