@@ -816,15 +816,35 @@ const MatchControl = () => {
   const matchDurationMins = Number(match?.match_duration || leagueData?.match_duration || (halfDurationMins * 2) || 60);
   const halfDurationSecs = halfDurationMins * 60;
 
-  // Current calculated match minute in countdown mode
-  const getCurrentMinute = () => {
-    const elapsedSec = Math.max(0, halfDurationSecs - timerSeconds);
-    const currentMin = Math.floor(elapsedSec / 60) + 1;
-    return Math.min(halfDurationMins, Math.max(1, currentMin));
+  // Calculate elapsed time (Count-UP: to'g'ri sanash) for Admin Panel Display
+  const getElapsedSeconds = () => {
+    if (!match || match.status === 'scheduled' || match.status === 'not_started' || match.status === 'pending' || match.status === 'upcoming') {
+      return 0;
+    }
+    if (match.status === 'half_time' || match.status === 'break') {
+      return halfDurationSecs;
+    }
+    if (match.status === 'second_half' || match.status === 'extra_time') {
+      const secondHalfElapsed = Math.max(0, halfDurationSecs - timerSeconds);
+      return halfDurationSecs + secondHalfElapsed;
+    }
+    if (match.status === 'finished') {
+      return matchDurationMins * 60;
+    }
+    // first_half / default
+    return Math.max(0, halfDurationSecs - timerSeconds);
   };
 
-  // Format Timer MM:SS
-  const formatTimer = (totalSeconds) => {
+  // Current calculated match minute (Count-UP: 1' dan 60' gacha)
+  const getCurrentMinute = () => {
+    const elapsedSec = getElapsedSeconds();
+    const currentMin = Math.floor(elapsedSec / 60) + 1;
+    return Math.min(matchDurationMins, Math.max(1, currentMin));
+  };
+
+  // Format Timer MM:SS (Count-UP display for Admin Panel)
+  const formatTimer = (rawSeconds) => {
+    const totalSeconds = rawSeconds !== undefined && rawSeconds !== null ? getElapsedSeconds() : getElapsedSeconds();
     const validSec = Math.max(0, Number(totalSeconds) || 0);
     const mins = Math.floor(validSec / 60);
     const secs = validSec % 60;

@@ -519,8 +519,29 @@ const ObsScoreboard = () => {
     return '';
   };
 
-  // Format Timer MM:SS
-  const formatTimer = (totalSeconds) => {
+  // Calculate elapsed time (Count-UP: to'g'ri sanash) for OBS Scoreboard Display
+  const getElapsedSeconds = () => {
+    const halfSec = getHalfDurationSecs(match, leagueData);
+    if (!match || match.status === 'scheduled' || match.status === 'not_started' || match.status === 'pending') {
+      return 0;
+    }
+    if (match.status === 'half_time' || match.status === 'break') {
+      return halfSec;
+    }
+    if (match.status === 'second_half' || match.status === 'extra_time') {
+      const secondHalfElapsed = Math.max(0, halfSec - timerSeconds);
+      return halfSec + secondHalfElapsed;
+    }
+    if (match.status === 'finished') {
+      return halfSec * 2;
+    }
+    // first_half / default
+    return Math.max(0, halfSec - timerSeconds);
+  };
+
+  // Format Timer MM:SS (Count-UP display for OBS)
+  const formatTimer = (rawSeconds) => {
+    const totalSeconds = getElapsedSeconds();
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
