@@ -34,16 +34,9 @@ const ObsScoreboard = () => {
     if (!id) return;
 
     const queryParams = new URLSearchParams(window.location.search);
-    const targetOrgId = queryParams.get('org_id');
+    const targetOrgId = queryParams.get('org_id') || 1;
 
-    // If id is stream1 or stream2, require a valid Organization Slug or Org ID!
-    if (id === 'stream1' || id === 'stream2') {
-      if (!targetOrgId) {
-        setActiveMatchId(null);
-        setMatch(null);
-        return;
-      }
-    } else {
+    if (id !== 'stream1' && id !== 'stream2') {
       // Direct Match ID
       setActiveMatchId(id);
       return;
@@ -77,9 +70,9 @@ const ObsScoreboard = () => {
         const fieldMatches = data.filter(isMatchForThisStream);
         const candidateList = fieldMatches.length > 0 ? fieldMatches : data;
 
-        // 1. Prefer currently active playing match on this field ('first_half', 'second_half')
+        // 1. Prefer currently active playing match on this field ('first_half', 'second_half', 'half_time')
         let selectedMatch = candidateList.find((m) =>
-          ['first_half', 'second_half'].includes(m.status)
+          ['first_half', 'second_half', 'half_time'].includes(m.status)
         );
 
         // 2. Fallback to latest match on this field so realtime connection stays active
@@ -384,7 +377,10 @@ const ObsScoreboard = () => {
     }
   };
 
-  const isPlayingStatus = match && ['first_half', 'second_half'].includes(match.status);
+  const isDirectMatch = Boolean(id && id !== 'stream1' && id !== 'stream2');
+  const isPlayingStatus = Boolean(
+    match && (isDirectMatch || ['first_half', 'second_half', 'half_time'].includes(match.status) || isTimerRunning)
+  );
 
   const [shouldRender, setShouldRender] = useState(false);
   const [isExiting, setIsExiting] = useState(false);

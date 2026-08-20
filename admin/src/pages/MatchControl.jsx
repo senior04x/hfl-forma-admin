@@ -472,21 +472,15 @@ const MatchControl = () => {
     baseTimerSecondsRef.current = baseSec;
     timerStartedAtRef.current = startedAtIso;
 
-    const targetId = match?.id || id;
-    const targetOrgId = match?.organization_id || orgId || null;
-
     const timerPayload = {
       timer_seconds: baseSec,
       timer_started_at: startedAtIso,
       is_timer_running: isRunning,
+      status: newStatus || match?.status,
       updated_at: new Date().toISOString()
     };
-    if (newStatus) timerPayload.status = newStatus;
 
     const matchUpdate = {
-      timer_seconds: baseSec,
-      timer_started_at: startedAtIso,
-      is_timer_running: isRunning,
       updated_at: new Date().toISOString()
     };
     if (newStatus) matchUpdate.status = newStatus;
@@ -958,47 +952,29 @@ const MatchControl = () => {
             status: 'finished',
             home_score: finalHomeScore,
             away_score: finalAwayScore,
+            updated_at: new Date().toISOString()
           };
 
           const targetId = match?.id || id;
 
           setMatch(prev => ({ 
             ...prev, 
-            ...finishData,
+            ...baseFinishData,
+            timer_seconds: timerSeconds,
+            timer_started_at: null,
+            is_timer_running: false,
             home_team: homeTeam,
             away_team: awayTeam
           }));
           setIsTimerRunning(false);
 
-          await updateTimerDBAndState(timerSeconds, null, false);
+          await updateTimerDBAndState(timerSeconds, null, false, 'finished');
 
           try {
-            const { error: fErr1 } = await supabaseAdmin.from('matches').update(finishData).eq('id', targetId);
-            if (fErr1) {
-              await supabaseAdmin.from('matches').update(baseFinishData).eq('id', targetId);
-            }
-            if (!isNaN(Number(targetId))) {
-              let { error: fErrNum } = await supabaseAdmin.from('matches').update(finishData).eq('id', Number(targetId));
-              if (fErrNum) {
-                await supabaseAdmin.from('matches').update(baseFinishData).eq('id', Number(targetId));
-              }
-            }
+            await supabaseAdmin.from('matches').update(baseFinishData).eq('id', targetId);
           } catch (errAdmin) {
             console.warn('Admin finish update error:', errAdmin);
           }
-
-          try {
-            const { error: fErr2 } = await supabase.from('matches').update(finishData).eq('id', targetId);
-            if (fErr2) {
-              await supabase.from('matches').update(baseFinishData).eq('id', targetId);
-            }
-            if (!isNaN(Number(targetId))) {
-              let { error: fErrNum2 } = await supabase.from('matches').update(finishData).eq('id', Number(targetId));
-              if (fErrNum2) {
-                await supabase.from('matches').update(baseFinishData).eq('id', Number(targetId));
-              }
-            }
-          } catch (e) {}
 
           const updatedMatch = { 
             ...match, 
