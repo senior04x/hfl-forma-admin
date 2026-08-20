@@ -433,7 +433,7 @@ const ObsScoreboard = () => {
 
   const isDirectMatch = Boolean(id && id !== 'stream1' && id !== 'stream2');
   const isPlayingStatus = Boolean(
-    match && (isDirectMatch || ['first_half', 'second_half', 'half_time'].includes(match.status) || isTimerRunning)
+    match && ['first_half', 'second_half'].includes(match.status)
   );
 
   const [shouldRender, setShouldRender] = useState(false);
