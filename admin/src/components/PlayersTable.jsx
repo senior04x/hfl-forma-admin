@@ -457,11 +457,11 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
         />
       )}
 
-      {/* 5s Countdown Delete Confirm Modal */}
+      {/* 3s Countdown Archive Confirm Modal */}
       <DeleteConfirmModal
         isOpen={!!deleteTargetId}
-        title="O'yinchini o'chirish"
-        message="O'chirsangiz barcha ma'lumotlar o'chib ketadi!"
+        title="O'yinchini arxivlash"
+        message="O'yinchi asosiy ro'yxatdan yashirilib, Arxiv bo'limiga o'tkaziladi."
         onConfirm={handleConfirmDelete}
         onClose={() => setDeleteTargetId(null)}
       />

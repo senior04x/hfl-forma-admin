@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, supabaseAdmin } from '../supabaseClient';
-import { X, Trash2, Save, Eye, Crop, Clock } from 'lucide-react';
+import { X, Trash2, Save, Eye, Crop, Clock, Archive } from 'lucide-react';
 import ImageCropperModal from './ImageCropperModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import TransferClosedModal from './TransferClosedModal';
@@ -244,13 +244,21 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
 
   const handleConfirmDelete = async () => {
     try {
-      await supabase.from('applications').delete().eq('id', player.id);
+      try {
+        await supabaseAdmin.from('applications').update({ is_archived: true, status: 'archived' }).eq('id', player.id);
+      } catch (e) {
+        await supabaseAdmin.from('applications').update({ status: 'archived' }).eq('id', player.id);
+      }
+      try {
+        await supabaseAdmin.from('players').update({ is_archived: true }).eq('id', player.id);
+      } catch (e) {}
+
       onRefresh();
       setShowDeleteModal(false);
       onClose();
     } catch (error) {
       console.error(error);
-      alert("O'chirishda xatolik yuz berdi");
+      alert("Arxivlashda xatolik yuz berdi");
     }
   };
 
@@ -332,7 +340,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
                   <option value="rejected">Rad etildi</option>
                 </select>
                 <button className="btn-edit" onClick={handleStartEdit}>Tahrirlash</button>
-                <button className="btn-delete" onClick={() => setShowDeleteModal(true)}><Trash2 size={16} /> O'chirish</button>
+                <button className="btn-delete" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)' }} onClick={() => setShowDeleteModal(true)}><Archive size={16} /> Arxivlash</button>
               </div>
             </div>
           ) : (
@@ -477,11 +485,11 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
         />
       )}
 
-      {/* 5s Countdown Delete Confirm Modal */}
+      {/* 3s Countdown Archive Confirm Modal */}
       <DeleteConfirmModal
         isOpen={showDeleteModal}
-        title="O'yinchini o'chirish"
-        message="O'chirsangiz o'yinchining barcha ma'lumotlari o'chib ketadi!"
+        title="O'yinchini arxivlash"
+        message="O'yinchi asosiy ro'yxatdan yashirilib, Arxiv bo'limiga o'tkaziladi."
         onConfirm={handleConfirmDelete}
         onClose={() => setShowDeleteModal(false)}
       />

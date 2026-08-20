@@ -291,11 +291,11 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
         />
       )}
 
-      {/* 5s Countdown Delete Confirm Modal */}
+      {/* 3s Countdown Archive Confirm Modal */}
       <DeleteConfirmModal
         isOpen={!!deleteTargetId}
-        title="Jamoani o'chirish"
-        message="O'chirsangiz barcha ma'lumotlar o'chib ketadi!"
+        title="Jamoani arxivlash"
+        message="Jamoa va uning tarkibi asosiy ro'yxatdan yashirilib, Arxiv bo'limiga o'tkaziladi."
         onConfirm={handleConfirmDelete}
         onClose={() => setDeleteTargetId(null)}
       />

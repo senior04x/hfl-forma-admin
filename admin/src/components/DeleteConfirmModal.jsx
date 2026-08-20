@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { Archive, X } from 'lucide-react';
 import './DeleteConfirmModal.css';
 
-const DeleteConfirmModal = ({ isOpen, title = "O'chirishni tasdiqlang", message = "O'chirsangiz barcha ma'lumotlar o'chib ketadi!", onConfirm, onClose }) => {
-  const [countdown, setCountdown] = useState(5);
+const DeleteConfirmModal = ({ 
+  isOpen, 
+  title = "Arxivlashni tasdiqlang", 
+  message = "Ushbu ma'lumot arxivga o'tkaziladi va asosiy ro'yxatdan yashiriladi.", 
+  onConfirm, 
+  onClose 
+}) => {
+  const [countdown, setCountdown] = useState(3);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
-    setCountdown(5);
+    setCountdown(3);
     setLoading(false);
 
     const timer = setInterval(() => {
@@ -46,14 +52,14 @@ const DeleteConfirmModal = ({ isOpen, title = "O'chirishni tasdiqlang", message 
         </button>
 
         <div className="delete-modal-icon-wrapper">
-          <AlertTriangle size={36} className="delete-warning-icon" />
+          <Archive size={32} className="delete-warning-icon" />
         </div>
 
         <h3 className="delete-modal-title">{title}</h3>
         <p className="delete-modal-message">{message}</p>
 
         <div className="delete-modal-notice">
-          <p>⚠️ Ushbu harakatni ortga qaytarib bo'lmaydi!</p>
+          <p>📦 Barcha o'yin ma'lumotlari saqlanadi. Uni istalgan vaqtda <b>Arxiv</b> bo'limidan qaytarishingiz mumkin.</p>
         </div>
 
         <div className="delete-modal-actions">
@@ -66,8 +72,8 @@ const DeleteConfirmModal = ({ isOpen, title = "O'chirishni tasdiqlang", message 
             onClick={handleConfirm}
             disabled={countdown > 0 || loading}
           >
-            <Trash2 size={18} />
-            {loading ? "O'chirilmoqda..." : countdown > 0 ? `O'chirish (${countdown}s)` : "O'chirish"}
+            <Archive size={18} />
+            {loading ? "Arxivlanmoqda..." : countdown > 0 ? `Arxivlash (${countdown}s)` : "Arxivlash"}
           </button>
         </div>
       </div>

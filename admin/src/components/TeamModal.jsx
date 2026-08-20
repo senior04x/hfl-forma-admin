@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues } from '../utils/leagueUtils';
-import { X, Trash2, Save, Eye, Crop, Plus, Check, Trophy, Clock } from 'lucide-react';
+import { X, Trash2, Save, Eye, Crop, Plus, Check, Trophy, Clock, Archive } from 'lucide-react';
 import PlayerModal from './PlayerModal';
 import ImageCropperModal from './ImageCropperModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
@@ -173,13 +173,13 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
     if (window.confirm("Jamoaning barcha o'yinchilari holati o'zgartiriladi. Tasdiqlaysizmi?")) {
       try {
         setStatus(newStatus);
-        await supabase.from('teams').update({ status: newStatus }).eq('id', team.id);
+        await supabaseAdmin.from('teams').update({ status: newStatus }).eq('id', team.id);
         
         let pStatus = 'pending';
         if (newStatus === 'approved') pStatus = 'approved';
         if (newStatus === 'rejected') pStatus = 'rejected';
         
-        await supabase.from('applications').update({ status: pStatus }).eq('team_id', team.id);
+        await supabaseAdmin.from('applications').update({ status: pStatus }).eq('team_id', team.id);
         
         fetchPlayers();
         onRefresh();
@@ -202,7 +202,7 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
 
       if (formData.captain_phone !== undefined) updateData.captain_phone = formData.captain_phone;
 
-      const { error } = await supabase.from('teams').update(updateData).eq('id', team.id);
+      const { error } = await supabaseAdmin.from('teams').update(updateData).eq('id', team.id);
       if (error) throw error;
 
       onRefresh();
@@ -217,13 +217,13 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
 
   const handleConfirmDelete = async () => {
     try {
-      await supabase.from('teams').update({ is_archived: true }).eq('id', team.id);
+      await supabaseAdmin.from('teams').update({ is_archived: true }).eq('id', team.id);
       onRefresh();
       setShowDeleteModal(false);
       onClose();
     } catch (error) {
       console.error(error);
-      alert("Jamoani o'chirishda xatolik yuz berdi");
+      alert("Jamoani arxivlashda xatolik yuz berdi");
     }
   };
 
@@ -327,7 +327,7 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
                   <option value="rejected">Rad etish</option>
                 </select>
                 <button className="btn-edit" onClick={() => setCurrentMode('edit')}>Tahrirlash</button>
-                <button className="btn-delete" onClick={() => setShowDeleteModal(true)}><Trash2 size={18} /> O'chirish</button>
+                <button className="btn-delete" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)' }} onClick={() => setShowDeleteModal(true)}><Archive size={18} /> Arxivlash</button>
               </div>
             </div>
           ) : (
@@ -437,11 +437,11 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
         />
       )}
 
-      {/* 5s Countdown Delete Confirm Modal */}
+      {/* 3s Countdown Archive Confirm Modal */}
       <DeleteConfirmModal
         isOpen={showDeleteModal}
-        title="Jamoani o'chirish"
-        message="O'chirsangiz jamoaning barcha ma'lumotlari hamda o'yinchilari o'chib ketadi!"
+        title="Jamoani arxivlash"
+        message="Jamoa va uning tarkibi asosiy ro'yxatdan yashirilib, Arxiv bo'limiga o'tkaziladi."
         onConfirm={handleConfirmDelete}
         onClose={() => setShowDeleteModal(false)}
       />

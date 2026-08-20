@@ -12,14 +12,14 @@
 
 .delete-modal-card {
     background: #141922;
-    border: 1px solid rgba(255, 59, 48, 0.3);
+    border: 1px solid rgba(245, 158, 11, 0.35);
     border-radius: 20px;
     width: 100%;
     max-width: 440px;
     padding: 30px 24px;
     text-align: center;
     position: relative;
-    box-shadow: 0 20px 50px rgba(255, 59, 48, 0.15);
+    box-shadow: 0 20px 50px rgba(245, 158, 11, 0.12);
     animation: modalPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -46,22 +46,22 @@
 }
 
 .delete-modal-close:hover {
-    background: rgba(255, 59, 48, 0.2);
-    color: #ff3b30;
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
 }
 
 .delete-modal-icon-wrapper {
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    background: rgba(255, 59, 48, 0.12);
-    border: 1px solid rgba(255, 59, 48, 0.3);
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 20px;
-    color: #ff3b30;
-    box-shadow: 0 0 25px rgba(255, 59, 48, 0.25);
+    color: #f59e0b;
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
 }
 
 .delete-warning-icon {
@@ -81,20 +81,22 @@
 }
 
 .delete-modal-message {
-    font-size: 15px;
-    font-weight: 600;
-    color: #ff4d4d;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
     margin-bottom: 16px;
     line-height: 1.5;
 }
 
 .delete-modal-notice {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px dashed rgba(245, 158, 11, 0.3);
     border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
+    padding: 12px 14px;
+    font-size: 12.5px;
+    color: #fbbf24;
     margin-bottom: 24px;
+    line-height: 1.45;
 }
 
 .delete-modal-actions {
@@ -136,20 +138,20 @@
 }
 
 .btn-delete-confirm.disabled {
-    background: rgba(255, 59, 48, 0.2);
-    border: 1px solid rgba(255, 59, 48, 0.3);
+    background: rgba(245, 158, 11, 0.2);
+    border: 1px solid rgba(245, 158, 11, 0.3);
     color: rgba(255, 255, 255, 0.4);
     cursor: not-allowed;
 }
 
 .btn-delete-confirm.ready {
-    background: #ff3b30;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
     color: #ffffff;
     cursor: pointer;
-    box-shadow: 0 6px 20px rgba(255, 59, 48, 0.4);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
 }
 
 .btn-delete-confirm.ready:hover {
-    background: #e02d24;
+    background: linear-gradient(135deg, #d97706, #b45309);
     transform: translateY(-2px);
 }
