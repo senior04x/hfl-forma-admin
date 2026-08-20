@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
 import { fetchAllTeams } from '../utils/supabaseHelpers';
@@ -103,7 +103,7 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
     const id = deleteTargetId;
     setTeams(prev => prev.filter(t => t.id !== id));
     try {
-      const { error } = await supabase.from('teams').update({ is_archived: true }).eq('id', id);
+      const { error } = await supabaseAdmin.from('teams').update({ is_archived: true }).eq('id', id);
       if (error) throw error;
       fetchTeams();
       onStatusChange();
@@ -119,14 +119,14 @@ const TeamsTable = ({ onStatusChange = () => {} }) => {
   const updateTeamStatus = async (teamId, newStatus) => {
     setTeams(prev => prev.map(t => t.id === teamId ? { ...t, status: newStatus } : t));
     try {
-      const { error } = await supabase.from('teams').update({ status: newStatus }).eq('id', teamId);
+      const { error } = await supabaseAdmin.from('teams').update({ status: newStatus }).eq('id', teamId);
       if (error) throw error;
       
       let pStatus = 'pending';
       if (newStatus === 'approved') pStatus = 'approved';
       if (newStatus === 'rejected') pStatus = 'rejected';
       
-      await supabase.from('applications').update({ status: pStatus }).eq('team_id', teamId);
+      await supabaseAdmin.from('applications').update({ status: pStatus }).eq('team_id', teamId);
       
       fetchTeams();
       onStatusChange();

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import { X, Trash2, Save, Eye, Crop, Clock } from 'lucide-react';
 import ImageCropperModal from './ImageCropperModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
@@ -165,7 +165,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   const handleStatusChange = async (newStatus) => {
     try {
       setStatus(newStatus);
-      const { error } = await supabase.from('applications').update({ status: newStatus }).eq('id', player.id);
+      const { error } = await supabaseAdmin.from('applications').update({ status: newStatus }).eq('id', player.id);
       if (error) throw error;
       onRefresh();
     } catch (error) {
@@ -230,7 +230,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
         comment: updatedComment.trim()
       };
 
-      const { error } = await supabase.from('applications').update(updatePayload).eq('id', player.id);
+      const { error } = await supabaseAdmin.from('applications').update(updatePayload).eq('id', player.id);
       if (error) throw error;
       onRefresh();
       setCurrentMode('view');

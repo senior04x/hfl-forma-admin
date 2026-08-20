@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { fetchAllApplications, fetchAllTeams } from '../utils/supabaseHelpers';
 import { Archive as ArchiveIcon, RotateCcw, Search, Shield, Users, Trophy } from 'lucide-react';
@@ -54,7 +54,7 @@ export default function ArchivePage() {
   const handleRestoreTeam = async (teamId) => {
     if (!window.confirm("Ushbu jamoani arxivdan qaytarishni tasdiqlaysizmi?")) return;
     try {
-      const { error } = await supabase.from('teams').update({ is_archived: false }).eq('id', teamId);
+      const { error } = await supabaseAdmin.from('teams').update({ is_archived: false }).eq('id', teamId);
       if (error) throw error;
       setArchivedTeams(prev => prev.filter(t => t.id !== teamId));
       alert("Jamoa muvaffaqiyatli qaytarildi! ⚽");
@@ -68,12 +68,12 @@ export default function ArchivePage() {
     if (!window.confirm("Ushbu o'yinchini arxivdan qaytarishni tasdiqlaysizmi?")) return;
     try {
       try {
-        await supabase.from('applications').update({ is_archived: false, status: 'approved' }).eq('id', playerId);
+        await supabaseAdmin.from('applications').update({ is_archived: false, status: 'approved' }).eq('id', playerId);
       } catch (e) {
-        await supabase.from('applications').update({ status: 'approved' }).eq('id', playerId);
+        await supabaseAdmin.from('applications').update({ status: 'approved' }).eq('id', playerId);
       }
       try {
-        await supabase.from('players').update({ is_archived: false }).eq('id', playerId);
+        await supabaseAdmin.from('players').update({ is_archived: false }).eq('id', playerId);
       } catch (e) {}
 
       setArchivedPlayers(prev => prev.filter(p => p.id !== playerId));
