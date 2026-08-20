@@ -203,7 +203,18 @@ const ObsScoreboard = () => {
 
     fetchData(activeMatchId);
 
-    // Fast Broadcast Channel for Instant 0ms Timer Sync
+    // 1. Web BroadcastChannel for local 0ms instant sync (same PC / OBS)
+    let bc = null;
+    try {
+      bc = new BroadcastChannel(`amatora_timer_${activeMatchId}`);
+      bc.onmessage = (e) => {
+        if (e.data) {
+          applyTimerPayload(e.data);
+        }
+      };
+    } catch (e) {}
+
+    // 2. Fast Supabase Broadcast Channel for cross-network 0-delay sync
     const fastTimerChannel = supabase
       .channel(`obs_fast_timer_${activeMatchId}`)
       .on('broadcast', { event: 'timer_update' }, (msg) => {
@@ -213,7 +224,7 @@ const ObsScoreboard = () => {
       })
       .subscribe();
 
-    // Subscribe to real-time match changes
+    // 3. Subscribe to real-time match changes
     const matchSubscription = supabase
       .channel(`obs-match-${activeMatchId}`)
       .on(
@@ -226,14 +237,11 @@ const ObsScoreboard = () => {
         },
         (payload) => {
           setMatch((prev) => ({ ...prev, ...payload.new }));
-          if (payload.new?.timer_seconds !== undefined || payload.new?.is_timer_running !== undefined) {
-            applyTimerPayload(payload.new);
-          }
         }
       )
       .subscribe();
 
-    // Subscribe to timer changes via sponsors table fallback
+    // 4. Subscribe to timer changes via sponsors table fallback
     const timerSubscription = supabase
       .channel(`obs-timer-${activeMatchId}`)
       .on(
@@ -312,6 +320,8 @@ const ObsScoreboard = () => {
       .subscribe();
 
     return () => {
+      if (bc) bc.close();
+      supabase.removeChannel(fastTimerChannel);
       supabase.removeChannel(matchSubscription);
       supabase.removeChannel(timerSubscription);
       supabase.removeChannel(eventsSubscription);

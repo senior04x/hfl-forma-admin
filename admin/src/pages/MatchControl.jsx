@@ -496,14 +496,22 @@ const MatchControl = () => {
         await supabaseAdmin.from('matches').update(matchUpdate).eq('id', targetId);
       }
 
-      // Fast broadcast channel for instant OBS update (0 latency!)
+      // Fast instant broadcast (0ms latency for OBS / browser)
       try {
-        supabase.channel(`obs_fast_timer_${targetId}`).send({
-          type: 'broadcast',
-          event: 'timer_update',
-          payload: timerPayload
-        });
+        if (broadcastChannelRef.current?.bc) {
+          broadcastChannelRef.current.bc.postMessage(timerPayload);
+        }
       } catch (bcErr) {}
+
+      try {
+        if (broadcastChannelRef.current?.fastChannel) {
+          broadcastChannelRef.current.fastChannel.send({
+            type: 'broadcast',
+            event: 'timer_update',
+            payload: timerPayload
+          });
+        }
+      } catch (rtErr) {}
 
       const { data: existingTimer } = await supabaseAdmin
         .from('sponsors')
@@ -593,10 +601,24 @@ const MatchControl = () => {
     };
   }, [match?.id, match?.location]);
 
+  const broadcastChannelRef = useRef(null);
+
   useEffect(() => {
     fetchMatchData();
 
-    // Supabase Realtime Subscriptions
+    // 1. Web BroadcastChannel for 0ms local tab/OBS sync
+    let bc = null;
+    try {
+      bc = new BroadcastChannel(`amatora_timer_${id}`);
+    } catch (e) {}
+
+    // 2. Supabase Fast Broadcast Channel
+    const fastChannel = supabase.channel(`obs_fast_timer_${id}`);
+    fastChannel.subscribe();
+
+    broadcastChannelRef.current = { bc, fastChannel };
+
+    // 3. Supabase Realtime Postgres Subscriptions
     const matchChannel = supabase
       .channel(`match_control_${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter: `match_id=eq.${id}` }, () => {
@@ -604,9 +626,6 @@ const MatchControl = () => {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
         setMatch(prev => ({ ...prev, ...payload.new }));
-        if (payload.new?.timer_seconds !== undefined || payload.new?.is_timer_running !== undefined) {
-          applyTimerPayload(payload.new);
-        }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sponsors', filter: `name=eq.MATCH_TIMER_${id}` }, (payload) => {
         const record = payload.new || payload.record;
@@ -620,6 +639,8 @@ const MatchControl = () => {
       .subscribe();
 
     return () => {
+      if (bc) bc.close();
+      supabase.removeChannel(fastChannel);
       supabase.removeChannel(matchChannel);
     };
   }, [id]);
