@@ -79,12 +79,33 @@
       window.currentOrg = org;
 
       if (dbClient) {
-        const { data: leagues } = await dbClient
+        let collabLeagueIds = [];
+        try {
+          const targetId = org.id || DEFAULT_ORG_ID;
+          const { data: myCollabs } = await dbClient
+            .from('league_collabs')
+            .select('league_id')
+            .eq('status', 'accepted')
+            .or(`sender_org_id.eq.${targetId},receiver_org_id.eq.${targetId}`);
+
+          if (myCollabs && myCollabs.length > 0) {
+            collabLeagueIds = myCollabs.map(c => c.league_id).filter(Boolean);
+          }
+        } catch (e) {}
+
+        const targetOrgId = org.id || DEFAULT_ORG_ID;
+        let lQuery = dbClient
           .from('leagues')
           .select('id, name, logo_url, is_junior, organization_id')
-          .eq('organization_id', DEFAULT_ORG_ID)
           .order('name');
 
+        if (collabLeagueIds.length > 0) {
+          lQuery = lQuery.or(`organization_id.eq.${targetOrgId},id.in.(${collabLeagueIds.join(',')})`);
+        } else {
+          lQuery = lQuery.eq('organization_id', targetOrgId);
+        }
+
+        const { data: leagues } = await lQuery;
         window.orgLeagues = leagues || [];
       } else {
         window.orgLeagues = [];
