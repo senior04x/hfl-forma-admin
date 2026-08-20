@@ -496,6 +496,15 @@ const MatchControl = () => {
         await supabaseAdmin.from('matches').update(matchUpdate).eq('id', targetId);
       }
 
+      // Fast broadcast channel for instant OBS update (0 latency!)
+      try {
+        supabase.channel(`obs_fast_timer_${targetId}`).send({
+          type: 'broadcast',
+          event: 'timer_update',
+          payload: timerPayload
+        });
+      } catch (bcErr) {}
+
       const { data: existingTimer } = await supabaseAdmin
         .from('sponsors')
         .select('id')

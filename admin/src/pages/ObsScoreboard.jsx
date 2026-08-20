@@ -116,12 +116,35 @@ const ObsScoreboard = () => {
     };
   }, [id]);
 
-  // Helper to apply persistent timer payload in OBS
+  // Dynamic Half Duration Calculation (masalan 25 daqiqa yoki 30 daqiqa)
+  const getHalfDurationSecs = (mObj, lObj) => {
+    const lName = (mObj?.league || '').toLowerCase();
+    let mins = 30;
+    if (lName.includes('7x7')) mins = 25;
+    else if (lName.includes('3-liga') || lName.includes('3 liga')) mins = 25;
+    
+    if (mObj?.half_duration) mins = Number(mObj.half_duration);
+    else if (lObj?.half_duration) mins = Number(lObj.half_duration);
+    else if (lObj?.match_duration) mins = Math.round(Number(lObj.match_duration) / 2);
+    else if (mObj?.match_duration) mins = Math.round(Number(mObj.match_duration) / 2);
+    
+    return mins * 60;
+  };
+
+  // Helper to apply persistent timer payload in OBS (Countdown Mode)
   const applyTimerPayload = (payload) => {
     if (!payload) return;
-    const baseSec = payload.timer_seconds !== undefined ? Number(payload.timer_seconds) : 0;
     const isRunning = !!payload.is_timer_running;
     const startedAt = payload.timer_started_at;
+    const defaultSec = getHalfDurationSecs(match, leagueData);
+    
+    let baseSec = payload.timer_seconds !== undefined && payload.timer_seconds !== null 
+      ? Number(payload.timer_seconds) 
+      : defaultSec;
+
+    if (baseSec === 0 && (payload.status === 'scheduled' || !isRunning)) {
+      baseSec = defaultSec;
+    }
 
     setIsTimerRunning(isRunning);
     baseTimerSecondsRef.current = baseSec;
@@ -131,7 +154,8 @@ const ObsScoreboard = () => {
       const startedMs = new Date(startedAt).getTime();
       if (!isNaN(startedMs)) {
         const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
-        setTimerSeconds(baseSec + elapsedSec);
+        const remaining = Math.max(0, baseSec - elapsedSec);
+        setTimerSeconds(remaining);
       } else {
         setTimerSeconds(baseSec);
       }
@@ -140,7 +164,7 @@ const ObsScoreboard = () => {
     }
   };
 
-  // Timer interval for OBS display
+  // Realtime Countdown Timer interval for OBS display (25:00 -> 00:00)
   useEffect(() => {
     if (isTimerRunning) {
       timerRef.current = setInterval(() => {
@@ -148,11 +172,21 @@ const ObsScoreboard = () => {
           const startedMs = new Date(timerStartedAtRef.current).getTime();
           if (!isNaN(startedMs)) {
             const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
-            setTimerSeconds(baseTimerSecondsRef.current + elapsedSec);
+            const remaining = Math.max(0, baseTimerSecondsRef.current - elapsedSec);
+            setTimerSeconds(remaining);
+            if (remaining === 0) {
+              setIsTimerRunning(false);
+            }
             return;
           }
         }
-        setTimerSeconds(prev => prev + 1);
+        setTimerSeconds(prev => {
+          if (prev <= 1) {
+            setIsTimerRunning(false);
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
     } else if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -168,6 +202,16 @@ const ObsScoreboard = () => {
     if (!activeMatchId) return;
 
     fetchData(activeMatchId);
+
+    // Fast Broadcast Channel for Instant 0ms Timer Sync
+    const fastTimerChannel = supabase
+      .channel(`obs_fast_timer_${activeMatchId}`)
+      .on('broadcast', { event: 'timer_update' }, (msg) => {
+        if (msg.payload) {
+          applyTimerPayload(msg.payload);
+        }
+      })
+      .subscribe();
 
     // Subscribe to real-time match changes
     const matchSubscription = supabase
