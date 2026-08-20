@@ -465,6 +465,35 @@ const MatchControl = () => {
     }
   };
 
+  // Multi-tier fast broadcast setup (Local BroadcastChannel + Supabase Realtime Broadcast)
+  useEffect(() => {
+    if (!id) return;
+    const streamName = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
+    let bcMatch = null;
+    let bcStream = null;
+    try {
+      bcMatch = new BroadcastChannel(`amatora_timer_${id}`);
+      bcStream = new BroadcastChannel(`amatora_${streamName}_timer`);
+    } catch (e) {}
+
+    const fastMatchChannel = supabase.channel(`obs_fast_timer_${id}`).subscribe();
+    const fastStreamChannel = supabase.channel(`obs_fast_${streamName}`).subscribe();
+
+    broadcastChannelRef.current = {
+      bcMatch,
+      bcStream,
+      fastMatchChannel,
+      fastStreamChannel
+    };
+
+    return () => {
+      try { if (bcMatch) bcMatch.close(); } catch (e) {}
+      try { if (bcStream) bcStream.close(); } catch (e) {}
+      supabase.removeChannel(fastMatchChannel);
+      supabase.removeChannel(fastStreamChannel);
+    };
+  }, [id, match?.location]);
+
   // Helper to update persistent timer state across all devices with zero latency (Non-blocking background DB write)
   const updateTimerDBAndState = (baseSec, startedAtIso, isRunning, newStatus) => {
     setTimerSeconds(baseSec);
@@ -483,16 +512,26 @@ const MatchControl = () => {
       updated_at: new Date().toISOString()
     };
 
-    // 1. Fast instant broadcast (0ms latency for OBS / browser)
+    // 1. Instant Fast Broadcast across ALL local & cloud channels (0ms latency!)
     try {
-      if (broadcastChannelRef.current?.bc) {
-        broadcastChannelRef.current.bc.postMessage(timerPayload);
+      if (broadcastChannelRef.current?.bcMatch) {
+        broadcastChannelRef.current.bcMatch.postMessage(timerPayload);
+      }
+      if (broadcastChannelRef.current?.bcStream) {
+        broadcastChannelRef.current.bcStream.postMessage(timerPayload);
       }
     } catch (bcErr) {}
 
     try {
-      if (broadcastChannelRef.current?.fastChannel) {
-        broadcastChannelRef.current.fastChannel.send({
+      if (broadcastChannelRef.current?.fastMatchChannel) {
+        broadcastChannelRef.current.fastMatchChannel.send({
+          type: 'broadcast',
+          event: 'timer_update',
+          payload: timerPayload
+        });
+      }
+      if (broadcastChannelRef.current?.fastStreamChannel) {
+        broadcastChannelRef.current.fastStreamChannel.send({
           type: 'broadcast',
           event: 'timer_update',
           payload: timerPayload

@@ -204,27 +204,56 @@ const ObsScoreboard = () => {
     fetchData(activeMatchId);
 
     // 1. Web BroadcastChannel for local 0ms instant sync (same PC / OBS)
-    let bc = null;
+    let bcMatch = null;
+    let bcStream = null;
     try {
-      bc = new BroadcastChannel(`amatora_timer_${activeMatchId}`);
-      bc.onmessage = (e) => {
-        if (e.data) {
-          applyTimerPayload(e.data);
-        }
+      bcMatch = new BroadcastChannel(`amatora_timer_${activeMatchId}`);
+      bcMatch.onmessage = (e) => {
+        if (e.data) applyTimerPayload(e.data);
+      };
+
+      const streamKey = id?.includes('stream2') ? 'stream2' : 'stream1';
+      bcStream = new BroadcastChannel(`amatora_${streamKey}_timer`);
+      bcStream.onmessage = (e) => {
+        if (e.data) applyTimerPayload(e.data);
       };
     } catch (e) {}
 
-    // 2. Fast Supabase Broadcast Channel for cross-network 0-delay sync
+    // 2. Fast Supabase Broadcast Channels (Match-level + Stream-level for 0ms cross-network sync)
+    const streamKey = id?.includes('stream2') ? 'stream2' : 'stream1';
     const fastTimerChannel = supabase
       .channel(`obs_fast_timer_${activeMatchId}`)
       .on('broadcast', { event: 'timer_update' }, (msg) => {
-        if (msg.payload) {
-          applyTimerPayload(msg.payload);
-        }
+        if (msg.payload) applyTimerPayload(msg.payload);
       })
       .subscribe();
 
-    // 3. Subscribe to real-time match changes
+    const fastStreamChannel = supabase
+      .channel(`obs_fast_${streamKey}`)
+      .on('broadcast', { event: 'timer_update' }, (msg) => {
+        if (msg.payload) applyTimerPayload(msg.payload);
+      })
+      .subscribe();
+
+    // 3. High-Frequency Lightweight Fallback Polling (Every 1.2s for slow WiFi / high ping resilience)
+    const fallbackPollInterval = setInterval(async () => {
+      try {
+        const { data: timerRow } = await supabaseAdmin
+          .from('sponsors')
+          .select('logo_url')
+          .eq('name', `MATCH_TIMER_${activeMatchId}`)
+          .maybeSingle();
+
+        if (timerRow?.logo_url) {
+          try {
+            const parsed = JSON.parse(timerRow.logo_url);
+            applyTimerPayload(parsed);
+          } catch (pe) {}
+        }
+      } catch (pollErr) {}
+    }, 1200);
+
+    // 4. Subscribe to real-time match changes
     const matchSubscription = supabase
       .channel(`obs-match-${activeMatchId}`)
       .on(
@@ -241,7 +270,7 @@ const ObsScoreboard = () => {
       )
       .subscribe();
 
-    // 4. Subscribe to timer changes via sponsors table fallback
+    // 5. Subscribe to timer changes via sponsors table realtime
     const timerSubscription = supabase
       .channel(`obs-timer-${activeMatchId}`)
       .on(
@@ -320,8 +349,11 @@ const ObsScoreboard = () => {
       .subscribe();
 
     return () => {
-      if (bc) bc.close();
+      try { if (bcMatch) bcMatch.close(); } catch (e) {}
+      try { if (bcStream) bcStream.close(); } catch (e) {}
+      clearInterval(fallbackPollInterval);
       supabase.removeChannel(fastTimerChannel);
+      supabase.removeChannel(fastStreamChannel);
       supabase.removeChannel(matchSubscription);
       supabase.removeChannel(timerSubscription);
       supabase.removeChannel(eventsSubscription);
