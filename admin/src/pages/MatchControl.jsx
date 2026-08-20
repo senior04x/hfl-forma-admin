@@ -670,21 +670,21 @@ const MatchControl = () => {
       setHomeTeam(home);
       setAwayTeam(away);
 
-      // Fetch approved players for each team
+      // Fetch approved players for each team (excluding archived players)
       const { data: hp } = await supabaseAdmin
         .from('applications')
-        .select('id, first_name, last_name, position, player_number')
+        .select('id, first_name, last_name, position, player_number, is_archived')
         .eq('team_id', matchData.home_team_id)
         .eq('status', 'approved');
       
       const { data: ap } = await supabaseAdmin
         .from('applications')
-        .select('id, first_name, last_name, position, player_number')
+        .select('id, first_name, last_name, position, player_number, is_archived')
         .eq('team_id', matchData.away_team_id)
         .eq('status', 'approved');
 
-      setHomePlayers(hp || []);
-      setAwayPlayers(ap || []);
+      setHomePlayers((hp || []).filter(p => !p.is_archived));
+      setAwayPlayers((ap || []).filter(p => !p.is_archived));
 
       // Fetch persistent timer state from sponsors or match
       const { data: timerSp } = await supabaseAdmin

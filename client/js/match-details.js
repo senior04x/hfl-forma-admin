@@ -89,14 +89,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         matchEvents = events || [];
 
-        // Fetch Players (Both teams) - from applications table
+        // Fetch Players (Both teams) - from applications table (excluding archived)
         const [homeRes, awayRes] = await Promise.all([
-            db.from('applications').select('*').eq('team_id', match.home_team_id),
-            db.from('applications').select('*').eq('team_id', match.away_team_id)
+            db.from('applications').select('*').eq('team_id', match.home_team_id).eq('status', 'approved'),
+            db.from('applications').select('*').eq('team_id', match.away_team_id).eq('status', 'approved')
         ]);
 
-        homePlayers = homeRes.data || [];
-        awayPlayers = awayRes.data || [];
+        homePlayers = (homeRes.data || []).filter(p => !p.is_archived);
+        awayPlayers = (awayRes.data || []).filter(p => !p.is_archived);
 
         renderOverview();
         
