@@ -924,8 +924,8 @@ const MatchControl = () => {
     } catch (e) {}
   };
 
-  const executeStatusChange = async (newStatus) => {
-    const halfSec = halfDurationSecs || 1800;
+  const executeStatusChange = (newStatus) => {
+    const halfSec = halfDurationSecs || 1500;
     let newBaseSec = timerSeconds;
     let newRunning = isTimerRunning;
     let nowIso = new Date().toISOString();
@@ -955,9 +955,11 @@ const MatchControl = () => {
 
     // 1. Optimistically update local state immediately (0ms instant UI change)
     setMatch(prev => ({ ...prev, ...updatedState }));
+    setIsTimerRunning(newRunning);
+    setTimerSeconds(newBaseSec);
 
     // 2. Persist in a single consolidated lightweight call (0 lag!)
-    await updateTimerDBAndState(newBaseSec, nowIso, newRunning, newStatus);
+    updateTimerDBAndState(newBaseSec, nowIso, newRunning, newStatus);
   };
 
   const requestStatusUpdate = (newStatus, message) => {
