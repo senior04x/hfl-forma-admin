@@ -472,6 +472,9 @@ const MatchControl = () => {
     baseTimerSecondsRef.current = baseSec;
     timerStartedAtRef.current = startedAtIso;
 
+    const targetId = match?.id || id;
+    const targetOrgId = match?.organization_id || orgId || 1;
+
     const timerPayload = {
       timer_seconds: baseSec,
       timer_started_at: startedAtIso,
@@ -489,13 +492,26 @@ const MatchControl = () => {
     const nameKey = `MATCH_TIMER_${targetId}`;
 
     try {
-      await Promise.allSettled([
-        supabaseAdmin.from('matches').update(matchUpdate).eq('id', targetId),
-        supabaseAdmin.from('sponsors').upsert(
-          { name: nameKey, logo_url: payloadStr, organization_id: targetOrgId },
-          { onConflict: 'name' }
-        )
-      ]);
+      if (targetId) {
+        await supabaseAdmin.from('matches').update(matchUpdate).eq('id', targetId);
+      }
+
+      const { data: existingTimer } = await supabaseAdmin
+        .from('sponsors')
+        .select('id')
+        .eq('name', nameKey)
+        .maybeSingle();
+
+      if (existingTimer) {
+        await supabaseAdmin.from('sponsors').update({ logo_url: payloadStr }).eq('id', existingTimer.id);
+      } else {
+        await supabaseAdmin.from('sponsors').insert([{ 
+          name: nameKey, 
+          logo_url: payloadStr, 
+          organization_id: targetOrgId, 
+          is_main: false 
+        }]);
+      }
     } catch (e) {
       console.warn('Fast timer sync error:', e);
     }
