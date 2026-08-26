@@ -249,11 +249,12 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
     setLoadingData(true);
     try {
       const activeNames = (activeLeagues || []).map(l => l.name);
-      const allTeamsData = await fetchAllTeams('id, name, league, organization_id, captain_phone');
+      const allTeamsData = await fetchAllTeams('id, name, league, organization_id, captain_phone, is_archived');
       const filtered = (allTeamsData || []).filter(t =>
-        t.organization_id === orgId ||
+        !t.is_archived &&
+        (t.organization_id === orgId ||
         (t.league && t.league.split(',').some(l => activeNames.includes(l.trim()))) ||
-        !orgId
+        !orgId)
       );
       setTeams(filtered);
     } catch (err) {
@@ -283,7 +284,8 @@ const ExportPdfModal = ({ isOpen, onClose, activeLeagues = [] }) => {
       const allApps = await fetchAllApplications('*');
       const validTeamIds = new Set(teams.map(t => t.id));
 
-      let validApps = allApps
+      let validApps = (allApps || [])
+        .filter(app => !app.is_archived && app.status !== 'archived')
         .filter(app => !app.comment || !app.comment.includes('[PROFILE_UPDATE]'))
         .filter(app =>
           app.organization_id === orgId ||

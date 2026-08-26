@@ -75,7 +75,10 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
     try {
       const { data, error } = await supabase.from('applications').select('*').eq('team_id', team.id).order('created_at', { ascending: false });
       if (error) throw error;
-      if (data) setPlayers(data);
+      if (data) {
+        const activePlayers = data.filter(p => !p.is_archived && p.status !== 'archived');
+        setPlayers(activePlayers);
+      }
     } catch (err) {
       console.error(err);
     } finally {

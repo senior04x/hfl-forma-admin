@@ -546,7 +546,7 @@ const Schedule = () => {
       if (loadedSponsors.length === 0) {
         let query = supabase.from('sponsors').select('*').order('created_at', { ascending: false });
         if (orgId) {
-          query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
+          query = query.eq('organization_id', orgId);
         }
         const { data } = await query;
         loadedSponsors = data || [];
