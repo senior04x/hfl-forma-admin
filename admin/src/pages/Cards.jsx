@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
 import { 
@@ -64,7 +64,7 @@ export default function Cards() {
   const fetchData = async (leaguesList = activeLeagues) => {
     setLoading(true);
     try {
-      const dbClient = supabaseAdmin || supabase;
+      const dbClient = supabase || supabase;
 
       // 1. Fetch Teams
       let teamsQuery = dbClient.from('teams').select('*');

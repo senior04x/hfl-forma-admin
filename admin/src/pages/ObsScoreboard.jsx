@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import './ObsScoreboard.css';
 
 const DEFAULT_LEAGUE_LOGOS = {
@@ -43,7 +43,7 @@ const ObsScoreboard = () => {
     }
 
     const findLiveMatch = async () => {
-      let query = supabaseAdmin.from('matches').select('*').order('id', { ascending: false });
+      let query = supabase.from('matches').select('*').order('id', { ascending: false });
 
       if (targetOrgId) {
         query = query.eq('organization_id', targetOrgId);
@@ -238,7 +238,7 @@ const ObsScoreboard = () => {
     // 3. High-Frequency Lightweight Fallback Polling (Every 1.2s for slow WiFi / high ping resilience)
     const fallbackPollInterval = setInterval(async () => {
       try {
-        const { data: timerRow } = await supabaseAdmin
+        const { data: timerRow } = await supabase
           .from('sponsors')
           .select('logo_url')
           .eq('name', `MATCH_TIMER_${activeMatchId}`)
@@ -311,13 +311,13 @@ const ObsScoreboard = () => {
             let pName = newEvent.event_type === 'goal' ? 'GOOOL' : 'O\'YINCHI';
             let pPhoto = null;
             if (newEvent.player_id) {
-              const { data: player } = await supabaseAdmin.from('applications').select('first_name, last_name, photo_url').eq('id', newEvent.player_id).maybeSingle();
+              const { data: player } = await supabase.from('applications').select('first_name, last_name, photo_url').eq('id', newEvent.player_id).maybeSingle();
               if (player) {
                 pName = `${player.first_name || ''} ${player.last_name || ''}`.trim() || pName;
                 pPhoto = player.photo_url;
               }
             }
-            const { data: tData } = await supabaseAdmin.from('teams').select('name, logo_url').eq('id', newEvent.team_id).maybeSingle();
+            const { data: tData } = await supabase.from('teams').select('name, logo_url').eq('id', newEvent.team_id).maybeSingle();
             
             const eventPayload = { 
               playerName: pName, 
@@ -386,7 +386,7 @@ const ObsScoreboard = () => {
 
   const fetchData = async (matchId) => {
     try {
-      const { data: matchData } = await supabaseAdmin
+      const { data: matchData } = await supabase
         .from('matches')
         .select('*')
         .eq('id', matchId)
@@ -398,7 +398,7 @@ const ObsScoreboard = () => {
         // Fetch League Data (logo & background image) for THIS specific organization
         if (matchData.league || matchData.organization_id) {
           try {
-            let lQuery = supabaseAdmin.from('leagues').select('*');
+            let lQuery = supabase.from('leagues').select('*');
             if (matchData.organization_id) {
               lQuery = lQuery.eq('organization_id', matchData.organization_id);
             }
@@ -416,7 +416,7 @@ const ObsScoreboard = () => {
         let awayObj = null;
 
         if (matchData.home_team_id) {
-          const { data: h } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.home_team_id).maybeSingle();
+          const { data: h } = await supabase.from('teams').select('*').eq('id', matchData.home_team_id).maybeSingle();
           homeObj = h;
         }
         if (!homeObj) {
@@ -427,7 +427,7 @@ const ObsScoreboard = () => {
         }
 
         if (matchData.away_team_id) {
-          const { data: a } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.away_team_id).maybeSingle();
+          const { data: a } = await supabase.from('teams').select('*').eq('id', matchData.away_team_id).maybeSingle();
           awayObj = a;
         }
         if (!awayObj) {
@@ -441,7 +441,7 @@ const ObsScoreboard = () => {
         setAwayTeam(awayObj);
 
         // Fetch timer state
-        const { data: timerSp } = await supabaseAdmin
+        const { data: timerSp } = await supabase
           .from('sponsors')
           .select('logo_url')
           .eq('name', `MATCH_TIMER_${matchId}`)

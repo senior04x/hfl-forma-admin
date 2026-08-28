@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
 import { fetchAllApplications, fetchAllTeams } from '../utils/supabaseHelpers';
@@ -150,7 +150,7 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
     // Optimistic update
     setPlayers(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
     try {
-      const { error } = await supabaseAdmin.from('applications').update({ status: newStatus }).eq('id', id);
+      const { error } = await supabase.from('applications').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
       fetchPlayers(false);
       onStatusChange();
@@ -176,11 +176,11 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
     const id = deleteTargetId;
     setPlayers(prev => prev.filter(p => p.id !== id));
     try {
-      const { error: appErr } = await supabaseAdmin.from('applications').update({ is_archived: true }).eq('id', id);
+      const { error: appErr } = await supabase.from('applications').update({ is_archived: true }).eq('id', id);
       if (appErr) throw appErr;
 
       try {
-        await supabaseAdmin.from('players').update({ is_archived: true }).eq('id', id);
+        await supabase.from('players').update({ is_archived: true }).eq('id', id);
       } catch (e) {}
 
       fetchPlayers(false);
@@ -197,11 +197,11 @@ const PlayersTable = ({ onStatusChange = () => {} }) => {
   const handleRestorePlayer = async (id) => {
     setPlayers(prev => prev.filter(p => p.id !== id));
     try {
-      const { error: appErr } = await supabaseAdmin.from('applications').update({ is_archived: false }).eq('id', id);
+      const { error: appErr } = await supabase.from('applications').update({ is_archived: false }).eq('id', id);
       if (appErr) throw appErr;
 
       try {
-        await supabaseAdmin.from('players').update({ is_archived: false }).eq('id', id);
+        await supabase.from('players').update({ is_archived: false }).eq('id', id);
       } catch (e) {}
 
       fetchPlayers(false);

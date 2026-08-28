@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues } from '../utils/leagueUtils';
 import { X, Trash2, Save, Eye, Crop, Plus, Check, Trophy, Clock, Archive } from 'lucide-react';
@@ -176,13 +176,13 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
     if (window.confirm("Jamoaning barcha o'yinchilari holati o'zgartiriladi. Tasdiqlaysizmi?")) {
       try {
         setStatus(newStatus);
-        await supabaseAdmin.from('teams').update({ status: newStatus }).eq('id', team.id);
+        await supabase.from('teams').update({ status: newStatus }).eq('id', team.id);
         
         let pStatus = 'pending';
         if (newStatus === 'approved') pStatus = 'approved';
         if (newStatus === 'rejected') pStatus = 'rejected';
         
-        await supabaseAdmin.from('applications').update({ status: pStatus }).eq('team_id', team.id);
+        await supabase.from('applications').update({ status: pStatus }).eq('team_id', team.id);
         
         fetchPlayers();
         onRefresh();
@@ -205,7 +205,7 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
 
       if (formData.captain_phone !== undefined) updateData.captain_phone = formData.captain_phone;
 
-      const { error } = await supabaseAdmin.from('teams').update(updateData).eq('id', team.id);
+      const { error } = await supabase.from('teams').update(updateData).eq('id', team.id);
       if (error) throw error;
 
       onRefresh();
@@ -220,13 +220,13 @@ const TeamModal = ({ team, mode, onClose, onRefresh }) => {
 
   const handleConfirmDelete = async () => {
     try {
-      const { error } = await supabaseAdmin.from('teams').update({ is_archived: true }).eq('id', team.id);
+      const { error } = await supabase.from('teams').update({ is_archived: true }).eq('id', team.id);
       if (error) throw error;
 
       // Also cascade archive to all players of this team
       try {
-        await supabaseAdmin.from('applications').update({ is_archived: true }).eq('team_id', team.id);
-        await supabaseAdmin.from('players').update({ is_archived: true }).eq('team_id', team.id);
+        await supabase.from('applications').update({ is_archived: true }).eq('team_id', team.id);
+        await supabase.from('players').update({ is_archived: true }).eq('team_id', team.id);
       } catch (e) {}
 
       onRefresh();

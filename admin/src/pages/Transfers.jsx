@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { 
   ArrowLeftRight, 
@@ -204,7 +204,7 @@ const Transfers = () => {
       const oldStatus = transfer.status;
       if (oldStatus === newStatus) return;
 
-      const { error: transferError } = await supabaseAdmin
+      const { error: transferError } = await supabase
         .from('transfers')
         .update({ status: newStatus })
         .eq('id', transfer.id);
@@ -215,23 +215,23 @@ const Transfers = () => {
       if (transfer.player_id) {
         if (newStatus === 'approved' && transfer.new_team_id) {
           // Move player to NEW team
-          await supabaseAdmin
+          await supabase
             .from('applications')
             .update({ team_id: transfer.new_team_id })
             .eq('id', transfer.player_id);
 
-          await supabaseAdmin
+          await supabase
             .from('players')
             .update({ team_id: transfer.new_team_id })
             .eq('id', transfer.player_id);
         } else if (oldStatus === 'approved' && (newStatus === 'pending' || newStatus === 'rejected') && transfer.old_team_id) {
           // Revert player BACK to OLD team
-          await supabaseAdmin
+          await supabase
             .from('applications')
             .update({ team_id: transfer.old_team_id })
             .eq('id', transfer.player_id);
 
-          await supabaseAdmin
+          await supabase
             .from('players')
             .update({ team_id: transfer.old_team_id })
             .eq('id', transfer.player_id);
@@ -256,7 +256,7 @@ const Transfers = () => {
   const handleDeleteTransfer = async (transferId) => {
     if (!window.confirm("Haqiqatan ham ushbu transfer so'rovini o'chirib tashlamoqchimisiz?")) return;
     try {
-      const { error } = await supabaseAdmin
+      const { error } = await supabase
         .from('transfers')
         .delete()
         .eq('id', transferId);
@@ -303,7 +303,7 @@ const Transfers = () => {
       const oldStatus = editingTransfer.status;
       const newStatus = editForm.status;
 
-      const { error } = await supabaseAdmin
+      const { error } = await supabase
         .from('transfers')
         .update({
           player_name: editForm.player_name,
@@ -323,22 +323,22 @@ const Transfers = () => {
       // Handle team movement when status changes in edit modal
       if (editingTransfer.player_id) {
         if (newStatus === 'approved' && newTeamId) {
-          await supabaseAdmin
+          await supabase
             .from('applications')
             .update({ team_id: newTeamId })
             .eq('id', editingTransfer.player_id);
 
-          await supabaseAdmin
+          await supabase
             .from('players')
             .update({ team_id: newTeamId })
             .eq('id', editingTransfer.player_id);
         } else if (oldStatus === 'approved' && (newStatus === 'pending' || newStatus === 'rejected') && oldTeamId) {
-          await supabaseAdmin
+          await supabase
             .from('applications')
             .update({ team_id: oldTeamId })
             .eq('id', editingTransfer.player_id);
 
-          await supabaseAdmin
+          await supabase
             .from('players')
             .update({ team_id: oldTeamId })
             .eq('id', editingTransfer.player_id);

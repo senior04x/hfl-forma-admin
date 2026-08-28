@@ -168,7 +168,7 @@ export function downloadBlob(blob, filename = 'stinger.webm') {
  * 100% Automatic Stinger Video Generator & Cloud Syncer
  * Automatically renders transparent WebM video, uploads to Supabase Storage, and returns public URL
  */
-export async function ensureAutoStingerSynced({ supabaseAdmin, orgId, orgLogo, orgName }) {
+export async function ensureAutoStingerSynced({ supabase, orgId, orgLogo, orgName }) {
   try {
     const safeOrgId = orgId || 'default_org';
     const fileName = `stinger_${safeOrgId}.webm`;
@@ -178,19 +178,19 @@ export async function ensureAutoStingerSynced({ supabaseAdmin, orgId, orgLogo, o
     const file = new File([blob], fileName, { type: 'video/webm' });
 
     // Upload to Supabase Storage automatically
-    const { data: uploadData, error } = await supabaseAdmin.storage
+    const { data: uploadData, error } = await supabase.storage
       .from('applications')
       .upload(`stingers/${fileName}`, file, { upsert: true });
 
     if (!error) {
-      const { data: publicUrlData } = supabaseAdmin.storage
+      const { data: publicUrlData } = supabase.storage
         .from('applications')
         .getPublicUrl(`stingers/${fileName}`);
 
       const publicUrl = publicUrlData?.publicUrl;
       if (publicUrl && orgId) {
         try {
-          await supabaseAdmin.from('organizations').update({ stinger_url: publicUrl }).eq('id', orgId);
+          await supabase.from('organizations').update({ stinger_url: publicUrl }).eq('id', orgId);
         } catch (dbErr) {}
       }
       return publicUrl;

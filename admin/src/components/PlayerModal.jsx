@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { X, Trash2, Save, Eye, Crop, Clock, Archive } from 'lucide-react';
 import ImageCropperModal from './ImageCropperModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
@@ -165,7 +165,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   const handleStatusChange = async (newStatus) => {
     try {
       setStatus(newStatus);
-      const { error } = await supabaseAdmin.from('applications').update({ status: newStatus }).eq('id', player.id);
+      const { error } = await supabase.from('applications').update({ status: newStatus }).eq('id', player.id);
       if (error) throw error;
       onRefresh();
     } catch (error) {
@@ -230,7 +230,7 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
         comment: updatedComment.trim()
       };
 
-      const { error } = await supabaseAdmin.from('applications').update(updatePayload).eq('id', player.id);
+      const { error } = await supabase.from('applications').update(updatePayload).eq('id', player.id);
       if (error) throw error;
       onRefresh();
       setCurrentMode('view');
@@ -244,11 +244,11 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
 
   const handleConfirmDelete = async () => {
     try {
-      const { error: appErr } = await supabaseAdmin.from('applications').update({ is_archived: true }).eq('id', player.id);
+      const { error: appErr } = await supabase.from('applications').update({ is_archived: true }).eq('id', player.id);
       if (appErr) throw appErr;
 
       try {
-        await supabaseAdmin.from('players').update({ is_archived: true }).eq('id', player.id);
+        await supabase.from('players').update({ is_archived: true }).eq('id', player.id);
       } catch (e) {}
 
       onRefresh();

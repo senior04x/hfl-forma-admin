@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import PlayersTable from '../components/PlayersTable';
 import TeamsTable from '../components/TeamsTable';
@@ -66,10 +66,10 @@ const Dashboard = () => {
     let openStatus = true;
     let found = false;
 
-    // 1. Try sponsors KV table with supabaseAdmin
+    // 1. Try sponsors KV table with supabase
     try {
       const configKey = `REGISTRATION_OPEN_${activeOrgId}`;
-      const { data: spData } = await supabaseAdmin
+      const { data: spData } = await supabase
         .from('sponsors')
         .select('logo_url')
         .eq('name', configKey)
@@ -81,10 +81,10 @@ const Dashboard = () => {
       }
     } catch (e) {}
 
-    // 2. Try organizations table with supabaseAdmin if not found in sponsors
+    // 2. Try organizations table with supabase if not found in sponsors
     if (!found) {
       try {
-        const { data: orgData } = await supabaseAdmin
+        const { data: orgData } = await supabase
           .from('organizations')
           .select('*')
           .eq('id', activeOrgId)
@@ -116,19 +116,19 @@ const Dashboard = () => {
     // Save ONLY to this organization's specific key `REGISTRATION_OPEN_${activeOrgId}`
     try {
       const key = `REGISTRATION_OPEN_${activeOrgId}`;
-      const { data: existing } = await supabaseAdmin
+      const { data: existing } = await supabase
         .from('sponsors')
         .select('id')
         .eq('name', key)
         .maybeSingle();
 
       if (existing?.id) {
-        await supabaseAdmin
+        await supabase
           .from('sponsors')
           .update({ logo_url: newState ? 'true' : 'false' })
           .eq('id', existing.id);
       } else {
-        await supabaseAdmin
+        await supabase
           .from('sponsors')
           .insert([{
             name: key,
@@ -143,7 +143,7 @@ const Dashboard = () => {
 
     // Also sync to organizations table for activeOrgId
     try {
-      await supabaseAdmin.from('organizations').update({ is_registration_open: newState }).eq('id', activeOrgId);
+      await supabase.from('organizations').update({ is_registration_open: newState }).eq('id', activeOrgId);
     } catch (e) {}
 
     setTogglingReg(false);

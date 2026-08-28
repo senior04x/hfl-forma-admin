@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { fetchAllApplications, fetchAllTeams } from '../utils/supabaseHelpers';
 import { Archive as ArchiveIcon, RotateCcw, Search, Shield, Users, Trophy } from 'lucide-react';
@@ -54,13 +54,13 @@ export default function ArchivePage() {
   const handleRestoreTeam = async (teamId) => {
     if (!window.confirm("Ushbu jamoani arxivdan qaytarishni tasdiqlaysizmi?")) return;
     try {
-      const { error } = await supabaseAdmin.from('teams').update({ is_archived: false }).eq('id', teamId);
+      const { error } = await supabase.from('teams').update({ is_archived: false }).eq('id', teamId);
       if (error) throw error;
 
       // Also cascade unarchive to all players of this team
       try {
-        await supabaseAdmin.from('applications').update({ is_archived: false }).eq('team_id', teamId);
-        await supabaseAdmin.from('players').update({ is_archived: false }).eq('team_id', teamId);
+        await supabase.from('applications').update({ is_archived: false }).eq('team_id', teamId);
+        await supabase.from('players').update({ is_archived: false }).eq('team_id', teamId);
       } catch (e) {}
 
       setArchivedTeams(prev => prev.filter(t => t.id !== teamId));
@@ -74,11 +74,11 @@ export default function ArchivePage() {
   const handleRestorePlayer = async (playerId) => {
     if (!window.confirm("Ushbu o'yinchini arxivdan qaytarishni tasdiqlaysizmi?")) return;
     try {
-      const { error: appErr } = await supabaseAdmin.from('applications').update({ is_archived: false }).eq('id', playerId);
+      const { error: appErr } = await supabase.from('applications').update({ is_archived: false }).eq('id', playerId);
       if (appErr) throw appErr;
 
       try {
-        await supabaseAdmin.from('players').update({ is_archived: false }).eq('id', playerId);
+        await supabase.from('players').update({ is_archived: false }).eq('id', playerId);
       } catch (e) {}
 
       setArchivedPlayers(prev => prev.filter(p => p.id !== playerId));

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert, Building2, Pencil, Trash2, Save, Crop, Upload } from 'lucide-react';
 import ImageCropperModal from '../components/ImageCropperModal';
@@ -294,7 +294,7 @@ const Settings = () => {
   const handleUpdateLeagueDurationDirect = async (leagueId, newDuration) => {
     try {
       const durationNum = Number(newDuration);
-      const client = supabaseAdmin || supabase;
+      const client = supabase || supabase;
       
       setLeagues(prev => prev.map(leg => leg.id === leagueId ? { ...leg, match_duration: durationNum } : leg));
 
@@ -464,7 +464,7 @@ const Settings = () => {
       let startDateMap = {};
       let endDateMap = {};
       try {
-        const { data: dateSponsors } = await (supabaseAdmin || supabase)
+        const { data: dateSponsors } = await (supabase || supabase)
           .from('sponsors')
           .select('name, logo_url')
           .or('name.like.LEAGUE_DURATION_%,name.like.LEAGUE_START_DATE_%,name.like.LEAGUE_END_DATE_%');
@@ -533,7 +533,7 @@ const Settings = () => {
     setMessage({ type: '', text: '' });
 
     try {
-      const client = supabaseAdmin || supabase;
+      const client = supabase || supabase;
       // Auto-derive season from start/end dates
       let cleanSeason = leagueSeason.trim() || '2026/2027';
       if (startDate && endDate) {

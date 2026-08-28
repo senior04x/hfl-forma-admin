@@ -1,11 +1,18 @@
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-const SUPABASE_URL = 'xzzyhfyazwohdqqbjiiy.supabase.co';
-const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6enloZnlhendvaGRxcWJqaWl5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MzEwMzU1MSwiZXhwIjoyMDk4Njc5NTUxfQ.Z_qdzR5mYepOEyW57WXl9fb1v5FV4xEYDP-LvihiU6I';
+// 🔒 SECURITY FIX: service_role kaliti .env faylidan o'qiladi
+const SUPABASE_URL = process.env.SUPABASE_URL || 'xzzyhfyazwohdqqbjiiy.supabase.co';
+const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const REPLAY_DIR = 'C:\\Replays';
+if (!SUPABASE_SERVICE_ROLE) {
+  console.error('❌ FATAL: SUPABASE_SERVICE_ROLE_KEY .env faylida topilmadi.');
+  process.exit(1);
+}
+
+const REPLAY_DIR = process.env.REPLAY_DIR || 'C:\\Replays';
 
 console.log('================================================');
 console.log('🎬 OBS Replay Auto-Uploader Service (Chronological Fix)');

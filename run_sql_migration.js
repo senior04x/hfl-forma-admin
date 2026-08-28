@@ -1,7 +1,14 @@
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_URL = 'https://xzzyhfyazwohdqqbjiiy.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6enloZnlhendvaGRxcWJqaWl5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MzEwMzU1MSwiZXhwIjoyMDk4Njc5NTUxfQ.o0WfHQ310sB8R1-6sL6Kk4iQstKx66M2iN39Q2wK2z8';
+// 🔒 SECURITY FIX: service_role kaliti .env faylidan o'qiladi
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://xzzyhfyazwohdqqbjiiy.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('❌ FATAL: SUPABASE_SERVICE_ROLE_KEY .env faylida topilmadi.');
+  process.exit(1);
+}
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { 
   ArrowLeft, Trash2, Monitor, Share2, Play, Pause, RotateCcw, 
@@ -102,7 +102,7 @@ const MatchControl = () => {
     } catch (e) {}
 
     try {
-      const { data } = await supabaseAdmin.from('organizations').select('yt_tokens').eq('id', activeId).maybeSingle();
+      const { data } = await supabase.from('organizations').select('yt_tokens').eq('id', activeId).maybeSingle();
       if (data?.yt_tokens) {
         const parsed = typeof data.yt_tokens === 'string' ? JSON.parse(data.yt_tokens) : data.yt_tokens;
         localStorage.setItem(key, JSON.stringify(parsed));
@@ -112,7 +112,7 @@ const MatchControl = () => {
 
     try {
       const configName = `YT_OAUTH_TOKENS_${activeId}`;
-      const { data } = await supabaseAdmin.from('sponsors').select('logo_url').eq('name', configName).maybeSingle();
+      const { data } = await supabase.from('sponsors').select('logo_url').eq('name', configName).maybeSingle();
       if (data?.logo_url) {
         const parsed = JSON.parse(data.logo_url);
         localStorage.setItem(key, JSON.stringify(parsed));
@@ -156,7 +156,7 @@ const MatchControl = () => {
         const payloadStr = JSON.stringify(updated);
         localStorage.setItem(`hfl_yt_tokens_${activeId}`, payloadStr);
         try {
-          await supabaseAdmin.from('sponsors').update({ logo_url: payloadStr }).eq('name', `YT_OAUTH_TOKENS_${activeId}`);
+          await supabase.from('sponsors').update({ logo_url: payloadStr }).eq('name', `YT_OAUTH_TOKENS_${activeId}`);
         } catch (e) {}
         return data.access_token;
       }
@@ -227,7 +227,7 @@ const MatchControl = () => {
         if (extracted) {
           videoId = extracted;
           try {
-            await supabaseAdmin.from('matches').update({ youtube_link: inputLink }).eq('id', finishedMatchObj.id);
+            await supabase.from('matches').update({ youtube_link: inputLink }).eq('id', finishedMatchObj.id);
             setMatch(prev => ({ ...prev, youtube_link: inputLink }));
             finishedMatchObj.youtube_link = inputLink;
           } catch (e) {}
@@ -247,7 +247,7 @@ const MatchControl = () => {
       let leagueData = null;
       if (finishedMatchObj.league) {
         // First try searching league belonging to targetOrgId
-        const { data: orgLeague } = await supabaseAdmin
+        const { data: orgLeague } = await supabase
           .from('leagues')
           .select('*')
           .eq('organization_id', targetOrgId)
@@ -256,7 +256,7 @@ const MatchControl = () => {
         
         leagueData = orgLeague;
         if (!leagueData) {
-          const { data: fallback } = await supabaseAdmin
+          const { data: fallback } = await supabase
             .from('leagues')
             .select('*')
             .ilike('name', finishedMatchObj.league.trim())
@@ -264,10 +264,10 @@ const MatchControl = () => {
           leagueData = fallback;
         }
       }
-      const { data: orgData } = await supabaseAdmin.from('organizations').select('*').eq('id', targetOrgId).maybeSingle();
+      const { data: orgData } = await supabase.from('organizations').select('*').eq('id', targetOrgId).maybeSingle();
       
       let loadedSponsors = [];
-      const { data: spData } = await supabaseAdmin.from('sponsors').select('*');
+      const { data: spData } = await supabase.from('sponsors').select('*');
       if (spData) {
         loadedSponsors = spData.filter(s => !s.name?.startsWith('YT_OAUTH_TOKENS_') && !s.name?.startsWith('MATCH_TIMER_'));
       }
@@ -288,7 +288,7 @@ const MatchControl = () => {
           `BANNER_SCHEDULE_${targetOrgId}_${leagueNameTrim}`
         ];
 
-        const { data: bannerRows } = await supabaseAdmin
+        const { data: bannerRows } = await supabase
           .from('sponsors')
           .select('logo_url, name')
           .in('name', sponsorKeys);
@@ -551,19 +551,19 @@ const MatchControl = () => {
         const nameKey = `MATCH_TIMER_${targetId}`;
 
         if (targetId) {
-          await supabaseAdmin.from('matches').update(matchUpdate).eq('id', targetId);
+          await supabase.from('matches').update(matchUpdate).eq('id', targetId);
         }
 
-        const { data: existingTimer } = await supabaseAdmin
+        const { data: existingTimer } = await supabase
           .from('sponsors')
           .select('id')
           .eq('name', nameKey)
           .maybeSingle();
 
         if (existingTimer) {
-          await supabaseAdmin.from('sponsors').update({ logo_url: payloadStr }).eq('id', existingTimer.id);
+          await supabase.from('sponsors').update({ logo_url: payloadStr }).eq('id', existingTimer.id);
         } else {
-          await supabaseAdmin.from('sponsors').insert([{ 
+          await supabase.from('sponsors').insert([{ 
             name: nameKey, 
             logo_url: payloadStr, 
             organization_id: targetOrgId, 
@@ -690,8 +690,8 @@ const MatchControl = () => {
   const fetchMatchData = async () => {
     setLoading(true);
     try {
-      // Fetch match using supabaseAdmin to bypass RLS for shared control panel links
-      const { data: matchData } = await supabaseAdmin
+      // Fetch match using supabase to bypass RLS for shared control panel links
+      const { data: matchData } = await supabase
         .from('matches')
         .select('*')
         .eq('id', id)
@@ -702,7 +702,7 @@ const MatchControl = () => {
 
       if (matchData.league) {
         try {
-          const { data: lData } = await supabaseAdmin
+          const { data: lData } = await supabase
             .from('leagues')
             .select('*')
             .ilike('name', matchData.league.trim())
@@ -718,7 +718,7 @@ const MatchControl = () => {
           }
 
           if (!matchDur && lData?.id) {
-            const { data: spDur } = await supabaseAdmin
+            const { data: spDur } = await supabase
               .from('sponsors')
               .select('logo_url')
               .eq('name', `LEAGUE_DURATION_${lData.id}`)
@@ -753,19 +753,19 @@ const MatchControl = () => {
       }
 
       // Fetch teams
-      const { data: home } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.home_team_id).single();
-      const { data: away } = await supabaseAdmin.from('teams').select('*').eq('id', matchData.away_team_id).single();
+      const { data: home } = await supabase.from('teams').select('*').eq('id', matchData.home_team_id).single();
+      const { data: away } = await supabase.from('teams').select('*').eq('id', matchData.away_team_id).single();
       setHomeTeam(home);
       setAwayTeam(away);
 
       // Fetch approved players for each team (excluding archived players)
-      const { data: hp } = await supabaseAdmin
+      const { data: hp } = await supabase
         .from('applications')
         .select('id, first_name, last_name, position, player_number, is_archived')
         .eq('team_id', matchData.home_team_id)
         .eq('status', 'approved');
       
-      const { data: ap } = await supabaseAdmin
+      const { data: ap } = await supabase
         .from('applications')
         .select('id, first_name, last_name, position, player_number, is_archived')
         .eq('team_id', matchData.away_team_id)
@@ -775,7 +775,7 @@ const MatchControl = () => {
       setAwayPlayers((ap || []).filter(p => !p.is_archived));
 
       // Fetch persistent timer state from sponsors or match
-      const { data: timerSp } = await supabaseAdmin
+      const { data: timerSp } = await supabase
         .from('sponsors')
         .select('logo_url')
         .eq('name', `MATCH_TIMER_${id}`)
@@ -802,7 +802,7 @@ const MatchControl = () => {
   };
 
   const fetchEvents = async (matchId) => {
-    const { data } = await supabaseAdmin
+    const { data } = await supabase
       .from('match_events')
       .select('*, player:player_id(first_name, last_name, player_number), team:team_id(name)')
       .eq('match_id', matchId || id)
@@ -880,7 +880,7 @@ const MatchControl = () => {
     if (orgStingerUrl) return orgStingerUrl;
     try {
       const syncedUrl = await ensureAutoStingerSynced({
-        supabaseAdmin,
+        supabase,
         orgId: match?.organization_id || currentOrg?.id,
         orgLogo: currentOrg?.logo_url || '/logo-for-jadval.png',
         orgName: currentOrg?.name || match?.league || 'AMATORA'
@@ -906,16 +906,16 @@ const MatchControl = () => {
         timestamp: Date.now()
       });
 
-      const { data: existingSignal } = await supabaseAdmin
+      const { data: existingSignal } = await supabase
         .from('sponsors')
         .select('id')
         .eq('name', fieldSignalName)
         .maybeSingle();
 
       if (existingSignal) {
-        await supabaseAdmin.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
+        await supabase.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
       } else {
-        await supabaseAdmin.from('sponsors').insert({ name: fieldSignalName, logo_url: signalPayload });
+        await supabase.from('sponsors').insert({ name: fieldSignalName, logo_url: signalPayload });
       }
 
       // Also trigger local OBS if connected locally
@@ -964,7 +964,7 @@ const MatchControl = () => {
       [isHome ? 'home_score' : 'away_score']: newScore
     }));
 
-    await supabaseAdmin.from('matches').update(updatePayload).eq('id', id);
+    await supabase.from('matches').update(updatePayload).eq('id', id);
   };
 
   // Quick Penalty Score Adjuster (+1 / -1)
@@ -979,7 +979,7 @@ const MatchControl = () => {
 
     const updatePayload = isHome ? { home_penalty_score: newPen } : { away_penalty_score: newPen };
     try {
-      await supabaseAdmin.from('matches').update(updatePayload).eq('id', id);
+      await supabase.from('matches').update(updatePayload).eq('id', id);
     } catch (e) {}
   };
 
@@ -1081,7 +1081,7 @@ const MatchControl = () => {
           await updateTimerDBAndState(timerSeconds, null, false, 'finished');
 
           try {
-            await supabaseAdmin.from('matches').update(baseFinishData).eq('id', targetId);
+            await supabase.from('matches').update(baseFinishData).eq('id', targetId);
           } catch (errAdmin) {
             console.warn('Admin finish update error:', errAdmin);
           }
@@ -1103,16 +1103,16 @@ const MatchControl = () => {
               timestamp: Date.now()
             });
 
-            const { data: existingSignal } = await supabaseAdmin
+            const { data: existingSignal } = await supabase
               .from('sponsors')
               .select('id')
               .eq('name', finishSignalName)
               .maybeSingle();
 
             if (existingSignal) {
-              await supabaseAdmin.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
+              await supabase.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
             } else {
-              await supabaseAdmin.from('sponsors').insert({ name: finishSignalName, logo_url: signalPayload });
+              await supabase.from('sponsors').insert({ name: finishSignalName, logo_url: signalPayload });
             }
           } catch (sigErr) {
             console.warn(`[FIELD_${fieldNum}] Finish match signal error:`, sigErr);
@@ -1145,7 +1145,7 @@ const MatchControl = () => {
     try {
       const minuteVal = parseInt(eventMinute) || getCurrentMinute();
 
-      const { data: insertedEvents, error } = await supabaseAdmin.from('match_events').insert([{
+      const { data: insertedEvents, error } = await supabase.from('match_events').insert([{
         match_id: id,
         team_id: selectedTeamId,
         player_id: selectedPlayerId,
@@ -1161,7 +1161,7 @@ const MatchControl = () => {
           const newHomeScore = (match.home_score || 0) + (isHome ? 1 : 0);
           const newAwayScore = (match.away_score || 0) + (isHome ? 0 : 1);
           
-          await supabaseAdmin.from('matches').update({
+          await supabase.from('matches').update({
             home_score: newHomeScore,
             away_score: newAwayScore
           }).eq('id', id);
@@ -1188,26 +1188,17 @@ const MatchControl = () => {
             ];
 
             for (const fieldSignalName of signalNames) {
-              const { data: existingSignal } = await supabaseAdmin
+              const { data: existingSignal } = await supabase
                 .from('sponsors')
                 .select('id')
                 .eq('name', fieldSignalName)
                 .maybeSingle();
 
               if (existingSignal) {
-                await supabaseAdmin.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
+                await supabase.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
               } else {
-                await supabaseAdmin.from('sponsors').insert({ name: fieldSignalName, logo_url: signalPayload });
+                await supabase.from('sponsors').insert({ name: fieldSignalName, logo_url: signalPayload });
               }
-            }
-
-            // Also trigger local OBS if connected
-            if (obsService.isConnected()) {
-              getOrSyncStingerUrl().then(activeStingerUrl => {
-                obsService.triggerGoalReplay({ stingerUrl: activeStingerUrl }).catch(err => {
-                  console.warn('Avto-replay uzatishda xatolik:', err);
-                });
-              });
             }
           } catch (sigErr) {
             console.warn(`[FIELD_${fieldNum}] Cloud signal yuborishda xatolik:`, sigErr);
@@ -1242,11 +1233,11 @@ const MatchControl = () => {
     }
 
     try {
-      // 2. Direct delete via supabaseAdmin
-      await supabaseAdmin.from('match_events').delete().eq('id', event.id);
+      // 2. Direct delete via supabase
+      await supabase.from('match_events').delete().eq('id', event.id);
 
       if (isGoal) {
-        await supabaseAdmin.from('matches').update({
+        await supabase.from('matches').update({
           home_score: newHomeScore,
           away_score: newAwayScore,
           updated_at: new Date().toISOString()

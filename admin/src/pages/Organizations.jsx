@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { Building2, Plus, Pencil, Trash2, X, Check, Globe, Mail, Lock, Eye, EyeOff, ShieldAlert, AlertTriangle, Crop } from 'lucide-react';
 import ImageCropperModal from '../components/ImageCropperModal';
 import './Organizations.css';
@@ -158,7 +158,7 @@ const Organizations = () => {
           .single();
         if (orgError) { alert('Tashkilot yaratishda xato: ' + orgError.message); return; }
 
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
           email: formData.admin_email.trim(),
           password: formData.admin_password,
           email_confirm: true,
@@ -206,23 +206,23 @@ const Organizations = () => {
 
     try {
       const orgId = deletingOrg.id;
-      const { data: adminUsers } = await supabaseAdmin.from('admin_users').select('id').eq('organization_id', orgId);
+      const { data: adminUsers } = await supabase.from('admin_users').select('id').eq('organization_id', orgId);
       if (adminUsers && adminUsers.length > 0) {
         for (const admin of adminUsers) {
-          await supabaseAdmin.auth.admin.deleteUser(admin.id).catch(() => {});
+          await supabase.auth.admin.deleteUser(admin.id).catch(() => {});
         }
-        await supabaseAdmin.from('admin_users').delete().eq('organization_id', orgId);
+        await supabase.from('admin_users').delete().eq('organization_id', orgId);
       }
 
-      await supabaseAdmin.from('league_collabs').delete().or(`sender_org_id.eq.${orgId},receiver_org_id.eq.${orgId}`);
-      await supabaseAdmin.from('leagues').delete().eq('organization_id', orgId);
-      await supabaseAdmin.from('applications').delete().eq('organization_id', orgId);
-      await supabaseAdmin.from('matches').delete().eq('organization_id', orgId);
-      await supabaseAdmin.from('teams').delete().eq('organization_id', orgId);
-      await supabaseAdmin.from('transfers').delete().eq('organization_id', orgId).catch(() => {});
-      await supabaseAdmin.from('sponsors').delete().eq('organization_id', orgId).catch(() => {});
+      await supabase.from('league_collabs').delete().or(`sender_org_id.eq.${orgId},receiver_org_id.eq.${orgId}`);
+      await supabase.from('leagues').delete().eq('organization_id', orgId);
+      await supabase.from('applications').delete().eq('organization_id', orgId);
+      await supabase.from('matches').delete().eq('organization_id', orgId);
+      await supabase.from('teams').delete().eq('organization_id', orgId);
+      await supabase.from('transfers').delete().eq('organization_id', orgId).catch(() => {});
+      await supabase.from('sponsors').delete().eq('organization_id', orgId).catch(() => {});
 
-      const { error: deleteOrgErr } = await supabaseAdmin.from('organizations').delete().eq('id', orgId);
+      const { error: deleteOrgErr } = await supabase.from('organizations').delete().eq('id', orgId);
       if (deleteOrgErr) throw deleteOrgErr;
 
       setDeleteModalOpen(false);

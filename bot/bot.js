@@ -1,10 +1,21 @@
+require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const { createClient } = require('@supabase/supabase-js');
 
-// Config
-const TELEGRAM_TOKEN = '8644740765:AAHHhAvzTpUgfz5kevg5iiDfA9GafA1m6Vs';
-const SUPABASE_URL = 'https://xzzyhfyazwohdqqbjiiy.supabase.co';
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6enloZnlhendvaGRxcWJqaWl5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MzEwMzU1MSwiZXhwIjoyMDk4Njc5NTUxfQ.Z_qdzR5mYepOEyW57WXl9fb1v5FV4xEYDP-LvihiU6I';
+// 🔒 SECURITY FIX: Barcha kalitlar .env'dan o'qiladi
+const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://xzzyhfyazwohdqqbjiiy.supabase.co';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Kalitlar mavjudligini tekshirish
+if (!TELEGRAM_TOKEN) {
+    console.error('❌ FATAL: TELEGRAM_BOT_TOKEN .env faylida topilmadi!');
+    process.exit(1);
+}
+if (!SUPABASE_SERVICE_KEY) {
+    console.error('❌ FATAL: SUPABASE_SERVICE_ROLE_KEY .env faylida topilmadi!');
+    process.exit(1);
+}
 
 // Initialize Telegram Bot & Supabase
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });

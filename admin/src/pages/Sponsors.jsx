@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { Upload, Trash2, Star, Award, Sparkles, ChevronDown, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 import './Sponsors.css';
@@ -44,7 +44,7 @@ export default function Sponsors() {
       }
 
       // Fetch system sponsor visibility settings from database
-      const { data: systemSponsorSettings } = await supabaseAdmin
+      const { data: systemSponsorSettings } = await supabase
         .from('sponsors')
         .select('*')
         .like('name', 'LEAGUE_SHOW_SPONSORS_%');
@@ -90,19 +90,19 @@ export default function Sponsors() {
       const keysToSave = [`LEAGUE_SHOW_SPONSORS_${league.id}`, `LEAGUE_SHOW_SPONSORS_${league.name}`];
       for (const keyName of keysToSave) {
         if (!keyName) continue;
-        const { data: existing } = await supabaseAdmin
+        const { data: existing } = await supabase
           .from('sponsors')
           .select('id')
           .eq('name', keyName)
           .maybeSingle();
 
         if (existing) {
-          await supabaseAdmin
+          await supabase
             .from('sponsors')
             .update({ logo_url: String(nextVal) })
             .eq('id', existing.id);
         } else {
-          await supabaseAdmin
+          await supabase
             .from('sponsors')
             .insert([{
               name: keyName,
@@ -129,14 +129,14 @@ export default function Sponsors() {
       let loadedSponsors = [];
 
       if (orgId) {
-        const { data: orgSponsors } = await supabaseAdmin
+        const { data: orgSponsors } = await supabase
           .from('sponsors')
           .select('*')
           .eq('organization_id', orgId)
           .order('created_at', { ascending: false });
         loadedSponsors = orgSponsors || [];
       } else {
-        const { data } = await supabaseAdmin
+        const { data } = await supabase
           .from('sponsors')
           .select('*')
           .is('organization_id', null)
@@ -211,7 +211,7 @@ export default function Sponsors() {
 
       let insertData = null;
       try {
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await supabase
           .from('sponsors')
           .insert([
             { name: file.name, logo_url: publicUrl, organization_id: orgId, is_main: false }
@@ -220,7 +220,7 @@ export default function Sponsors() {
         if (error) throw error;
         insertData = data;
       } catch (e) {
-        const { data } = await supabaseAdmin
+        const { data } = await supabase
           .from('sponsors')
           .insert([
             { name: file.name, logo_url: publicUrl, is_main: false }
@@ -270,12 +270,12 @@ export default function Sponsors() {
 
     try {
       if (orgId) {
-        await supabaseAdmin.from('sponsors').update({ is_main: false }).eq('organization_id', orgId);
+        await supabase.from('sponsors').update({ is_main: false }).eq('organization_id', orgId);
       }
-      await supabaseAdmin.from('sponsors').update({ is_main: false }).is('organization_id', null);
+      await supabase.from('sponsors').update({ is_main: false }).is('organization_id', null);
 
       if (targetMain) {
-        const { error: updateErr } = await supabaseAdmin
+        const { error: updateErr } = await supabase
           .from('sponsors')
           .update({ is_main: true })
           .eq('id', targetMain.id);
@@ -329,7 +329,7 @@ export default function Sponsors() {
         await supabase.storage.from('sponsors').remove([fileName]);
       }
       
-      const { error } = await supabaseAdmin.from('sponsors').delete().eq('id', id);
+      const { error } = await supabase.from('sponsors').delete().eq('id', id);
       if (error) throw error;
       
       setSponsors(prev => prev.filter(s => s.id !== id));

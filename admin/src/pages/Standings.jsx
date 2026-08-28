@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase, supabaseAdmin } from '../supabaseClient';
+import { supabase, supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
 import { Download, Save, ShieldAlert, Upload, Sparkles, AlertCircle, X, Check, Trophy, Edit, RefreshCw } from 'lucide-react';
@@ -53,7 +53,7 @@ export default function Standings() {
   const fetchSponsorsData = async () => {
     try {
       let loadedSponsors = [];
-      const dbClient = supabaseAdmin || supabase;
+      const dbClient = supabase || supabase;
       if (orgId) {
         const { data: orgSponsors } = await dbClient
           .from('sponsors')
@@ -439,7 +439,7 @@ export default function Standings() {
     if (!editingTeam || savingOverride) return;
     setSavingOverride(true);
     try {
-      const dbClient = supabaseAdmin || supabase;
+      const dbClient = supabase || supabase;
       const teamId = editingTeam.id;
 
       // Offsets relative to raw match calculations
