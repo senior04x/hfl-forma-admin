@@ -1173,11 +1173,17 @@ const MatchControl = () => {
           const orgId = match?.organization_id || currentOrg?.id || 'default';
           
           try {
+            const selectedPlayerObj = (isHome ? homePlayers : awayPlayers).find(p => String(p.id) === String(selectedPlayerId));
+            const selectedPlayerName = selectedPlayerObj ? `${selectedPlayerObj.first_name || ''} ${selectedPlayerObj.last_name || ''}`.trim() : '';
+            const selectedTeamName = isHome ? (homeTeam?.name || 'Uy jamoa') : (awayTeam?.name || 'Mehmon');
+
             const signalPayload = JSON.stringify({
               org_id: orgId,
               match_id: id,
               event_id: newEvent?.id || '',
               field: fieldNum,
+              player_name: selectedPlayerName,
+              team_name: selectedTeamName,
               timestamp: Date.now()
             });
 
