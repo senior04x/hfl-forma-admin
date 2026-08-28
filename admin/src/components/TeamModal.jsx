@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase, supabase } from '../supabaseClient';
+import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues } from '../utils/leagueUtils';
 import { X, Trash2, Save, Eye, Crop, Plus, Check, Trophy, Clock, Archive } from 'lucide-react';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase, supabase } from '../supabaseClient';
+import { supabase } from '../supabaseClient';
 import './ObsScoreboard.css';
 
 const DEFAULT_LEAGUE_LOGOS = {

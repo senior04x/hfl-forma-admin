@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, supabase } from '../supabaseClient';
+import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { Upload, Trash2, Star, Award, Sparkles, ChevronDown, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 import './Sponsors.css';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase, supabase } from '../supabaseClient';
+import { supabase } from '../supabaseClient';
 import { X, Trash2, Save, Eye, Crop, Clock, Archive } from 'lucide-react';
 import ImageCropperModal from './ImageCropperModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
