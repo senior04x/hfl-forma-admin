@@ -45,15 +45,6 @@ const Dashboard = () => {
           }
         }
       )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sponsors' },
-        (payload) => {
-          if (payload.new && payload.new.name && payload.new.name.startsWith('REGISTRATION_OPEN')) {
-            setIsRegistrationOpen(payload.new.logo_url === 'true');
-          }
-        }
-      )
       .subscribe();
 
     return () => {
@@ -63,43 +54,19 @@ const Dashboard = () => {
 
   const fetchRegistrationStatus = async () => {
     const activeOrgId = orgId || 1;
-    let openStatus = true;
-    let found = false;
-
-    // 1. Try sponsors KV table with supabase
     try {
-      const configKey = `REGISTRATION_OPEN_${activeOrgId}`;
-      const { data: spData } = await supabase
-        .from('sponsors')
-        .select('logo_url')
-        .eq('name', configKey)
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('is_registration_open')
+        .eq('id', activeOrgId)
         .maybeSingle();
 
-      if (spData && spData.logo_url !== undefined && spData.logo_url !== null) {
-        openStatus = spData.logo_url === 'true';
-        found = true;
+      if (orgData && orgData.is_registration_open !== undefined && orgData.is_registration_open !== null) {
+        setIsRegistrationOpen(!!orgData.is_registration_open);
+        try { localStorage.setItem(`hfl_reg_open_${activeOrgId}`, orgData.is_registration_open ? 'true' : 'false'); } catch (e) {}
       }
-    } catch (e) {}
-
-    // 2. Try organizations table with supabase if not found in sponsors
-    if (!found) {
-      try {
-        const { data: orgData } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('id', activeOrgId)
-          .maybeSingle();
-
-        if (orgData && orgData.is_registration_open !== undefined && orgData.is_registration_open !== null) {
-          openStatus = !!orgData.is_registration_open;
-          found = true;
-        }
-      } catch (e) {}
-    }
-
-    if (found) {
-      setIsRegistrationOpen(openStatus);
-      try { localStorage.setItem(`hfl_reg_open_${activeOrgId}`, openStatus ? 'true' : 'false'); } catch (e) {}
+    } catch (e) {
+      console.warn('fetchRegistrationStatus error:', e);
     }
   };
 
@@ -113,38 +80,12 @@ const Dashboard = () => {
     // Instantly persist to localStorage for activeOrgId
     try { localStorage.setItem(`hfl_reg_open_${activeOrgId}`, newState ? 'true' : 'false'); } catch (e) {}
 
-    // Save ONLY to this organization's specific key `REGISTRATION_OPEN_${activeOrgId}`
-    try {
-      const key = `REGISTRATION_OPEN_${activeOrgId}`;
-      const { data: existing } = await supabase
-        .from('sponsors')
-        .select('id')
-        .eq('name', key)
-        .maybeSingle();
-
-      if (existing?.id) {
-        await supabase
-          .from('sponsors')
-          .update({ logo_url: newState ? 'true' : 'false' })
-          .eq('id', existing.id);
-      } else {
-        await supabase
-          .from('sponsors')
-          .insert([{
-            name: key,
-            logo_url: newState ? 'true' : 'false',
-            organization_id: activeOrgId,
-            is_main: false
-          }]);
-      }
-    } catch (e) {
-      console.warn('Sponsors reg toggle save notice:', e);
-    }
-
-    // Also sync to organizations table for activeOrgId
+    // Save directly to organizations table
     try {
       await supabase.from('organizations').update({ is_registration_open: newState }).eq('id', activeOrgId);
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Organization reg toggle save notice:', e);
+    }
 
     setTogglingReg(false);
   };

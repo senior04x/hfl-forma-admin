@@ -553,14 +553,15 @@ const Settings = () => {
         const safePayload = {
           name: cleanName,
           logo_url: leagueLogo.trim() || null,
-          is_junior: isJunior
+          is_junior: isJunior,
+          duration: matchDuration ? Number(matchDuration) : 60,
+          start_date: startDate ? startDate : null,
         };
 
         const fullPayload = {
           ...safePayload,
           season: cleanSeason,
           status: leagueStatus,
-          start_date: startDate ? startDate : null,
           end_date: endDate ? endDate : null
         };
 
@@ -573,38 +574,8 @@ const Settings = () => {
           if (baseErr) console.warn('Base update warning:', baseErr);
         }
 
-        // Save match duration and start/end dates in sponsors table / localStorage helper
-        if (targetId) {
-          try {
-            if (matchDuration) {
-              const nameKey = `LEAGUE_DURATION_${targetId}`;
-              const { data: existing } = await client.from('sponsors').select('id').eq('name', nameKey).maybeSingle();
-              if (existing) {
-                await client.from('sponsors').update({ logo_url: String(matchDuration) }).eq('id', existing.id);
-              } else {
-                await client.from('sponsors').insert({ name: nameKey, logo_url: String(matchDuration) });
-              }
-            }
-            if (startDate) {
-              const startKey = `LEAGUE_START_DATE_${targetId}`;
-              const { data: exStart } = await client.from('sponsors').select('id').eq('name', startKey).maybeSingle();
-              if (exStart) {
-                await client.from('sponsors').update({ logo_url: startDate }).eq('id', exStart.id);
-              } else {
-                await client.from('sponsors').insert({ name: startKey, logo_url: startDate });
-              }
-            }
-            if (endDate) {
-              const endKey = `LEAGUE_END_DATE_${targetId}`;
-              const { data: exEnd } = await client.from('sponsors').select('id').eq('name', endKey).maybeSingle();
-              if (exEnd) {
-                await client.from('sponsors').update({ logo_url: endDate }).eq('id', exEnd.id);
-              } else {
-                await client.from('sponsors').insert({ name: endKey, logo_url: endDate });
-              }
-            }
-          } catch (e) {}
-          if (matchDuration) localStorage.setItem(`hfl_league_duration_${targetId}`, String(matchDuration));
+        if (matchDuration && targetId) {
+          localStorage.setItem(`hfl_league_duration_${targetId}`, String(matchDuration));
         }
 
         if (oldName !== cleanName) {
@@ -621,14 +592,15 @@ const Settings = () => {
           name: cleanName,
           logo_url: leagueLogo.trim() || null,
           organization_id: orgId,
-          is_junior: isJunior
+          is_junior: isJunior,
+          duration: matchDuration ? Number(matchDuration) : 60,
+          start_date: startDate ? startDate : null,
         };
 
         const fullInsertPayload = {
           ...safeInsertPayload,
           season: cleanSeason,
           status: leagueStatus,
-          start_date: startDate ? startDate : null,
           end_date: endDate ? endDate : null
         };
 
@@ -643,22 +615,8 @@ const Settings = () => {
           newLeague = data;
         }
 
-        if (newLeague) {
-          try {
-            if (matchDuration) {
-              const nameKey = `LEAGUE_DURATION_${newLeague.id}`;
-              await client.from('sponsors').insert({ name: nameKey, logo_url: String(matchDuration) });
-            }
-            if (startDate) {
-              const startKey = `LEAGUE_START_DATE_${newLeague.id}`;
-              await client.from('sponsors').insert({ name: startKey, logo_url: startDate });
-            }
-            if (endDate) {
-              const endKey = `LEAGUE_END_DATE_${newLeague.id}`;
-              await client.from('sponsors').insert({ name: endKey, logo_url: endDate });
-            }
-          } catch (e) {}
-          if (matchDuration) localStorage.setItem(`hfl_league_duration_${newLeague.id}`, String(matchDuration));
+        if (newLeague && matchDuration) {
+          localStorage.setItem(`hfl_league_duration_${newLeague.id}`, String(matchDuration));
         }
 
         setMessage({ type: 'success', text: `"${cleanName}" ligasi muvaffaqiyatli yaratildi!` });

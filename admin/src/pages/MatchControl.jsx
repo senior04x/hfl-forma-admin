@@ -27,6 +27,9 @@ const STATUS_LABELS = {
   finished: 'Yakunlangan'
 };
 
+// Cache unassigned replays when admin deletes a mistake goal so re-adding re-links the replay video
+const ORPHAN_REPLAYS_BY_MATCH = new Map();
+
 const MatchControl = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -1144,71 +1147,38 @@ const MatchControl = () => {
     setSavingEvent(true);
     try {
       const minuteVal = parseInt(eventMinute) || getCurrentMinute();
+      const isGoal = eventType === 'goal';
+
+      // Check if there is an existing orphan replay from a recently deleted mistake goal
+      const orphanReplay = ORPHAN_REPLAYS_BY_MATCH.get(String(id));
+      const isOrphanFresh = orphanReplay && (Date.now() - orphanReplay.timestamp < 10 * 60 * 1000);
+      const existingReplayUrl = isGoal && isOrphanFresh ? orphanReplay.url : null;
+      if (existingReplayUrl) {
+        ORPHAN_REPLAYS_BY_MATCH.delete(String(id));
+      }
 
       const { data: insertedEvents, error } = await supabase.from('match_events').insert([{
         match_id: id,
         team_id: selectedTeamId,
         player_id: selectedPlayerId,
         event_type: eventType,
-        minute: minuteVal
+        minute: minuteVal,
+        replay_video_url: existingReplayUrl || null,
       }]).select('*');
 
       if (!error) {
-        const newEvent = insertedEvents && insertedEvents.length > 0 ? insertedEvents[0] : null;
-
-        if (eventType === 'goal') {
+        if (isGoal) {
           const isHome = selectedTeamId === match.home_team_id;
           const newHomeScore = (match.home_score || 0) + (isHome ? 1 : 0);
           const newAwayScore = (match.away_score || 0) + (isHome ? 0 : 1);
           
           await supabase.from('matches').update({
             home_score: newHomeScore,
-            away_score: newAwayScore
+            away_score: newAwayScore,
+            updated_at: new Date().toISOString(),
           }).eq('id', id);
 
           setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
-
-          // Broadcast Cloud Signal for Remote AMATORA.exe Field Replay (Multi-tenant org_id isolation)
-          const fieldNum = match?.location?.includes('2-maydon') ? 2 : 1;
-          const orgId = match?.organization_id || currentOrg?.id || 'default';
-          
-          try {
-            const selectedPlayerObj = (isHome ? homePlayers : awayPlayers).find(p => String(p.id) === String(selectedPlayerId));
-            const selectedPlayerName = selectedPlayerObj ? `${selectedPlayerObj.first_name || ''} ${selectedPlayerObj.last_name || ''}`.trim() : '';
-            const selectedTeamName = isHome ? (homeTeam?.name || 'Uy jamoa') : (awayTeam?.name || 'Mehmon');
-
-            const signalPayload = JSON.stringify({
-              org_id: orgId,
-              match_id: id,
-              event_id: newEvent?.id || '',
-              field: fieldNum,
-              player_name: selectedPlayerName,
-              team_name: selectedTeamName,
-              timestamp: Date.now()
-            });
-
-            // Scoped signal name & generic signal name for full compatibility
-            const signalNames = [
-              `REMOTE_GOAL_${orgId}_FIELD_${fieldNum}`,
-              `REMOTE_GOAL_FIELD_${fieldNum}`
-            ];
-
-            for (const fieldSignalName of signalNames) {
-              const { data: existingSignal } = await supabase
-                .from('sponsors')
-                .select('id')
-                .eq('name', fieldSignalName)
-                .maybeSingle();
-
-              if (existingSignal) {
-                await supabase.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
-              } else {
-                await supabase.from('sponsors').insert({ name: fieldSignalName, logo_url: signalPayload });
-              }
-            }
-          } catch (sigErr) {
-            console.warn(`[FIELD_${fieldNum}] Cloud signal yuborishda xatolik:`, sigErr);
-          }
         }
 
         await fetchEvents();
@@ -1236,6 +1206,14 @@ const MatchControl = () => {
       newHomeScore = Math.max(0, newHomeScore - (isHome ? 1 : 0));
       newAwayScore = Math.max(0, newAwayScore - (isHome ? 0 : 1));
       setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
+
+      // If this deleted goal had a recorded replay video, preserve it in orphan map so next goal can re-link it
+      if (event.replay_video_url) {
+        ORPHAN_REPLAYS_BY_MATCH.set(String(id), {
+          url: event.replay_video_url,
+          timestamp: Date.now(),
+        });
+      }
     }
 
     try {

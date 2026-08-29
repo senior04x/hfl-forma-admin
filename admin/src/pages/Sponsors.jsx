@@ -144,15 +144,28 @@ export default function Sponsors() {
         loadedSponsors = data || [];
       }
 
-      // Filter out system internal banner and settings keys
-      const realSponsors = loadedSponsors.filter(s => 
-        s.name && 
-        !s.name.startsWith('SCHEDULE_BANNER_') && 
-        !s.name.startsWith('YT_BANNER_') && 
-        !s.name.startsWith('YT_OAUTH_TOKENS_') &&
-        !s.name.startsWith('MATCH_TIMER_') &&
-        !s.name.startsWith('LEAGUE_SHOW_SPONSORS_')
-      );
+      // Filter out system internal banner, OBS signals, and settings keys
+      const realSponsors = loadedSponsors.filter(s => {
+        if (!s || !s.name) return false;
+        const uName = String(s.name).toUpperCase();
+        const rawUrl = String(s.logo_url || '').trim();
+        if (
+          uName.startsWith('SCHEDULE_BANNER_') || 
+          uName.startsWith('YT_BANNER_') || 
+          uName.startsWith('YT_OAUTH_TOKENS_') ||
+          uName.startsWith('MATCH_TIMER_') ||
+          uName.startsWith('REMOTE_') ||
+          uName.includes('REMOTE_FINISH') ||
+          uName.includes('REMOTE_GOAL') ||
+          uName.startsWith('LEAGUE_SHOW_SPONSORS_')
+        ) return false;
+
+        if (rawUrl.startsWith('{') || rawUrl.startsWith('[') || (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://') && !rawUrl.startsWith('data:'))) {
+          return false;
+        }
+
+        return true;
+      });
 
       setSponsors(realSponsors);
 

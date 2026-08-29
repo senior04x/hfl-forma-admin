@@ -60,9 +60,10 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
   };
 
   const extractPlayerMeta = (p) => {
+    if (!p) return { citizenship: '', height: '', weight: '', instaUser: '' };
     let citizenship = p.citizenship || '';
-    let height = p.height || '';
-    let weight = p.weight || '';
+    let height = p.height !== null && p.height !== undefined ? String(p.height) : '';
+    let weight = p.weight !== null && p.weight !== undefined ? String(p.weight) : '';
     let instaUser = getInstaUsername(p);
 
     if (p.comment) {
@@ -70,9 +71,9 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
       if (metaMatch?.[1]) {
         try {
           const obj = JSON.parse(metaMatch[1]);
-          if (obj.citizenship) citizenship = obj.citizenship;
-          if (obj.height) height = obj.height;
-          if (obj.weight) weight = obj.weight;
+          if (obj.citizenship && !citizenship) citizenship = obj.citizenship;
+          if (obj.height && !height) height = String(obj.height);
+          if (obj.weight && !weight) weight = String(obj.weight);
         } catch (e) {}
       }
     }
@@ -214,7 +215,6 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
         updatedComment += ` [INSTAGRAM:${instaUrl}]`;
       }
 
-      // ONLY update valid SQL columns to prevent 400 Bad Request error
       const updatePayload = {
         first_name: formData.first_name,
         last_name: formData.last_name,
@@ -227,11 +227,28 @@ const PlayerModal = ({ player, mode, onClose, onRefresh }) => {
         player_number: formData.player_number ? Number(formData.player_number) : null,
         photo_url: formData.photo_url,
         team_id: formData.team_id || null,
+        height: formData.height ? Number(formData.height) : null,
+        weight: formData.weight ? Number(formData.weight) : null,
+        citizenship: formData.citizenship || null,
+        instagram_username: cleanInsta || null,
+        league: selectedLeague || null,
         comment: updatedComment.trim()
       };
 
       const { error } = await supabase.from('applications').update(updatePayload).eq('id', player.id);
       if (error) throw error;
+
+      // In-place mutation so view mode immediately updates
+      Object.assign(player, updatePayload);
+      setFormData(prev => ({
+        ...prev,
+        ...updatePayload,
+        instagram_username: cleanInsta,
+        citizenship: formData.citizenship,
+        height: formData.height,
+        weight: formData.weight
+      }));
+
       onRefresh();
       setCurrentMode('view');
     } catch (error) {
