@@ -1745,21 +1745,32 @@ const Schedule = () => {
                   const postponedMatches = filteredList.filter(m => m.is_postponed);
                   const totalCount = currentRoundMatches.length + postponedMatches.length;
 
-                  let rowPadding = '9px 18px';
-                  let teamFontSize = '25px';
+                  let rowPadding = '9px 16px';
                   let teamLogoSize = '65px';
-                  let timeBoxFontSize = '40px';
-                  let timeDateFontSize = '14px';
+                  let timeBoxFontSize = '36px';
+                  let timeDateFontSize = '13px';
                   let matchGap = '14px';
 
                   if (totalCount > 6) {
-                    rowPadding = '6.5px 14px';
-                    teamFontSize = '22px';
+                    rowPadding = '6.5px 12px';
                     teamLogoSize = '58px';
-                    timeBoxFontSize = '36px';
-                    timeDateFontSize = '13px';
+                    timeBoxFontSize = '32px';
+                    timeDateFontSize = '12px';
                     matchGap = '10px';
                   }
+
+                  const getTeamFontSize = (name) => {
+                    const len = (name || '').trim().length;
+                    if (totalCount > 6) {
+                      if (len > 16) return '15px';
+                      if (len > 12) return '17px';
+                      return '19px';
+                    } else {
+                      if (len > 16) return '16px';
+                      if (len > 12) return '18px';
+                      return '21px';
+                    }
+                  };
 
                   return (
                     <>
@@ -1797,16 +1808,16 @@ const Schedule = () => {
                         {currentRoundMatches.map(match => {
                           const isMatchFinished = match.status === 'finished' || filterStatus === 'finished' || (match.home_score !== null && match.away_score !== null && (match.home_score > 0 || match.away_score > 0 || match.status === 'finished'));
                           return (
-                            <div key={match.id} className="sch-match-row" style={{ padding: rowPadding, gridTemplateColumns: `${teamLogoSize} 1fr 200px 1fr ${teamLogoSize}` }}>
+                            <div key={match.id} className="sch-match-row" style={{ padding: rowPadding, gridTemplateColumns: `${teamLogoSize} 1fr 160px 1fr ${teamLogoSize}` }}>
                               <img src={match.home_team?.logo_url} className="sch-team-logo" style={{ width: teamLogoSize, height: teamLogoSize }} crossOrigin="anonymous" alt="" />
-                              <div style={{ color: '#fff', fontSize: teamFontSize, fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 6px' }}>{match.home_team?.name}</div>
+                              <div style={{ color: '#fff', fontSize: getTeamFontSize(match.home_team?.name), fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.5px', lineHeight: 1.2, padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflowWrap: 'normal', wordBreak: 'normal', whiteSpace: 'normal' }}>{match.home_team?.name}</div>
                               <div className="sch-time-container">
                                 <div className="sch-time-date" style={{ fontSize: timeDateFontSize }}>{match.match_date?.split('-').reverse().join('.')}</div>
                                 <div className="sch-time-box" style={{ fontSize: timeBoxFontSize }}>
                                   {isMatchFinished ? `${match.home_score || 0} - ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
                                 </div>
                               </div>
-                              <div style={{ color: '#fff', fontSize: teamFontSize, fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 6px' }}>{match.away_team?.name}</div>
+                              <div style={{ color: '#fff', fontSize: getTeamFontSize(match.away_team?.name), fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.5px', lineHeight: 1.2, padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflowWrap: 'normal', wordBreak: 'normal', whiteSpace: 'normal' }}>{match.away_team?.name}</div>
                               <img src={match.away_team?.logo_url} className="sch-team-logo" style={{ width: teamLogoSize, height: teamLogoSize }} crossOrigin="anonymous" alt="" />
                             </div>
                           );
@@ -1820,16 +1831,16 @@ const Schedule = () => {
                             {postponedMatches.map(match => {
                               const isMatchFinished = match.status === 'finished' || filterStatus === 'finished' || (match.home_score !== null && match.away_score !== null && (match.home_score > 0 || match.away_score > 0 || match.status === 'finished'));
                               return (
-                                <div key={match.id} className="sch-match-row" style={{ padding: rowPadding, gridTemplateColumns: `${teamLogoSize} 1fr 200px 1fr ${teamLogoSize}`, borderColor: 'rgba(255, 59, 48, 0.65)', background: 'rgba(255, 59, 48, 0.2)' }}>
+                                <div key={match.id} className="sch-match-row" style={{ padding: rowPadding, gridTemplateColumns: `${teamLogoSize} 1fr 160px 1fr ${teamLogoSize}`, borderColor: 'rgba(255, 59, 48, 0.65)', background: 'rgba(255, 59, 48, 0.2)' }}>
                                   <img src={match.home_team?.logo_url} className="sch-team-logo" style={{ width: teamLogoSize, height: teamLogoSize }} crossOrigin="anonymous" alt="" />
-                                  <div style={{ color: '#fff', fontSize: teamFontSize, fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 6px' }}>{match.home_team?.name}</div>
+                                  <div style={{ color: '#fff', fontSize: getTeamFontSize(match.home_team?.name), fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.5px', lineHeight: 1.2, padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflowWrap: 'normal', wordBreak: 'normal', whiteSpace: 'normal' }}>{match.home_team?.name}</div>
                                   <div className="sch-time-container">
                                     <div className="sch-time-date" style={{ fontSize: timeDateFontSize }}>{match.match_date?.split('-').reverse().join('.')}</div>
                                     <div className="sch-time-box" style={{ fontSize: timeBoxFontSize }}>
                                       {isMatchFinished ? `${match.home_score || 0} - ${match.away_score || 0}` : match.match_time?.substring(0, 5)}
                                     </div>
                                   </div>
-                                  <div style={{ color: '#fff', fontSize: teamFontSize, fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px', wordBreak: 'break-word', padding: '0 6px' }}>{match.away_team?.name}</div>
+                                  <div style={{ color: '#fff', fontSize: getTeamFontSize(match.away_team?.name), fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.5px', lineHeight: 1.2, padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflowWrap: 'normal', wordBreak: 'normal', whiteSpace: 'normal' }}>{match.away_team?.name}</div>
                                   <img src={match.away_team?.logo_url} className="sch-team-logo" style={{ width: teamLogoSize, height: teamLogoSize }} crossOrigin="anonymous" alt="" />
                                 </div>
                               );
