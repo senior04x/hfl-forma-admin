@@ -188,6 +188,14 @@
   z-index: 1;
 }
 
+.export-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+}
+
 /* Dynamic Background Themes */
 .theme-export-Super {
   background: linear-gradient(180deg, #b91c1c 0%, #ea580c 50%, #f59e0b 100%);
@@ -214,8 +222,8 @@
 .export-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 40px 50px 20px 50px;
+  align-items: center;
+  padding: 75px 45px 15px 45px;
 }
 
 .export-logo-left {
@@ -223,7 +231,7 @@
   flex-direction: column;
 }
 .export-logo-left h2 {
-  font-size: 32px;
+  font-size: 34px;
   font-style: italic;
   font-weight: 900;
   margin: 0;
@@ -241,20 +249,22 @@
   align-items: flex-end;
 }
 .export-logo-right img {
-  height: 40px;
+  height: 52px;
 }
 .export-logo-right span {
   font-size: 14px;
-  margin-top: 5px;
+  margin-top: 4px;
 }
 
 /* Main Grid Layout for Export */
 .export-body {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 20px 50px 30px 50px;
-  flex: 1;
-  gap: 20px;
+  grid-template-columns: 1.15fr 0.85fr;
+  padding: 0 45px;
+  gap: 18px;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Table Area */
@@ -263,7 +273,7 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 10px;
+  border-radius: 14px;
   color: white;
   overflow: hidden;
   display: flex;
@@ -272,35 +282,38 @@
 
 .export-table-header {
   display: flex;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 15px;
-  font-weight: 800;
-  font-size: 18px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.14);
+  padding: 10px 14px;
+  font-weight: 900;
+  font-size: 17px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.25);
   color: #fff;
+  letter-spacing: 0.5px;
 }
-.export-col-hash { width: 40px; text-align: center; }
-.export-col-team { flex: 1; margin-left: 10px; }
-.export-col-stat { width: 50px; text-align: center; }
+.export-col-hash { width: 34px; text-align: center; font-weight: 900; }
+.export-col-team { flex: 1; margin-left: 8px; font-weight: 900; }
+.export-col-stat { width: 44px; text-align: center; font-weight: 900; }
 
 .export-table-row {
   display: flex;
-  padding: 12px 15px;
+  padding: 6px 12px;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
 }
 .export-table-row:last-child { border-bottom: none; }
 .export-table-row .team-img {
-  width: 30px; height: 30px; border-radius: 50%; margin-right: 15px; object-fit: cover;
+  width: 28px; height: 28px; border-radius: 50%; margin-right: 10px; object-fit: cover;
 }
 
 /* Right Column (Results & Stats) */
 .export-right-col {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 10px;
+  height: 100%;
 }
 
 .export-card {
@@ -308,25 +321,29 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 10px;
+  border-radius: 14px;
   color: white;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .export-card-title {
   text-align: center;
-  padding: 10px 14px;
-  font-size: 15px;
-  font-weight: 800;
+  padding: 9px 12px;
+  font-size: 16px;
+  font-weight: 900;
   color: white;
   text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.5px;
 }
 
 .export-results-title {
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 900;
   text-align: center;
   margin-bottom: 8px;
   text-transform: uppercase;
@@ -336,31 +353,31 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-weight: 700;
-  font-size: 13px;
+  font-weight: 800;
+  font-size: 14px;
   background: transparent;
   border-radius: 6px;
-  margin-bottom: 4px;
+  margin-bottom: 1px;
 }
 .export-result-row:last-child { border-bottom: none; margin-bottom: 0; }
 .export-result-team { display: flex; align-items: center; gap: 8px; flex: 1; }
 .export-result-team.away { flex-direction: row-reverse; }
 .export-result-team img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
-.export-result-score { font-size: 16px; padding: 0 10px; font-weight: 900; }
+.export-result-score { font-size: 16.5px; padding: 0 8px; font-weight: 900; }
 
 .export-stats-row {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 7px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15.5px;
+  font-weight: 800;
 }
 .export-stats-row:last-child { border-bottom: none; }
 .export-stats-row .stat-img {
-  width: 26px; height: 26px; border-radius: 50%; margin-right: 10px; object-fit: cover;
+  width: 28px; height: 28px; border-radius: 50%; margin-right: 10px; object-fit: cover;
 }
 
 /* ============================================================ */
@@ -368,14 +385,14 @@
 /* ============================================================ */
 .cards-export-title-banner {
   text-align: center;
-  margin: 5px 50px 10px 50px;
-  background: rgba(255, 255, 255, 0.12);
+  margin: 5px 45px 12px 45px;
+  background: rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 12px;
-  border-radius: 12px;
-  font-size: 22px;
+  padding: 14px;
+  border-radius: 14px;
+  font-size: 25px;
   font-weight: 900;
   letter-spacing: 2px;
   color: #ffffff;
@@ -403,14 +420,14 @@
 }
 
 .card-player-row {
-  padding: 10px 14px;
+  padding: 12px 16px;
 }
 
 .card-badge {
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-radius: 8px;
-  font-weight: 800;
-  font-size: 14px;
+  font-weight: 900;
+  font-size: 16px;
 }
 
 .card-badge.yellow-badge {
@@ -477,4 +494,127 @@
   .admin-table-container {
     overflow-x: auto;
   }
+}
+
+/* ============================================================ */
+/* PLATFORM DESIGN & SKELETON ANIMATIONS */
+/* ============================================================ */
+
+.standings-page {
+  padding: 24px;
+  background-color: #0b1221;
+  min-height: 100vh;
+  color: #fff;
+}
+
+.standings-title-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.standings-title-icon {
+  color: #00ff66;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 102, 0.4));
+}
+
+.standings-filter-card {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+  background: rgba(20, 25, 34, 0.7);
+  backdrop-filter: blur(12px);
+  padding: 18px 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 255, 102, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-icon {
+  color: #00ff66;
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.rank-badge.rank-1 {
+  background: linear-gradient(135deg, #ffe259, #ffa751);
+  color: #000;
+  box-shadow: 0 0 10px rgba(255, 226, 89, 0.4);
+}
+
+.rank-badge.rank-2 {
+  background: linear-gradient(135deg, #e0e0e0, #f5f5f5);
+  color: #000;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.rank-badge.rank-3 {
+  background: linear-gradient(135deg, #e5a663, #ab6726);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(229, 166, 99, 0.3);
+}
+
+/* Skeleton Loading Shimmer */
+.skeleton-pulse {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(0, 255, 102, 0.12) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.skeleton-text {
+  height: 16px;
+  width: 100%;
+}
+
+.skeleton-title {
+  height: 32px;
+  width: 240px;
+}
+
+.skeleton-btn {
+  height: 40px;
+  width: 140px;
+  border-radius: 10px;
+}
+
+.skeleton-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-filter-box {
+  height: 70px;
+  width: 100%;
+  border-radius: 16px;
 }

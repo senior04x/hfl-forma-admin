@@ -50,6 +50,52 @@ export const compareMatches = (a, b) => {
   return (a?.id || 0) - (b?.id || 0);
 };
 
+export const isRealSponsor = (s) => {
+  if (!s || !s.name) return false;
+  const uName = String(s.name).trim().toUpperCase();
+  const rawUrl = String(s.logo_url || '').trim();
+  const uUrl = rawUrl.toUpperCase();
+
+  // 1. Filter out all system config keys, banners, tokens, timers, remote triggers, overrides
+  if (
+    uName.startsWith('BANNER_') ||
+    uName.startsWith('SCHEDULE_BANNER') ||
+    uName.startsWith('YT_BANNER') ||
+    uName.startsWith('YT_OAUTH') ||
+    uName.startsWith('MATCH_TIMER') ||
+    uName.startsWith('REMOTE_') ||
+    uName.includes('REMOTE_FINISH') ||
+    uName.includes('REMOTE_GOAL') ||
+    uName.includes('MATCH_TIMER') ||
+    uName.startsWith('LEAGUE_SHOW_SPONSORS') ||
+    uName.startsWith('STANDINGS_OVERRIDE') ||
+    uName.startsWith('LEAGUE_BG') ||
+    uName.startsWith('EXPORT_BG') ||
+    uName.startsWith('BG_') ||
+    uName.endsWith('_BG') ||
+    uName.includes('BACKGROUND') ||
+    uUrl.includes('LEAGUE-BACKGROUNDS') ||
+    uUrl.includes('LEAGUE_BG') ||
+    uUrl.includes('EXPORT_BG') ||
+    uUrl.includes('EXPORT-BG')
+  ) {
+    return false;
+  }
+
+  // 2. Must have a valid image URL (not JSON string or boolean)
+  if (
+    rawUrl.startsWith('{') ||
+    rawUrl.startsWith('[') ||
+    rawUrl === 'true' ||
+    rawUrl === 'false' ||
+    (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://') && !rawUrl.startsWith('data:') && !rawUrl.startsWith('blob:'))
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
 const Schedule = () => {
   const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
@@ -604,14 +650,7 @@ const Schedule = () => {
       setLeagueSponsorsSettingsMap(settingsMap);
 
       // Filter out system internal banner and settings keys
-      const realSponsors = loadedSponsors.filter(s => 
-        s.name && 
-        !s.name.startsWith('SCHEDULE_BANNER_') && 
-        !s.name.startsWith('YT_BANNER_') && 
-        !s.name.startsWith('YT_OAUTH_TOKENS_') &&
-        !s.name.startsWith('MATCH_TIMER_') &&
-        !s.name.startsWith('LEAGUE_SHOW_SPONSORS_')
-      );
+      const realSponsors = loadedSponsors.filter(isRealSponsor);
 
       setAllSponsors(realSponsors);
 
