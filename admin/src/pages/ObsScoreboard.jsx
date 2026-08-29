@@ -134,7 +134,7 @@ const ObsScoreboard = () => {
   // Helper to apply persistent timer payload in OBS (Countdown Mode)
   const applyTimerPayload = (payload) => {
     if (!payload) return;
-    const isRunning = !!payload.is_timer_running;
+    const isRunning = String(payload.is_timer_running) === 'true' || payload.is_timer_running === true;
     const startedAt = payload.timer_started_at;
     const defaultSec = getHalfDurationSecs(match, leagueData);
     
@@ -235,9 +235,22 @@ const ObsScoreboard = () => {
       })
       .subscribe();
 
-    // 3. High-Frequency Lightweight Fallback Polling (Every 1.2s for slow WiFi / high ping resilience)
+    // 3. High-Frequency Lightweight Fallback Polling (Every 1s for resilience)
     const fallbackPollInterval = setInterval(async () => {
       try {
+        const { data: matchRow } = await supabase
+          .from('matches')
+          .select('timer_seconds, timer_started_at, is_timer_running, status, home_score, away_score')
+          .eq('id', activeMatchId)
+          .maybeSingle();
+
+        if (matchRow) {
+          applyTimerPayload(matchRow);
+          if (matchRow.home_score !== undefined || matchRow.away_score !== undefined) {
+            setMatch((prev) => ({ ...prev, ...matchRow }));
+          }
+        }
+
         const { data: timerRow } = await supabase
           .from('sponsors')
           .select('logo_url')
@@ -251,7 +264,7 @@ const ObsScoreboard = () => {
           } catch (pe) {}
         }
       } catch (pollErr) {}
-    }, 1200);
+    }, 1000);
 
     // 4. Subscribe to real-time match changes
     const matchSubscription = supabase
@@ -266,6 +279,9 @@ const ObsScoreboard = () => {
         },
         (payload) => {
           setMatch((prev) => ({ ...prev, ...payload.new }));
+          if (payload.new) {
+            applyTimerPayload(payload.new);
+          }
         }
       )
       .subscribe();
