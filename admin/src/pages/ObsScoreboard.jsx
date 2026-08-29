@@ -71,13 +71,20 @@ const ObsScoreboard = () => {
         const candidateList = fieldMatches.length > 0 ? fieldMatches : data;
 
         // 1. Prefer currently active playing match on this field ('first_half', 'second_half', 'half_time')
-        let selectedMatch = candidateList.find((m) =>
+        let selectedMatch = fieldMatches.find((m) =>
           ['first_half', 'second_half', 'half_time'].includes(m.status)
         );
 
-        // 2. Fallback to latest match on this field so realtime connection stays active
+        // 1b. If no live match on this specific stream, check if there is ANY live match in this organization
         if (!selectedMatch) {
-          selectedMatch = candidateList[0];
+          selectedMatch = data.find((m) =>
+            ['first_half', 'second_half', 'half_time'].includes(m.status)
+          );
+        }
+
+        // 2. Fallback to latest match
+        if (!selectedMatch) {
+          selectedMatch = fieldMatches[0] || data[0];
         }
 
         if (selectedMatch) {
@@ -102,9 +109,12 @@ const ObsScoreboard = () => {
               (isStream2 && (loc.includes('2') || loc.includes('stream2'))) ||
               (isStream1 && (loc.includes('1') || loc.includes('stream1') || (!loc.includes('2') && !loc.includes('stream2'))));
 
-            if (isMatchForThisStream) {
+            const isLive = ['first_half', 'second_half', 'half_time'].includes(newMatch.status);
+
+            if (isMatchForThisStream || isLive) {
               setActiveMatchId(newMatch.id);
               setMatch(newMatch);
+              applyTimerPayload(newMatch);
             }
           }
         }
@@ -116,19 +126,16 @@ const ObsScoreboard = () => {
     };
   }, [id]);
 
-  // Dynamic Half Duration Calculation (masalan 25 daqiqa yoki 30 daqiqa)
+  // Dynamic Half Duration Calculation (from Match / League configuration)
   const getHalfDurationSecs = (mObj, lObj) => {
-    const lName = (mObj?.league || '').toLowerCase();
-    let mins = 30;
-    if (lName.includes('7x7')) mins = 25;
-    else if (lName.includes('3-liga') || lName.includes('3 liga')) mins = 25;
-    
-    if (mObj?.half_duration) mins = Number(mObj.half_duration);
-    else if (lObj?.half_duration) mins = Number(lObj.half_duration);
-    else if (lObj?.match_duration) mins = Math.round(Number(lObj.match_duration) / 2);
-    else if (mObj?.match_duration) mins = Math.round(Number(mObj.match_duration) / 2);
-    
-    return mins * 60;
+    const halfMins = Number(
+      mObj?.half_duration ||
+      lObj?.half_duration ||
+      (mObj?.match_duration ? Math.round(Number(mObj.match_duration) / 2) :
+      (lObj?.match_duration ? Math.round(Number(lObj.match_duration) / 2) : 30))
+    );
+    const calculatedSecs = (halfMins || 30) * 60;
+    return Math.max(calculatedSecs, baseTimerSecondsRef.current || 0);
   };
 
   // Helper to apply persistent timer payload in OBS (Countdown Mode)
@@ -136,7 +143,7 @@ const ObsScoreboard = () => {
     if (!payload) return;
     const isRunning = String(payload.is_timer_running) === 'true' || payload.is_timer_running === true;
     const startedAt = payload.timer_started_at;
-    const defaultSec = getHalfDurationSecs(match, leagueData);
+    const defaultSec = getHalfDurationSecs(payload || match, leagueData);
     
     let baseSec = payload.timer_seconds !== undefined && payload.timer_seconds !== null 
       ? Number(payload.timer_seconds) 
