@@ -24,6 +24,8 @@ const STATUS_LABELS = {
   finished: 'Yakunlangan'
 };
 
+const ORPHAN_REPLAYS_BY_MATCH = new Map();
+
 const MatchControl = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -418,13 +420,23 @@ const MatchControl = () => {
     setSavingEvent(true);
     try {
       const minuteVal = parseInt(eventMinute) || getCurrentMinute();
+      const isGoal = eventType === 'goal';
+
+      // Check if there is an existing orphan replay from a recently deleted mistake goal
+      const orphanReplay = ORPHAN_REPLAYS_BY_MATCH.get(String(id));
+      const isOrphanFresh = orphanReplay && (Date.now() - orphanReplay.timestamp < 10 * 60 * 1000);
+      const existingReplayUrl = isGoal && isOrphanFresh ? orphanReplay.url : null;
+      if (existingReplayUrl) {
+        ORPHAN_REPLAYS_BY_MATCH.delete(String(id));
+      }
 
       const { error } = await supabase.from('match_events').insert([{
         match_id: id,
         team_id: selectedTeamId,
         player_id: selectedPlayerId,
         event_type: eventType,
-        minute: minuteVal
+        minute: minuteVal,
+        replay_video_url: existingReplayUrl || null,
       }]);
 
       if (!error) {
@@ -436,7 +448,8 @@ const MatchControl = () => {
           
           await supabase.from('matches').update({
             home_score: newHomeScore,
-            away_score: newAwayScore
+            away_score: newAwayScore,
+            updated_at: new Date().toISOString(),
           }).eq('id', id);
 
           setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
@@ -462,6 +475,13 @@ const MatchControl = () => {
   const handleDeleteEvent = async (event) => {
     if (!window.confirm("Bu voqeani o'chirishni tasdiqlaysizmi?")) return;
 
+    if (event.event_type === 'goal' && event.replay_video_url) {
+      ORPHAN_REPLAYS_BY_MATCH.set(String(id), {
+        url: event.replay_video_url,
+        timestamp: Date.now(),
+      });
+    }
+
     const { error } = await supabase.from('match_events').delete().eq('id', event.id);
     if (!error) {
       if (event.event_type === 'goal') {
@@ -471,7 +491,8 @@ const MatchControl = () => {
         
         await supabase.from('matches').update({
           home_score: newHomeScore,
-          away_score: newAwayScore
+          away_score: newAwayScore,
+          updated_at: new Date().toISOString(),
         }).eq('id', id);
 
         setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));

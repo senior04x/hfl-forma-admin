@@ -542,10 +542,13 @@ const MatchControl = () => {
       }
     } catch (rtErr) {}
 
-    // 2. Non-blocking Background DB Persistence
+    // 2. Non-blocking Background DB Persistence directly to matches table
     (async () => {
       try {
         const matchUpdate = {
+          timer_seconds: baseSec,
+          timer_started_at: startedAtIso,
+          is_timer_running: isRunning,
           updated_at: new Date().toISOString()
         };
         if (newStatus) matchUpdate.status = newStatus;
