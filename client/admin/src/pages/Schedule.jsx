@@ -8,6 +8,48 @@ import { obsService } from '../services/obsService';
 import html2canvas from 'html2canvas';
 import './Schedule.css';
 
+export const compareMatches = (a, b) => {
+  // 1. Sort by match_date (ascending: earlier date first)
+  const dateA = a?.match_date ? String(a.match_date).trim() : '';
+  const dateB = b?.match_date ? String(b.match_date).trim() : '';
+  if (dateA !== dateB) {
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    return dateA.localeCompare(dateB);
+  }
+
+  // 2. Sort by match_time (ascending: earlier time first, e.g. 20:45 before 21:45)
+  const timeA = a?.match_time ? String(a.match_time).trim().substring(0, 5) : '';
+  const timeB = b?.match_time ? String(b.match_time).trim().substring(0, 5) : '';
+  if (timeA !== timeB) {
+    if (!timeA) return 1;
+    if (!timeB) return -1;
+    return timeA.localeCompare(timeB);
+  }
+
+  // 3. Sort by field / location (1-maydon first, then 2-maydon, etc.)
+  const getFieldNum = (loc) => {
+    if (!loc) return 999;
+    const match = String(loc).match(/\d+/);
+    return match ? parseInt(match[0], 10) : 999;
+  };
+
+  const fieldA = getFieldNum(a?.location);
+  const fieldB = getFieldNum(b?.location);
+  if (fieldA !== fieldB) {
+    return fieldA - fieldB;
+  }
+
+  const locA = String(a?.location || '').toLowerCase();
+  const locB = String(b?.location || '').toLowerCase();
+  if (locA !== locB) {
+    return locA.localeCompare(locB);
+  }
+
+  // 4. Fallback ID
+  return (a?.id || 0) - (b?.id || 0);
+};
+
 const Schedule = () => {
   const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
@@ -778,6 +820,7 @@ const Schedule = () => {
         ...m,
         is_postponed: m.is_postponed != null ? m.is_postponed : !!postponedMap[m.id]
       }));
+      merged.sort(compareMatches);
       setMatches(merged);
     }
   };
@@ -1258,6 +1301,7 @@ const Schedule = () => {
               if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
               return m.status === filterStatus;
             })
+            .sort(compareMatches)
             .map(match => {
               const isDeleting = deletingMatchIds.includes(match.id);
               const isExportingThis = exportingMatchId === match.id;
@@ -1694,7 +1738,8 @@ const Schedule = () => {
                       if (filterStatus === 'all') return true;
                       if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
                       return m.status === filterStatus;
-                    });
+                    })
+                    .sort(compareMatches);
 
                   const currentRoundMatches = filteredList.filter(m => !m.is_postponed);
                   const postponedMatches = filteredList.filter(m => m.is_postponed);
