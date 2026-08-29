@@ -117,6 +117,7 @@ const Schedule = () => {
   const [youtubeLink, setYoutubeLink] = useState('');
   const [matchRound, setMatchRound] = useState('');
   const [isPostponed, setIsPostponed] = useState(false);
+  const [importance, setImportance] = useState('oddiy'); // 'oddiy' | 'ortacha' | 'markaziy'
   const [deletingMatchIds, setDeletingMatchIds] = useState([]);
 
   const [exportLeague, setExportLeague] = useState('');
@@ -340,6 +341,14 @@ const Schedule = () => {
       const res = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
+      if (res.status === 401) {
+        // Token is expired or unauthorized, clean up YouTube tokens
+        const safeOrg = orgId || 'default';
+        localStorage.removeItem(`yt_tokens_${safeOrg}`);
+        localStorage.removeItem('yt_tokens');
+        setYtChannelInfo(null);
+        return;
+      }
       const data = await res.json();
       if (data.items && data.items.length > 0) {
         const ch = data.items[0].snippet;
@@ -625,7 +634,7 @@ const Schedule = () => {
       if (loadedSponsors.length === 0) {
         let query = supabase.from('sponsors').select('*').order('created_at', { ascending: false });
         if (orgId) {
-          query = query.or(`organization_id.eq.${orgId},organization_id.is.null`);
+          query = query.eq('organization_id', orgId);
         }
         const { data } = await query;
         loadedSponsors = data || [];
@@ -655,7 +664,7 @@ const Schedule = () => {
       }
 
       // 2. Selected secondary sponsors directly from DB
-      const selectedFromDb = realSponsors.filter(s => !s.is_main && s.is_selected !== false);
+      const selectedFromDb = realSponsors.filter(s => s.id !== mainFromDb?.id && s.is_selected !== false);
       setSelectedSponsors(selectedFromDb);
       try { localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(selectedFromDb)); } catch (e) {}
     } catch (e) {
@@ -828,10 +837,10 @@ const Schedule = () => {
   };
 
   const fetchTeams = async (leaguesList = activeLeagues) => {
-    let query = supabase.from('teams').select('id, name, logo_url, league').eq('status', 'approved');
+    let query = supabase.from('teams').select('*').eq('status', 'approved');
     query = applyOrgAndCollabFilter(query, orgId, leaguesList);
     const { data } = await query;
-    if (data) setTeams(data);
+    if (data) setTeams((data || []).filter(t => !t.is_archived && t.status !== 'archived'));
   };
 
   const fetchMatches = async (leaguesList = activeLeagues) => {
@@ -887,87 +896,108 @@ const Schedule = () => {
         .eq('id', match.id);
 
       if (error) {
-        console.warn('is_postponed DB update fallback notice:', error);
+        console.warn('is_postponed DB update notice:', error);
       }
-    } catch (e) {
-      console.warn('DB update catch:', e);
+    } catch (err) {
+      console.error('Error toggling is_postponed:', err);
     }
   };
 
-  const handleCreateMatch = () => {
+  const handleOpenModal = () => {
     setEditingMatch(null);
+    setSelectedLeague(exportLeague || (activeLeagues[0]?.name || ''));
     setHomeTeamId('');
     setAwayTeamId('');
     setMatchDate('');
     setMatchTime('');
-    setLocation('1-maydon');
+    setLocation('');
     setStadiumName('');
     setYoutubeLink('');
     setMatchRound('');
     setIsPostponed(false);
-    if (activeLeagues.length > 0) setSelectedLeague(activeLeagues[0].name);
+    setImportance('oddiy');
     setIsModalOpen(true);
   };
 
   const handleEditMatch = (match) => {
     setEditingMatch(match);
-    setSelectedLeague(match.league);
-    setHomeTeamId(match.home_team_id);
-    setAwayTeamId(match.away_team_id);
-    setMatchDate(match.match_date);
-    setMatchTime(match.match_time);
-    setLocation(match.location);
-    setStadiumName(match.stadium_name || '');
+    setSelectedLeague(match.league || '');
+    setHomeTeamId(match.home_team_id || '');
+    setAwayTeamId(match.away_team_id || '');
+    setMatchDate(match.match_date || '');
+    setMatchTime(match.match_time || '');
     setYoutubeLink(match.youtube_link || '');
-    setMatchRound(match.round || '');
+    setMatchRound(match.round ? String(match.round) : '');
+    setLocation(match.location || '1-maydon');
+    setStadiumName(match.stadium_name || '');
     setIsPostponed(!!match.is_postponed);
+    setImportance(match.importance || 'oddiy');
     setIsModalOpen(true);
   };
 
-  const handleSaveMatch = async (e) => {
-    e.preventDefault();
-    if (!homeTeamId || !awayTeamId || !matchDate || !matchTime || !location || !selectedLeague) {
-      alert('Iltimos, barcha majburiy maydonlarni to\'ldiring!');
+  const handleSave = async () => {
+    if (!selectedLeague || !homeTeamId || !awayTeamId || !matchDate || !matchTime || !location) {
+      alert("Iltimos, barcha majburiy maydonlarni (Liga, Jamoalar, Sana, Vaqt, Maydon) to'ldiring.");
       return;
     }
     if (homeTeamId === awayTeamId) {
-      alert('Mezbon va mehmon jamoalari bir xil bo\'lishi mumkin emas!');
+      alert("Mezbon va mehmon jamoalar har xil bo'lishi kerak.");
       return;
     }
 
     setLoading(true);
     try {
-      let savedMatchId = editingMatch?.id;
-      const matchData = {
-        organization_id: orgId || 1,
+      const dbClient = supabase || supabase;
+
+      const parsedOrgId = Number(orgId);
+      const validOrgId = Number.isInteger(parsedOrgId) ? parsedOrgId : undefined;
+
+      const baseMatchData = {
         league: selectedLeague,
         home_team_id: homeTeamId,
         away_team_id: awayTeamId,
         match_date: matchDate,
         match_time: matchTime,
         location: location,
-        stadium_name: stadiumName || null,
-        youtube_link: youtubeLink || null,
+        youtube_link: youtubeLink,
         round: matchRound ? parseInt(matchRound) : null,
-        is_postponed: isPostponed
       };
 
+      if (validOrgId !== undefined) {
+        baseMatchData.organization_id = validOrgId;
+      }
+
+      const matchData = {
+        ...baseMatchData,
+        importance: importance,
+      };
+
+      let savedMatchId = editingMatch?.id;
       if (editingMatch) {
-        let { error } = await supabase.from('matches').update(matchData).eq('id', editingMatch.id);
+        let { error } = await dbClient
+          .from('matches')
+          .update(matchData)
+          .eq('id', editingMatch.id);
+
         if (error) {
-          delete matchData.is_postponed;
-          await supabase.from('matches').update(matchData).eq('id', editingMatch.id);
+          // Fallback if importance column does not exist in Supabase DB schema yet
+          let { error: err2 } = await dbClient.from('matches').update(baseMatchData).eq('id', editingMatch.id);
+          if (err2) {
+            console.error('Match update error:', err2);
+            alert('Tahrirlashda xatolik: ' + err2.message);
+            return;
+          }
         }
       } else {
-        let { data, error } = await supabase.from('matches').insert([{
+        let { data, error } = await dbClient.from('matches').insert([{
           ...matchData,
           status: 'scheduled'
         }]).select();
 
         if (error) {
-          delete matchData.is_postponed;
-          const fallbackRes = await supabase.from('matches').insert([{
-            ...matchData,
+          // Fallback if importance column does not exist in Supabase DB schema yet
+          const fallbackRes = await dbClient.from('matches').insert([{
+            ...baseMatchData,
             status: 'scheduled'
           }]).select();
           savedMatchId = fallbackRes.data ? fallbackRes.data[0]?.id : null;
@@ -1057,31 +1087,47 @@ const Schedule = () => {
     try {
       const matchToDelete = matches.find(m => m.id === id);
 
-      // 1. Cascade cleanup: Delete all 20s replay video files from Supabase Storage for this match
+      // 1. Cascade cleanup: Delete ALL 20s replay video files from Supabase Storage for this match
       try {
+        const orgId = matchToDelete?.organization_id || currentOrg?.id || 1;
+        const matchFolder = `${orgId}/${id}`;
+
+        // List all files inside replays/<org_id>/<match_id>/
+        const { data: folderFiles } = await supabase.storage
+          .from('replays')
+          .list(matchFolder, { limit: 100 });
+
+        let filesToRemove = [];
+
+        if (folderFiles && folderFiles.length > 0) {
+          filesToRemove = folderFiles
+            .filter(f => f.name && !f.name.startsWith('.'))
+            .map(f => `${matchFolder}/${f.name}`);
+        }
+
+        // Also collect files from match_events.replay_video_url
         const { data: events } = await supabase
           .from('match_events')
           .select('id, replay_video_url')
           .eq('match_id', id);
 
         if (events && events.length > 0) {
-          const filesToDelete = events
-            .filter(e => e.replay_video_url)
-            .map(e => {
-              const url = e.replay_video_url;
-              if (url.includes('/replays/')) return url.split('/replays/')[1];
-              return null;
-            })
-            .filter(Boolean);
-
-          if (filesToDelete.length > 0) {
-            await supabase.storage.from('replays').remove(filesToDelete);
-            await supabase.storage.from('applications').remove(filesToDelete.map(f => `replays/${f}`));
-            console.log('Replay videolari Storage-dan toizlandi:', filesToDelete);
-          }
+          events.forEach(e => {
+            if (e.replay_video_url && e.replay_video_url.includes('/replays/')) {
+              const path = e.replay_video_url.split('/replays/')[1];
+              if (path && !filesToRemove.includes(path)) {
+                filesToRemove.push(path);
+              }
+            }
+          });
 
           // Delete match events
           await supabase.from('match_events').delete().eq('match_id', id);
+        }
+
+        if (filesToRemove.length > 0) {
+          await supabase.storage.from('replays').remove(filesToRemove);
+          console.log('Replay videolari Storage-dan 100% tozalandi:', filesToRemove);
         }
       } catch (storageErr) {
         console.warn('Replay fayllarini o\'chirishda xatolik:', storageErr);
@@ -1129,209 +1175,124 @@ const Schedule = () => {
   };
 
   const availableTeams = teams.filter(t => t.league === selectedLeague);
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'live':
-      case 'first_half':
-      case 'second_half':
-      case 'half_time':
-        return <span className="status-badge live">🔴 Jonli O'yin</span>;
-      case 'finished':
-        return <span className="status-badge finished">Tugagan</span>;
-      default:
-        return <span className="status-badge scheduled">Rejalashtirilgan</span>;
-    }
-  };
+  const availableRounds = (() => {
+    const roundsFromMatches = Array.from(new Set(matches.filter(m => m.league === exportLeague && m.round).map(m => Number(m.round)))).sort((a, b) => a - b);
+    if (roundsFromMatches.length > 0) return roundsFromMatches;
+    return Array.from({ length: 30 }, (_, i) => i + 1);
+  })();
 
   return (
     <div className="schedule-page">
+      {/* Header */}
       <div className="schedule-header">
-        <div className="header-title">
-          <h1>📅 O'yinlar Jadvali (Schedule)</h1>
-          <p>Tashkilot litalari bo'yicha barcha futbol uchrashuvlarini boshqarish va eksport qilish</p>
+        <div>
+          <h1>O'yinlar Jadvali</h1>
+          <p>{currentOrg?.name} ({exportLeague || 'Barcha ligalar'})</p>
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Organization OBS Connections */}
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'rgba(15, 23, 42, 0.6)', padding: '4px 8px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <button
-              onClick={() => handleOpenObsModal('stream1')}
-              title="1-Maydon OBS Sozlamalari"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                fontSize: '11px',
-                fontWeight: '800',
-                border: 'none',
-                cursor: 'pointer',
-                background: isObs1Connected ? 'rgba(0, 255, 102, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                color: isObs1Connected ? '#00FF66' : '#ef4444',
-                borderColor: isObs1Connected ? 'rgba(0, 255, 102, 0.4)' : 'rgba(239, 68, 68, 0.4)',
-                borderWidth: '1px',
-                borderStyle: 'solid'
-              }}
-            >
-              {isObs1Connected ? <Wifi size={13} /> : <WifiOff size={13} />} 1-Maydon OBS
-            </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
 
-            <button
-              onClick={() => handleOpenObsModal('stream2')}
-              title="2-Maydon OBS Sozlamalari"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                fontSize: '11px',
-                fontWeight: '800',
-                border: 'none',
-                cursor: 'pointer',
-                background: isObs2Connected ? 'rgba(0, 255, 102, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                color: isObs2Connected ? '#00FF66' : '#ef4444',
-                borderColor: isObs2Connected ? 'rgba(0, 255, 102, 0.4)' : 'rgba(239, 68, 68, 0.4)',
-                borderWidth: '1px',
-                borderStyle: 'solid'
-              }}
-            >
-              {isObs2Connected ? <Wifi size={13} /> : <WifiOff size={13} />} 2-Maydon OBS
-            </button>
-          </div>
-
-          {/* YouTube OAuth Connection Button */}
           {ytChannelInfo ? (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 0, 0, 0.12)', border: '1px solid rgba(255, 0, 0, 0.35)', padding: '4px 10px', borderRadius: '10px' }}>
-              {ytChannelInfo.thumbnail ? (
-                <img src={ytChannelInfo.thumbnail} alt={ytChannelInfo.title} style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }} />
-              ) : (
-                <Video size={14} color="#FF0000" />
-              )}
-              <span style={{ color: '#ffffff', fontSize: '12px', fontWeight: '800', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {ytChannelInfo.title}
-              </span>
-              <button
-                onClick={handleDisconnectYouTube}
-                title="Uzish"
-                style={{ background: 'transparent', border: 'none', color: '#ff4d4d', cursor: 'pointer', padding: 0, fontSize: '11px', fontWeight: '700', marginLeft: '4px' }}
-              >
-                ✕
-              </button>
+            <div className="yt-connected-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 59, 48, 0.15)', border: '1px solid rgba(255, 59, 48, 0.4)', padding: '8px 14px', borderRadius: '10px', color: '#ff4d4d', fontSize: '13px', fontWeight: '700' }}>
+              {ytChannelInfo.thumbnail && <img src={ytChannelInfo.thumbnail} alt="" style={{ width: '22px', height: '22px', borderRadius: '50%' }} />}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Video size={14} color="#ff4d4d" /> {ytChannelInfo.title}</span>
+              <button onClick={handleDisconnectYouTube} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '12px', marginLeft: '6px' }} title="Uzish">✕</button>
             </div>
           ) : (
-            <button 
-              className="btn-yt-connect"
-              onClick={handleConnectYouTube}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
-                color: '#ffffff',
-                border: 'none',
-                padding: '9px 14px',
-                borderRadius: '10px',
-                fontWeight: '800',
-                fontSize: '12px',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(255,0,0,0.3)'
-              }}
-            >
-              <Video size={15} /> YouTube Ulash
+            <button className="btn-yt-connect" onClick={handleConnectYouTube} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #ff0000 0%, #cc0000 100%)', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 0, 0, 0.4)', transition: 'all 0.2s' }}>
+              <Video size={16} /> YouTube Kanalni Ulash
             </button>
           )}
-
-          <button className="btn-primary" onClick={handleCreateMatch}>
-            <Plus size={18} /> Yangi O'yin Yaratish
+          <button className="btn-add-match" onClick={handleOpenModal}>
+            <Plus size={18} /> O'yin qo'shish
           </button>
         </div>
       </div>
 
-      {/* OBS Settings Modal */}
-      {showObsModal && (
-        <div className="modal-overlay" onClick={() => setShowObsModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <h2>{activeFieldStream === 'stream1' ? '1-Maydon' : '2-Maydon'} OBS WebSocket Sozlamalari</h2>
-            <form onSubmit={handleSaveObsConnection}>
-              <div className="form-group" style={{ marginTop: '14px' }}>
-                <label>WebSocket Manzili (Address)</label>
-                <input
-                  type="text"
-                  value={obsModalAddress}
-                  onChange={(e) => setObsModalAddress(e.target.value)}
-                  placeholder="ws://localhost:4455"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>WebSocket Paroli (Password)</label>
-                <input
-                  type="password"
-                  value={obsModalPassword}
-                  onChange={(e) => setObsModalPassword(e.target.value)}
-                  placeholder="OBS Server paroli (bo'sh qolishi mumkin)"
-                />
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={() => setShowObsModal(false)}>Bekor qilish</button>
-                <button type="submit" className="btn-primary">Saqlash va Ulanish</button>
-              </div>
-            </form>
+      {/* Modern Filter & 1x1 Poster Banner Control Card */}
+      <div className="schedule-filter-banner-card">
+        {/* Header Bar */}
+        <div className="filter-header-bar">
+          <div className="filter-title-group" onClick={() => setIsFilterOpen(!isFilterOpen)}>
+            <Filter size={18} className="filter-icon" />
+            <span>O'yinlar Filteri (Liga, Tur, Holat)</span>
+            <ChevronDown size={18} className={`chevron-icon ${isFilterOpen ? 'open' : ''}`} />
+          </div>
+          <div className="filter-active-status-badge">
+            {filterStatus === 'all' && 'Barcha o\'yinlar'}
+            {filterStatus === 'scheduled' && 'Rejalashtirilgan'}
+            {filterStatus === 'live' && 'Jonli (Live)'}
+            {filterStatus === 'finished' && 'Yakunlangan'}
           </div>
         </div>
-      )}
 
-      {/* FILTER & EXPORT BAR */}
-      <div className="schedule-filter-bar">
-        <div className="filter-header" onClick={() => setIsFilterOpen(!isFilterOpen)}>
-          <div className="filter-title">
-            <Filter size={18} />
-            <span>Filtrlash va Eksport (Poster Generator)</span>
-          </div>
-          <ChevronDown size={18} style={{ transform: isFilterOpen ? 'rotate(180deg)' : 'none', transition: '0.3s' }} />
-        </div>
-
+        {/* Expandable Select Filters */}
         {isFilterOpen && (
-          <div className="filter-content">
-            <div className="filter-group">
-              <label><Trophy size={14} /> Liga bo'yicha:</label>
-              <select value={exportLeague} onChange={(e) => setExportLeague(e.target.value)}>
-                {activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
-              </select>
-            </div>
+          <div className="filter-expanded-content">
+            <div className="filter-row">
+              <div className="filter-field">
+                <label><Trophy size={14} /> Liga tanlang</label>
+                <div className="custom-select-wrapper">
+                  <select value={exportLeague} onChange={e => setExportLeague(e.target.value)}>
+                    {activeLeagues.map(l => (
+                      <option key={l.id} value={l.name}>
+                        {l.name} {l.isCollab ? '(Co-Host)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="select-arrow" />
+                </div>
+              </div>
 
-            <div className="filter-group">
-              <label><Layers size={14} /> Tur (Round):</label>
-              <select value={exportRound} onChange={(e) => setExportRound(e.target.value)}>
-                {[...Array(30)].map((_, i) => (
-                  <option key={i + 1} value={(i + 1).toString()}>{i + 1}-Tur</option>
-                ))}
-              </select>
-            </div>
+              <div className="filter-field">
+                <label><Layers size={14} /> Tur</label>
+                <div className="custom-select-wrapper">
+                  <select value={exportRound || '1'} onChange={e => setExportRound(e.target.value)}>
+                    {availableRounds.map(r => (
+                      <option key={r} value={r}>{r}-Tur</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="select-arrow" />
+                </div>
+              </div>
 
-            <div className="filter-group">
-              <label><Clock size={14} /> Holati:</label>
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                <option value="all">Barcha o'yinlar</option>
-                <option value="scheduled">Rejalashtirilgan</option>
-                <option value="live">🔴 Jonli (Live)</option>
-                <option value="finished">Tugagan</option>
-              </select>
+              <div className="filter-field">
+                <label><Clock size={14} /> O'yin Holati</label>
+                <div className="custom-select-wrapper">
+                  <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                    <option value="all">Barchasi</option>
+                    <option value="scheduled">Rejalashtirilgan</option>
+                    <option value="live">Jonli (Live)</option>
+                    <option value="finished">Tugagan</option>
+                  </select>
+                  <ChevronDown size={16} className="select-arrow" />
+                </div>
+              </div>
             </div>
-
-            <button className="btn-export" onClick={handleExport} disabled={isExporting}>
-              <Download size={16} /> {isExporting ? 'Yuklanmoqda...' : 'Jadvalni Yuklab Olish (PNG)'}
-            </button>
           </div>
         )}
+
+        {/* PNG Eksport Buttonlari */}
+        <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button className="btn-download-poster" onClick={handleExport} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
+            {isExporting ? (
+              <><span className="btn-spinner"></span> <span>Yuklanmoqda...</span></>
+            ) : (
+              <><Download size={18} /> <span>Jadvalni yuklab olish (1:1)</span></>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* MATCHES LIST */}
-      <div className="matches-container">
+      {/* Matches Grid Wrapper with Glassmorphism overlay on 1x1 scheduleBanner */}
+      <div 
+        className={`schedule-matches-wrapper ${scheduleBanner ? 'has-bg-banner' : ''}`}
+        style={scheduleBanner ? {
+          backgroundImage: `linear-gradient(rgba(11, 14, 23, 0.55), rgba(11, 14, 23, 0.8)), url(${scheduleBanner})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        } : {}}
+      >
         <div className="matches-grid">
           {matches
             .filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound))
@@ -1343,13 +1304,29 @@ const Schedule = () => {
             .sort(compareMatches)
             .map(match => {
               const isDeleting = deletingMatchIds.includes(match.id);
-              const isExportingThis = exportingMatchId === match.id;
+              const mImportance = match.importance || 'oddiy';
+              const cardImportanceStyle = mImportance === 'markaziy'
+                ? { border: '2px solid #ffe600', boxShadow: '0 0 16px rgba(255, 230, 0, 0.45)', background: 'linear-gradient(135deg, rgba(255, 230, 0, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%)' }
+                : mImportance === 'ortacha'
+                ? { border: '2px solid #0ea5e9', boxShadow: '0 0 14px rgba(14, 165, 233, 0.35)', background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(15, 23, 42, 0.85) 100%)' }
+                : {};
+
               return (
-              <div key={match.id} className={`match-card ${match.status} ${match.is_postponed ? 'postponed' : ''} ${isDeleting ? 'deleting' : ''}`}>
+              <div key={match.id} className={`match-card glassmorphic-card ${isDeleting ? 'deleting-card' : ''}`} style={cardImportanceStyle}>
                 <div className="match-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '10px' }}>
-                  <div className="match-badges-container" style={{ position: 'static', margin: 0 }}>
+                  <div className="match-badges-container" style={{ position: 'static', margin: 0, display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                      <div className="match-league-badge">{match.league}</div>
                      {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
+                     {mImportance === 'markaziy' && (
+                       <div style={{ background: 'rgba(255, 230, 0, 0.25)', color: '#ffe600', border: '1px solid #ffe600', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>
+                         ⭐ MARKAZIY
+                       </div>
+                     )}
+                     {mImportance === 'ortacha' && (
+                       <div style={{ background: 'rgba(14, 165, 233, 0.25)', color: '#38bdf8', border: '1px solid #0ea5e9', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>
+                         ⚡ SHIDDATLI
+                       </div>
+                     )}
                   </div>
                   <div className="match-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <button className="edit-match-btn" onClick={() => handleEditMatch(match)} disabled={isDeleting} title="Tahrirlash">
@@ -1535,6 +1512,67 @@ const Schedule = () => {
               />
             </div>
 
+            <div className="form-group" style={{ marginTop: '12px' }}>
+              <label style={{ fontWeight: '700', color: '#e2e8f0', marginBottom: '6px', display: 'block' }}>
+                O'yin Dolzarbligi Darajasi (Ilovalar uchun):
+              </label>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setImportance('oddiy')}
+                  style={{
+                    flex: 1,
+                    padding: '10px 6px',
+                    borderRadius: '8px',
+                    border: importance === 'oddiy' ? '2px solid #64748b' : '1px solid rgba(255,255,255,0.1)',
+                    background: importance === 'oddiy' ? 'rgba(100, 116, 139, 0.3)' : 'rgba(255,255,255,0.03)',
+                    color: '#ffffff',
+                    fontWeight: importance === 'oddiy' ? '800' : '500',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  ⚪ Oddiy
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setImportance('ortacha')}
+                  style={{
+                    flex: 1,
+                    padding: '10px 6px',
+                    borderRadius: '8px',
+                    border: importance === 'ortacha' ? '2px solid #0ea5e9' : '1px solid rgba(255,255,255,0.1)',
+                    background: importance === 'ortacha' ? 'rgba(14, 165, 233, 0.3)' : 'rgba(255,255,255,0.03)',
+                    color: importance === 'ortacha' ? '#38bdf8' : '#ffffff',
+                    fontWeight: importance === 'ortacha' ? '800' : '500',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  🔵 O'rtacha
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setImportance('markaziy')}
+                  style={{
+                    flex: 1,
+                    padding: '10px 6px',
+                    borderRadius: '8px',
+                    border: importance === 'markaziy' ? '2px solid #ffe600' : '1px solid rgba(255,255,255,0.1)',
+                    background: importance === 'markaziy' ? 'rgba(255, 230, 0, 0.3)' : 'rgba(255,255,255,0.03)',
+                    color: importance === 'markaziy' ? '#ffe600' : '#ffffff',
+                    fontWeight: importance === 'markaziy' ? '800' : '500',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  ⭐ Markaziy
+                </button>
+              </div>
+            </div>
+
             <div 
               onClick={() => setIsPostponed(!isPostponed)}
               style={{ 
@@ -1568,7 +1606,7 @@ const Schedule = () => {
 
             <div className="modal-actions">
               <button className="btn-cancel" onClick={() => setIsModalOpen(false)}>Bekor qilish</button>
-              <button className="btn-primary" onClick={handleSaveMatch} disabled={loading}>
+              <button className="btn-save" onClick={handleSave} disabled={loading}>
                 {loading ? <><span className="btn-spinner"></span> Saqlanmoqda...</> : (editingMatch ? 'Yangilash' : 'Saqlash')}
               </button>
             </div>
@@ -1651,7 +1689,7 @@ const Schedule = () => {
                 position: 'relative', 
                 display: 'flex', 
                 flexDirection: 'column', 
-                justify: 'space-between', 
+                justify: 'space-between',
                 padding: '10px 45px 25px 45px', 
                 boxSizing: 'border-box',
                 fontFamily: "'Outfit', 'Inter', sans-serif"
@@ -1686,9 +1724,9 @@ const Schedule = () => {
                 </div>
               </div>
 
-              {/* Match Details Center Stage */}
+              {/* Center Match Banner: Home Team vs Away Team */}
               {selectedMatchForYtExport && (
-                <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', flex: 1, margin: '15px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '60px', flex: 1, margin: '20px 0' }}>
                   {/* Home Team */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '320px', textAlign: 'center' }}>
                     <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.08)', border: '4px solid rgba(0, 255, 102, 0.6)', padding: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 35px rgba(0, 255, 102, 0.3)' }}>
@@ -1900,7 +1938,7 @@ const Schedule = () => {
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '28px' }}>
                               {secondarySponsors.map((s, idx) => (
                                 <React.Fragment key={s.id || idx}>
-                                  <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '30px', maxWidth: '100px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.8 }} />
+                                  <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '32px', maxWidth: '105px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.8 }} />
                                   {idx < secondarySponsors.length - 1 && (
                                     <div style={{ height: '18px', width: '1px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
                                   )}
@@ -1917,6 +1955,47 @@ const Schedule = () => {
           );
         })()}
       </div>
+
+      {/* OBS Settings Modal for Organization */}
+      {showObsModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '420px' }}>
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Video size={24} color="#7c3aed" /> {activeFieldStream === 'stream1' ? '1-Maydon OBS Sozlamalari' : '2-Maydon OBS Sozlamalari'}
+            </h2>
+            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '15px' }}>
+              {currentOrg?.name || 'Tashkilot'} uchun {activeFieldStream === 'stream1' ? '1-Maydon' : '2-Maydon'} OBS WebSocket ulanishi.
+            </p>
+            <form onSubmit={handleSaveObsConnection}>
+              <div className="form-group">
+                <label>OBS WebSocket Manzili (Address):</label>
+                <input
+                  type="text"
+                  value={obsModalAddress}
+                  onChange={(e) => setObsModalAddress(e.target.value)}
+                  placeholder={activeFieldStream === 'stream2' ? 'ws://localhost:4456' : 'ws://localhost:4455'}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>OBS Paroli (Server Password):</label>
+                <input
+                  type="password"
+                  value={obsModalPassword}
+                  onChange={(e) => setObsModalPassword(e.target.value)}
+                  placeholder="Agar bo'sh bo'lsa, qoldiring"
+                />
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: '20px' }}>
+                <button type="button" className="btn-cancel" onClick={() => setShowObsModal(false)}>Yopish</button>
+                <button type="submit" className="btn-save" style={{ background: '#7c3aed' }}>Saqlash va Ulanish</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

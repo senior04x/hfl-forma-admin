@@ -144,7 +144,7 @@ export default function Standings() {
         setMainSponsor(mainFromDb);
       }
 
-      const selectedFromDb = realSponsors.filter(s => !s.is_main && s.is_selected !== false);
+      const selectedFromDb = realSponsors.filter(s => s.id !== mainFromDb?.id && s.is_selected !== false);
       setSelectedSponsors(selectedFromDb);
     } catch (e) {
       console.error('Error fetching sponsors in Standings:', e);

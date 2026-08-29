@@ -664,7 +664,7 @@ const Schedule = () => {
       }
 
       // 2. Selected secondary sponsors directly from DB
-      const selectedFromDb = realSponsors.filter(s => !s.is_main && s.is_selected !== false);
+      const selectedFromDb = realSponsors.filter(s => s.id !== mainFromDb?.id && s.is_selected !== false);
       setSelectedSponsors(selectedFromDb);
       try { localStorage.setItem(`hfl_selectedSponsors_${orgId}`, JSON.stringify(selectedFromDb)); } catch (e) {}
     } catch (e) {
