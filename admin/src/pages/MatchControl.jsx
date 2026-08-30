@@ -422,8 +422,8 @@ const MatchControl = () => {
   };
 
   const copyObsLink = () => {
-    let streamId = 'stream1';
-    if (match?.location?.includes('2-maydon')) streamId = 'stream2';
+    const isField2 = String(match?.location || '').toLowerCase().includes('2');
+    const streamId = isField2 ? 'stream2' : 'stream1';
     
     const targetOrgId = match?.organization_id || orgId || 1;
     const universalObsLink = `${window.location.origin}/obs/scoreboard/${streamId}?org_id=${targetOrgId}`;
@@ -471,7 +471,7 @@ const MatchControl = () => {
   // Multi-tier fast broadcast setup (Local BroadcastChannel + Supabase Realtime Broadcast)
   useEffect(() => {
     if (!id) return;
-    const streamName = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
+    const streamName = String(match?.location || '').toLowerCase().includes('2') ? 'stream2' : 'stream1';
     let bcMatch = null;
     let bcStream = null;
     try {
@@ -620,7 +620,7 @@ const MatchControl = () => {
   // OBS WebSocket Auto-Connect Effect (Strictly routed per field: 1-maydon vs 2-maydon)
   useEffect(() => {
     if (!match) return;
-    const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
+    const locationKey = String(match?.location || '').toLowerCase().includes('2') ? 'stream2' : 'stream1';
     const defaultPortAddress = locationKey === 'stream2' ? 'ws://localhost:4456' : 'ws://localhost:4455';
     const savedAddress = localStorage.getItem(`obs_address_${locationKey}`) || localStorage.getItem(`obs_address_${locationKey}_${orgId}`) || defaultPortAddress;
     const savedPassword = localStorage.getItem(`obs_password_${locationKey}`) || localStorage.getItem(`obs_password_${locationKey}_${orgId}`) || '';
@@ -859,7 +859,7 @@ const MatchControl = () => {
 
   const handleConnectObs = async (e) => {
     if (e) e.preventDefault();
-    const locationKey = match?.location?.includes('2-maydon') ? 'stream2' : 'stream1';
+    const locationKey = String(match?.location || '').toLowerCase().includes('2') ? 'stream2' : 'stream1';
     localStorage.setItem(`obs_address_${locationKey}`, obsAddress);
     localStorage.setItem(`obs_password_${locationKey}`, obsPassword);
     localStorage.setItem('obs_websocket_address', obsAddress);
@@ -900,7 +900,7 @@ const MatchControl = () => {
   };
 
   const handleManualReplay = async () => {
-    const fieldNum = match?.location?.includes('2-maydon') ? 2 : 1;
+    const fieldNum = String(match?.location || '').toLowerCase().includes('2') ? 2 : 1;
     const fieldSignalName = `REMOTE_GOAL_FIELD_${fieldNum}`;
     setIsTriggeringReplay(true);
 
@@ -1100,7 +1100,7 @@ const MatchControl = () => {
           };
 
           // Broadcast cloud signal to clean C:\Replays folder on field PC
-          const fieldNum = match?.location?.includes('2-maydon') ? 2 : 1;
+          const fieldNum = String(match?.location || '').toLowerCase().includes('2') ? 2 : 1;
           const finishSignalName = `REMOTE_FINISH_MATCH_FIELD_${fieldNum}`;
           try {
             const signalPayload = JSON.stringify({
@@ -1288,7 +1288,7 @@ const MatchControl = () => {
             </button>
             <div className="obs-divider"></div>
             <button className="obs-action-btn obs-text-btn" style={{background: '#1e40af'}} onClick={copyObsLink} title="OBS Linkini nusxalash">
-              <Monitor size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">{match?.location?.includes('2-maydon') ? '2-Maydon (OBS)' : '1-Maydon (OBS)'}</span>
+              <Monitor size={16} className="btn-icon-mobile" /> <span className="btn-text-desktop">{String(match?.location || '').toLowerCase().includes('2') ? '2-Maydon (OBS)' : '1-Maydon (OBS)'}</span>
             </button>
             <div className="obs-divider"></div>
             <button className="obs-action-btn obs-text-btn" style={{background: '#cc1818'}} onClick={handleManualYtThumbUpdate} disabled={updatingYtThumb} title="YouTube Oblojkasini yangilash">

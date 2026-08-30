@@ -34,16 +34,47 @@ const ObsScoreboard = () => {
     if (!id) return;
 
     const queryParams = new URLSearchParams(window.location.search);
-    const targetOrgId = queryParams.get('org_id') || 1;
+    const rawTargetOrgId = queryParams.get('org_id') || queryParams.get('org') || queryParams.get('organization_id') || 1;
+    const targetOrgId = isNaN(Number(rawTargetOrgId)) ? rawTargetOrgId : Number(rawTargetOrgId);
 
-    if (id !== 'stream1' && id !== 'stream2') {
-      // Direct Match ID
+    const rawFieldParam = (queryParams.get('field') || queryParams.get('field_id') || queryParams.get('stream') || queryParams.get('maydon') || '').toLowerCase();
+    const idLower = String(id).toLowerCase();
+
+    // Check if direct UUID
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
+
+    if (isUuid && !rawFieldParam) {
       setActiveMatchId(id);
       return;
     }
 
+    // Determine field number (1, 2, 3, 4...)
+    let fieldNum = 1;
+    if (idLower.includes('4') || rawFieldParam.includes('4')) fieldNum = 4;
+    else if (idLower.includes('3') || rawFieldParam.includes('3')) fieldNum = 3;
+    else if (idLower.includes('2') || rawFieldParam.includes('2')) fieldNum = 2;
+    else if (idLower.includes('1') || rawFieldParam.includes('1')) fieldNum = 1;
+
+    const isMatchForThisField = (m) => {
+      const loc = String(m?.location || '').toLowerCase();
+      if (fieldNum === 2) {
+        return loc.includes('2') || loc.includes('stream2');
+      }
+      if (fieldNum === 3) {
+        return loc.includes('3') || loc.includes('stream3');
+      }
+      if (fieldNum === 4) {
+        return loc.includes('4') || loc.includes('stream4');
+      }
+      // fieldNum === 1
+      return loc.includes('1') || loc.includes('stream1') || (!loc.includes('2') && !loc.includes('3') && !loc.includes('4') && !loc.includes('stream2') && !loc.includes('stream3') && !loc.includes('stream4'));
+    };
+
     const findLiveMatch = async () => {
-      let query = supabase.from('matches').select('*').order('id', { ascending: false });
+      let query = supabase
+        .from('matches')
+        .select('*')
+        .order('updated_at', { ascending: false });
 
       if (targetOrgId) {
         query = query.eq('organization_id', targetOrgId);
@@ -52,39 +83,17 @@ const ObsScoreboard = () => {
       const { data } = await query;
 
       if (data && data.length > 0) {
-        const isStream1 = id === 'stream1';
-        const isStream2 = id === 'stream2';
-
-        const isMatchForThisStream = (m) => {
-          const loc = String(m.location || '').toLowerCase();
-          if (isStream2) {
-            return loc.includes('2') || loc.includes('stream2');
-          }
-          if (isStream1) {
-            return loc.includes('1') || loc.includes('stream1') || (!loc.includes('2') && !loc.includes('stream2'));
-          }
-          return true;
-        };
-
         // Filter matches strictly for this stream field
-        const fieldMatches = data.filter(isMatchForThisStream);
-        const candidateList = fieldMatches.length > 0 ? fieldMatches : data;
+        const fieldMatches = data.filter(isMatchForThisField);
 
-        // 1. Prefer currently active playing match on this field ('first_half', 'second_half', 'half_time')
+        // 1. Prefer currently active live match on this field ('first_half', 'second_half', 'half_time', 'break', 'extra_time', 'live', 'penalties')
         let selectedMatch = fieldMatches.find((m) =>
-          ['first_half', 'second_half', 'half_time'].includes(m.status)
+          ['first_half', 'second_half', 'half_time', 'break', 'extra_time', 'live', 'penalties'].includes(m.status)
         );
 
-        // 1b. If no live match on this specific stream, check if there is ANY live match in this organization
-        if (!selectedMatch) {
-          selectedMatch = data.find((m) =>
-            ['first_half', 'second_half', 'half_time'].includes(m.status)
-          );
-        }
-
-        // 2. Fallback to latest match
-        if (!selectedMatch) {
-          selectedMatch = fieldMatches[0] || data[0];
+        // 2. Fallback to latest scheduled match strictly on THIS field
+        if (!selectedMatch && fieldMatches.length > 0) {
+          selectedMatch = fieldMatches.find((m) => m.status === 'scheduled') || fieldMatches[0];
         }
 
         if (selectedMatch) {
@@ -96,22 +105,13 @@ const ObsScoreboard = () => {
 
     findLiveMatch();
 
-    const streamChannel = supabase.channel(`global-matches-${id}`)
+    const streamKey = `stream${fieldNum}`;
+    const streamChannel = supabase.channel(`global-matches-${streamKey}-${targetOrgId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (payload) => {
         const newMatch = payload.new;
         if (newMatch) {
           if (!targetOrgId || String(newMatch.organization_id) === String(targetOrgId)) {
-            const isStream1 = id === 'stream1';
-            const isStream2 = id === 'stream2';
-            const loc = String(newMatch.location || '').toLowerCase();
-
-            const isMatchForThisStream =
-              (isStream2 && (loc.includes('2') || loc.includes('stream2'))) ||
-              (isStream1 && (loc.includes('1') || loc.includes('stream1') || (!loc.includes('2') && !loc.includes('stream2'))));
-
-            const isLive = ['first_half', 'second_half', 'half_time'].includes(newMatch.status);
-
-            if (isMatchForThisStream || isLive) {
+            if (isMatchForThisField(newMatch)) {
               setActiveMatchId(newMatch.id);
               setMatch(newMatch);
               applyTimerPayload(newMatch);
@@ -210,6 +210,18 @@ const ObsScoreboard = () => {
 
     fetchData(activeMatchId);
 
+    const queryParams = new URLSearchParams(window.location.search);
+    const rawFieldParam = (queryParams.get('field') || queryParams.get('field_id') || queryParams.get('stream') || queryParams.get('maydon') || '').toLowerCase();
+    const idLower = String(id || '').toLowerCase();
+
+    let fieldNum = 1;
+    if (idLower.includes('4') || rawFieldParam.includes('4')) fieldNum = 4;
+    else if (idLower.includes('3') || rawFieldParam.includes('3')) fieldNum = 3;
+    else if (idLower.includes('2') || rawFieldParam.includes('2')) fieldNum = 2;
+    else if (idLower.includes('1') || rawFieldParam.includes('1')) fieldNum = 1;
+
+    const streamKey = `stream${fieldNum}`;
+
     // 1. Web BroadcastChannel for local 0ms instant sync (same PC / OBS)
     let bcMatch = null;
     let bcStream = null;
@@ -219,7 +231,6 @@ const ObsScoreboard = () => {
         if (e.data) applyTimerPayload(e.data);
       };
 
-      const streamKey = id?.includes('stream2') ? 'stream2' : 'stream1';
       bcStream = new BroadcastChannel(`amatora_${streamKey}_timer`);
       bcStream.onmessage = (e) => {
         if (e.data) applyTimerPayload(e.data);
@@ -227,7 +238,6 @@ const ObsScoreboard = () => {
     } catch (e) {}
 
     // 2. Fast Supabase Broadcast Channels (Match-level + Stream-level for 0ms cross-network sync)
-    const streamKey = id?.includes('stream2') ? 'stream2' : 'stream1';
     const fastTimerChannel = supabase
       .channel(`obs_fast_timer_${activeMatchId}`)
       .on('broadcast', { event: 'timer_update' }, (msg) => {

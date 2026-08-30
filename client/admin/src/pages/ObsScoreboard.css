@@ -49,6 +49,22 @@ html, body {
   padding-left: 15px; 
 }
 
+/* ================== LEAGUE LOGO AT TOP OF SCOREBOARD ================== */
+.obs-league-logo-top-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.obs-league-logo-top-img {
+  height: 52px;
+  max-width: 180px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.85));
+}
+
 /* Yuqori qator (Jamoalar va Hisob) */
 .obs-top-row {
   display: flex;
@@ -88,21 +104,53 @@ html, body {
 }
 
 .obs-score {
+  position: relative;
   background: var(--obs-grad);
   color: white;
-  min-width: 120px;
+  min-width: 130px;
   font-size: 28px;
   font-weight: 800;
+  overflow: hidden;
+}
+
+.obs-score-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 1;
+}
+
+.obs-score-darken-shade {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 2;
+}
+
+.obs-score-content {
+  position: relative;
+  z-index: 3;
 }
 
 /* Ajratuvchi qizil (gradient) chiziq */
 .obs-separator {
+  position: relative;
   height: 4px;
   background: var(--obs-grad);
   /* Chiziq qiya qutilar ostidan o'tishi uchun joylashuv */
   margin-top: -1px;
   margin-left: -5px;
   width: calc(100% - 10px);
+  overflow: hidden;
+}
+
+.obs-separator-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.9;
 }
 
 /* Pastki qator (Liga nomi) */
@@ -128,6 +176,32 @@ html, body {
 .obs-status-text {
   color: #ffffff;
   font-weight: 700;
+}
+
+.obs-timer-display {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+.obs-timer-paused {
+  color: #ff3333 !important;
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(255, 51, 51, 0.9), 0 0 20px rgba(255, 0, 0, 0.6);
+  animation: obsTimerBlinkRed 1.0s infinite ease-in-out;
+}
+
+@keyframes obsTimerBlinkRed {
+  0%, 100% {
+    opacity: 1;
+    color: #ff2222;
+    text-shadow: 0 0 12px rgba(255, 34, 34, 0.95), 0 0 24px rgba(255, 0, 0, 0.7);
+  }
+  50% {
+    opacity: 0.25;
+    color: #ff6666;
+    text-shadow: 0 0 4px rgba(255, 102, 102, 0.4);
+  }
 }
 
 /* ================== ANIMATSIYALAR ================== */
@@ -202,6 +276,7 @@ html, body {
 }
 
 .obs-lt-top-bar {
+  position: relative;
   background: var(--obs-grad);
   color: white;
   padding: 5px 30px;
@@ -212,6 +287,7 @@ html, body {
   width: fit-content;
   margin-left: 20px;
   box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+  overflow: hidden;
 }
 
 .obs-lt-bottom-bar {
@@ -280,7 +356,6 @@ html, body {
   background: white;
   border: 1px solid rgba(255,255,255,0.2);
 }
-
 
 /* ================== MATCH EVENTS ICONS ================== */
 .obs-events-container {
