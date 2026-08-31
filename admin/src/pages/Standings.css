@@ -223,7 +223,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 75px 45px 15px 45px;
+  padding: 65px 45px 5px 45px;
+  height: 180px;
+  box-sizing: border-box;
 }
 
 .export-logo-left {
@@ -262,7 +264,7 @@
   grid-template-columns: 1.15fr 0.85fr;
   padding: 0 45px;
   gap: 18px;
-  align-items: stretch;
+  align-items: center;
   width: 100%;
   box-sizing: border-box;
 }
@@ -313,7 +315,6 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 10px;
-  height: 100%;
 }
 
 .export-card {
@@ -326,7 +327,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  flex: 1;
+  box-sizing: border-box;
 }
 
 .export-card-title {
@@ -353,31 +354,57 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 5px 10px;
+  padding: 5px 6px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-weight: 800;
-  font-size: 14px;
-  background: transparent;
-  border-radius: 6px;
-  margin-bottom: 1px;
+  box-sizing: border-box;
 }
-.export-result-row:last-child { border-bottom: none; margin-bottom: 0; }
-.export-result-team { display: flex; align-items: center; gap: 8px; flex: 1; }
-.export-result-team.away { flex-direction: row-reverse; }
-.export-result-team img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
-.export-result-score { font-size: 16.5px; padding: 0 8px; font-weight: 900; }
+.export-result-row:last-child { border-bottom: none; }
+.export-result-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.export-result-team.away {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.export-result-team img {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.export-result-team span {
+  text-transform: uppercase;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+}
+.export-result-score {
+  font-size: 18px;
+  padding: 0 6px;
+  font-weight: 900;
+  flex-shrink: 0;
+  text-align: center;
+}
 
 .export-stats-row {
   display: flex;
   align-items: center;
-  padding: 7px 12px;
+  padding: 6px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 15.5px;
   font-weight: 800;
+  box-sizing: border-box;
 }
 .export-stats-row:last-child { border-bottom: none; }
 .export-stats-row .stat-img {
-  width: 28px; height: 28px; border-radius: 50%; margin-right: 10px; object-fit: cover;
+  width: 28px; height: 28px; border-radius: 50%; margin-right: 10px; object-fit: cover; flex-shrink: 0;
 }
 
 /* ============================================================ */

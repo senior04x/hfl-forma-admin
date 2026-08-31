@@ -996,44 +996,100 @@ export default function Standings() {
                     <div className="export-right-col">
                       
                       {/* Results */}
-                      <div className="export-card" style={{ flex: recentMatches.length > 4 ? 1.15 : 1 }}>
+                      <div className="export-card">
                         <div className="export-card-title">{displayRound}-TUR NATIJALARI</div>
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '4px 8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '2px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px' }}>
                           {recentMatches.length === 0 ? (
                             <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '16px 0', textTransform: 'uppercase' }}>NATIJALAR KIRITILMAGAN</div>
                           ) : (() => {
-                            const matchCount = recentMatches.length;
-                            let resultRowPadding = '4px 6px';
-                            let resultFontSize = '13.5px';
-                            let resultLogoSize = '24px';
-                            let resultScoreFontSize = '16px';
+                            const listToRender = recentMatches;
+                            const matchCount = listToRender.length;
+                            let resultRowPadding = '7px 6px';
+                            let resultFontSize = 18.5;
+                            let resultLogoSize = '32px';
+                            let resultScoreFontSize = '20px';
 
                             if (matchCount > 6) {
-                              resultRowPadding = '2px 4px';
-                              resultFontSize = '12px';
-                              resultLogoSize = '20px';
-                              resultScoreFontSize = '14.5px';
+                              resultRowPadding = '4.5px 6px';
+                              resultFontSize = 15;
+                              resultLogoSize = '24px';
+                              resultScoreFontSize = '16.5px';
+                            } else if (matchCount === 5 || matchCount === 6) {
+                              resultRowPadding = '6px 6px';
+                              resultFontSize = 16.5;
+                              resultLogoSize = '28px';
+                              resultScoreFontSize = '18.5px';
                             } else if (matchCount <= 4) {
-                              resultRowPadding = '6px 8px';
-                              resultFontSize = '14.5px';
-                              resultLogoSize = '26px';
-                              resultScoreFontSize = '17px';
+                              resultRowPadding = '9.5px 8px';
+                              resultFontSize = 19.5;
+                              resultLogoSize = '36px';
+                              resultScoreFontSize = '22px';
                             }
 
-                            return recentMatches.map(m => {
+                            const getDynamicResultTeamFontSize = (name, baseSize) => {
+                              const len = String(name || '').trim().length;
+                              if (len > 15) return Math.round(baseSize * 0.62 * 10) / 10;
+                              if (len > 12) return Math.round(baseSize * 0.74 * 10) / 10;
+                              if (len > 9) return Math.round(baseSize * 0.84 * 10) / 10;
+                              if (len > 7) return Math.round(baseSize * 0.92 * 10) / 10;
+                              return baseSize;
+                            };
+
+                            return listToRender.slice(0, 8).map((m, idx) => {
                               const hTeam = teams.find(t => t.id === m.home_team_id);
                               const aTeam = teams.find(t => t.id === m.away_team_id);
-                              if(!hTeam || !aTeam) return null;
+                              const homeName = hTeam?.name || m.home_team || m.home_team_name || 'Jamoa 1';
+                              const awayName = aTeam?.name || m.away_team || m.away_team_name || 'Jamoa 2';
+                              const homeLogo = hTeam?.logo_url || m.home_team_logo;
+                              const awayLogo = aTeam?.logo_url || m.away_team_logo;
+                              const homeFontSize = getDynamicResultTeamFontSize(homeName, resultFontSize);
+                              const awayFontSize = getDynamicResultTeamFontSize(awayName, resultFontSize);
+
                               return (
-                                <div className="export-result-row" key={m.id} style={{ padding: resultRowPadding }}>
+                                <div 
+                                  className="export-result-row" 
+                                  key={m.id || idx} 
+                                  style={{ 
+                                    padding: resultRowPadding,
+                                    borderBottom: idx < Math.min(8, listToRender.length) - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none' 
+                                  }}
+                                >
                                   <div className="export-result-team">
-                                    <img src={hTeam.logo_url} alt="" crossOrigin="anonymous" style={{ width: resultLogoSize, height: resultLogoSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
-                                    <span style={{textTransform:'uppercase', fontSize: resultFontSize, fontWeight: '800', wordBreak: 'normal', overflowWrap: 'break-word', whiteSpace: 'normal'}}>{hTeam.name}</span>
+                                    {homeLogo ? (
+                                      <img 
+                                        src={homeLogo} 
+                                        alt="" 
+                                        crossOrigin="anonymous" 
+                                        style={{ width: resultLogoSize, height: resultLogoSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} 
+                                        onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} 
+                                      />
+                                    ) : (
+                                      <div style={{ width: resultLogoSize, height: resultLogoSize, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <span style={{ color: '#fff', fontSize: '13px', fontWeight: '900' }}>{(homeName || '?')[0]}</span>
+                                      </div>
+                                    )}
+                                    <span style={{ textTransform: 'uppercase', fontSize: `${homeFontSize}px`, fontWeight: '800', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>{homeName}</span>
                                   </div>
-                                  <div className="export-result-score" style={{ fontSize: resultScoreFontSize, padding: '0 4px', flexShrink: 0 }}>{m.home_score}-{m.away_score}</div>
+
+                                  <div className="export-result-score" style={{ fontSize: resultScoreFontSize, padding: '0 6px', flexShrink: 0 }}>
+                                    {m.home_score !== undefined && m.home_score !== null ? `${m.home_score}-${m.away_score}` : 'VS'}
+                                  </div>
+
                                   <div className="export-result-team away">
-                                    <img src={aTeam.logo_url} alt="" crossOrigin="anonymous" style={{ width: resultLogoSize, height: resultLogoSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
-                                    <span style={{textTransform:'uppercase', fontSize: resultFontSize, fontWeight: '800', wordBreak: 'normal', overflowWrap: 'break-word', whiteSpace: 'normal'}}>{aTeam.name}</span>
+                                    {awayLogo ? (
+                                      <img 
+                                        src={awayLogo} 
+                                        alt="" 
+                                        crossOrigin="anonymous" 
+                                        style={{ width: resultLogoSize, height: resultLogoSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} 
+                                        onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} 
+                                      />
+                                    ) : (
+                                      <div style={{ width: resultLogoSize, height: resultLogoSize, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <span style={{ color: '#fff', fontSize: '13px', fontWeight: '900' }}>{(awayName || '?')[0]}</span>
+                                      </div>
+                                    )}
+                                    <span style={{ textTransform: 'uppercase', fontSize: `${awayFontSize}px`, fontWeight: '800', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1, textAlign: 'right' }}>{awayName}</span>
                                   </div>
                                 </div>
                               );
@@ -1043,14 +1099,20 @@ export default function Standings() {
                       </div>
 
                       {/* Top Scorers */}
-                      <div className="export-card" style={{ flex: 1 }}>
-                        <div className="export-card-title">TO'PURARLAR <span style={{float:'right', fontSize:'15px'}}>O'   G</span></div>
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <div className="export-card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', background: 'rgba(255, 255, 255, 0.14)', borderBottom: '1px solid rgba(255, 255, 255, 0.25)' }}>
+                          <span style={{ fontSize: '16px', fontWeight: '900', color: '#ffffff', textTransform: 'uppercase' }}>TO'PURARLAR</span>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <span style={{ width: '30px', textAlign: 'center', fontSize: '15px', fontWeight: '800', color: '#ffffff' }}>O'</span>
+                            <span style={{ width: '30px', textAlign: 'center', fontSize: '15px', fontWeight: '800', color: '#ffffff' }}>G</span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
                           {topScorers.length === 0 ? (
-                            <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '16px 0', textTransform: 'uppercase' }}>TO'PURARLAR MAVJUD EMAS</div>
+                            <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '12px 0', textTransform: 'uppercase' }}>TO'PURARLAR MAVJUD EMAS</div>
                           ) : (
-                            topScorers.slice(0, 3).map(p => (
-                              <div className="export-stats-row" key={p.id}>
+                            topScorers.slice(0, 3).map((p, idx) => (
+                              <div className="export-stats-row" key={p.id || idx} style={{ borderBottom: idx < Math.min(3, topScorers.length) - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none' }}>
                                 <img 
                                   src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
                                   className="stat-img" 
@@ -1061,9 +1123,9 @@ export default function Standings() {
                                     e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
                                   }} 
                                 />
-                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', wordBreak: 'normal', overflowWrap: 'break-word', whiteSpace: 'normal'}}>{p.name}</div>
-                                <div style={{width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800'}}>{p.playedMatches || 1}</div>
-                                <div style={{width: '30px', textAlign: 'center', fontWeight: '900', fontSize: '17.5px'}}>{p.goals}</div>
+                                <div style={{ flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                <div style={{ width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800' }}>{p.playedMatches || 1}</div>
+                                <div style={{ width: '30px', textAlign: 'center', fontWeight: '900', fontSize: '17.5px' }}>{p.goals}</div>
                               </div>
                             ))
                           )}
@@ -1071,14 +1133,20 @@ export default function Standings() {
                       </div>
 
                       {/* Top Assists */}
-                      <div className="export-card" style={{ flex: 1 }}>
-                        <div className="export-card-title">ASSISTENTLAR <span style={{float:'right', fontSize:'15px'}}>O'   A</span></div>
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <div className="export-card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', background: 'rgba(255, 255, 255, 0.14)', borderBottom: '1px solid rgba(255, 255, 255, 0.25)' }}>
+                          <span style={{ fontSize: '16px', fontWeight: '900', color: '#ffffff', textTransform: 'uppercase' }}>ASSISTENTLAR</span>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <span style={{ width: '30px', textAlign: 'center', fontSize: '15px', fontWeight: '800', color: '#ffffff' }}>O'</span>
+                            <span style={{ width: '30px', textAlign: 'center', fontSize: '15px', fontWeight: '800', color: '#ffffff' }}>A</span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
                           {topAssists.length === 0 ? (
-                            <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '16px 0', textTransform: 'uppercase' }}>ASSISTENTLAR MAVJUD EMAS</div>
+                            <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '12px 0', textTransform: 'uppercase' }}>ASSISTENTLAR MAVJUD EMAS</div>
                           ) : (
-                            topAssists.slice(0, 3).map(p => (
-                              <div className="export-stats-row" key={p.id}>
+                            topAssists.slice(0, 3).map((p, idx) => (
+                              <div className="export-stats-row" key={p.id || idx} style={{ borderBottom: idx < Math.min(3, topAssists.length) - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none' }}>
                                 <img 
                                   src={p.playerPhoto || p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"} 
                                   className="stat-img" 
@@ -1089,9 +1157,9 @@ export default function Standings() {
                                     e.target.src = p.teamLogo || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; 
                                   }} 
                                 />
-                                <div style={{flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', wordBreak: 'normal', overflowWrap: 'break-word', whiteSpace: 'normal'}}>{p.name}</div>
-                                <div style={{width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800'}}>{p.playedMatches || 1}</div>
-                                <div style={{width: '30px', textAlign: 'center', fontWeight: '900', fontSize: '17.5px'}}>{p.assists}</div>
+                                <div style={{ flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                <div style={{ width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800' }}>{p.playedMatches || 1}</div>
+                                <div style={{ width: '30px', textAlign: 'center', fontWeight: '900', fontSize: '17.5px' }}>{p.assists}</div>
                               </div>
                             ))
                           )}

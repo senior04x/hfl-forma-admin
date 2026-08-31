@@ -116,8 +116,8 @@ async function uploadFile(filename) {
 }
 
 function attachToExactMatchEvent(publicUrl) {
-  // Query EXACT latest match_event sorted by created_at DESC (Chronological, NOT UUID string)
-  const queryPath = `/rest/v1/match_events?select=id,match_id,created_at&replay_video_url=is.null&order=created_at.desc&limit=1`;
+  // Query EXACT latest GOAL match_event (only goals with player_id, NOT assists or cards)
+  const queryPath = `/rest/v1/match_events?select=id,match_id,created_at&event_type=in.(goal,own_goal,penalty_goal)&player_id=not.is.null&replay_video_url=is.null&order=created_at.desc&limit=1`;
   const req = https.request({
     hostname: SUPABASE_URL,
     path: queryPath,
@@ -136,7 +136,7 @@ function attachToExactMatchEvent(publicUrl) {
           const targetEvent = events[0];
           updateEventRecord(targetEvent.id, publicUrl);
         } else {
-          // If no pending event exists, fallback to latest created match_event OR live match
+          // If no unlinked goal event exists, fallback to latest created goal event
           attachToLatestAnyEvent(publicUrl);
         }
       } catch (e) {
@@ -148,7 +148,7 @@ function attachToExactMatchEvent(publicUrl) {
 }
 
 function attachToLatestAnyEvent(publicUrl) {
-  const queryPath = `/rest/v1/match_events?select=id,match_id,created_at&order=created_at.desc&limit=1`;
+  const queryPath = `/rest/v1/match_events?select=id,match_id,created_at&event_type=in.(goal,own_goal,penalty_goal)&player_id=not.is.null&order=created_at.desc&limit=1`;
   const req = https.request({
     hostname: SUPABASE_URL,
     path: queryPath,
@@ -166,59 +166,22 @@ function attachToLatestAnyEvent(publicUrl) {
         if (events && events.length > 0) {
           updateEventRecord(events[0].id, publicUrl);
         } else {
-          createEventForActiveMatch(publicUrl);
+          logUnmatchedReplay(publicUrl);
         }
-      } catch (e) {}
+      } catch (e) {
+        logUnmatchedReplay(publicUrl);
+      }
     });
   });
   req.end();
 }
 
-function createEventForActiveMatch(publicUrl) {
-  const queryPath = `/rest/v1/matches?select=id,home_team_id&status=in.(live,first_half,second_half,half_time,scheduled)&order=id.desc&limit=1`;
-  const req = https.request({
-    hostname: SUPABASE_URL,
-    path: queryPath,
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE}`,
-      'apikey': SUPABASE_SERVICE_ROLE
-    }
-  }, (res) => {
-    let body = '';
-    res.on('data', chunk => body += chunk);
-    res.on('end', () => {
-      try {
-        const matches = JSON.parse(body);
-        if (matches && matches.length > 0) {
-          const match = matches[0];
-          const newEventData = JSON.stringify({
-            match_id: match.id,
-            team_id: match.home_team_id,
-            event_type: 'goal',
-            minute: 1,
-            replay_video_url: publicUrl
-          });
-
-          const postReq = https.request({
-            hostname: SUPABASE_URL,
-            path: `/rest/v1/match_events`,
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE}`,
-              'apikey': SUPABASE_SERVICE_ROLE,
-              'Content-Type': 'application/json'
-            }
-          }, (postRes) => {
-            console.log(`⚽ Yangi replay voqeasi match #${match.id} ga muvaffaqiyatli qo'shildi!`);
-          });
-          postReq.write(newEventData);
-          postReq.end();
-        }
-      } catch (e) {}
-    });
-  });
-  req.end();
+function logUnmatchedReplay(publicUrl) {
+  const logEntry = `[${new Date().toISOString()}] UNMATCHED_REPLAY: ${publicUrl}\n`;
+  try {
+    fs.appendFileSync(path.join(__dirname, 'unmatched_replays.log'), logEntry, 'utf8');
+  } catch (err) {}
+  console.log(`⚠️ Biriktirilmagan replay fayli xavfsiz saqlanib, logga yozildi: ${publicUrl}`);
 }
 
 function updateEventRecord(eventId, publicUrl) {
