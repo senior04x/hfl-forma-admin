@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { 
-  ArrowLeft, Trash2, Monitor, Share2, Play, Pause, RotateCcw, 
+import {
+  ArrowLeft, Trash2, Pencil, Monitor, Share2, Play, Pause, RotateCcw,
   Clock, ChevronLeft, ChevronRight, Video, Wifi, WifiOff, Settings
 } from 'lucide-react';
 import { obsService } from '../services/obsService';
@@ -53,6 +53,10 @@ const MatchControl = () => {
   const timerRef = useRef(null);
   const timerStartedAtRef = useRef(null);
   const baseTimerSecondsRef = useRef(0);
+  // Operator o'yinni yakunlashni unutib, taymer pauza qilinmagan holda
+  // (is_timer_running=true) davomiy ishlab qolib ketishining oldini olish
+  // uchun — bitta marta avtomatik yakunlash ishga tushishini kafolatlaydi
+  const autoFinishTriggeredRef = useRef(false);
 
   // Penalty Shootout State
   const [homePenalties, setHomePenalties] = useState(0);
@@ -66,6 +70,13 @@ const MatchControl = () => {
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
   const [eventMinute, setEventMinute] = useState('');
   const [savingEvent, setSavingEvent] = useState(false);
+  // Tahrirlanayotgan voqea id'si — null bo'lsa modal YANGI voqea qo'shish
+  // rejimida, aks holda MAVJUD voqeani (id o'zgarmasdan) YANGILASH
+  // rejimida ishlaydi. Sabab: avval tuzatish faqat o'chirib qayta qo'shish
+  // orqali qilinar edi — bu esa voqea id'sini o'zgartirib, unga OBS orqali
+  // biriktirilgan replay_video_url'ni yo'qotib qo'yardi (ayniqsa tuzatish
+  // biriktirishdan ancha keyin, masalan bir kundan keyin qilinsa).
+  const [editingEventId, setEditingEventId] = useState(null);
 
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, message: '' });
@@ -956,20 +967,59 @@ const MatchControl = () => {
     updateTimerDBAndState(defaultSec, nowIso, isTimerRunning);
   };
 
-  // Quick Score Adjuster (+1 / -1)
+  // Quick Score Adjuster (+1 / -1).
+  // MUHIM: delta=+1 (gol qo'shilayotganda) endi shunchaki hisobni oshirish
+  // bilan CHEKLANMAYDI — match_events jadvaliga "muallifsiz" (player_id:
+  // null) gol voqeasi HAM to'g'ridan-to'g'ri qo'shiladi (record_match_event
+  // RPC ishlatilmaydi, chunki u p_player_id NULL bo'lishini qabul qilmaydi
+  // — bu yerda mobil admin ilovasidagi bilan bir xil yechim qo'llanildi).
+  // Bu, raqamsiz kiyimda o'ynagan futbolchining goli uchun ishlatilganda:
+  //   1) Match Detail sahifasida "JAMOA GOLI" sifatida ko'rinadi
+  //      (avval umuman event yaratilmagani uchun ko'rinmas edi).
+  //   2) OBS controller uni oddiy gol eventi kabi aniqlab, replay videoni
+  //      ANIQ shu event id'siga avtomatik biriktiradi (avval bu mumkin
+  //      emas edi, video hech narsaga bog'lanmay "etim" qolardi).
+  // delta<=0 holatida xatti-harakat o'zgarishsiz — faqat qo'lda tuzatish,
+  // hech qanday event yaratilmaydi/o'chirilmaydi.
   const adjustScore = async (teamType, delta) => {
     if (!match) return;
     const isHome = teamType === 'home';
     const currentScore = isHome ? (match.home_score || 0) : (match.away_score || 0);
     const newScore = Math.max(0, currentScore + delta);
 
-    const updatePayload = isHome ? { home_score: newScore } : { away_score: newScore };
-
     setMatch(prev => ({
       ...prev,
       [isHome ? 'home_score' : 'away_score']: newScore
     }));
 
+    if (delta > 0) {
+      const teamId = isHome ? match?.home_team_id : match?.away_team_id;
+      const minVal = getCurrentMinute();
+      try {
+        const { error: insertErr } = await supabase.from('match_events').insert([{
+          match_id: id,
+          team_id: teamId,
+          player_id: null,
+          event_type: 'goal',
+          minute: minVal,
+        }]);
+        if (insertErr) throw insertErr;
+
+        await supabase.from('matches').update({
+          [isHome ? 'home_score' : 'away_score']: newScore,
+          updated_at: new Date().toISOString(),
+        }).eq('id', id);
+
+        await fetchEvents();
+      } catch (e) {
+        console.error('adjustScore (jamoa goli) error:', e);
+        setMatch(prev => ({ ...prev, [isHome ? 'home_score' : 'away_score']: currentScore }));
+        alert("Jamoa golini saqlashda xatolik yuz berdi");
+      }
+      return;
+    }
+
+    const updatePayload = isHome ? { home_score: newScore } : { away_score: newScore };
     await supabase.from('matches').update(updatePayload).eq('id', id);
   };
 
@@ -1043,99 +1093,142 @@ const MatchControl = () => {
     });
   };
 
+  // O'yinni yakunlash uchun asosiy (haqiqiy) logika — tasdiqlash oynasidan
+  // (requestFinishMatch) ham, taymer-nazoratchisi (auto-finish watchdog)
+  // tomonidan avtomatik ham chaqiriladi. Modalga bog'liq emas.
+  const finishMatchNow = async () => {
+    try {
+      const homeGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.home_team_id).length;
+      const awayGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.away_team_id).length;
+
+      const finalHomeScore = homeGoals > 0 ? homeGoals : (match.home_score || 0);
+      const finalAwayScore = awayGoals > 0 ? awayGoals : (match.away_score || 0);
+
+      const finishData = {
+        status: 'finished',
+        home_score: finalHomeScore,
+        away_score: finalAwayScore,
+        timer_seconds: timerSeconds,
+        timer_started_at: null,
+        is_timer_running: false,
+      };
+
+      const baseFinishData = {
+        status: 'finished',
+        home_score: finalHomeScore,
+        away_score: finalAwayScore,
+        updated_at: new Date().toISOString()
+      };
+
+      const targetId = match?.id || id;
+
+      setMatch(prev => ({
+        ...prev,
+        ...baseFinishData,
+        timer_seconds: timerSeconds,
+        timer_started_at: null,
+        is_timer_running: false,
+        home_team: homeTeam,
+        away_team: awayTeam
+      }));
+      setIsTimerRunning(false);
+
+      await updateTimerDBAndState(timerSeconds, null, false, 'finished');
+
+      try {
+        await supabase.from('matches').update(baseFinishData).eq('id', targetId);
+      } catch (errAdmin) {
+        console.warn('Admin finish update error:', errAdmin);
+      }
+
+      const updatedMatch = {
+        ...match,
+        ...finishData,
+        home_team: homeTeam,
+        away_team: awayTeam
+      };
+
+      // Broadcast cloud signal to clean C:\Replays folder on field PC
+      const fieldNum = String(match?.location || '').toLowerCase().includes('2') ? 2 : 1;
+      const finishSignalName = `REMOTE_FINISH_MATCH_FIELD_${fieldNum}`;
+      try {
+        const signalPayload = JSON.stringify({
+          match_id: targetId,
+          action: 'finish_match',
+          timestamp: Date.now()
+        });
+
+        const { data: existingSignal } = await supabase
+          .from('sponsors')
+          .select('id')
+          .eq('name', finishSignalName)
+          .maybeSingle();
+
+        if (existingSignal) {
+          await supabase.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
+        } else {
+          await supabase.from('sponsors').insert({ name: finishSignalName, logo_url: signalPayload });
+        }
+      } catch (sigErr) {
+        console.warn(`[FIELD_${fieldNum}] Finish match signal error:`, sigErr);
+      }
+
+      autoUpdateYouTubeThumbnail(updatedMatch);
+    } catch (err) {
+      console.error('Error finishing match:', err);
+    }
+  };
+
   const requestFinishMatch = () => {
     setConfirmModal({
       isOpen: true,
       message: "O'yinni yakunlashni tasdiqlaysizmi?",
       action: async () => {
-        try {
-          const homeGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.home_team_id).length;
-          const awayGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.away_team_id).length;
-
-          const finalHomeScore = homeGoals > 0 ? homeGoals : (match.home_score || 0);
-          const finalAwayScore = awayGoals > 0 ? awayGoals : (match.away_score || 0);
-
-          const finishData = {
-            status: 'finished',
-            home_score: finalHomeScore,
-            away_score: finalAwayScore,
-            timer_seconds: timerSeconds,
-            timer_started_at: null,
-            is_timer_running: false,
-          };
-
-          const baseFinishData = {
-            status: 'finished',
-            home_score: finalHomeScore,
-            away_score: finalAwayScore,
-            updated_at: new Date().toISOString()
-          };
-
-          const targetId = match?.id || id;
-
-          setMatch(prev => ({ 
-            ...prev, 
-            ...baseFinishData,
-            timer_seconds: timerSeconds,
-            timer_started_at: null,
-            is_timer_running: false,
-            home_team: homeTeam,
-            away_team: awayTeam
-          }));
-          setIsTimerRunning(false);
-
-          await updateTimerDBAndState(timerSeconds, null, false, 'finished');
-
-          try {
-            await supabase.from('matches').update(baseFinishData).eq('id', targetId);
-          } catch (errAdmin) {
-            console.warn('Admin finish update error:', errAdmin);
-          }
-
-          const updatedMatch = { 
-            ...match, 
-            ...finishData,
-            home_team: homeTeam,
-            away_team: awayTeam
-          };
-
-          // Broadcast cloud signal to clean C:\Replays folder on field PC
-          const fieldNum = String(match?.location || '').toLowerCase().includes('2') ? 2 : 1;
-          const finishSignalName = `REMOTE_FINISH_MATCH_FIELD_${fieldNum}`;
-          try {
-            const signalPayload = JSON.stringify({
-              match_id: targetId,
-              action: 'finish_match',
-              timestamp: Date.now()
-            });
-
-            const { data: existingSignal } = await supabase
-              .from('sponsors')
-              .select('id')
-              .eq('name', finishSignalName)
-              .maybeSingle();
-
-            if (existingSignal) {
-              await supabase.from('sponsors').update({ logo_url: signalPayload }).eq('id', existingSignal.id);
-            } else {
-              await supabase.from('sponsors').insert({ name: finishSignalName, logo_url: signalPayload });
-            }
-          } catch (sigErr) {
-            console.warn(`[FIELD_${fieldNum}] Finish match signal error:`, sigErr);
-          }
-
-          autoUpdateYouTubeThumbnail(updatedMatch);
-        } catch (err) {
-          console.error('Error finishing match:', err);
-        } finally {
-          setConfirmModal({ isOpen: false, action: null, message: '' });
-        }
+        await finishMatchNow();
+        setConfirmModal({ isOpen: false, action: null, message: '' });
       }
     });
   };
 
+  // ═══════════════════════════════════════════════════════════════
+  // AVTOMATIK YAKUNLASH NAZORATCHISI (Auto-finish watchdog)
+  // Operator o'yinni yakunlashni unutib qo'yishi mumkin — agar taymer
+  // pauza qilinmagan holda (is_timer_running=true, timer_started_at
+  // real vaqt belgisi bo'yicha) ligaga belgilangan umumiy o'yin
+  // vaqtidan + 30 daqiqa "grace" muddatdan ko'proq davomiy ishlab
+  // ketsa, o'yin bazani behuda band qilib turmasligi uchun avtomatik
+  // "finished" holatiga o'tkaziladi. Haqiqiy (server) vaqt belgisiga
+  // asoslangani uchun sahifa qayta ochilganda ham to'g'ri ishlaydi.
+  useEffect(() => {
+    if (!match || !id) return;
+    if (match.status === 'finished' || match.status === 'scheduled') {
+      autoFinishTriggeredRef.current = false;
+      return;
+    }
+    if (!match.is_timer_running || !match.timer_started_at) return;
+
+    const checkAutoFinish = () => {
+      if (autoFinishTriggeredRef.current) return;
+      if (!match.timer_started_at) return;
+      const startedMs = new Date(match.timer_started_at).getTime();
+      if (isNaN(startedMs)) return;
+      const runningForSec = (Date.now() - startedMs) / 1000;
+      const limitSec = (matchDurationMins + 30) * 60;
+      if (runningForSec >= limitSec) {
+        autoFinishTriggeredRef.current = true;
+        console.warn(`⏰ Auto-finish: match ${id} taymeri ${Math.round(runningForSec / 60)} daqiqadan beri pauzasiz ishlab turibdi (limit: ${matchDurationMins + 30} daq) — o'yin avtomatik yakunlanmoqda.`);
+        finishMatchNow();
+      }
+    };
+
+    checkAutoFinish();
+    const watchdogInterval = setInterval(checkAutoFinish, 60000);
+    return () => clearInterval(watchdogInterval);
+  }, [id, match?.status, match?.is_timer_running, match?.timer_started_at, matchDurationMins]);
+
   // Open Event Modal directly or pre-filled for a specific player
   const openEventModal = (type, teamId = '', playerId = '') => {
+    setEditingEventId(null);
     setEventType(type);
     setSelectedTeamId(teamId || (match?.home_team_id || ''));
     setSelectedPlayerId(playerId || '');
@@ -1144,14 +1237,85 @@ const MatchControl = () => {
     setShowEventModal(true);
   };
 
+  // Mavjud voqeani TAHRIRLASH uchun modalni to'ldirib ochish. Hech narsani
+  // o'chirmaydi/yaratmaydi — haqiqiy saqlash handleSaveEvent ichidagi
+  // editingEventId shoxobchasi orqali to'g'ridan-to'g'ri UPDATE qiladi.
+  const handleEditEvent = (event) => {
+    setEditingEventId(String(event.id));
+    setEventType(event.event_type || event.type || 'goal');
+    setSelectedTeamId(event.team_id || match?.home_team_id || '');
+    setSelectedPlayerId(event.player_id || '');
+    setEventMinute(String(event.minute ?? getCurrentMinute()));
+    setSavingEvent(false);
+    setShowEventModal(true);
+  };
+
   const handleSaveEvent = async () => {
     if (!selectedTeamId || !selectedPlayerId || !eventMinute || savingEvent) return;
 
     setSavingEvent(true);
-    try {
-      const minuteVal = parseInt(eventMinute) || getCurrentMinute();
-      const isGoal = eventType === 'goal';
+    const minuteVal = parseInt(eventMinute) || getCurrentMinute();
+    const isGoal = eventType === 'goal';
 
+    // ══════════════════════════════════════════════════════════════════
+    // TAHRIRLASH REJIMI: xato kiritilgan voqeani (masalan, noto'g'ri
+    // o'yinchi/jamoaga yozilgan gol) O'CHIRIB QAYTA QO'SHISH o'rniga,
+    // mavjud qatorni id'sini o'zgartirmasdan UPDATE qilamiz — shu bilan
+    // unga oldin OBS orqali biriktirilgan replay_video_url saqlanib
+    // qoladi (o'chirib-qayta-qo'shishda esa yangi id yaratilib, eski
+    // videoning bog'lanishi butunlay uzilib qolar edi).
+    if (editingEventId) {
+      try {
+        const originalEvent = events.find(e => String(e.id) === String(editingEventId));
+        const wasGoal = originalEvent ? (originalEvent.event_type === 'goal' || originalEvent.type === 'goal') : false;
+        const wasHome = originalEvent ? String(originalEvent.team_id) === String(match?.home_team_id) : false;
+        const isHome = selectedTeamId === match.home_team_id;
+
+        let newHomeScore = match?.home_score || 0;
+        let newAwayScore = match?.away_score || 0;
+        if (wasGoal) {
+          newHomeScore = Math.max(0, newHomeScore - (wasHome ? 1 : 0));
+          newAwayScore = Math.max(0, newAwayScore - (wasHome ? 0 : 1));
+        }
+        if (isGoal) {
+          newHomeScore = newHomeScore + (isHome ? 1 : 0);
+          newAwayScore = newAwayScore + (isHome ? 0 : 1);
+        }
+
+        const { error } = await supabase.from('match_events').update({
+          team_id: selectedTeamId,
+          player_id: selectedPlayerId,
+          event_type: eventType,
+          minute: minuteVal,
+        }).eq('id', editingEventId);
+
+        if (error) throw error;
+
+        if (wasGoal || isGoal) {
+          await supabase.from('matches').update({
+            home_score: newHomeScore,
+            away_score: newAwayScore,
+            updated_at: new Date().toISOString(),
+          }).eq('id', id);
+
+          setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
+        }
+
+        await fetchEvents();
+        setShowEventModal(false);
+        setEditingEventId(null);
+      } catch (err) {
+        console.error(err);
+        alert("Voqeani yangilashda xatolik yuz berdi");
+      } finally {
+        setSavingEvent(false);
+      }
+      return;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // YANGI VOQEA QO'SHISH REJIMI (oldingi mantiq, o'zgarishsiz)
+    try {
       // Check if there is an existing orphan replay from a recently deleted mistake goal
       const orphanReplay = ORPHAN_REPLAYS_BY_MATCH.get(String(id));
       const isOrphanFresh = orphanReplay && (Date.now() - orphanReplay.timestamp < 10 * 60 * 1000);
@@ -1174,7 +1338,7 @@ const MatchControl = () => {
           const isHome = selectedTeamId === match.home_team_id;
           const newHomeScore = (match.home_score || 0) + (isHome ? 1 : 0);
           const newAwayScore = (match.away_score || 0) + (isHome ? 0 : 1);
-          
+
           await supabase.from('matches').update({
             home_score: newHomeScore,
             away_score: newAwayScore,
@@ -1338,10 +1502,16 @@ const MatchControl = () => {
               >
                 {isTimerRunning ? <Pause size={14} /> : <Play size={14} />}
               </button>
-              <button 
+              {/* HAVFLI: Taymerni boshiga qaytarish tugmasi tasodifiy bosilib,
+                  jonli o'yin vaqtini o'chirib qo'yishi mumkin — shuning uchun
+                  o'chirilmasdan (kod strukturasi buzilmasligi uchun) faqat
+                  yashirilgan (hidden) holatga keltirildi. */}
+              <button
                 className="timer-control-btn reset"
                 onClick={resetTimerManual}
                 title="Taym boshiga qaytarish"
+                style={{ display: 'none' }}
+                hidden
               >
                 <RotateCcw size={12} />
               </button>
@@ -1534,14 +1704,25 @@ const MatchControl = () => {
                 <span className="timeline-icon">{EVENT_TYPES[event.event_type]?.icon}</span>
                 <div className="timeline-details">
                   <div className="timeline-player">
-                    {event.player?.player_number ? `#${event.player.player_number} ` : ''}
-                    {event.player?.first_name} {event.player?.last_name}
+                    {event.player_id ? (
+                      <>
+                        {event.player?.player_number ? `#${event.player.player_number} ` : ''}
+                        {event.player?.first_name} {event.player?.last_name}
+                      </>
+                    ) : (
+                      'Jamoa goli (o\'yinchisiz)'
+                    )}
                   </div>
                   <div className="timeline-team">{event.team?.name}</div>
                 </div>
-                <button className="timeline-delete" onClick={() => handleDeleteEvent(event)} title="O'chirish">
-                  <Trash2 size={16} />
-                </button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button className="timeline-delete" onClick={() => handleEditEvent(event)} title="Tahrirlash">
+                    <Pencil size={16} />
+                  </button>
+                  <button className="timeline-delete" onClick={() => handleDeleteEvent(event)} title="O'chirish">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -1598,9 +1779,13 @@ const MatchControl = () => {
 
       {/* Event Modal */}
       {showEventModal && (
-        <div className="event-modal-overlay" onClick={() => !savingEvent && setShowEventModal(false)}>
+        <div className="event-modal-overlay" onClick={() => { if (!savingEvent) { setShowEventModal(false); setEditingEventId(null); } }}>
           <div className="event-modal" onClick={e => e.stopPropagation()}>
-            <h3>{EVENT_TYPES[eventType]?.icon} {EVENT_TYPES[eventType]?.label} qo'shish</h3>
+            <h3>
+              {editingEventId
+                ? <>✏️ {EVENT_TYPES[eventType]?.label} tahrirlash</>
+                : <>{EVENT_TYPES[eventType]?.icon} {EVENT_TYPES[eventType]?.label} qo'shish</>}
+            </h3>
             
             <div className="form-group">
               <label>Jamoa</label>
@@ -1637,7 +1822,7 @@ const MatchControl = () => {
             </div>
 
             <div className="event-modal-actions">
-              <button className="btn-modal-cancel" onClick={() => setShowEventModal(false)} disabled={savingEvent}>Bekor</button>
+              <button className="btn-modal-cancel" onClick={() => { setShowEventModal(false); setEditingEventId(null); }} disabled={savingEvent}>Bekor</button>
               <button
                 className="btn-modal-save"
                 onClick={handleSaveEvent}
@@ -1647,6 +1832,8 @@ const MatchControl = () => {
                   <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span className="btn-spinner">⏳</span> Saqlanmoqda...
                   </span>
+                ) : editingEventId ? (
+                  "O'zgarishni saqlash"
                 ) : (
                   'Saqlash'
                 )}
