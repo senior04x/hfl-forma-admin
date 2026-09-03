@@ -67,13 +67,19 @@ export default function ProfileUpdates() {
           if (item.comment && item.comment.includes('[PROFILE_UPDATE]')) {
             const parts = item.comment.split('[PROFILE_UPDATE]');
             let jsonStr = parts[1] || '';
-            // Strip trailing tags like [INSTAGRAM:...] or [METADATA:...]
-            jsonStr = jsonStr
-              .replace(/\[INSTAGRAM:[^\]]+\]/g, '')
-              .replace(/\[METADATA:[^\]]+\]/g, '')
-              .trim();
-
-            parsedPayload = JSON.parse(jsonStr);
+            const firstTagIdx = jsonStr.indexOf(' [');
+            if (firstTagIdx !== -1) {
+              jsonStr = jsonStr.substring(0, firstTagIdx);
+            }
+            jsonStr = jsonStr.trim();
+            try {
+              parsedPayload = JSON.parse(jsonStr);
+            } catch (pErr) {
+              const jsonMatch = jsonStr.match(/\{[\s\S]*?\}(?=\s*\[|$)/);
+              if (jsonMatch) {
+                parsedPayload = JSON.parse(jsonMatch[0]);
+              }
+            }
           }
         } catch (e) {
           console.warn('Failed to parse profile update payload:', e, item.comment);
