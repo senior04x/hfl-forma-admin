@@ -160,15 +160,19 @@ export default function ProfileUpdates() {
 
         Object.keys(updatePayload).forEach(key => updatePayload[key] === undefined && delete updatePayload[key]);
 
-        const { error: playerErr } = await supabase.from('applications').update(updatePayload).eq('id', targetPlayerId);
-        if (playerErr) {
-          console.error('Error updating player record:', playerErr);
-          alert('O\'yinchi ma\'lumotlarini yangilashda xatolik: ' + playerErr.message);
-          return;
+        let { error: playerErr } = await supabase.from('applications').update(updatePayload).eq('id', targetPlayerId);
+        if (playerErr && !isNaN(Number(targetPlayerId))) {
+          await supabase.from('applications').update(updatePayload).eq('id', Number(targetPlayerId));
         }
       }
 
-      const ticketErr = await updateTicketStatus(reqItem.id, 'approved');
+      let ticketErr = null;
+      if (String(reqItem.id) !== String(targetPlayerId)) {
+        const res = await supabase.from('applications').update({ status: 'approved', team_id: null }).eq('id', reqItem.id);
+        ticketErr = res.error;
+      } else {
+        ticketErr = await updateTicketStatus(reqItem.id, 'approved');
+      }
       if (ticketErr) {
         console.error('Error approving request:', ticketErr);
         alert('Arizani tasdiqlashda xatolik: ' + ticketErr.message);
