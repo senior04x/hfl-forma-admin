@@ -136,6 +136,7 @@ const Schedule = () => {
   const [exportLeague, setExportLeague] = useState('');
   const [exportRound, setExportRound] = useState('1');
   const [isExporting, setIsExporting] = useState(false);
+  const [activeExportChunk, setActiveExportChunk] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const exportRef = useRef(null);
 
@@ -883,6 +884,56 @@ const Schedule = () => {
     }
   };
 
+  // Kunlar bo'yicha eksport: kunda 8 tadan ko'p o'yin bo'lsa, qismlarga bo'lib barcha rasmlarni avtomatik yuklaydi
+  const handleExportDay = async (dayGroup) => {
+    if (!exportRef.current || isExporting) return;
+    setIsExporting(true);
+    try {
+      const isTournExport = viewMode === 'tournament';
+      const cleanTitle = (isTournExport ? (selectedTournObj?.name || 'turnir') : exportLeague)
+        .replace(/[^a-zA-Z0-9_\u0400-\u04FF]/g, '_');
+
+      for (let cIdx = 0; cIdx < dayGroup.chunks.length; cIdx++) {
+        setActiveExportChunk({
+          dayNumber: dayGroup.dayNumber,
+          date: dayGroup.date,
+          formattedDate: dayGroup.formattedDate,
+          chunkIndex: cIdx,
+          totalChunks: dayGroup.chunks.length,
+          matches: dayGroup.chunks[cIdx]
+        });
+
+        // Wait for state update and re-render
+        await new Promise(resolve => setTimeout(resolve, 250));
+
+        const canvas = await html2canvas(exportRef.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: null
+        });
+
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        const partSuffix = dayGroup.chunks.length > 1 ? `_qism_${cIdx + 1}` : '';
+        link.download = `jadval_${cleanTitle}_${dayGroup.dayNumber}_kun_${dayGroup.formattedDate.replace(/\./g, '_')}${partSuffix}.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        if (cIdx < dayGroup.chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 350));
+        }
+      }
+    } catch (err) {
+      console.error('Error exporting day schedule:', err);
+      alert("Rasmni yuklab olishda xatolik yuz berdi.");
+    } finally {
+      setActiveExportChunk(null);
+      setIsExporting(false);
+    }
+  };
+
   const fetchTeams = async (leaguesList = activeLeagues) => {
     let query = supabase.from('teams').select('*').eq('status', 'approved');
     query = applyOrgAndCollabFilter(query, orgId, leaguesList);
@@ -1280,6 +1331,66 @@ const Schedule = () => {
     return Array.from({ length: 30 }, (_, i) => i + 1);
   })();
 
+  // Match Schedule Day & Part Groups (Splits matches by day; max 8 matches per 1x1 image chunk)
+  const scheduleDayGroups = React.useMemo(() => {
+    const isTournView = viewMode === 'tournament';
+    const filteredList = matches
+      .filter(m => {
+        if (isTournView) {
+          if (!m.tournament_id) return false;
+          if (selectedTournamentId && String(m.tournament_id) !== String(selectedTournamentId)) return false;
+          if (selectedStage) {
+            if (selectedStage === 'group') {
+              if (m.stage && m.stage !== 'group') return false;
+              if (exportRound && m.round && String(m.round) !== String(exportRound)) return false;
+            } else {
+              if (m.stage !== selectedStage) return false;
+            }
+          }
+        } else {
+          if (m.tournament_id) return false;
+          if (exportLeague && m.league !== exportLeague) return false;
+          if (exportRound && m.round && String(m.round) !== String(exportRound)) return false;
+        }
+
+        if (filterStatus === 'all') return true;
+        if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
+        return m.status === filterStatus;
+      })
+      .sort(compareMatches);
+
+    const map = new Map();
+    filteredList.forEach(m => {
+      const d = m.match_date ? String(m.match_date).trim() : (m.date ? String(m.date).trim() : 'Belgilanmagan');
+      if (!map.has(d)) map.set(d, []);
+      map.get(d).push(m);
+    });
+
+    const groups = [];
+    let dayIdx = 1;
+    map.forEach((matchesList, rawDate) => {
+      const formattedDate = rawDate !== 'Belgilanmagan'
+        ? rawDate.split('-').reverse().join('.')
+        : 'Belgilanmagan';
+
+      const chunks = [];
+      const CHUNK_SIZE = 8;
+      for (let i = 0; i < matchesList.length; i += CHUNK_SIZE) {
+        chunks.push(matchesList.slice(i, i + CHUNK_SIZE));
+      }
+
+      groups.push({
+        dayNumber: dayIdx++,
+        date: rawDate,
+        formattedDate,
+        matches: matchesList,
+        chunks,
+      });
+    });
+
+    return groups;
+  }, [matches, viewMode, selectedTournamentId, selectedStage, exportRound, exportLeague, filterStatus]);
+
   return (
     <div className="schedule-page">
       {/* Header */}
@@ -1469,16 +1580,60 @@ const Schedule = () => {
           </div>
         )}
 
-        {/* PNG Eksport Buttonlari */}
-        <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <button className="btn-download-poster" onClick={handleExport} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
-            {isExporting ? (
-              <><span className="btn-spinner"></span> <span>Yuklanmoqda...</span></>
-            ) : (
-              <><Download size={18} /> <span>Jadvalni yuklab olish (1:1)</span></>
-            )}
-          </button>
-        </div>
+        {/* PNG Eksport Buttonlari (Kunlar bo'yicha) */}
+        {scheduleDayGroups.length > 0 ? (
+          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              📅 Kunlar bo'yicha yuklab olish (1x1 format):
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+              {scheduleDayGroups.map(dayGroup => (
+                <button
+                  key={dayGroup.date}
+                  type="button"
+                  onClick={() => handleExportDay(dayGroup)}
+                  disabled={isExporting}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 18px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.25) 100%)',
+                    border: '1px solid rgba(59, 130, 246, 0.4)',
+                    color: '#fff',
+                    cursor: isExporting ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: '900', fontSize: '15px', color: '#60a5fa' }}>
+                      📅 {dayGroup.dayNumber}-kun ({dayGroup.formattedDate})
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginTop: '3px' }}>
+                      {dayGroup.matches.length} ta o'yin {dayGroup.chunks.length > 1 ? `• ${dayGroup.chunks.length} ta rasm (8 tadan)` : '• 1 ta rasm'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#3b82f6', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '800' }}>
+                    <Download size={15} />
+                    <span>{isExporting ? 'Yuklanmoqda...' : (dayGroup.chunks.length > 1 ? `${dayGroup.chunks.length} ta rasm yuklash` : 'Yuklab olish')}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button className="btn-download-poster" onClick={handleExport} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
+              {isExporting ? (
+                <><span className="btn-spinner"></span> <span>Yuklanmoqda...</span></>
+              ) : (
+                <><Download size={18} /> <span>Jadvalni yuklab olish (1:1)</span></>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Matches Grid Wrapper with Glassmorphism overlay on 1x1 scheduleBanner */}
@@ -2166,8 +2321,9 @@ const Schedule = () => {
                     })
                     .sort(compareMatches);
 
-                  const currentRoundMatches = filteredList.filter(m => !m.is_postponed);
-                  const postponedMatches = filteredList.filter(m => m.is_postponed);
+                  const listToRender = activeExportChunk ? activeExportChunk.matches : filteredList;
+                  const currentRoundMatches = listToRender.filter(m => !m.is_postponed);
+                  const postponedMatches = listToRender.filter(m => m.is_postponed);
                   const totalCount = currentRoundMatches.length + postponedMatches.length;
 
                   let rowPadding = '9px 16px';
@@ -2213,23 +2369,28 @@ const Schedule = () => {
                           )}
                         </div>
 
-                        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
                           {isTournView ? (
                             selectedTournObj?.logo_url ? (
-                              <img src={selectedTournObj.logo_url} alt={selectedTournObj.name} style={{ maxHeight: totalCount > 6 ? '105px' : '110px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                              <img src={selectedTournObj.logo_url} alt={selectedTournObj.name} style={{ maxHeight: totalCount > 6 ? '100px' : '105px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
                             ) : (
-                              <h2 style={{ color: '#fff', fontSize: '36px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>
+                              <h2 style={{ color: '#fff', fontSize: '34px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>
                                 {selectedTournObj?.name || 'TURNIR'} {selectedStage && selectedStage !== 'group' ? `(${getStageDisplayTitle(selectedStage)})` : (exportRound ? `(${exportRound}-TUR)` : '')}
                               </h2>
                             )
                           ) : (
                             currentLeagueObj?.logo_url ? (
-                              <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: totalCount > 6 ? '105px' : '110px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                              <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: totalCount > 6 ? '100px' : '105px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
                             ) : (
-                              <h2 style={{ color: '#fff', fontSize: '36px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>
+                              <h2 style={{ color: '#fff', fontSize: '34px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>
                                 {exportLeague} {exportRound ? `(${exportRound}-TUR)` : ''}
                               </h2>
                             )
+                          )}
+                          {activeExportChunk && (
+                            <div style={{ marginTop: '6px', background: 'rgba(56, 189, 248, 0.2)', border: '1px solid #38BDF8', padding: '3px 14px', borderRadius: '10px', color: '#38BDF8', fontSize: '15px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+                              {activeExportChunk.dayNumber}-KUN ({activeExportChunk.formattedDate}){activeExportChunk.totalChunks > 1 ? ` • ${activeExportChunk.chunkIndex + 1}-QISM` : ''}
+                            </div>
                           )}
                         </div>
 
