@@ -5,6 +5,31 @@ import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, P
 import ImageCropperModal from '../components/ImageCropperModal';
 import './Settings.css';
 
+function parseTournamentTier(t) {
+  let tier = t?.tier ? Number(t.tier) : 1;
+  let parentId = t?.parent_tournament_id ? Number(t.parent_tournament_id) : null;
+  let cleanDesc = t?.description || '';
+
+  if (cleanDesc && cleanDesc.includes('[TIER:')) {
+    const match = cleanDesc.match(/\[TIER:(\d+)(?:\|PARENT:(\d+|null)?)?\]\s*(.*)/s);
+    if (match) {
+      if (!t?.tier) tier = Number(match[1]) || 1;
+      if (!t?.parent_tournament_id && match[2] && match[2] !== 'null') {
+        parentId = Number(match[2]);
+      }
+      cleanDesc = match[3] || '';
+    }
+  }
+
+  return { tier, parentId, cleanDescription: cleanDesc };
+}
+
+function formatTournamentDescription(tier, parentId, userDesc) {
+  const meta = `[TIER:${tier}|PARENT:${parentId || ''}]`;
+  const trimmed = (userDesc || '').trim();
+  return trimmed ? `${meta}\n${trimmed}` : meta;
+}
+
 const Settings = () => {
   const { currentOrg, orgId, adminRole, updateCurrentOrg } = useOrg();
   const [userEmail, setUserEmail] = useState('');
@@ -399,6 +424,8 @@ const Settings = () => {
   const [tournamentEndDate, setTournamentEndDate] = useState('');
   const [tournamentDesc, setTournamentDesc] = useState('');
   const [tournamentDuration, setTournamentDuration] = useState(90);
+  const [tournamentTier, setTournamentTier] = useState(1);
+  const [tournamentParentId, setTournamentParentId] = useState(null);
   const [tournamentStatus, setTournamentStatus] = useState('active');
   const [savingTournament, setSavingTournament] = useState(false);
   const [deletingTournamentId, setDeletingTournamentId] = useState(null);
@@ -603,14 +630,17 @@ const Settings = () => {
   };
 
   const startEditTournament = (tourn) => {
+    const parsed = parseTournamentTier(tourn);
     setEditingTournament(tourn);
     setTournamentName(tourn.name || '');
     setTournamentLogo(tourn.logo_url || '');
     setTournamentBg(tourn.export_bg_url || '');
     setTournamentStartDate(tourn.start_date || '');
     setTournamentEndDate(tourn.end_date || '');
-    setTournamentDesc(tourn.description || '');
+    setTournamentDesc(parsed.cleanDescription || '');
     setTournamentDuration(tourn.match_duration || 90);
+    setTournamentTier(parsed.tier);
+    setTournamentParentId(parsed.parentId);
     setTournamentStatus(tourn.status || 'active');
     setIsTournamentModalOpen(true);
   };
@@ -624,6 +654,8 @@ const Settings = () => {
     setTournamentEndDate('');
     setTournamentDesc('');
     setTournamentDuration(90);
+    setTournamentTier(1);
+    setTournamentParentId(null);
     setTournamentStatus('active');
     setIsTournamentModalOpen(false);
   };
@@ -634,28 +666,53 @@ const Settings = () => {
     setSavingTournament(true);
 
     try {
-      const payload = {
+      const descToSave = formatTournamentDescription(tournamentTier, tournamentTier === 2 ? tournamentParentId : null, tournamentDesc);
+
+      const basePayload = {
         name: tournamentName.trim(),
         logo_url: tournamentLogo.trim() || null,
         export_bg_url: tournamentBg.trim() || null,
         start_date: tournamentStartDate || null,
         end_date: tournamentEndDate || null,
-        description: tournamentDesc.trim() || null,
+        description: descToSave || null,
         match_duration: Number(tournamentDuration) || 90,
         status: tournamentStatus || 'active'
       };
 
+      const fullPayload = {
+        ...basePayload,
+        tier: Number(tournamentTier) || 1,
+        parent_tournament_id: tournamentTier === 2 ? tournamentParentId : null,
+      };
+
       if (editingTournament) {
-        const { error } = await supabase
+        let { error } = await supabase
           .from('tournaments')
-          .update(payload)
+          .update(fullPayload)
           .eq('id', editingTournament.id);
-        if (error) throw error;
+
+        if (error && (error.code === '42703' || error.message?.includes('column'))) {
+          const retry = await supabase
+            .from('tournaments')
+            .update(basePayload)
+            .eq('id', editingTournament.id);
+          if (retry.error) throw retry.error;
+        } else if (error) {
+          throw error;
+        }
       } else {
-        const { error } = await supabase
+        let { error } = await supabase
           .from('tournaments')
-          .insert([{ ...payload, organization_id: orgId }]);
-        if (error) throw error;
+          .insert([{ ...fullPayload, organization_id: orgId }]);
+
+        if (error && (error.code === '42703' || error.message?.includes('column'))) {
+          const retry = await supabase
+            .from('tournaments')
+            .insert([{ ...basePayload, organization_id: orgId }]);
+          if (retry.error) throw retry.error;
+        } else if (error) {
+          throw error;
+        }
       }
 
       cancelEditTournament();
@@ -1812,6 +1869,24 @@ const Settings = () => {
                             <div className="league-card-name-section">
                               <h4 className="league-title">{t.name}</h4>
                               <div className="league-badges-wrap">
+                                {(() => {
+                                  const parsed = parseTournamentTier(t);
+                                  const pObj = parsed.parentId ? tournaments.find(x => Number(x.id) === Number(parsed.parentId)) : null;
+                                  return (
+                                    <>
+                                      {parsed.tier === 1 ? (
+                                        <span className="junior-badge" style={{ background: 'rgba(0, 255, 102, 0.15)', color: '#00FF66', borderColor: 'rgba(0, 255, 102, 0.3)' }}>
+                                          🏆 1-DARAJALI
+                                        </span>
+                                      ) : (
+                                        <span className="junior-badge" style={{ background: 'rgba(192, 132, 252, 0.15)', color: '#C084FC', borderColor: 'rgba(192, 132, 252, 0.35)' }}>
+                                          🥈 2-DARAJALI {pObj ? `(${pObj.name})` : ''}
+                                        </span>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+
                                 {t.status === 'completed' ? (
                                   <span className="junior-badge" style={{ background: 'rgba(255, 170, 0, 0.15)', color: '#ffaa00', borderColor: 'rgba(255, 170, 0, 0.3)' }}>
                                     📦 YAKUNLANGAN
@@ -1856,6 +1931,7 @@ const Settings = () => {
                                     <option value={50} style={{ background: '#1e293b' }}>⏱️ 50 daq</option>
                                     <option value={40} style={{ background: '#1e293b' }}>⏱️ 40 daq</option>
                                     <option value={30} style={{ background: '#1e293b' }}>⏱️ 30 daq</option>
+                                    <option value={20} style={{ background: '#1e293b' }}>⏱️ 20 daq</option>
                                   </select>
                                 ) : (
                                   <span className="junior-badge">⏱️ {t.match_duration || 90} daq</span>
@@ -2486,6 +2562,89 @@ const Settings = () => {
                 />
               </div>
 
+              {/* Turnir Darajasi (Tier Selection) */}
+              <div className="form-group">
+                <label style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '8px', display: 'block' }}>Turnir Darajasi *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTournamentTier(1);
+                      setTournamentParentId(null);
+                    }}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '10px',
+                      border: tournamentTier === 1 ? '1px solid #00FF66' : '1px solid rgba(255,255,255,0.15)',
+                      background: tournamentTier === 1 ? 'rgba(0, 255, 102, 0.12)' : 'rgba(255,255,255,0.04)',
+                      color: tournamentTier === 1 ? '#00FF66' : '#fff',
+                      textAlign: 'left',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div style={{ fontWeight: '800', fontSize: '13px', marginBottom: '2px' }}>🏆 1-Darajali</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>Asosiy (Chempionlar Ligasi)</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTournamentTier(2);
+                      if (!tournamentParentId) {
+                        const firstT1 = tournaments.find(t => {
+                          if (editingTournament && t.id === editingTournament.id) return false;
+                          const p = parseTournamentTier(t);
+                          return p.tier === 1;
+                        });
+                        if (firstT1) setTournamentParentId(firstT1.id);
+                      }
+                    }}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '10px',
+                      border: tournamentTier === 2 ? '1px solid #C084FC' : '1px solid rgba(255,255,255,0.15)',
+                      background: tournamentTier === 2 ? 'rgba(192, 132, 252, 0.12)' : 'rgba(255,255,255,0.04)',
+                      color: tournamentTier === 2 ? '#C084FC' : '#fff',
+                      textAlign: 'left',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div style={{ fontWeight: '800', fontSize: '13px', marginBottom: '2px' }}>🥈 2-Darajali</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>Quyi (Europa Ligasi)</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* If Tier 2: Parent Tournament Selector */}
+              {tournamentTier === 2 && (
+                <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(192, 132, 252, 0.08)', border: '1px solid rgba(192, 132, 252, 0.3)' }}>
+                  <label style={{ fontSize: '12px', color: '#E9D5FF', fontWeight: '700', marginBottom: '4px', display: 'block' }}>
+                    Bog'langan 1-darajali (asosiy) turnir *
+                  </label>
+                  <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 8px 0' }}>
+                    Ushbu 2-darajali turnirga tanlangan 1-darajali turnirning 1/4 finaliga o'tolmagan jamoalari biriktiriladi.
+                  </p>
+                  <select
+                    value={tournamentParentId || ''}
+                    onChange={e => setTournamentParentId(Number(e.target.value) || null)}
+                    style={{ width: '100%', padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(192, 132, 252, 0.4)', borderRadius: '8px', color: '#fff' }}
+                  >
+                    <option value="">1-darajali turnirni tanlang...</option>
+                    {tournaments
+                      .filter(t => {
+                        if (editingTournament && t.id === editingTournament.id) return false;
+                        const p = parseTournamentTier(t);
+                        return p.tier === 1;
+                      })
+                      .map(t1 => (
+                        <option key={t1.id} value={t1.id}>
+                          🏆 {t1.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="form-group">
                   <label style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '6px', display: 'block' }}>Boshlanish Sanasi</label>
@@ -2522,6 +2681,7 @@ const Settings = () => {
                     <option value={50}>⏱️ 50 daqiqa</option>
                     <option value={40}>⏱️ 40 daqiqa</option>
                     <option value={30}>⏱️ 30 daqiqa</option>
+                    <option value={20}>⏱️ 20 daqiqa</option>
                   </select>
                 </div>
                 <div className="form-group">
