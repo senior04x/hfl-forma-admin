@@ -435,6 +435,7 @@ const MatchControl = () => {
         team_id: selectedTeamId,
         player_id: selectedPlayerId,
         event_type: eventType,
+        type: eventType,
         minute: minuteVal,
         replay_video_url: existingReplayUrl || null,
       }]);
