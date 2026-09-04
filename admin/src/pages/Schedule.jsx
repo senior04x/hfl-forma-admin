@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Pencil, CheckCircle2, Radio, AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import { getActiveOrgTournaments, getTournamentLeagues, getTournamentTeams, getStageDisplayTitle, STAGES, STAGE_LABELS } from '../utils/tournamentUtils';
+import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Pencil, CheckCircle2, Radio, AlertCircle, Wifi, WifiOff, Award } from 'lucide-react';
 import { obsService } from '../services/obsService';
 import html2canvas from 'html2canvas';
 import './Schedule.css';
@@ -119,6 +120,18 @@ const Schedule = () => {
   const [isPostponed, setIsPostponed] = useState(false);
   const [importance, setImportance] = useState('oddiy'); // 'oddiy' | 'ortacha' | 'markaziy'
   const [deletingMatchIds, setDeletingMatchIds] = useState([]);
+
+  // Tournament Filter & Management State
+  const [tournaments, setTournaments] = useState([]);
+  const [tournamentLeaguesMap, setTournamentLeaguesMap] = useState({});
+  const [viewMode, setViewMode] = useState('league'); // 'league' | 'tournament'
+  const [selectedTournamentId, setSelectedTournamentId] = useState('');
+  const [selectedStage, setSelectedStage] = useState(''); // '' means all stages
+
+  // Match Modal Competition Details
+  const [matchCompetitionType, setMatchCompetitionType] = useState('league'); // 'league' | 'tournament'
+  const [matchTournamentId, setMatchTournamentId] = useState('');
+  const [matchStage, setMatchStage] = useState('group'); // 'group' | 'round_of_32' | 'round_of_16' | 'quarterfinal' | 'semifinal' | 'final'
 
   const [exportLeague, setExportLeague] = useState('');
   const [exportRound, setExportRound] = useState('1');
@@ -516,12 +529,15 @@ const Schedule = () => {
       };
       setSelectedMatchForYtExport(fullMatchObj);
 
-      let formattedLeague = (matchObj.league || exportLeague || 'HAVAS FUTBOL LIGASI').toUpperCase();
-      const roundText = matchObj.round ? `${matchObj.round}-TUR` : 'GURUH BOSQICHI';
+      const tournObj = matchObj.tournament_id ? tournaments.find(t => t.id === matchObj.tournament_id) : null;
+      let formattedLeague = (tournObj?.name || matchObj.league || exportLeague || 'AMATORA').toUpperCase();
+      const roundText = matchObj.stage && matchObj.stage !== 'group'
+        ? getStageDisplayTitle(matchObj.stage)
+        : (matchObj.round ? `${matchObj.round}-TUR` : 'GURUH BOSQICHI');
       const homeName = (homeTeamObj?.name || 'HOME').toUpperCase();
       const awayName = (awayTeamObj?.name || 'AWAY').toUpperCase();
 
-      // Dynamic Title Format for any league: HAVAS 1-LIGA | 3-TUR | FC TEAM 1 - FC TEAM 2
+      // Dynamic Title Format for any league or tournament
       const title = `${formattedLeague} | ${roundText} | ${homeName} - ${awayName}`;
       
       // Dynamic Description Format with full match info:
@@ -707,11 +723,30 @@ const Schedule = () => {
   const loadLeaguesAndData = async () => {
     setLoading(true);
     try {
-      const fetchedLeagues = await getActiveOrgLeagues(orgId);
+      const [fetchedLeagues, fetchedTournaments] = await Promise.all([
+        getActiveOrgLeagues(orgId),
+        getActiveOrgTournaments(orgId)
+      ]);
       setActiveLeagues(fetchedLeagues);
+      setTournaments(fetchedTournaments || []);
+
       if (fetchedLeagues.length > 0) {
         setExportLeague(fetchedLeagues[0].name);
       }
+      if (fetchedTournaments && fetchedTournaments.length > 0) {
+        setSelectedTournamentId(String(fetchedTournaments[0].id));
+      }
+
+      // Fetch leagues for each tournament
+      if (fetchedTournaments && fetchedTournaments.length > 0) {
+        const lMap = {};
+        await Promise.all(fetchedTournaments.map(async (t) => {
+          const tLeagues = await getTournamentLeagues(t.id);
+          lMap[t.id] = tLeagues;
+        }));
+        setTournamentLeaguesMap(lMap);
+      }
+
       await Promise.all([
         fetchTeams(fetchedLeagues),
         fetchMatches(fetchedLeagues)
@@ -812,8 +847,13 @@ const Schedule = () => {
 
   const handleExport = async () => {
     if (!exportRef.current || isExporting) return;
-    if (!exportLeague || !exportRound) {
+    const isTournExport = viewMode === 'tournament';
+    if (!isTournExport && (!exportLeague || !exportRound)) {
       alert("Iltimos eksport qilish uchun liga va turni tanlang.");
+      return;
+    }
+    if (isTournExport && !selectedTournamentId) {
+      alert("Iltimos eksport qilish uchun turnirni tanlang.");
       return;
     }
     setIsExporting(true);
@@ -825,7 +865,14 @@ const Schedule = () => {
       });
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = `jadval_${exportLeague}_${exportRound}_tur.png`;
+
+      const cleanTitle = (isTournExport ? (selectedTournObj?.name || 'turnir') : exportLeague)
+        .replace(/[^a-zA-Z0-9_\u0400-\u04FF]/g, '_');
+      const cleanStage = isTournExport 
+        ? (selectedStage && selectedStage !== 'group' ? selectedStage : `${exportRound}_tur`)
+        : `${exportRound}_tur`;
+
+      link.download = `jadval_${cleanTitle}_${cleanStage}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -905,7 +952,17 @@ const Schedule = () => {
 
   const handleOpenModal = () => {
     setEditingMatch(null);
-    setSelectedLeague(exportLeague || (activeLeagues[0]?.name || ''));
+    if (viewMode === 'tournament' && tournaments.length > 0) {
+      setMatchCompetitionType('tournament');
+      setMatchTournamentId(selectedTournamentId || String(tournaments[0].id));
+      setMatchStage('group');
+      setSelectedLeague('');
+    } else {
+      setMatchCompetitionType('league');
+      setMatchTournamentId('');
+      setMatchStage('group');
+      setSelectedLeague(exportLeague || (activeLeagues[0]?.name || ''));
+    }
     setHomeTeamId('');
     setAwayTeamId('');
     setMatchDate('');
@@ -913,7 +970,7 @@ const Schedule = () => {
     setLocation('');
     setStadiumName('');
     setYoutubeLink('');
-    setMatchRound('');
+    setMatchRound('1');
     setIsPostponed(false);
     setImportance('oddiy');
     setIsModalOpen(true);
@@ -921,7 +978,17 @@ const Schedule = () => {
 
   const handleEditMatch = (match) => {
     setEditingMatch(match);
-    setSelectedLeague(match.league || '');
+    if (match.tournament_id) {
+      setMatchCompetitionType('tournament');
+      setMatchTournamentId(String(match.tournament_id));
+      setMatchStage(match.stage || 'group');
+      setSelectedLeague(match.league || '');
+    } else {
+      setMatchCompetitionType('league');
+      setMatchTournamentId('');
+      setMatchStage('group');
+      setSelectedLeague(match.league || '');
+    }
     setHomeTeamId(match.home_team_id || '');
     setAwayTeamId(match.away_team_id || '');
     setMatchDate(match.match_date || '');
@@ -936,10 +1003,19 @@ const Schedule = () => {
   };
 
   const handleSave = async () => {
-    if (!selectedLeague || !homeTeamId || !awayTeamId || !matchDate || !matchTime || !location) {
-      alert("Iltimos, barcha majburiy maydonlarni (Liga, Jamoalar, Sana, Vaqt, Maydon) to'ldiring.");
-      return;
+    const isTournament = matchCompetitionType === 'tournament';
+    if (isTournament) {
+      if (!matchTournamentId || !homeTeamId || !awayTeamId || !matchDate || !matchTime || !location) {
+        alert("Iltimos, barcha majburiy maydonlarni (Turnir, Jamoalar, Sana, Vaqt, Maydon) to'ldiring.");
+        return;
+      }
+    } else {
+      if (!selectedLeague || !homeTeamId || !awayTeamId || !matchDate || !matchTime || !location) {
+        alert("Iltimos, barcha majburiy maydonlarni (Liga, Jamoalar, Sana, Vaqt, Maydon) to'ldiring.");
+        return;
+      }
     }
+
     if (homeTeamId === awayTeamId) {
       alert("Mezbon va mehmon jamoalar har xil bo'lishi kerak.");
       return;
@@ -953,14 +1029,16 @@ const Schedule = () => {
       const validOrgId = Number.isInteger(parsedOrgId) ? parsedOrgId : undefined;
 
       const baseMatchData = {
-        league: selectedLeague,
+        league: isTournament ? null : selectedLeague,
+        tournament_id: isTournament ? Number(matchTournamentId) : null,
+        stage: isTournament ? (matchStage || 'group') : null,
         home_team_id: homeTeamId,
         away_team_id: awayTeamId,
         match_date: matchDate,
         match_time: matchTime,
         location: location,
         youtube_link: youtubeLink,
-        round: matchRound ? parseInt(matchRound) : null,
+        round: (!isTournament || matchStage === 'group') && matchRound ? parseInt(matchRound) : null,
       };
 
       if (validOrgId !== undefined) {
@@ -1174,8 +1252,29 @@ const Schedule = () => {
     }
   };
 
-  const availableTeams = teams.filter(t => t.league === selectedLeague);
+  const selectedTournObj = tournaments.find(t => String(t.id) === String(selectedTournamentId));
+
+  const availableTeams = React.useMemo(() => {
+    if (matchCompetitionType === 'tournament') {
+      const currentTournLeagues = tournamentLeaguesMap[matchTournamentId] || [];
+      return getTournamentTeams(currentTournLeagues, teams);
+    }
+    // Oddiy liga
+    if (!selectedLeague) return [];
+    return teams.filter(t => {
+      if (!t.league) return false;
+      const tLeagues = t.league.split(',').map(s => s.trim().toLowerCase());
+      return tLeagues.includes(selectedLeague.trim().toLowerCase());
+    });
+  }, [matchCompetitionType, matchTournamentId, tournamentLeaguesMap, selectedLeague, teams]);
+
   const availableRounds = (() => {
+    if (viewMode === 'tournament') {
+      const tournMatches = matches.filter(m => String(m.tournament_id) === String(selectedTournamentId) && m.round);
+      const rounds = Array.from(new Set(tournMatches.map(m => Number(m.round)))).sort((a, b) => a - b);
+      if (rounds.length > 0) return rounds;
+      return Array.from({ length: 15 }, (_, i) => i + 1);
+    }
     const roundsFromMatches = Array.from(new Set(matches.filter(m => m.league === exportLeague && m.round).map(m => Number(m.round)))).sort((a, b) => a - b);
     if (roundsFromMatches.length > 0) return roundsFromMatches;
     return Array.from({ length: 30 }, (_, i) => i + 1);
@@ -1228,32 +1327,131 @@ const Schedule = () => {
         {/* Expandable Select Filters */}
         {isFilterOpen && (
           <div className="filter-expanded-content">
-            <div className="filter-row">
-              <div className="filter-field">
-                <label><Trophy size={14} /> Liga tanlang</label>
-                <div className="custom-select-wrapper">
-                  <select value={exportLeague} onChange={e => setExportLeague(e.target.value)}>
-                    {activeLeagues.map(l => (
-                      <option key={l.id} value={l.name}>
-                        {l.name} {l.isCollab ? '(Co-Host)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={16} className="select-arrow" />
-                </div>
-              </div>
+            {/* View Mode Toggle: Ligalar / Turnirlar */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={() => setViewMode('league')}
+                style={{
+                  flex: 1,
+                  padding: '9px 14px',
+                  borderRadius: '10px',
+                  border: viewMode === 'league' ? '2px solid #00FF66' : '1px solid rgba(255,255,255,0.1)',
+                  background: viewMode === 'league' ? 'rgba(0, 255, 102, 0.15)' : 'rgba(255,255,255,0.03)',
+                  color: viewMode === 'league' ? '#00FF66' : '#94a3b8',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <Trophy size={16} /> Ligalar ({activeLeagues.length})
+              </button>
 
-              <div className="filter-field">
-                <label><Layers size={14} /> Tur</label>
-                <div className="custom-select-wrapper">
-                  <select value={exportRound || '1'} onChange={e => setExportRound(e.target.value)}>
-                    {availableRounds.map(r => (
-                      <option key={r} value={r}>{r}-Tur</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={16} className="select-arrow" />
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => setViewMode('tournament')}
+                style={{
+                  flex: 1,
+                  padding: '9px 14px',
+                  borderRadius: '10px',
+                  border: viewMode === 'tournament' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
+                  background: viewMode === 'tournament' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.03)',
+                  color: viewMode === 'tournament' ? '#38bdf8' : '#94a3b8',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <Award size={16} /> Turnirlar ({tournaments.length})
+              </button>
+            </div>
+
+            <div className="filter-row">
+              {viewMode === 'league' ? (
+                <>
+                  <div className="filter-field">
+                    <label><Trophy size={14} /> Liga tanlang</label>
+                    <div className="custom-select-wrapper">
+                      <select value={exportLeague} onChange={e => setExportLeague(e.target.value)}>
+                        {activeLeagues.map(l => (
+                          <option key={l.id} value={l.name}>
+                            {l.name} {l.isCollab ? '(Co-Host)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} className="select-arrow" />
+                    </div>
+                  </div>
+
+                  <div className="filter-field">
+                    <label><Layers size={14} /> Tur</label>
+                    <div className="custom-select-wrapper">
+                      <select value={exportRound || '1'} onChange={e => setExportRound(e.target.value)}>
+                        {availableRounds.map(r => (
+                          <option key={r} value={r}>{r}-Tur</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} className="select-arrow" />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="filter-field">
+                    <label><Award size={14} /> Turnir tanlang</label>
+                    <div className="custom-select-wrapper">
+                      <select value={selectedTournamentId} onChange={e => setSelectedTournamentId(e.target.value)}>
+                        {tournaments.length === 0 ? (
+                          <option value="">Turnir mavjud emas</option>
+                        ) : (
+                          tournaments.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))
+                        )}
+                      </select>
+                      <ChevronDown size={16} className="select-arrow" />
+                    </div>
+                  </div>
+
+                  <div className="filter-field">
+                    <label><Layers size={14} /> Bosqich (Stage)</label>
+                    <div className="custom-select-wrapper">
+                      <select value={selectedStage} onChange={e => setSelectedStage(e.target.value)}>
+                        <option value="">Barcha bosqichlar</option>
+                        <option value="group">Guruh bosqichi (Tur)</option>
+                        <option value="round_of_32">1/16 Final</option>
+                        <option value="round_of_16">1/8 Final</option>
+                        <option value="quarterfinal">Chorak Final (1/4)</option>
+                        <option value="semifinal">Yarim Final (1/2)</option>
+                        <option value="final">Final</option>
+                      </select>
+                      <ChevronDown size={16} className="select-arrow" />
+                    </div>
+                  </div>
+
+                  {selectedStage === 'group' && (
+                    <div className="filter-field">
+                      <label><Layers size={14} /> Tur</label>
+                      <div className="custom-select-wrapper">
+                        <select value={exportRound || '1'} onChange={e => setExportRound(e.target.value)}>
+                          {availableRounds.map(r => (
+                            <option key={r} value={r}>{r}-Tur</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={16} className="select-arrow" />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
 
               <div className="filter-field">
                 <label><Clock size={14} /> O'yin Holati</label>
@@ -1295,8 +1493,24 @@ const Schedule = () => {
       >
         <div className="matches-grid">
           {matches
-            .filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound))
             .filter(m => {
+              if (viewMode === 'tournament') {
+                if (!m.tournament_id) return false;
+                if (selectedTournamentId && String(m.tournament_id) !== String(selectedTournamentId)) return false;
+                if (selectedStage) {
+                  if (selectedStage === 'group') {
+                    if (m.stage && m.stage !== 'group') return false;
+                    if (exportRound && m.round && String(m.round) !== String(exportRound)) return false;
+                  } else {
+                    if (m.stage !== selectedStage) return false;
+                  }
+                }
+              } else {
+                if (m.tournament_id) return false;
+                if (exportLeague && m.league !== exportLeague) return false;
+                if (exportRound && m.round && String(m.round) !== String(exportRound)) return false;
+              }
+
               if (filterStatus === 'all') return true;
               if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
               return m.status === filterStatus;
@@ -1311,12 +1525,27 @@ const Schedule = () => {
                 ? { border: '2px solid #0ea5e9', boxShadow: '0 0 14px rgba(14, 165, 233, 0.35)', background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(15, 23, 42, 0.85) 100%)' }
                 : {};
 
+              const matchTourn = match.tournament_id ? tournaments.find(t => t.id === match.tournament_id) : null;
+
               return (
               <div key={match.id} className={`match-card glassmorphic-card ${isDeleting ? 'deleting-card' : ''}`} style={cardImportanceStyle}>
                 <div className="match-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '10px' }}>
                   <div className="match-badges-container" style={{ position: 'static', margin: 0, display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                     <div className="match-league-badge">{match.league}</div>
-                     {match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>}
+                     {match.tournament_id ? (
+                       <div className="match-league-badge" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}>
+                         🏆 {matchTourn?.name || 'Turnir'}
+                       </div>
+                     ) : (
+                       <div className="match-league-badge">{match.league}</div>
+                     )}
+
+                     {match.tournament_id ? (
+                       <div className="match-league-badge round-badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.4)' }}>
+                         {getStageDisplayTitle(match.stage, match.round)}
+                       </div>
+                     ) : (
+                       match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>
+                     )}
                      {mImportance === 'markaziy' && (
                        <div style={{ background: 'rgba(255, 230, 0, 0.25)', color: '#ffe600', border: '1px solid #ffe600', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>
                          ⭐ MARKAZIY
@@ -1447,24 +1676,126 @@ const Schedule = () => {
           <div className="modal-content schedule-modal" onClick={e => e.stopPropagation()}>
             <h2>{editingMatch ? 'O\'yinni tahrirlash' : 'Yangi o\'yin rejalashtirish'}</h2>
             
-            <div className="form-group">
-              <label>Liga</label>
-              <select value={selectedLeague} onChange={(e) => {setSelectedLeague(e.target.value); setHomeTeamId(''); setAwayTeamId('');}}>
-                <option value="">Tanlang</option>
-                {activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
-              </select>
+            {/* Musobaqa turi: Liga yoki Turnir */}
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '6px', display: 'block' }}>Musobaqa turi</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMatchCompetitionType('league');
+                    setMatchTournamentId('');
+                    setSelectedLeague(exportLeague || (activeLeagues[0]?.name || ''));
+                    setHomeTeamId('');
+                    setAwayTeamId('');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    borderRadius: '8px',
+                    border: matchCompetitionType === 'league' ? '2px solid #00FF66' : '1px solid rgba(255,255,255,0.1)',
+                    background: matchCompetitionType === 'league' ? 'rgba(0, 255, 102, 0.15)' : 'rgba(255,255,255,0.04)',
+                    color: matchCompetitionType === 'league' ? '#00FF66' : '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🏆 Liga o'yini
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMatchCompetitionType('tournament');
+                    setMatchTournamentId(selectedTournamentId || String(tournaments[0]?.id || ''));
+                    setSelectedLeague('');
+                    setHomeTeamId('');
+                    setAwayTeamId('');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    borderRadius: '8px',
+                    border: matchCompetitionType === 'tournament' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
+                    background: matchCompetitionType === 'tournament' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.04)',
+                    color: matchCompetitionType === 'tournament' ? '#38bdf8' : '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ⚡ Turnir o'yini
+                </button>
+              </div>
             </div>
 
-            <div className="form-group">
-              <label>Nechanchi Tur (Round)</label>
-              <input 
-                type="number" 
-                placeholder="Masalan: 1" 
-                value={matchRound} 
-                onChange={(e) => setMatchRound(e.target.value)} 
-                min="1"
-              />
-            </div>
+            {matchCompetitionType === 'league' ? (
+              <>
+                <div className="form-group">
+                  <label>Liga</label>
+                  <select value={selectedLeague} onChange={(e) => {setSelectedLeague(e.target.value); setHomeTeamId(''); setAwayTeamId('');}}>
+                    <option value="">Tanlang</option>
+                    {activeLeagues.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Nechanchi Tur (Round)</label>
+                  <input 
+                    type="number" 
+                    placeholder="Masalan: 1" 
+                    value={matchRound} 
+                    onChange={(e) => setMatchRound(e.target.value)} 
+                    min="1"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label>Turnir</label>
+                  <select 
+                    value={matchTournamentId} 
+                    onChange={(e) => {
+                      setMatchTournamentId(e.target.value);
+                      setHomeTeamId('');
+                      setAwayTeamId('');
+                    }}
+                    required
+                  >
+                    <option value="">Turnirni tanlang</option>
+                    {tournaments.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Turnir Bosqichi (Stage)</label>
+                  <select value={matchStage} onChange={(e) => setMatchStage(e.target.value)}>
+                    <option value="group">Guruh bosqichi (Tur)</option>
+                    <option value="round_of_32">1/16 Final</option>
+                    <option value="round_of_16">1/8 Final</option>
+                    <option value="quarterfinal">Chorak Final (1/4)</option>
+                    <option value="semifinal">Yarim Final (1/2)</option>
+                    <option value="final">Final</option>
+                  </select>
+                </div>
+
+                {matchStage === 'group' && (
+                  <div className="form-group">
+                    <label>Guruh Bosqichidagi Tur (Round)</label>
+                    <input 
+                      type="number" 
+                      placeholder="Masalan: 1" 
+                      value={matchRound} 
+                      onChange={(e) => setMatchRound(e.target.value)} 
+                      min="1"
+                    />
+                  </div>
+                )}
+              </>
+            )}
 
             <div className="form-group">
               <label>Mezbon Jamoa</label>
@@ -1749,9 +2080,9 @@ const Schedule = () => {
                         ? `${selectedMatchForYtExport.home_score || 0} - ${selectedMatchForYtExport.away_score || 0}`
                         : 'VS'}
                     </div>
-                    {selectedMatchForYtExport.round && (
+                    {(selectedMatchForYtExport.stage || selectedMatchForYtExport.round) && (
                       <span style={{ color: '#00ff66', fontSize: '22px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
-                        {selectedMatchForYtExport.round}-TUR
+                        {getStageDisplayTitle(selectedMatchForYtExport.stage, selectedMatchForYtExport.round)}
                       </span>
                     )}
                   </div>
@@ -1809,9 +2140,26 @@ const Schedule = () => {
           return (
             <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px 45px 20px 45px', boxSizing: 'border-box' }}>
                 {(() => {
+                  const isTournView = viewMode === 'tournament';
                   const filteredList = matches
-                    .filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound))
                     .filter(m => {
+                      if (isTournView) {
+                        if (!m.tournament_id) return false;
+                        if (selectedTournamentId && String(m.tournament_id) !== String(selectedTournamentId)) return false;
+                        if (selectedStage) {
+                          if (selectedStage === 'group') {
+                            if (m.stage && m.stage !== 'group') return false;
+                            if (exportRound && m.round && String(m.round) !== String(exportRound)) return false;
+                          } else {
+                            if (m.stage !== selectedStage) return false;
+                          }
+                        }
+                      } else {
+                        if (m.tournament_id) return false;
+                        if (exportLeague && m.league !== exportLeague) return false;
+                        if (exportRound && m.round && String(m.round) !== String(exportRound)) return false;
+                      }
+
                       if (filterStatus === 'all') return true;
                       if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
                       return m.status === filterStatus;
@@ -1866,10 +2214,22 @@ const Schedule = () => {
                         </div>
 
                         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-                          {currentLeagueObj?.logo_url ? (
-                            <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: totalCount > 6 ? '105px' : '110px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                          {isTournView ? (
+                            selectedTournObj?.logo_url ? (
+                              <img src={selectedTournObj.logo_url} alt={selectedTournObj.name} style={{ maxHeight: totalCount > 6 ? '105px' : '110px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                            ) : (
+                              <h2 style={{ color: '#fff', fontSize: '36px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>
+                                {selectedTournObj?.name || 'TURNIR'} {selectedStage && selectedStage !== 'group' ? `(${getStageDisplayTitle(selectedStage)})` : (exportRound ? `(${exportRound}-TUR)` : '')}
+                              </h2>
+                            )
                           ) : (
-                            <h2 style={{ color: '#fff', fontSize: '36px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>{exportLeague} {exportRound ? `(${exportRound}-TUR)` : ''}</h2>
+                            currentLeagueObj?.logo_url ? (
+                              <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: totalCount > 6 ? '105px' : '110px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                            ) : (
+                              <h2 style={{ color: '#fff', fontSize: '36px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>
+                                {exportLeague} {exportRound ? `(${exportRound}-TUR)` : ''}
+                              </h2>
+                            )
                           )}
                         </div>
 

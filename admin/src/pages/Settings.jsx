@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert, Building2, Pencil, Trash2, Save, Crop, Upload } from 'lucide-react';
+import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, Plus, Users, Send, X, ShieldAlert, Building2, Pencil, Trash2, Save, Crop, Upload, Award, Layers, Calendar, CheckSquare, Square } from 'lucide-react';
 import ImageCropperModal from '../components/ImageCropperModal';
 import './Settings.css';
 
@@ -385,6 +385,44 @@ const Settings = () => {
   const [disconnectingCollab, setDisconnectingCollab] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Tournaments state
+  const [tournaments, setTournaments] = useState([]);
+  const [allTournamentLeagues, setAllTournamentLeagues] = useState([]);
+  const [allTournamentCollabs, setAllTournamentCollabs] = useState([]);
+  const [incomingTournCollabs, setIncomingTournCollabs] = useState([]);
+  const [isTournamentModalOpen, setIsTournamentModalOpen] = useState(false);
+  const [editingTournament, setEditingTournament] = useState(null);
+  const [tournamentName, setTournamentName] = useState('');
+  const [tournamentLogo, setTournamentLogo] = useState('');
+  const [tournamentBg, setTournamentBg] = useState('');
+  const [tournamentStartDate, setTournamentStartDate] = useState('');
+  const [tournamentEndDate, setTournamentEndDate] = useState('');
+  const [tournamentDesc, setTournamentDesc] = useState('');
+  const [tournamentDuration, setTournamentDuration] = useState(90);
+  const [tournamentStatus, setTournamentStatus] = useState('active');
+  const [savingTournament, setSavingTournament] = useState(false);
+  const [deletingTournamentId, setDeletingTournamentId] = useState(null);
+
+  // Tournament Leagues management modal
+  const [isTournLeaguesModalOpen, setIsTournLeaguesModalOpen] = useState(false);
+  const [selectedTournForLeagues, setSelectedTournForLeagues] = useState(null);
+  const [tournSelectedLeagueIds, setTournSelectedLeagueIds] = useState([]);
+  const [savingTournLeagues, setSavingTournLeagues] = useState(false);
+
+  // Tournament Collab modal
+  const [selectedTournForCollab, setSelectedTournForCollab] = useState(null);
+  const [targetTournOrgEmail, setTargetTournOrgEmail] = useState('');
+  const [sendingTournCollab, setSendingTournCollab] = useState(false);
+
+  // Teams for team count in leagues
+  const [allOrgTeams, setAllOrgTeams] = useState([]);
+
+  // Direct upload refs for tournament
+  const directTournLogoInputRef = useRef(null);
+  const tournBgFileInputRef = useRef(null);
+  const [logoUploadTournId, setLogoUploadTournId] = useState(null);
+  const [bgUploadTournId, setBgUploadTournId] = useState(null);
+
   useEffect(() => {
     loadAllSettingsData();
   }, [orgId]);
@@ -394,7 +432,8 @@ const Settings = () => {
     try {
       await Promise.all([
         fetchUserData(),
-        fetchLeaguesAndOrgs()
+        fetchLeaguesAndOrgs(),
+        fetchTournamentsData()
       ]);
     } catch (err) {
       console.error('Error loading settings:', err);
@@ -496,6 +535,349 @@ const Settings = () => {
       setLeagues(withDurations);
     } catch (err) {
       console.error('Error fetching leagues/collabs:', err);
+    }
+  };
+
+  const fetchTournamentsData = async () => {
+    try {
+      // 1. Fetch own tournaments
+      const { data: ownTourns, error: ownErr } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('organization_id', orgId)
+        .order('id', { ascending: true });
+
+      if (ownErr && ownErr.code !== 'PGRST205') {
+        console.warn('Error fetching own tournaments:', ownErr.message);
+      }
+
+      // 2. Fetch tournament collabs
+      const { data: tournCollabs } = await supabase
+        .from('tournament_cohosts')
+        .select(`
+          *,
+          tournament:tournament_id (*),
+          sender_org:sender_org_id (id, name, logo_url),
+          receiver_org:receiver_org_id (id, name, logo_url)
+        `)
+        .or(`receiver_org_id.eq.${orgId},sender_org_id.eq.${orgId}`)
+        .order('created_at', { ascending: false });
+
+      if (tournCollabs) {
+        setAllTournamentCollabs(tournCollabs);
+        setIncomingTournCollabs(tournCollabs.filter(c => c.receiver_org_id === orgId && c.status === 'pending'));
+      } else {
+        setAllTournamentCollabs([]);
+        setIncomingTournCollabs([]);
+      }
+
+      // Merge own and accepted collab tournaments
+      const acceptedCollabs = (tournCollabs || []).filter(c => c.status === 'accepted');
+      const collabTournaments = acceptedCollabs
+        .map(c => c.tournament)
+        .filter(t => t && t.organization_id !== orgId);
+
+      const allTournMap = new Map();
+      (ownTourns || []).forEach(t => allTournMap.set(t.id, { ...t, isOwn: true }));
+      collabTournaments.forEach(t => {
+        if (!allTournMap.has(t.id)) {
+          allTournMap.set(t.id, { ...t, isOwn: false, isCollab: true });
+        }
+      });
+      setTournaments(Array.from(allTournMap.values()));
+
+      // 3. Fetch tournament leagues
+      const { data: tLeagues } = await supabase
+        .from('tournament_leagues')
+        .select('*, league:league_id (id, name, logo_url)');
+      setAllTournamentLeagues(tLeagues || []);
+
+      // 4. Fetch teams for counting
+      const { data: teamsData } = await supabase
+        .from('teams')
+        .select('id, name, league, organization_id');
+      setAllOrgTeams(teamsData || []);
+    } catch (err) {
+      console.warn('Notice regarding tournaments fetch:', err);
+    }
+  };
+
+  const startEditTournament = (tourn) => {
+    setEditingTournament(tourn);
+    setTournamentName(tourn.name || '');
+    setTournamentLogo(tourn.logo_url || '');
+    setTournamentBg(tourn.export_bg_url || '');
+    setTournamentStartDate(tourn.start_date || '');
+    setTournamentEndDate(tourn.end_date || '');
+    setTournamentDesc(tourn.description || '');
+    setTournamentDuration(tourn.match_duration || 90);
+    setTournamentStatus(tourn.status || 'active');
+    setIsTournamentModalOpen(true);
+  };
+
+  const cancelEditTournament = () => {
+    setEditingTournament(null);
+    setTournamentName('');
+    setTournamentLogo('');
+    setTournamentBg('');
+    setTournamentStartDate('');
+    setTournamentEndDate('');
+    setTournamentDesc('');
+    setTournamentDuration(90);
+    setTournamentStatus('active');
+    setIsTournamentModalOpen(false);
+  };
+
+  const handleSaveTournament = async (e) => {
+    e.preventDefault();
+    if (!tournamentName.trim()) return;
+    setSavingTournament(true);
+
+    try {
+      const payload = {
+        name: tournamentName.trim(),
+        logo_url: tournamentLogo.trim() || null,
+        export_bg_url: tournamentBg.trim() || null,
+        start_date: tournamentStartDate || null,
+        end_date: tournamentEndDate || null,
+        description: tournamentDesc.trim() || null,
+        match_duration: Number(tournamentDuration) || 90,
+        status: tournamentStatus || 'active'
+      };
+
+      if (editingTournament) {
+        const { error } = await supabase
+          .from('tournaments')
+          .update(payload)
+          .eq('id', editingTournament.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('tournaments')
+          .insert([{ ...payload, organization_id: orgId }]);
+        if (error) throw error;
+      }
+
+      cancelEditTournament();
+      await fetchTournamentsData();
+    } catch (err) {
+      console.error('Error saving tournament:', err);
+      alert('Turnirni saqlashda xatolik yuz berdi: ' + err.message);
+    } finally {
+      setSavingTournament(false);
+    }
+  };
+
+  const handleDeleteTournament = async (tourn) => {
+    if (!window.confirm(`"${tourn.name}" turnirini o'chirishni tasdiqlaysizmi? Unga bog'langan ligalar va o'yinlar ham ajratiladi.`)) {
+      return;
+    }
+    setDeletingTournamentId(tourn.id);
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .delete()
+        .eq('id', tourn.id);
+      if (error) throw error;
+      await fetchTournamentsData();
+    } catch (err) {
+      console.error('Error deleting tournament:', err);
+      alert('Turnirni o\'chirishda xatolik: ' + err.message);
+    } finally {
+      setDeletingTournamentId(null);
+    }
+  };
+
+  const handleUpdateTournDurationDirect = async (tournId, newDuration) => {
+    const durNum = Number(newDuration);
+    setTournaments(prev => prev.map(t => t.id === tournId ? { ...t, match_duration: durNum } : t));
+    try {
+      await supabase.from('tournaments').update({ match_duration: durNum }).eq('id', tournId);
+    } catch (e) {
+      console.error('Error updating tournament duration:', e);
+    }
+  };
+
+  const handleTournLogoDirectUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !logoUploadTournId) return;
+
+    try {
+      const fileExt = file.name.split('.').pop() || 'png';
+      const fileName = `tourn_logo_${logoUploadTournId}_${Date.now()}.${fileExt}`;
+      const filePath = `tournaments/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('applications')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('applications')
+        .getPublicUrl(filePath);
+
+      await supabase.from('tournaments').update({ logo_url: publicUrl }).eq('id', logoUploadTournId);
+      await fetchTournamentsData();
+    } catch (err) {
+      console.error('Error uploading tournament logo:', err);
+      alert('Logo yuklashda xatolik: ' + err.message);
+    } finally {
+      setLogoUploadTournId(null);
+      if (directTournLogoInputRef.current) directTournLogoInputRef.current.value = '';
+    }
+  };
+
+  const handleTournBgDirectUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !bgUploadTournId) return;
+
+    try {
+      const fileExt = file.name.split('.').pop() || 'png';
+      const fileName = `tourn_bg_${bgUploadTournId}_${Date.now()}.${fileExt}`;
+      const filePath = `tournaments/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('applications')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('applications')
+        .getPublicUrl(filePath);
+
+      await supabase.from('tournaments').update({ export_bg_url: publicUrl }).eq('id', bgUploadTournId);
+      await fetchTournamentsData();
+    } catch (err) {
+      console.error('Error uploading tournament background:', err);
+      alert('Fon rasm yuklashda xatolik: ' + err.message);
+    } finally {
+      setBgUploadTournId(null);
+      if (tournBgFileInputRef.current) tournBgFileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteTournBg = async (tourn) => {
+    if (!window.confirm(`"${tourn.name}" turnirining fon rasmini o'chirmoqchimisiz?`)) return;
+    try {
+      await supabase.from('tournaments').update({ export_bg_url: null }).eq('id', tourn.id);
+      await fetchTournamentsData();
+    } catch (e) {
+      console.error('Error deleting tourn bg:', e);
+    }
+  };
+
+  const handleOpenTournLeaguesModal = (tourn) => {
+    setSelectedTournForLeagues(tourn);
+    const linkedLeagueIds = allTournamentLeagues
+      .filter(tl => tl.tournament_id === tourn.id)
+      .map(tl => tl.league_id);
+    setTournSelectedLeagueIds(linkedLeagueIds);
+    setIsTournLeaguesModalOpen(true);
+  };
+
+  const toggleLeagueForTournament = (leagueId) => {
+    setTournSelectedLeagueIds(prev => 
+      prev.includes(leagueId) ? prev.filter(id => id !== leagueId) : [...prev, leagueId]
+    );
+  };
+
+  const handleSaveTournLeagues = async () => {
+    if (!selectedTournForLeagues) return;
+    setSavingTournLeagues(true);
+
+    try {
+      const tournId = selectedTournForLeagues.id;
+      // 1. Delete removed links
+      await supabase
+        .from('tournament_leagues')
+        .delete()
+        .eq('tournament_id', tournId);
+
+      // 2. Insert selected links
+      if (tournSelectedLeagueIds.length > 0) {
+        const rowsToInsert = tournSelectedLeagueIds.map(lId => ({
+          tournament_id: tournId,
+          league_id: lId
+        }));
+        const { error: insErr } = await supabase
+          .from('tournament_leagues')
+          .insert(rowsToInsert);
+        if (insErr) throw insErr;
+      }
+
+      setIsTournLeaguesModalOpen(false);
+      setSelectedTournForLeagues(null);
+      await fetchTournamentsData();
+    } catch (err) {
+      console.error('Error updating tournament leagues:', err);
+      alert('Ligalarni biriktirishda xatolik: ' + err.message);
+    } finally {
+      setSavingTournLeagues(false);
+    }
+  };
+
+  const handleSendTournCollab = async (e) => {
+    e.preventDefault();
+    if (!targetTournOrgEmail.trim() || !selectedTournForCollab) return;
+    setSendingTournCollab(true);
+
+    try {
+      const { data: targetOrg } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .eq('admin_email', targetTournOrgEmail.trim().toLowerCase())
+        .maybeSingle();
+
+      if (!targetOrg) {
+        alert("Bunday emailga ega tashkilot topilmadi.");
+        return;
+      }
+
+      if (targetOrg.id === orgId) {
+        alert("O'z tashkilotingizga hamkorlik taklifini yubora olmaysiz.");
+        return;
+      }
+
+      const { error: insErr } = await supabase
+        .from('tournament_cohosts')
+        .insert([{
+          tournament_id: selectedTournForCollab.id,
+          sender_org_id: orgId,
+          receiver_org_id: targetOrg.id,
+          status: 'pending'
+        }]);
+
+      if (insErr) throw insErr;
+
+      alert(`Hamkorlik taklifi "${targetOrg.name}" tashkilotiga muvaffaqiyatli yuborildi!`);
+      setSelectedTournForCollab(null);
+      setTargetTournOrgEmail('');
+      await fetchTournamentsData();
+    } catch (err) {
+      console.error('Error sending tournament collab:', err);
+      alert('Taklif yuborishda xatolik: ' + err.message);
+    } finally {
+      setSendingTournCollab(false);
+    }
+  };
+
+  const handleAcceptTournCollab = async (collabId) => {
+    try {
+      await supabase.from('tournament_cohosts').update({ status: 'accepted' }).eq('id', collabId);
+      await fetchTournamentsData();
+    } catch (e) {
+      console.error('Error accepting collab:', e);
+    }
+  };
+
+  const handleRejectTournCollab = async (collabId) => {
+    try {
+      await supabase.from('tournament_cohosts').update({ status: 'rejected' }).eq('id', collabId);
+      await fetchTournamentsData();
+    } catch (e) {
+      console.error('Error rejecting collab:', e);
     }
   };
 
@@ -1269,6 +1651,324 @@ const Settings = () => {
               </div>
             </div>
 
+            {/* Hidden file inputs for Tournaments */}
+            <input 
+              type="file" 
+              ref={directTournLogoInputRef} 
+              style={{ display: 'none' }} 
+              accept="image/*" 
+              onChange={handleTournLogoDirectUpload} 
+            />
+            <input 
+              type="file" 
+              ref={tournBgFileInputRef} 
+              style={{ display: 'none' }} 
+              accept="image/*" 
+              onChange={handleTournBgDirectUpload} 
+            />
+
+            {/* ========================================================================= */}
+            {/* TASHKILOT TURNIRLARI BOSHQARUVI                                           */}
+            {/* ========================================================================= */}
+            <div className="settings-card" style={{ marginTop: '30px' }}>
+              <div className="settings-card-header" style={{ justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Award size={22} color="#00FF66" />
+                  <div>
+                    <h2>Tashkilot Turnirlari Boshqaruvi</h2>
+                    <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>
+                      Turnir jamoalardan emas, mavjud ligalardan tashkil topadi. Liga qo'shilganda uning barcha jamoalari avtomatik turnirga o'tadi.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Kiruvchi hamkorlik so'rovlari (Turnirlar) */}
+              {incomingTournCollabs.length > 0 && (
+                <div style={{ marginBottom: '20px', padding: '12px 16px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '12px' }}>
+                  <h4 style={{ color: '#60a5fa', margin: '0 0 10px 0', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Send size={16} /> Kutilayotgan Turnir Hamkorlik Takliflari ({incomingTournCollabs.length})
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {incomingTournCollabs.map(c => (
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: '8px' }}>
+                        <div>
+                          <strong style={{ color: '#fff' }}>{c.tournament?.name}</strong>
+                          <span style={{ color: '#94a3b8', fontSize: '12px', marginLeft: '8px' }}>
+                            ({c.sender_org?.name || 'Tashkilot'}dan taklif)
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleAcceptTournCollab(c.id)}
+                            style={{ background: '#10b981', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                          >
+                            Qabul qilish
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRejectTournCollab(c.id)}
+                            style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+                          >
+                            Rad etish
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Turnirlar Ro'yxati */}
+              <div className="leagues-list-container">
+                <h3>Mavjud Turnirlar ({tournaments.length})</h3>
+                {tournaments.length === 0 ? (
+                  <p className="no-data-text" style={{ padding: '24px 0', textAlign: 'center' }}>
+                    Hali turnirlar yaratilmagan. Quyidagi tugma orqali yangi turnir qo'shing.
+                  </p>
+                ) : (
+                  <div className="leagues-grid">
+                    {tournaments.map(t => {
+                      const isOwner = t.isOwn !== false && t.organization_id === orgId;
+                      const linkedLeagues = allTournamentLeagues
+                        .filter(tl => tl.tournament_id === t.id)
+                        .map(tl => tl.league)
+                        .filter(Boolean);
+
+                      // Calculate teams count from linked leagues
+                      const linkedLeagueNames = linkedLeagues.map(l => l.name.trim().toLowerCase());
+                      const matchingTeams = allOrgTeams.filter(team => {
+                        if (!team.league) return false;
+                        const tLeagues = team.league.split(',').map(s => s.trim().toLowerCase());
+                        return tLeagues.some(lName => linkedLeagueNames.includes(lName));
+                      });
+
+                      return (
+                        <div key={t.id} className={`league-card-drawn ${editingTournament?.id === t.id ? 'editing' : ''}`}>
+                          {/* Banner / Bg */}
+                          <div 
+                            className="league-card-bg-banner"
+                            style={t.export_bg_url ? { backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.8) 100%), url(${t.export_bg_url})` } : {}}
+                          >
+                            {/* Logo */}
+                            <div 
+                              className={`league-card-logo-area ${isOwner ? 'clickable' : ''}`}
+                              onClick={(e) => {
+                                if (!isOwner) return;
+                                e.stopPropagation();
+                                setLogoUploadTournId(t.id);
+                                directTournLogoInputRef.current?.click();
+                              }}
+                              title={isOwner ? "Turnir logotipini almashtirish uchun bosing" : ""}
+                            >
+                              {t.logo_url ? (
+                                <img src={t.logo_url} alt={t.name} className="league-card-logo-img" />
+                              ) : (
+                                <div className="league-card-logo-placeholder">
+                                  <Award size={24} color="#00FF66" />
+                                </div>
+                              )}
+                              {isOwner && (
+                                <div className="logo-hover-badge">
+                                  <Upload size={12} />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Bg upload button */}
+                            {isOwner && (
+                              <button
+                                type="button"
+                                className="btn-upload-bg-trigger"
+                                onClick={() => {
+                                  setBgUploadTournId(t.id);
+                                  tournBgFileInputRef.current?.click();
+                                }}
+                              >
+                                <Upload size={14} />
+                                <span>{t.export_bg_url ? "Fonni almashtirish" : "Fon rasmi yuklash"}</span>
+                              </button>
+                            )}
+
+                            {/* Delete Bg button */}
+                            {isOwner && t.export_bg_url && (
+                              <button
+                                type="button"
+                                className="btn-delete-bg-corner"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTournBg(t);
+                                }}
+                                title="Fon rasmini o'chirish"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Info Section */}
+                          <div className="league-card-bottom">
+                            <div className="league-card-name-section">
+                              <h4 className="league-title">{t.name}</h4>
+                              <div className="league-badges-wrap">
+                                {t.status === 'completed' ? (
+                                  <span className="junior-badge" style={{ background: 'rgba(255, 170, 0, 0.15)', color: '#ffaa00', borderColor: 'rgba(255, 170, 0, 0.3)' }}>
+                                    📦 YAKUNLANGAN
+                                  </span>
+                                ) : (
+                                  <span className="junior-badge" style={{ background: 'rgba(0, 255, 102, 0.15)', color: '#00FF66', borderColor: 'rgba(0, 255, 102, 0.3)' }}>
+                                    ⚡ FAOL
+                                  </span>
+                                )}
+
+                                {t.start_date && (
+                                  <span className="junior-badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+                                    📅 {t.start_date}
+                                  </span>
+                                )}
+
+                                {isOwner ? (
+                                  <select
+                                    value={t.match_duration || 90}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      handleUpdateTournDurationDirect(t.id, e.target.value);
+                                    }}
+                                    style={{
+                                      background: 'rgba(59, 130, 246, 0.2)',
+                                      color: '#60a5fa',
+                                      border: '1px solid rgba(59, 130, 246, 0.4)',
+                                      borderRadius: '8px',
+                                      padding: '3px 8px',
+                                      fontSize: '11px',
+                                      fontWeight: '700',
+                                      cursor: 'pointer'
+                                    }}
+                                    title="O'yin vaqti"
+                                  >
+                                    <option value={90} style={{ background: '#1e293b' }}>⏱️ 90 daq</option>
+                                    <option value={80} style={{ background: '#1e293b' }}>⏱️ 80 daq</option>
+                                    <option value={70} style={{ background: '#1e293b' }}>⏱️ 70 daq</option>
+                                    <option value={60} style={{ background: '#1e293b' }}>⏱️ 60 daq</option>
+                                    <option value={50} style={{ background: '#1e293b' }}>⏱️ 50 daq</option>
+                                    <option value={40} style={{ background: '#1e293b' }}>⏱️ 40 daq</option>
+                                    <option value={30} style={{ background: '#1e293b' }}>⏱️ 30 daq</option>
+                                  </select>
+                                ) : (
+                                  <span className="junior-badge">⏱️ {t.match_duration || 90} daq</span>
+                                )}
+                              </div>
+
+                              {/* Biriktirilgan Ligalar va Jamoalar Ko'rsatkichi */}
+                              <div style={{ marginTop: '10px', padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                                  <span style={{ color: '#94a3b8' }}>Biriktirilgan ligalar:</span>
+                                  <strong style={{ color: '#00FF66' }}>{linkedLeagues.length} ta liga</strong>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', marginTop: '4px' }}>
+                                  <span style={{ color: '#94a3b8' }}>Ishtirokchi jamoalar:</span>
+                                  <strong style={{ color: '#38bdf8' }}>{matchingTeams.length} ta jamoa</strong>
+                                </div>
+                                {linkedLeagues.length > 0 && (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                                    {linkedLeagues.map(l => (
+                                      <span key={l.id} style={{ fontSize: '10px', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', color: '#e2e8f0' }}>
+                                        {l.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="league-card-action-tabs">
+                              {isOwner && (
+                                <button
+                                  type="button"
+                                  className="action-tab"
+                                  style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }}
+                                  onClick={() => handleOpenTournLeaguesModal(t)}
+                                  title="Turnirga ligalarni biriktirish"
+                                >
+                                  <Layers size={13} /> <span>Ligalar ({linkedLeagues.length})</span>
+                                </button>
+                              )}
+
+                              {isOwner && (
+                                <button
+                                  type="button"
+                                  className="action-tab btn-tab-collab"
+                                  onClick={() => setSelectedTournForCollab(t)}
+                                  title="Hamkorlik taklifi yuborish"
+                                >
+                                  <Send size={13} /> <span>Collab</span>
+                                </button>
+                              )}
+
+                              {isOwner && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="action-tab btn-tab-edit"
+                                    onClick={() => startEditTournament(t)}
+                                    title="Tahrirlash"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="action-tab btn-tab-delete"
+                                    onClick={() => handleDeleteTournament(t)}
+                                    disabled={deletingTournamentId === t.id}
+                                    title="O'chirish"
+                                  >
+                                    {deletingTournamentId === t.id ? <span className="btn-spinner"></span> : <Trash2 size={14} />}
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Add Tournament Button */}
+                <div style={{ marginTop: '28px', display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    className="settings-btn settings-btn-primary"
+                    style={{
+                      width: '100%',
+                      maxWidth: '340px',
+                      height: '46px',
+                      fontSize: '14px',
+                      fontWeight: '800',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 20px rgba(0, 255, 102, 0.25)'
+                    }}
+                    onClick={() => {
+                      cancelEditTournament();
+                      setIsTournamentModalOpen(true);
+                    }}
+                  >
+                    <Plus size={18} />
+                    <span>TURNIR QO'SHISH</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Organization Logo Card */}
             <div className="settings-card">
               <div className="settings-card-header">
@@ -1753,6 +2453,275 @@ const Settings = () => {
                 {disconnectingCollab ? 'Uzilmoqda...' : 'Ha, sheriklikni uzish'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 1. TURNIR YARATISH / TAHRIRLASH MODALI                                    */}
+      {/* ========================================================================= */}
+      {isTournamentModalOpen && (
+        <div className="settings-modal-overlay" onClick={cancelEditTournament}>
+          <div className="settings-modal league-management-modal" style={{ maxWidth: '520px' }} onClick={e => e.stopPropagation()}>
+            <div className="settings-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Award size={22} color="#00FF66" />
+                <h3>{editingTournament ? 'Turnirni Tahrirlash' : 'Yangi Turnir Yaratish'}</h3>
+              </div>
+              <button type="button" className="btn-close-modal" onClick={cancelEditTournament}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTournament} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+              <div className="form-group">
+                <label style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '6px', display: 'block' }}>Turnir Nomi *</label>
+                <input
+                  type="text"
+                  value={tournamentName}
+                  onChange={e => setTournamentName(e.target.value)}
+                  placeholder="Masalan: Qishki Chempionlar Kubogi 2026"
+                  required
+                  style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: '#fff' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '6px', display: 'block' }}>Boshlanish Sanasi</label>
+                  <input
+                    type="date"
+                    value={tournamentStartDate}
+                    onChange={e => setTournamentStartDate(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: '#fff' }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '6px', display: 'block' }}>Tugash Sanasi</label>
+                  <input
+                    type="date"
+                    value={tournamentEndDate}
+                    onChange={e => setTournamentEndDate(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: '#fff' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '6px', display: 'block' }}>O'yin Davomiyligi</label>
+                  <select
+                    value={tournamentDuration}
+                    onChange={e => setTournamentDuration(Number(e.target.value))}
+                    style={{ width: '100%', padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: '#fff' }}
+                  >
+                    <option value={90}>⏱️ 90 daqiqa</option>
+                    <option value={80}>⏱️ 80 daqiqa</option>
+                    <option value={70}>⏱️ 70 daqiqa</option>
+                    <option value={60}>⏱️ 60 daqiqa</option>
+                    <option value={50}>⏱️ 50 daqiqa</option>
+                    <option value={40}>⏱️ 40 daqiqa</option>
+                    <option value={30}>⏱️ 30 daqiqa</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '6px', display: 'block' }}>Holati</label>
+                  <select
+                    value={tournamentStatus}
+                    onChange={e => setTournamentStatus(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: '#fff' }}
+                  >
+                    <option value="active">⚡ Faol</option>
+                    <option value="completed">📦 Yakunlangan</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '6px', display: 'block' }}>Tavsif (ixtiyoriy)</label>
+                <textarea
+                  value={tournamentDesc}
+                  onChange={e => setTournamentDesc(e.target.value)}
+                  placeholder="Turnir qoidalari, sovrin jamg'armasi yoki maqsadi..."
+                  rows={3}
+                  style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: '#fff', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={cancelEditTournament}
+                  style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '10px', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingTournament}
+                  style={{ padding: '10px 22px', background: '#00FF66', border: 'none', borderRadius: '10px', color: '#000', cursor: 'pointer', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  {savingTournament ? <span className="btn-spinner"></span> : <Save size={16} />}
+                  <span>{editingTournament ? 'Saqlash' : 'Yaratish'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 2. TURNIRGA LIGALAR BIRIKTIRISH MODALI                                     */}
+      {/* ========================================================================= */}
+      {isTournLeaguesModalOpen && selectedTournForLeagues && (
+        <div className="settings-modal-overlay" onClick={() => setIsTournLeaguesModalOpen(false)}>
+          <div className="settings-modal league-management-modal" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>
+            <div className="settings-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Layers size={22} color="#38bdf8" />
+                <div>
+                  <h3 style={{ margin: 0 }}>Turnirga Ligalarni Biriktirish</h3>
+                  <span style={{ fontSize: '13px', color: '#38bdf8' }}>{selectedTournForLeagues.name}</span>
+                </div>
+              </div>
+              <button type="button" className="btn-close-modal" onClick={() => setIsTournLeaguesModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#94a3b8', margin: '14px 0 16px 0' }}>
+              Turnir jamoalardan emas, ligalardan iborat. Bitta ligani tanlasangiz, o'sha liganing barcha jamoalari <strong>avtomatik</strong> ushbu turnir ishtirokchisiga aylanadi.
+            </p>
+
+            <div style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
+              {leagues.length === 0 ? (
+                <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>Tashkilotda hali ligalar mavjud emas.</p>
+              ) : (
+                leagues.map(l => {
+                  const isSelected = tournSelectedLeagueIds.includes(l.id);
+                  // Count teams in this league
+                  const lTeams = allOrgTeams.filter(t => (t.league || '').split(',').map(s => s.trim().toLowerCase()).includes(l.name.trim().toLowerCase()));
+
+                  return (
+                    <div
+                      key={l.id}
+                      onClick={() => toggleLeagueForTournament(l.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 16px',
+                        borderRadius: '10px',
+                        background: isSelected ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.04)',
+                        border: isSelected ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.08)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ color: isSelected ? '#38bdf8' : '#64748b' }}>
+                          {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
+                        </div>
+                        {l.logo_url && (
+                          <img src={l.logo_url} alt="" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+                        )}
+                        <div>
+                          <strong style={{ color: '#fff', fontSize: '14px' }}>{l.name}</strong>
+                          <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                            {l.season || '2026/2027'} {l.is_junior ? '• Junior' : ''}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: isSelected ? '#38bdf8' : '#94a3b8', background: 'rgba(255,255,255,0.08)', padding: '4px 8px', borderRadius: '6px' }}>
+                          {lTeams.length} ta jamoa
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div style={{ marginTop: '20px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+                Tanlangan: <strong style={{ color: '#38bdf8' }}>{tournSelectedLeagueIds.length} ta liga</strong>
+              </span>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsTournLeaguesModalOpen(false)}
+                  style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer' }}
+                >
+                  Yopish
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveTournLeagues}
+                  disabled={savingTournLeagues}
+                  style={{ padding: '8px 20px', background: '#38bdf8', border: 'none', borderRadius: '8px', color: '#000', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {savingTournLeagues ? <span className="btn-spinner"></span> : <Save size={16} />}
+                  <span>Saqlash</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. TURNIR HAMKORLIGI (COLLAB) MODALI                                      */}
+      {/* ========================================================================= */}
+      {selectedTournForCollab && (
+        <div className="settings-modal-overlay" onClick={() => setSelectedTournForCollab(null)}>
+          <div className="settings-modal league-management-modal" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+            <div className="settings-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Send size={20} color="#60a5fa" />
+                <h3>Turnir Hamkorlik Taklifi</h3>
+              </div>
+              <button type="button" className="btn-close-modal" onClick={() => setSelectedTournForCollab(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#94a3b8', margin: '12px 0 16px 0' }}>
+              <strong>"{selectedTournForCollab.name}"</strong> turnirini boshqa tashkilot bilan birgalikda o'tkazish uchun uning admin email manzilini kiriting:
+            </p>
+
+            <form onSubmit={handleSendTournCollab} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="form-group">
+                <label style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '6px', display: 'block' }}>Hamkor Tashkilot Admin Emaili</label>
+                <input
+                  type="email"
+                  value={targetTournOrgEmail}
+                  onChange={e => setTargetTournOrgEmail(e.target.value)}
+                  placeholder="admin@hamkor-liga.uz"
+                  required
+                  style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: '#fff' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTournForCollab(null)}
+                  style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer' }}
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingTournCollab}
+                  style={{ padding: '8px 20px', background: '#3b82f6', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {sendingTournCollab ? <span className="btn-spinner"></span> : <Send size={15} />}
+                  <span>Taklif Yuborish</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

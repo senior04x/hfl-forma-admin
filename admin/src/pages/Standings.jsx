@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
+import { getActiveOrgTournaments, getTournamentLeagues, getTournamentTeams, getStageDisplayTitle } from '../utils/tournamentUtils';
 import { Download, Save, ShieldAlert, Upload, Sparkles, AlertCircle, X, Check, Trophy, Edit, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Standings.css';
@@ -66,6 +67,10 @@ export default function Standings() {
   const [matches, setMatches] = useState([]);
   const [events, setEvents] = useState([]);
   const [activeLeagues, setActiveLeagues] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
+  const [tournamentLeaguesMap, setTournamentLeaguesMap] = useState({});
+  const [viewMode, setViewMode] = useState('league'); // 'league' | 'tournament'
+  const [selectedTournamentId, setSelectedTournamentId] = useState('');
   const [loading, setLoading] = useState(true);
   const { currentOrg, orgId } = useOrg();
   
@@ -207,10 +212,27 @@ export default function Standings() {
     if (withOrgBgs.length > 0) {
       setSelectedLeague(withOrgBgs[0].name);
     }
-    fetchData(withOrgBgs);
+
+    // Fetch tournaments & their linked leagues
+    const fetchedTournaments = await getActiveOrgTournaments(orgId);
+    setTournaments(fetchedTournaments);
+    if (fetchedTournaments.length > 0) {
+      setSelectedTournamentId(fetchedTournaments[0].id);
+    }
+
+    const tLeaguesMap = {};
+    await Promise.all(
+      fetchedTournaments.map(async (t) => {
+        const lgs = await getTournamentLeagues(t.id);
+        tLeaguesMap[t.id] = lgs;
+      })
+    );
+    setTournamentLeaguesMap(tLeaguesMap);
+
+    fetchData(withOrgBgs, fetchedTournaments);
   };
 
-  const fetchData = async (leaguesList = activeLeagues) => {
+  const fetchData = async (leaguesList = activeLeagues, tournsList = tournaments) => {
     setLoading(true);
     try {
       // Fetch Teams with collab filter
@@ -232,14 +254,25 @@ export default function Standings() {
       });
       setPenalties(initialPenalties);
 
-      // Fetch Matches with collab filter
+      // Fetch Matches with collab and tournament filter
+      const collabLeagueNames = (leaguesList || []).filter(l => l.isCollab).map(l => l.name);
+      const collabTournIds = (tournsList || []).filter(t => t.isCollab).map(t => t.id);
+
+      let orConditions = [`organization_id.eq.${orgId}`];
+      if (collabLeagueNames.length > 0) {
+        const escapedNames = collabLeagueNames.map(n => `"${n.replace(/"/g, '""')}"`).join(',');
+        orConditions.push(`league.in.(${escapedNames})`);
+      }
+      if (collabTournIds.length > 0) {
+        orConditions.push(`tournament_id.in.(${collabTournIds.join(',')})`);
+      }
+
       let matchesQuery = supabase
         .from('matches')
         .select('*')
         .eq('status', 'finished')
+        .or(orConditions.join(','))
         .order('match_date', { ascending: false });
-
-      matchesQuery = applyOrgAndCollabFilter(matchesQuery, orgId, leaguesList);
 
       const { data: matchesData, error: matchesError } = await matchesQuery;
       if (matchesError) throw matchesError;
@@ -281,10 +314,11 @@ export default function Standings() {
 
   // Auto-set selectedRound to max finished round for the SPECIFIC active league
   useEffect(() => {
+    if (viewMode === 'tournament') return;
     if (!selectedLeague || teams.length === 0) return;
     const currentLeagueTeams = teams.filter(t => (t.league || '').includes(selectedLeague));
     const currentLeagueTeamIds = new Set(currentLeagueTeams.map(t => t.id));
-    const currentLeagueMatches = matches.filter(m => currentLeagueTeamIds.has(m.home_team_id));
+    const currentLeagueMatches = matches.filter(m => !m.tournament_id && currentLeagueTeamIds.has(m.home_team_id));
 
     let maxR = 0;
     currentLeagueMatches.forEach(m => {
@@ -293,38 +327,65 @@ export default function Standings() {
 
     const defaultRound = maxR > 0 ? maxR.toString() : '1';
     setSelectedRound(defaultRound);
-  }, [selectedLeague, teams, matches]);
+  }, [selectedLeague, teams, matches, viewMode]);
 
   useEffect(() => {
     computeStandings();
-  }, [teams, matches, events, selectedLeague, selectedRound, penalties]);
+  }, [teams, matches, events, selectedLeague, selectedRound, penalties, viewMode, selectedTournamentId, tournamentLeaguesMap]);
 
   const computeStandings = () => {
-    // Filter teams by selected league
-    const filteredTeams = teams.filter(t => (t.league || 'Super liga').includes(selectedLeague));
-    const filteredTeamIds = new Set(filteredTeams.map(t => t.id));
+    const isTournament = viewMode === 'tournament';
+    let filteredTeams = [];
+    let relevantMatches = [];
 
-    // All finished matches for the selected league (cumulative across ALL rounds)
-    const allLeagueMatches = matches.filter(m => filteredTeamIds.has(m.home_team_id));
-
-    // Find max round for the active league
-    let maxLeagueRound = 0;
-    allLeagueMatches.forEach(m => {
-      if (m.round && parseInt(m.round) > maxLeagueRound) maxLeagueRound = parseInt(m.round);
-    });
-
-    // Target round for recent matches card display (defaults to max/latest round)
-    let targetRound = selectedRound;
-    if (!targetRound || targetRound === 'all') {
-      targetRound = maxLeagueRound > 0 ? maxLeagueRound.toString() : '1';
+    if (isTournament) {
+      if (!selectedTournamentId) {
+        setStandings([]);
+        setRecentMatches([]);
+        setTopScorers([]);
+        setTopAssists([]);
+        setTopYellowCards([]);
+        setTopRedCards([]);
+        return;
+      }
+      const tournLeagues = tournamentLeaguesMap[selectedTournamentId] || [];
+      filteredTeams = getTournamentTeams(tournLeagues, teams);
+      const filteredTeamIds = new Set(filteredTeams.map(t => t.id));
+      // In tournament view, strictly only include matches belonging to this tournament
+      relevantMatches = matches.filter(m => String(m.tournament_id) === String(selectedTournamentId));
+    } else {
+      // Filter teams by selected league
+      filteredTeams = teams.filter(t => (t.league || 'Super liga').includes(selectedLeague));
+      const filteredTeamIds = new Set(filteredTeams.map(t => t.id));
+      // In league view, strictly only include non-tournament league matches
+      relevantMatches = matches.filter(m => !m.tournament_id && filteredTeamIds.has(m.home_team_id));
     }
 
-    const roundMatches = allLeagueMatches.filter(m => String(m.round) === String(targetRound));
+    const relevantTeamIds = new Set(filteredTeams.map(t => t.id));
+    const relevantMatchIds = new Set(relevantMatches.map(m => m.id));
 
-    // Filter events across all league matches
-    const filteredEvents = events.filter(e => filteredTeamIds.has(e.team_id));
+    let roundMatches = [];
+    if (!isTournament) {
+      // Find max round for the active league
+      let maxLeagueRound = 0;
+      relevantMatches.forEach(m => {
+        if (m.round && parseInt(m.round) > maxLeagueRound) maxLeagueRound = parseInt(m.round);
+      });
 
-    // 1. Standings Table - calculates cumulative totals across ALL rounds in the league
+      // Target round for recent matches card display (defaults to max/latest round)
+      let targetRound = selectedRound;
+      if (!targetRound || targetRound === 'all') {
+        targetRound = maxLeagueRound > 0 ? maxLeagueRound.toString() : '1';
+      }
+      roundMatches = relevantMatches.filter(m => String(m.round) === String(targetRound));
+    } else {
+      roundMatches = relevantMatches.slice(0, 8);
+    }
+
+    // Filter events strictly across relevant matches so tournament & league stats NEVER mix
+    const filteredEvents = events.filter(e => e.match_id && relevantMatchIds.has(e.match_id));
+
+    // 1. Standings Table - calculates cumulative totals across ALL relevant matches
     const tableMap = {};
     filteredTeams.forEach(t => {
       tableMap[t.id] = {
@@ -339,7 +400,7 @@ export default function Standings() {
       };
     });
 
-    allLeagueMatches.forEach(m => {
+    relevantMatches.forEach(m => {
       const hId = m.home_team_id;
       const aId = m.away_team_id;
       const hScore = parseInt(m.home_score || 0);
@@ -379,14 +440,15 @@ export default function Standings() {
     const computedStandings = Object.values(tableMap)
       .filter(t => !t.is_archived)
       .map(t => {
-        const ovr = standingsOverridesMap[t.id] || {};
+        const ovrKey = isTournament ? `TOURN_${selectedTournamentId}_${t.id}` : t.id;
+        const ovr = standingsOverridesMap[ovrKey] || (!isTournament ? standingsOverridesMap[t.id] : {}) || {};
         const played_offset = parseInt(ovr.played_offset || 0);
         const won_offset = parseInt(ovr.won_offset || 0);
         const draw_offset = parseInt(ovr.draw_offset || 0);
         const lost_offset = parseInt(ovr.lost_offset || 0);
         const gf_offset = parseInt(ovr.gf_offset || 0);
         const ga_offset = parseInt(ovr.ga_offset || 0);
-        const pts_offset = parseInt(ovr.pts_offset || penalties[t.id] || 0);
+        const pts_offset = parseInt(ovr.pts_offset || (!isTournament ? (penalties[t.id] || 0) : 0));
 
         t.played = Math.max(0, t.raw_played + played_offset);
         t.won = Math.max(0, t.raw_won + won_offset);
@@ -407,9 +469,9 @@ export default function Standings() {
       });
 
     setStandings(computedStandings);
-    setRecentMatches(roundMatches.length > 0 ? roundMatches : allLeagueMatches.slice(0, 6));
+    setRecentMatches(roundMatches.length > 0 ? roundMatches : relevantMatches.slice(0, 6));
 
-    // 2. Top Scorers, Assists & Cards - cumulative across ALL rounds
+    // 2. Top Scorers, Assists & Cards - cumulative across ALL relevant matches
     const playerStats = {};
     filteredEvents.forEach(e => {
       if (!e.player || !e.player_id) return;
@@ -576,8 +638,15 @@ export default function Standings() {
     executeExport();
   };
 
+  const selectedTournObj = tournaments.find(t => String(t.id) === String(selectedTournamentId));
+
   const executeExport = async () => {
     if (!exportRef.current || isExporting) return;
+    const isTourn = viewMode === 'tournament';
+    if (isTourn && !selectedTournamentId) {
+      alert("Iltimos, eksport qilish uchun turnirni tanlang.");
+      return;
+    }
     setIsExporting(true);
     try {
       const canvas = await html2canvas(exportRef.current, {
@@ -587,7 +656,9 @@ export default function Standings() {
       });
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = `turnir_jadvali_${selectedLeague}_${selectedRound}.png`;
+      const targetName = (isTourn ? (selectedTournObj?.name || 'turnir') : selectedLeague).replace(/\s+/g, '_');
+      const targetSub = isTourn ? 'umumiy' : selectedRound;
+      link.download = `turnir_jadvali_${targetName}_${targetSub}.png`;
       link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
@@ -618,14 +689,24 @@ export default function Standings() {
 
   // Background theme mapping for export
   let exportThemeClass = 'theme-export-Super';
-  if (selectedLeague.includes('Pro')) exportThemeClass = 'theme-export-Pro';
-  else if (selectedLeague.includes('3-liga') || selectedLeague.includes('3 liga')) exportThemeClass = 'theme-export-3-liga';
-  else if (selectedLeague.includes('Europa')) exportThemeClass = 'theme-export-Europa';
-  else if (selectedLeague.includes('Chempion')) exportThemeClass = 'theme-export-Chempion';
-  else if (selectedLeague.includes('7x7')) exportThemeClass = 'theme-export-7x7';
+  if (viewMode === 'tournament') {
+    exportThemeClass = 'theme-export-Chempion';
+  } else if (selectedLeague.includes('Pro')) {
+    exportThemeClass = 'theme-export-Pro';
+  } else if (selectedLeague.includes('3-liga') || selectedLeague.includes('3 liga')) {
+    exportThemeClass = 'theme-export-3-liga';
+  } else if (selectedLeague.includes('Europa')) {
+    exportThemeClass = 'theme-export-Europa';
+  } else if (selectedLeague.includes('Chempion')) {
+    exportThemeClass = 'theme-export-Chempion';
+  } else if (selectedLeague.includes('7x7')) {
+    exportThemeClass = 'theme-export-7x7';
+  }
 
   const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
   const currentLeagueBg = currentLeagueObj?.export_bg_url || getLeagueBgForOrg(orgId, selectedLeague);
+  const currentTournBg = selectedTournObj?.bg_url || selectedTournObj?.banner_url;
+  const activeExportBg = viewMode === 'tournament' ? currentTournBg : currentLeagueBg;
 
   if (loading) {
     return (
@@ -690,32 +771,98 @@ export default function Standings() {
         <div className="filter-header-bar">
           <div className="filter-title-group">
             <Trophy size={18} className="filter-icon" />
-            <span>Eksport va Fon Rasmi Boshqaruvi ({selectedLeague})</span>
+            <span>
+              Eksport va Fon Rasmi Boshqaruvi ({viewMode === 'tournament' ? (selectedTournObj?.name || 'Turnir') : selectedLeague})
+            </span>
           </div>
         </div>
 
         <div className="filter-expanded-content" style={{ marginTop: '16px' }}>
+          {/* View Mode Toggle: Ligalar / Turnirlar */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <button
+              type="button"
+              onClick={() => setViewMode('league')}
+              style={{
+                flex: 1,
+                padding: '9px 14px',
+                borderRadius: '10px',
+                border: viewMode === 'league' ? '2px solid #00FF66' : '1px solid rgba(255,255,255,0.1)',
+                background: viewMode === 'league' ? 'rgba(0, 255, 102, 0.15)' : 'rgba(255,255,255,0.03)',
+                color: viewMode === 'league' ? '#00FF66' : '#94a3b8',
+                fontWeight: '800',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s'
+              }}
+            >
+              🏆 Ligalar
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('tournament')}
+              style={{
+                flex: 1,
+                padding: '9px 14px',
+                borderRadius: '10px',
+                border: viewMode === 'tournament' ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
+                background: viewMode === 'tournament' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255,255,255,0.03)',
+                color: viewMode === 'tournament' ? '#60a5fa' : '#94a3b8',
+                fontWeight: '800',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s'
+              }}
+            >
+              ⭐ Turnirlar ({tournaments.length})
+            </button>
+          </div>
+
           <div className="filter-row">
-            <div className="filter-field">
-              <label>Liga tanlang</label>
-              <div className="custom-select-wrapper">
-                <select value={selectedLeague} onChange={(e) => setSelectedLeague(e.target.value)}>
-                  {activeLeagues.map(l => (
-                    <option key={l.id} value={l.name}>{l.name} {l.isCollab ? '(Co-Host)' : ''}</option>
-                  ))}
-                  {activeLeagues.length === 0 && <option value="">Hali ligalar yo'q</option>}
-                </select>
+            {viewMode === 'league' ? (
+              <>
+                <div className="filter-field">
+                  <label>Liga tanlang</label>
+                  <div className="custom-select-wrapper">
+                    <select value={selectedLeague} onChange={(e) => setSelectedLeague(e.target.value)}>
+                      {activeLeagues.map(l => (
+                        <option key={l.id} value={l.name}>{l.name} {l.isCollab ? '(Co-Host)' : ''}</option>
+                      ))}
+                      {activeLeagues.length === 0 && <option value="">Hali ligalar yo'q</option>}
+                    </select>
+                  </div>
+                </div>
+                <div className="filter-field">
+                  <label>Tur</label>
+                  <div className="custom-select-wrapper">
+                    <select value={selectedRound} onChange={(e) => setSelectedRound(e.target.value)}>
+                      <option value="all">Barchasi (Umumiy)</option>
+                      {roundOptions.map(r => <option key={r} value={r}>{r}-tur</option>)}
+                    </select>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="filter-field" style={{ flex: 1 }}>
+                <label>Turnir tanlang</label>
+                <div className="custom-select-wrapper">
+                  <select value={selectedTournamentId} onChange={(e) => setSelectedTournamentId(e.target.value)}>
+                    {tournaments.map(t => (
+                      <option key={t.id} value={t.id}>{t.name} {t.isCollab ? '(Co-Host)' : ''}</option>
+                    ))}
+                    {tournaments.length === 0 && <option value="">Faol turnirlar mavjud emas</option>}
+                  </select>
+                </div>
               </div>
-            </div>
-            <div className="filter-field">
-              <label>Tur</label>
-              <div className="custom-select-wrapper">
-                <select value={selectedRound} onChange={(e) => setSelectedRound(e.target.value)}>
-                  <option value="all">Barchasi (Umumiy)</option>
-                  {roundOptions.map(r => <option key={r} value={r}>{r}-tur</option>)}
-                </select>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -909,8 +1056,10 @@ export default function Standings() {
       {/* HIDDEN EXPORT TEMPLATE */}
       <div style={{ position: 'fixed', left: '-9999px', top: 0, opacity: 1, pointerEvents: 'none', zIndex: -100 }}>
         {(() => {
+          const isTourn = viewMode === 'tournament';
           const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
-          const isCollab = currentLeagueObj?.isCollab;
+          const currentTournObj = tournaments.find(t => String(t.id) === String(selectedTournamentId));
+          const isCollab = isTourn ? currentTournObj?.isCollab : currentLeagueObj?.isCollab;
 
           const teamCount = standings.length;
           let rowPadding = '10px 14px';
@@ -943,8 +1092,8 @@ export default function Standings() {
             <div 
               ref={exportRef} 
               className={`export-wrapper ${exportThemeClass}`}
-              style={currentLeagueObj?.export_bg_url ? {
-                backgroundImage: `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${currentLeagueObj.export_bg_url})`,
+              style={activeExportBg ? {
+                backgroundImage: `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${activeExportBg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat'
@@ -957,9 +1106,9 @@ export default function Standings() {
                   <div className="export-logo-left" style={{ width: '250px', minWidth: '250px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
                     {isCollab ? (
                       <>
-                        <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '85px', objectFit: 'contain', background: 'transparent' }} />
+                        <img src={(isTourn ? currentTournObj?.org1?.logo_url : currentLeagueObj?.org1?.logo_url) || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '85px', objectFit: 'contain', background: 'transparent' }} />
                         <img src="/x.png" crossOrigin="anonymous" style={{ height: '16px', objectFit: 'contain', opacity: 0.7, background: 'transparent' }} />
-                        <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain', background: 'transparent' }} />
+                        <img src={(isTourn ? currentTournObj?.org2?.logo_url : currentLeagueObj?.org2?.logo_url) || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '75px', objectFit: 'contain', background: 'transparent' }} />
                       </>
                     ) : (
                       <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '90px', objectFit: 'contain', background: 'transparent' }} />
@@ -967,10 +1116,18 @@ export default function Standings() {
                   </div>
 
                   <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-                    {currentLeagueObj?.logo_url ? (
-                      <img src={currentLeagueObj.logo_url} alt={selectedLeague} style={{ maxHeight: '95px', maxWidth: '380px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                    {isTourn ? (
+                      currentTournObj?.logo_url ? (
+                        <img src={currentTournObj.logo_url} alt={currentTournObj.name} style={{ maxHeight: '95px', maxWidth: '380px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                      ) : (
+                        <h2 style={{ color: '#fff', fontSize: '36px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>{currentTournObj?.name || 'TURNIR'}</h2>
+                      )
                     ) : (
-                      <h2 style={{ color: '#fff', fontSize: '36px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>{selectedLeague}</h2>
+                      currentLeagueObj?.logo_url ? (
+                        <img src={currentLeagueObj.logo_url} alt={selectedLeague} style={{ maxHeight: '95px', maxWidth: '380px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                      ) : (
+                        <h2 style={{ color: '#fff', fontSize: '36px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>{selectedLeague}</h2>
+                      )
                     )}
                   </div>
 
@@ -1015,7 +1172,7 @@ export default function Standings() {
                       
                       {/* Results */}
                       <div className="export-card">
-                        <div className="export-card-title">{displayRound}-TUR NATIJALARI</div>
+                        <div className="export-card-title">{isTourn ? 'OXIRGI O\'YINLAR NATIJALARI' : `${displayRound}-TUR NATIJALARI`}</div>
                         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '2px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px' }}>
                           {recentMatches.length === 0 ? (
                             <div style={{ textAlign: 'center', opacity: 0.6, fontSize: '13.5px', fontWeight: '600', padding: '16px 0', textTransform: 'uppercase' }}>NATIJALAR KIRITILMAGAN</div>
