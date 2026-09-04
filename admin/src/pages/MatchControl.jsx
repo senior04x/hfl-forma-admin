@@ -968,19 +968,11 @@ const MatchControl = () => {
   };
 
   // Quick Score Adjuster (+1 / -1).
-  // MUHIM: delta=+1 (gol qo'shilayotganda) endi shunchaki hisobni oshirish
-  // bilan CHEKLANMAYDI — match_events jadvaliga "muallifsiz" (player_id:
-  // null) gol voqeasi HAM to'g'ridan-to'g'ri qo'shiladi (record_match_event
-  // RPC ishlatilmaydi, chunki u p_player_id NULL bo'lishini qabul qilmaydi
-  // — bu yerda mobil admin ilovasidagi bilan bir xil yechim qo'llanildi).
-  // Bu, raqamsiz kiyimda o'ynagan futbolchining goli uchun ishlatilganda:
-  //   1) Match Detail sahifasida "JAMOA GOLI" sifatida ko'rinadi
-  //      (avval umuman event yaratilmagani uchun ko'rinmas edi).
-  //   2) OBS controller uni oddiy gol eventi kabi aniqlab, replay videoni
-  //      ANIQ shu event id'siga avtomatik biriktiradi (avval bu mumkin
-  //      emas edi, video hech narsaga bog'lanmay "etim" qolardi).
-  // delta<=0 holatida xatti-harakat o'zgarishsiz — faqat qo'lda tuzatish,
-  // hech qanday event yaratilmaydi/o'chirilmaydi.
+  // Tepadagi tablo tugmalari (+ / -) faqat match hisobini (home_score / away_score)
+  // to'g'ridan-to'g'ri o'zgartirish uchun mo'ljallangan.
+  // match_events jadvaliga muallifsiz bo'sh qator yozilmaydi (chunki player_id NOT NULL
+  // va statistikaga xalaqit bermasligi kerak). Haqiqiy gol o'yinchilar ro'yxatidagi
+  // yoki "Voqea qo'shish" tugmasi orqali kiritiladi.
   const adjustScore = async (teamType, delta) => {
     if (!match) return;
     const isHome = teamType === 'home';
@@ -993,7 +985,7 @@ const MatchControl = () => {
       [isHome ? 'home_score' : 'away_score']: newScore
     }));
 
-    // 1. Asosiy hisobni matches jadvalida yangilash
+    // Asosiy hisobni matches jadvalida yangilash
     const updatePayload = {
       [isHome ? 'home_score' : 'away_score']: newScore,
       updated_at: new Date().toISOString(),
@@ -1009,37 +1001,11 @@ const MatchControl = () => {
         console.error('adjustScore matches update error:', matchUpdateErr);
         setMatch(prev => ({ ...prev, [isHome ? 'home_score' : 'away_score']: currentScore }));
         alert("Hisobni saqlashda xatolik yuz berdi");
-        return;
       }
     } catch (err) {
       console.error('adjustScore matches catch error:', err);
       setMatch(prev => ({ ...prev, [isHome ? 'home_score' : 'away_score']: currentScore }));
       alert("Hisobni saqlashda xatolik yuz berdi");
-      return;
-    }
-
-    // 2. Agar gol qo'shilgan bo'lsa (delta > 0), match_events ga muallifsiz jamoa goli sifatida saqlash
-    if (delta > 0) {
-      const teamId = isHome ? match?.home_team_id : match?.away_team_id;
-      const minVal = getCurrentMinute();
-      try {
-        const { error: insertErr } = await supabase.from('match_events').insert([{
-          match_id: id,
-          team_id: teamId,
-          player_id: null,
-          event_type: 'goal',
-          type: 'goal',
-          minute: minVal,
-        }]);
-
-        if (insertErr) {
-          console.warn('adjustScore (jamoa goli) match_events ogohlantirish (hisob matches jadvalida saqlandi):', insertErr);
-        } else {
-          await fetchEvents();
-        }
-      } catch (e) {
-        console.warn('adjustScore (jamoa goli) event ogohlantirish:', e);
-      }
     }
   };
 
