@@ -245,14 +245,32 @@ export default function Standings() {
       if (matchesError) throw matchesError;
       setMatches(matchesData || []);
 
-      // Fetch Events (goals, assists, yellow cards, red cards)
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('match_events')
-        .select('id, event_type, player_id, team_id, match_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
-        .in('event_type', ['goal', 'assist', 'yellow_card', 'red_card']);
+      // Extract organization team IDs to only fetch relevant events (scalable to 100k+ events)
+      const targetTeamIds = (teamsData || []).map(t => t.id).filter(Boolean);
 
-      if (eventsError) throw eventsError;
-      setEvents(eventsData || []);
+      // Fetch Events (goals, assists, yellow cards, red cards) with pagination and team filter
+      let allEvents = [];
+      if (targetTeamIds.length > 0) {
+        let page = 0;
+        const PAGE_SIZE = 1000;
+        while (true) {
+          let eventsQuery = supabase
+            .from('match_events')
+            .select('id, event_type, player_id, team_id, match_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
+            .in('team_id', targetTeamIds)
+            .in('event_type', ['goal', 'assist', 'yellow_card', 'red_card'])
+            .order('id', { ascending: true })
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+          const { data: pageData, error: pageError } = await eventsQuery;
+          if (pageError) throw pageError;
+          if (!pageData || pageData.length === 0) break;
+          allEvents.push(...pageData);
+          if (pageData.length < PAGE_SIZE) break;
+          page++;
+        }
+      }
+      setEvents(allEvents);
 
     } catch (err) {
       console.error("Error fetching standings data:", err);

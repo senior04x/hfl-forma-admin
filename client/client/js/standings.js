@@ -25,14 +25,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (matchesError) throw matchesError;
         allMatchesData = matchesData;
 
-        // Fetch Match Events (goals and assists)
-        const { data: eventsData, error: eventsError } = await db
-            .from('match_events')
-            .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
-            .in('event_type', ['goal', 'assist']);
+        // Fetch Match Events (goals and assists) with pagination to exceed 1000 limit
+        let allEvents = [];
+        let page = 0;
+        const PAGE_SIZE = 1000;
+        while (true) {
+            const { data: pageData, error: pageError } = await db
+                .from('match_events')
+                .select('id, event_type, player_id, team_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
+                .in('event_type', ['goal', 'assist'])
+                .order('id', { ascending: true })
+                .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-        if (eventsError) throw eventsError;
-        allEventsData = eventsData;
+            if (pageError) throw pageError;
+            if (!pageData || pageData.length === 0) break;
+            allEvents.push(...pageData);
+            if (pageData.length < PAGE_SIZE) break;
+            page++;
+        }
+        allEventsData = allEvents;
 
         // Filter State
         let currentLeague = 'Super';
