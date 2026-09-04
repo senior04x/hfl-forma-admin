@@ -5,7 +5,6 @@ import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUti
 import { getActiveOrgTournaments, getTournamentLeagues, getTournamentTeams, getStageDisplayTitle } from '../utils/tournamentUtils';
 import { Download, Save, ShieldAlert, Upload, Sparkles, AlertCircle, X, Check, Trophy, Edit, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { buildPlayoffBracket } from '../utils/playoffBracketUtils';
 import './Standings.css';
 
 const DEFAULT_LEAGUE_LOGOS = {
@@ -93,9 +92,6 @@ export default function Standings() {
 
   const [savingPenalty, setSavingPenalty] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [tournamentSubTab, setTournamentSubTab] = useState('standings'); // 'standings' | 'bracket'
-  const [tournamentPlayoffMatches, setTournamentPlayoffMatches] = useState([]);
-  const bracketExportRef = useRef(null);
 
   const [mainSponsor, setMainSponsor] = useState(null);
   const [selectedSponsors, setSelectedSponsors] = useState([]);
@@ -333,30 +329,7 @@ export default function Standings() {
     setSelectedRound(defaultRound);
   }, [selectedLeague, teams, matches, viewMode]);
 
-  useEffect(() => {
-    if (viewMode === 'tournament' && selectedTournamentId) {
-      const fetchPlayoffs = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('matches')
-            .select('*, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)')
-            .eq('tournament_id', selectedTournamentId)
-            .in('stage', ['quarterfinal', 'semifinal', 'final'])
-            .order('id', { ascending: true });
-          if (!error && data) {
-            setTournamentPlayoffMatches(data);
-          }
-        } catch (e) {
-          console.warn('Error fetching playoff matches:', e);
-        }
-      };
-      fetchPlayoffs();
-    } else {
-      setTournamentPlayoffMatches([]);
-    }
-  }, [viewMode, selectedTournamentId]);
 
-  const bracketData = React.useMemo(() => buildPlayoffBracket(tournamentPlayoffMatches, teams), [tournamentPlayoffMatches, teams]);
 
   useEffect(() => {
     computeStandings();
@@ -671,8 +644,7 @@ export default function Standings() {
 
   const executeExport = async () => {
     const isTourn = viewMode === 'tournament';
-    const isBracket = isTourn && tournamentSubTab === 'bracket';
-    const targetRef = isBracket ? bracketExportRef.current : exportRef.current;
+    const targetRef = exportRef.current;
     if (!targetRef || isExporting) return;
     if (isTourn && !selectedTournamentId) {
       alert("Iltimos, eksport qilish uchun turnirni tanlang.");
@@ -688,7 +660,7 @@ export default function Standings() {
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       const targetName = (isTourn ? (selectedTournObj?.name || 'turnir') : selectedLeague).replace(/\s+/g, '_');
-      const targetSub = isBracket ? 'pley_off_tori' : (isTourn ? 'umumiy' : selectedRound);
+      const targetSub = isTourn ? 'turnir_jadvali' : selectedRound;
       link.download = `${targetSub}_${targetName}.png`;
       link.href = dataUrl;
       document.body.appendChild(link);
@@ -701,92 +673,6 @@ export default function Standings() {
       setIsExporting(false);
     }
   };
-
-  const renderWebBracketPill = (team, align = 'left', width = '100%') => {
-    if (!team) {
-      return (
-        <div style={{
-          width,
-          height: '42px',
-          borderRadius: '12px',
-          background: 'rgba(56, 189, 248, 0.08)',
-          border: '1px solid rgba(56, 189, 248, 0.25)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'rgba(255, 255, 255, 0.4)',
-          fontSize: '12px',
-          fontWeight: '700'
-        }}>
-          Kutilmoqda...
-        </div>
-      );
-    }
-
-    const isWinner = team.isWinner;
-    const isLoser = team.isLoser;
-
-    return (
-      <div style={{
-        width,
-        height: '42px',
-        borderRadius: '12px',
-        background: isWinner ? 'rgba(56, 189, 248, 0.32)' : isLoser ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.12)',
-        border: isWinner ? '2px solid #38BDF8' : isLoser ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(255, 255, 255, 0.22)',
-        opacity: isLoser ? 0.35 : 1,
-        display: 'flex',
-        flexDirection: align === 'right' ? 'row-reverse' : 'row',
-        alignItems: 'center',
-        padding: '0 8px',
-        gap: '8px',
-        boxSizing: 'border-box'
-      }}>
-        {team.logo_url ? (
-          <img src={team.logo_url} alt="" style={{ width: '28px', height: '28px', borderRadius: '14px', objectFit: 'contain', background: 'rgba(255,255,255,0.1)' }} onError={(e) => { e.target.style.display = 'none'; }} />
-        ) : (
-          <div style={{ width: '28px', height: '28px', borderRadius: '14px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: '900' }}>
-            {(team.name || '?')[0]}
-          </div>
-        )}
-        <span style={{
-          flex: 1,
-          color: isWinner ? '#38BDF8' : '#ffffff',
-          fontSize: '13px',
-          fontWeight: isWinner ? '900' : '800',
-          textAlign: align === 'right' ? 'right' : 'left',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}>
-          {team.name}
-        </span>
-        {team.score !== null && team.score !== undefined && (
-          <div style={{
-            minWidth: '24px',
-            height: '24px',
-            borderRadius: '6px',
-            background: isWinner ? '#38BDF8' : 'rgba(255,255,255,0.2)',
-            color: isWinner ? '#050c1f' : '#ffffff',
-            fontSize: '13px',
-            fontWeight: '900',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 4px'
-          }}>
-            {team.score}{team.penalty_score !== null && team.penalty_score !== undefined ? `(${team.penalty_score})` : ''}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderWebBracketMatchPair = (match, align = 'left', width = '100%') => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width }}>
-      {renderWebBracketPill(match?.team1, align, '100%')}
-      {renderWebBracketPill(match?.team2, align, '100%')}
-    </div>
-  );
 
   // Get dynamic rounds specifically for the active selected league
   const activeLeagueTeams = teams.filter(t => (t.league || '').includes(selectedLeague));
@@ -983,169 +869,17 @@ export default function Standings() {
           </div>
         </div>
 
-        {viewMode === 'tournament' && (
-          <div style={{ display: 'flex', gap: '10px', marginTop: '14px', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => setTournamentSubTab('standings')}
-              style={{
-                padding: '9px 18px',
-                borderRadius: '10px',
-                border: tournamentSubTab === 'standings' ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
-                background: tournamentSubTab === 'standings' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.04)',
-                color: tournamentSubTab === 'standings' ? '#60a5fa' : '#94a3b8',
-                fontWeight: '800',
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              📊 Guruh / Umumiy Jadval
-            </button>
-            <button
-              type="button"
-              onClick={() => setTournamentSubTab('bracket')}
-              style={{
-                padding: '9px 18px',
-                borderRadius: '10px',
-                border: tournamentSubTab === 'bracket' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
-                background: tournamentSubTab === 'bracket' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255,255,255,0.04)',
-                color: tournamentSubTab === 'bracket' ? '#38bdf8' : '#94a3b8',
-                fontWeight: '800',
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              ⚡ Pley-off To'ri (1/4 ➡️ Final)
-            </button>
-          </div>
-        )}
-
-        {/* 1x1 Poster Image Box & Buttons */}
-        <div className="poster-banner-section" style={{ justifyContent: 'flex-start' }}>
+        {/* Poster Image Box & Buttons */}
+        <div className="poster-banner-section" style={{ justifyContent: 'flex-start', marginTop: '14px' }}>
           <div style={{ display: 'flex', gap: '12px', width: '100%', flexWrap: 'wrap' }}>
             <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
-              <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : (viewMode === 'tournament' && tournamentSubTab === 'bracket' ? "Pley-off To'rini yuklab olish (PNG)" : 'Jadvalni yuklab olish')}</span>
+              <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish (PNG)'}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {viewMode === 'tournament' && tournamentSubTab === 'bracket' ? (
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          borderRadius: '16px',
-          padding: '24px',
-          overflowX: 'auto',
-          minHeight: '400px',
-          marginBottom: '32px'
-        }}>
-          {!bracketData.hasPlayoffMatches ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
-              <Trophy size={48} style={{ opacity: 0.4, marginBottom: '16px', color: '#38bdf8' }} />
-              <h3 style={{ color: '#fff', fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>Pley-off o'yinlari hali boshlanmagan</h3>
-              <p style={{ fontSize: '14px', maxWidth: '480px', margin: '0 auto' }}>Ushbu turnir uchun 1/4, 1/2 yoki Final bosqichidagi o'yinlar ro'yxatida "quarterfinal", "semifinal", "final" deb kiritilmagan.</p>
-            </div>
-          ) : (
-            <div style={{ minWidth: '960px' }}>
-              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                <h2 style={{ color: '#fff', fontSize: '24px', fontWeight: '900', letterSpacing: '3px', margin: 0, textTransform: 'uppercase' }}>
-                  Pley-off To'ri (1/4 ➡️ Final)
-                </h2>
-                <p style={{ color: '#38bdf8', fontSize: '14px', fontWeight: '700', marginTop: '6px' }}>
-                  {selectedTournObj?.name || 'Turnir'}
-                </p>
-              </div>
-
-              {/* Responsive Bracket Field on screen */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', padding: '20px 0' }}>
-                {/* 1. Left Wing */}
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', maxWidth: '340px' }}>
-                  {/* QF Column */}
-                  <div style={{ width: '190px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
-                    <div>
-                      <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px', fontWeight: '900', textAlign: 'center', marginBottom: '6px' }}>1/4 FINAL</div>
-                      {renderWebBracketMatchPair(bracketData.qf[0], 'left', '100%')}
-                    </div>
-                    <div>
-                      <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px', fontWeight: '900', textAlign: 'center', marginBottom: '6px' }}>1/4 FINAL</div>
-                      {renderWebBracketMatchPair(bracketData.qf[1], 'left', '100%')}
-                    </div>
-                  </div>
-
-                  {/* Connectors */}
-                  <div style={{ width: '30px', height: '220px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: '15px', height: '150px', borderTop: '2px solid rgba(56, 189, 248, 0.5)', borderBottom: '2px solid rgba(56, 189, 248, 0.5)', borderRight: '2px solid rgba(56, 189, 248, 0.5)', boxSizing: 'border-box' }} />
-                    <div style={{ position: 'absolute', right: 0, width: '15px', height: '2px', background: 'rgba(56, 189, 248, 0.5)' }} />
-                  </div>
-
-                  {/* SF1 Column */}
-                  <div style={{ width: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div style={{ color: '#38bdf8', fontSize: '14px', fontWeight: '900', textAlign: 'center', marginBottom: '6px' }}>1/2 FINAL</div>
-                    {renderWebBracketMatchPair(bracketData.sf[0], 'left', '100%')}
-                  </div>
-                </div>
-
-                {/* 2. Center Final */}
-                <div style={{ width: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: '80px', height: '80px', borderRadius: '40px', background: 'rgba(56, 189, 248, 0.12)', border: '2px solid rgba(56, 189, 248, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
-                    <Trophy size={42} color="#38bdf8" />
-                  </div>
-                  <div style={{ color: '#ffffff', fontSize: '22px', fontWeight: '900', letterSpacing: '3px', marginBottom: '14px' }}>FINAL</div>
-                  <div style={{ width: '100%' }}>
-                    {renderWebBracketMatchPair(bracketData.final, 'center', '100%')}
-                  </div>
-                  {bracketData.champion && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', padding: '8px 16px', borderRadius: '12px', background: 'rgba(255, 215, 0, 0.2)', border: '1.5px solid #ffd700' }}>
-                      <Trophy size={18} color="#ffd700" />
-                      <span style={{ color: '#ffd700', fontSize: '13px', fontWeight: '900', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                        Chempion: {bracketData.champion.name}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Right Wing */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'row-reverse', alignItems: 'center', maxWidth: '340px' }}>
-                  {/* QF Column */}
-                  <div style={{ width: '190px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
-                    <div>
-                      <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px', fontWeight: '900', textAlign: 'center', marginBottom: '6px' }}>1/4 FINAL</div>
-                      {renderWebBracketMatchPair(bracketData.qf[2], 'right', '100%')}
-                    </div>
-                    <div>
-                      <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px', fontWeight: '900', textAlign: 'center', marginBottom: '6px' }}>1/4 FINAL</div>
-                      {renderWebBracketMatchPair(bracketData.qf[3], 'right', '100%')}
-                    </div>
-                  </div>
-
-                  {/* Connectors */}
-                  <div style={{ width: '30px', height: '220px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: '15px', height: '150px', borderTop: '2px solid rgba(56, 189, 248, 0.5)', borderBottom: '2px solid rgba(56, 189, 248, 0.5)', borderLeft: '2px solid rgba(56, 189, 248, 0.5)', boxSizing: 'border-box' }} />
-                    <div style={{ position: 'absolute', left: 0, width: '15px', height: '2px', background: 'rgba(56, 189, 248, 0.5)' }} />
-                  </div>
-
-                  {/* SF2 Column */}
-                  <div style={{ width: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div style={{ color: '#38bdf8', fontSize: '14px', fontWeight: '900', textAlign: 'center', marginBottom: '6px' }}>1/2 FINAL</div>
-                    {renderWebBracketMatchPair(bracketData.sf[1], 'right', '100%')}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="admin-table-container">
+      <div className="admin-table-container">
           <table className="admin-table">
             <thead>
               <tr>
@@ -1211,7 +945,6 @@ export default function Standings() {
             </tbody>
           </table>
         </div>
-      )}
 
       {/* STANDINGS EDIT OVERRIDE MODAL */}
       {editingTeam && (
@@ -1330,6 +1063,354 @@ export default function Standings() {
           const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
           const currentTournObj = tournaments.find(t => String(t.id) === String(selectedTournamentId));
           const isCollab = isTourn ? currentTournObj?.isCollab : currentLeagueObj?.isCollab;
+
+          if (isTourn) {
+            const teamCount = standings.length;
+            // Dynamic canvas height up to 1920 (9:16 aspect ratio)
+            let canvasHeight = 1080;
+            if (teamCount > 30) canvasHeight = 1920;
+            else if (teamCount > 22) canvasHeight = 1680;
+            else if (teamCount > 15) canvasHeight = 1440;
+            else if (teamCount > 10) canvasHeight = 1260;
+            else canvasHeight = 1080;
+
+            const availTableHeight = canvasHeight - 270;
+            const computedRowHeight = Math.max(26, Math.min(52, Math.floor(availTableHeight / Math.max(1, teamCount))));
+            const tFontSize = teamCount > 35 ? '13px' : teamCount > 24 ? '15px' : teamCount > 16 ? '17px' : '19px';
+            const tLogoSize = teamCount > 35 ? '20px' : teamCount > 24 ? '24px' : teamCount > 16 ? '28px' : '34px';
+
+            let zone1Limit = 8;
+            let zone2Limit = 24;
+            let zone1Label = '1\\8 FINAL';
+            let zone2Label = '1\\16 FINAL';
+            let zone3Label = 'TURNIRNI TARK ETADIGANLAR';
+
+            if (teamCount < 16) {
+              zone1Limit = 4;
+              zone2Limit = 8;
+              zone1Label = '1\\4 FINAL';
+              zone2Label = 'PLEY-OFF';
+            } else if (teamCount < 24) {
+              zone1Limit = 4;
+              zone2Limit = 12;
+              zone1Label = '1\\4 FINAL';
+              zone2Label = '1\\8 FINAL';
+            }
+
+            const orgName = (currentOrg?.name || 'AMATORA').toUpperCase();
+            const tournName = (currentTournObj?.name || 'TURNIR').toUpperCase();
+
+            return (
+              <div
+                ref={exportRef}
+                style={{
+                  width: '1080px',
+                  height: `${canvasHeight}px`,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  background: activeExportBg
+                    ? `linear-gradient(rgba(8, 12, 22, 0.88), rgba(6, 9, 18, 0.94)), url(${activeExportBg}) center/cover no-repeat`
+                    : 'radial-gradient(ellipse at 50% 0%, #0d1e3d 0%, #060a12 75%)',
+                  color: '#ffffff',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  boxSizing: 'border-box',
+                  padding: '24px 32px'
+                }}
+              >
+                {/* Top Header */}
+                <div style={{ height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '10px' }}>
+                  {/* Left Emblem */}
+                  <div style={{ width: '220px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {isCollab ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <img src={currentTournObj?.org1?.logo_url || currentOrg?.logo_url || '/logo-for-jadval.png'} alt="" style={{ height: '65px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                        <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 'bold' }}>✕</span>
+                        <img src={currentTournObj?.org2?.logo_url || '/llf-logo.png'} alt="" style={{ height: '55px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                      </div>
+                    ) : (
+                      <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt="" style={{ maxHeight: '75px', maxWidth: '200px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                    )}
+                  </div>
+
+                  {/* Center: Tournament Logo / Title */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    {currentTournObj?.logo_url ? (
+                      <img src={currentTournObj.logo_url} alt="" style={{ maxHeight: '85px', maxWidth: '420px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                    ) : (
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '14px', color: '#94a3b8', fontWeight: '800', letterSpacing: '3px' }}>{orgName}</div>
+                        <div style={{ fontSize: '30px', color: '#ffffff', fontWeight: '900', letterSpacing: '2px', textTransform: 'uppercase' }}>{tournName}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Brand / Media Logo */}
+                  <div style={{ width: '220px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    {mainSponsorLogo ? (
+                      <img src={mainSponsorLogo} alt="" style={{ maxHeight: '70px', maxWidth: '200px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                    ) : (
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '18px', fontWeight: '900', color: '#ffffff', letterSpacing: '1px' }}>{orgName}</div>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#38bdf8', letterSpacing: '2px' }}>MEDIA</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Center Section: Left Rotated Title + Table + Right Zone Labels */}
+                <div style={{ flex: 1, display: 'flex', gap: '16px', alignItems: 'stretch', minHeight: 0 }}>
+                  
+                  {/* Left Vertical Column with Rotated Title */}
+                  <div style={{
+                    width: '65px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    backdropFilter: 'blur(16px)',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    padding: '10px 0'
+                  }}>
+                    <div style={{
+                      writingMode: 'vertical-rl',
+                      transform: 'rotate(180deg)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '14px',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#94a3b8', letterSpacing: '3px' }}>
+                        {orgName} {tournName}
+                      </span>
+                      <span style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', letterSpacing: '4px' }}>
+                        TURNIR JADVALI
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Center Table Container */}
+                  <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: 'rgba(255, 255, 255, 0.035)',
+                    backdropFilter: 'blur(20px)',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Table Header */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      background: 'rgba(255, 255, 255, 0.07)',
+                      padding: '10px 14px',
+                      borderBottom: '2px solid rgba(255, 255, 255, 0.15)',
+                      fontSize: tFontSize,
+                      fontWeight: '900',
+                      color: '#ffffff'
+                    }}>
+                      <div style={{ width: '40px', textAlign: 'center' }}>#</div>
+                      <div style={{ flex: 1, paddingLeft: '12px' }}>JAMOALAR</div>
+                      <div style={{ width: '68px', textAlign: 'center' }}>O'YIN</div>
+                      <div style={{ width: '68px', textAlign: 'center' }}>T/N</div>
+                      <div style={{ width: '74px', textAlign: 'center' }}>OCHKO</div>
+                    </div>
+
+                    {/* Table Body */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      {standings.map((t, idx) => {
+                        const rank = idx + 1;
+                        const isZone1End = rank === zone1Limit;
+                        const isZone2End = rank === zone2Limit;
+                        const inZone1 = rank <= zone1Limit;
+                        const inZone2 = rank > zone1Limit && rank <= zone2Limit;
+
+                        let borderBottomStyle = '1px solid rgba(255, 255, 255, 0.04)';
+                        if (isZone1End && rank < teamCount) {
+                          borderBottomStyle = '2.5px solid #22c55e';
+                        } else if (isZone2End && rank < teamCount) {
+                          borderBottomStyle = '2.5px solid #ef4444';
+                        }
+
+                        let rowBg = idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'transparent';
+                        if (inZone1) rowBg = 'rgba(34, 197, 94, 0.04)';
+                        else if (inZone2) rowBg = 'rgba(56, 189, 248, 0.03)';
+
+                        return (
+                          <div
+                            key={t.id || idx}
+                            style={{
+                              height: `${computedRowHeight}px`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '0 14px',
+                              background: rowBg,
+                              borderBottom: borderBottomStyle,
+                              boxSizing: 'border-box',
+                              fontSize: tFontSize
+                            }}
+                          >
+                            <div style={{
+                              width: '40px',
+                              textAlign: 'center',
+                              fontWeight: '900',
+                              color: inZone1 ? '#22c55e' : (inZone2 ? '#38bdf8' : '#cbd5e1')
+                            }}>
+                              {rank}
+                            </div>
+
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', paddingLeft: '12px', minWidth: 0, gap: '10px' }}>
+                              {t.logo_url ? (
+                                <img
+                                  src={t.logo_url}
+                                  alt=""
+                                  crossOrigin="anonymous"
+                                  style={{ width: tLogoSize, height: tLogoSize, borderRadius: '50%', objectFit: 'contain', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}
+                                  onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                              ) : (
+                                <div style={{ width: tLogoSize, height: tLogoSize, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: '900', flexShrink: 0 }}>
+                                  {(t.name || '?')[0]}
+                                </div>
+                              )}
+                              <span style={{
+                                color: '#ffffff',
+                                fontWeight: '800',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.3px',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}>
+                                {t.name}
+                              </span>
+                            </div>
+
+                            <div style={{ width: '68px', textAlign: 'center', color: '#e2e8f0', fontWeight: '700' }}>
+                              {t.played ?? 0}
+                            </div>
+
+                            <div style={{ width: '68px', textAlign: 'center', color: (t.gd > 0 ? '#38bdf8' : t.gd < 0 ? '#f87171' : '#cbd5e1'), fontWeight: '800' }}>
+                              {t.gd ?? 0}
+                            </div>
+
+                            <div style={{ width: '74px', textAlign: 'center', color: '#ffffff', fontWeight: '900' }}>
+                              {t.points ?? 0}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Right Side Column with Bracket Zone Labels */}
+                  <div style={{
+                    width: '46px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    backdropFilter: 'blur(16px)',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Zone 1 Label: 1\8 FINAL */}
+                    <div style={{
+                      flex: Math.min(zone1Limit, teamCount),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderBottom: teamCount > zone1Limit ? '2px solid #22c55e' : 'none',
+                      background: 'rgba(34, 197, 94, 0.08)'
+                    }}>
+                      <span style={{
+                        writingMode: 'vertical-rl',
+                        transform: 'rotate(180deg)',
+                        fontSize: '13px',
+                        fontWeight: '900',
+                        color: '#22c55e',
+                        letterSpacing: '3px',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {zone1Label}
+                      </span>
+                    </div>
+
+                    {/* Zone 2 Label: 1\16 FINAL */}
+                    {teamCount > zone1Limit && (
+                      <div style={{
+                        flex: Math.min(zone2Limit - zone1Limit, Math.max(0, teamCount - zone1Limit)),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderBottom: teamCount > zone2Limit ? '2px solid #ef4444' : 'none',
+                        background: 'rgba(56, 189, 248, 0.06)'
+                      }}>
+                        <span style={{
+                          writingMode: 'vertical-rl',
+                          transform: 'rotate(180deg)',
+                          fontSize: '13px',
+                          fontWeight: '900',
+                          color: '#38bdf8',
+                          letterSpacing: '3px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {zone2Label}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Zone 3 Label: TURNIRNI TARK ETADIGANLAR */}
+                    {teamCount > zone2Limit && (
+                      <div style={{
+                        flex: Math.max(0, teamCount - zone2Limit),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(239, 68, 68, 0.08)'
+                      }}>
+                        <span style={{
+                          writingMode: 'vertical-rl',
+                          transform: 'rotate(180deg)',
+                          fontSize: '12px',
+                          fontWeight: '900',
+                          color: '#ef4444',
+                          letterSpacing: '3px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {zone3Label}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bottom Social Handle */}
+                <div style={{ height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '10px' }}>
+                  <div style={{
+                    padding: '6px 20px',
+                    borderRadius: '20px',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#cbd5e1',
+                    fontSize: '13.5px',
+                    fontWeight: '800',
+                    letterSpacing: '1px'
+                  }}>
+                    @{((currentOrg?.name || selectedTournObj?.name || 'amatora')).toLowerCase().replace(/\s+/g, '_')}
+                  </div>
+                </div>
+              </div>
+            );
+          }
 
           const teamCount = standings.length;
           let rowPadding = '10px 14px';
@@ -1644,147 +1725,6 @@ export default function Standings() {
             </div>
           );
         })()}
-
-        {/* 1080x1080 Playoff Bracket Export Canvas */}
-        <div 
-          ref={bracketExportRef}
-          style={{
-            width: '1080px',
-            height: '1080px',
-            background: activeExportBg
-              ? `linear-gradient(rgba(5, 12, 31, 0.88), rgba(5, 12, 31, 0.94)), url(${activeExportBg})`
-              : 'linear-gradient(135deg, #050c1f 0%, #0a1931 50%, #050c1f 100%)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            padding: '36px 36px 24px 36px',
-            boxSizing: 'border-box',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            fontFamily: "'Inter', sans-serif",
-            color: '#ffffff'
-          }}
-        >
-          {/* Top Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100px', borderBottom: '1px solid rgba(255, 255, 255, 0.15)', paddingBottom: '12px' }}>
-            <div style={{ width: '220px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-              {mainSponsor?.logo_url ? (
-                <img src={mainSponsor.logo_url} crossOrigin="anonymous" alt="" style={{ height: '50px', maxWidth: '180px', objectFit: 'contain' }} />
-              ) : currentOrg?.logo_url ? (
-                <img src={currentOrg.logo_url} crossOrigin="anonymous" alt="" style={{ height: '55px', maxWidth: '180px', objectFit: 'contain' }} />
-              ) : (
-                <div style={{ color: '#00FF66', fontSize: '24px', fontWeight: '900', letterSpacing: '1.5px' }}>AMATORA</div>
-              )}
-            </div>
-
-            <div style={{ textAlign: 'center', flex: 1 }}>
-              <div style={{ color: '#ffffff', fontSize: '32px', fontWeight: '900', letterSpacing: '4px', textTransform: 'uppercase' }}>
-                TURNIR JADVALI
-              </div>
-              <div style={{ color: '#38BDF8', fontSize: '16px', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>
-                {selectedTournObj?.name || 'CHAMPIONS LEAGUE'}
-              </div>
-            </div>
-
-            <div style={{ width: '220px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-              {selectedTournObj?.logo_url ? (
-                <img src={selectedTournObj.logo_url} crossOrigin="anonymous" alt="" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
-              ) : currentOrg?.logo_url ? (
-                <img src={currentOrg.logo_url} crossOrigin="anonymous" alt="" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
-              ) : (
-                <div style={{ width: '64px', height: '64px', borderRadius: '32px', background: 'rgba(56, 189, 248, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Trophy size={32} color="#38BDF8" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Main Bracket Field (Left Wing, Center Final, Right Wing) */}
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '14px 0' }}>
-            {/* 1. LEFT WING (QF1, QF2 -> SF1) */}
-            <div style={{ width: '340px', height: '680px', display: 'flex', alignItems: 'center' }}>
-              {/* QF Column */}
-              <div style={{ width: '190px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
-                <div>
-                  <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '16px', fontWeight: '900', textAlign: 'center', marginBottom: '8px', letterSpacing: '1px' }}>1/4</div>
-                  {renderWebBracketMatchPair(bracketData.qf[0], 'left', '190px')}
-                </div>
-                <div>
-                  <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '16px', fontWeight: '900', textAlign: 'center', marginBottom: '8px', letterSpacing: '1px' }}>1/4</div>
-                  {renderWebBracketMatchPair(bracketData.qf[1], 'left', '190px')}
-                </div>
-              </div>
-
-              {/* Connector lines Left */}
-              <div style={{ width: '30px', height: '380px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: '15px', height: '260px', borderTop: '2px solid rgba(56, 189, 248, 0.5)', borderBottom: '2px solid rgba(56, 189, 248, 0.5)', borderRight: '2px solid rgba(56, 189, 248, 0.5)', boxSizing: 'border-box' }} />
-                <div style={{ position: 'absolute', right: 0, width: '15px', height: '2px', background: 'rgba(56, 189, 248, 0.5)' }} />
-              </div>
-
-              {/* SF1 Column */}
-              <div style={{ width: '120px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ color: '#38BDF8', fontSize: '16px', fontWeight: '900', textAlign: 'center', marginBottom: '8px', letterSpacing: '1px' }}>1/2</div>
-                {renderWebBracketMatchPair(bracketData.sf[0], 'left', '120px')}
-              </div>
-            </div>
-
-            {/* 2. CENTER FINAL (Trophy + Final Match) */}
-            <div style={{ width: '280px', height: '680px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: '120px', height: '120px', borderRadius: '60px', background: 'rgba(56, 189, 248, 0.12)', border: '2px solid rgba(56, 189, 248, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
-                <Trophy size={72} color="#38BDF8" />
-              </div>
-              <div style={{ color: '#ffffff', fontSize: '26px', fontWeight: '900', letterSpacing: '4px', marginBottom: '16px' }}>
-                FINAL
-              </div>
-              <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-                {renderWebBracketMatchPair(bracketData.final, 'center', '240px')}
-              </div>
-
-              {bracketData.champion && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', padding: '8px 16px', borderRadius: '14px', background: 'rgba(255, 215, 0, 0.2)', border: '1.5px solid #FFD700' }}>
-                  <Trophy size={20} color="#FFD700" />
-                  <span style={{ color: '#FFD700', fontSize: '15px', fontWeight: '900', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                    Chempion: {bracketData.champion.name}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* 3. RIGHT WING (SF2 <- QF3, QF4) */}
-            <div style={{ width: '340px', height: '680px', display: 'flex', flexDirection: 'row-reverse', alignItems: 'center' }}>
-              {/* QF Column */}
-              <div style={{ width: '190px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
-                <div>
-                  <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '16px', fontWeight: '900', textAlign: 'center', marginBottom: '8px', letterSpacing: '1px' }}>1/4</div>
-                  {renderWebBracketMatchPair(bracketData.qf[2], 'right', '190px')}
-                </div>
-                <div>
-                  <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '16px', fontWeight: '900', textAlign: 'center', marginBottom: '8px', letterSpacing: '1px' }}>1/4</div>
-                  {renderWebBracketMatchPair(bracketData.qf[3], 'right', '190px')}
-                </div>
-              </div>
-
-              {/* Connector lines Right */}
-              <div style={{ width: '30px', height: '380px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: '15px', height: '260px', borderTop: '2px solid rgba(56, 189, 248, 0.5)', borderBottom: '2px solid rgba(56, 189, 248, 0.5)', borderLeft: '2px solid rgba(56, 189, 248, 0.5)', boxSizing: 'border-box' }} />
-                <div style={{ position: 'absolute', left: 0, width: '15px', height: '2px', background: 'rgba(56, 189, 248, 0.5)' }} />
-              </div>
-
-              {/* SF2 Column */}
-              <div style={{ width: '120px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ color: '#38BDF8', fontSize: '16px', fontWeight: '900', textAlign: 'center', marginBottom: '8px', letterSpacing: '1px' }}>1/2</div>
-                {renderWebBracketMatchPair(bracketData.sf[1], 'right', '120px')}
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Footer */}
-          <div style={{ height: '50px', borderTop: '1px solid rgba(255, 255, 255, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-            <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '16px', fontWeight: '800', letterSpacing: '1px' }}>
-              @{((currentOrg?.name || selectedTournObj?.name || 'havas_football')).toLowerCase().replace(/\s+/g, '_')}
-            </span>
-          </div>
-        </div>
       </div>
 
     </div>
