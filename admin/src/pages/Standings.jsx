@@ -742,7 +742,7 @@ export default function Standings() {
 
   const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
   const currentLeagueBg = currentLeagueObj?.export_bg_url || getLeagueBgForOrg(orgId, selectedLeague);
-  const currentTournBg = selectedTournObj?.bg_url || selectedTournObj?.banner_url;
+  const currentTournBg = selectedTournObj?.export_bg_url || selectedTournObj?.bg_image || selectedTournObj?.bg_url || selectedTournObj?.banner_url;
   const activeExportBg = viewMode === 'tournament' ? currentTournBg : currentLeagueBg;
 
   if (loading) {
@@ -1097,41 +1097,25 @@ export default function Standings() {
           const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
           const currentTournObj = tournaments.find(t => String(t.id) === String(selectedTournamentId));
           const parsedTourn = parseTournamentTier(currentTournObj);
-          const tournColor = parsedTourn.color || '#38bdf8';
+          const tournColor = parsedTourn.color || (parsedTourn.tier === 2 ? '#38bdf8' : '#22c55e');
           const isCollab = isTourn ? currentTournObj?.isCollab : currentLeagueObj?.isCollab;
 
           if (isTourn) {
             const teamCount = standings.length;
-            // Dynamic canvas height up to 1920 (9:16 aspect ratio)
-            let canvasHeight = 1080;
-            if (teamCount > 30) canvasHeight = 1920;
-            else if (teamCount > 22) canvasHeight = 1680;
-            else if (teamCount > 15) canvasHeight = 1440;
-            else if (teamCount > 10) canvasHeight = 1260;
-            else canvasHeight = 1080;
-
-            const availTableHeight = canvasHeight - 270;
-            const computedRowHeight = Math.max(26, Math.min(52, Math.floor(availTableHeight / Math.max(1, teamCount))));
-            const tFontSize = teamCount > 35 ? '13px' : teamCount > 24 ? '15px' : teamCount > 16 ? '17px' : '19px';
+            const canvasHeight = 1920;
+            const tFontSize = teamCount > 35 ? '13.5px' : teamCount > 24 ? '15px' : teamCount > 16 ? '16.5px' : '18px';
             const tLogoSize = teamCount > 35 ? '20px' : teamCount > 24 ? '24px' : teamCount > 16 ? '28px' : '34px';
+            const tournRowHeight = teamCount > 35 ? 31 : teamCount > 24 ? 33 : teamCount > 16 ? 38 : 44;
+            const tournTableWidth = 710;
+            const tournStatsWidth = 184;
+            const tournBracketWidth = 54;
+            const tournLeftBlockWidth = tournTableWidth - tournStatsWidth - tournBracketWidth; // 472px
 
-            let zone1Limit = 8;
-            let zone2Limit = 24;
-            let zone1Label = '1\\8 FINAL';
-            let zone2Label = '1\\16 FINAL';
-            let zone3Label = 'TURNIRNI TARK ETADIGANLAR';
-
-            if (teamCount < 16) {
-              zone1Limit = 4;
-              zone2Limit = 8;
-              zone1Label = '1\\4 FINAL';
-              zone2Label = 'PLEY-OFF';
-            } else if (teamCount < 24) {
-              zone1Limit = 4;
-              zone2Limit = 12;
-              zone1Label = '1\\4 FINAL';
-              zone2Label = '1\\8 FINAL';
-            }
+            const zone1Limit = 8;
+            const zone2Limit = 24;
+            const zone1Label = '1\\8 FINAL';
+            const zone2Label = '1\\16 FINAL';
+            const zone3Label = 'TURNIRNI TARK ETADIGANLAR';
 
             const orgName = (currentOrg?.name || 'AMATORA').toUpperCase();
             const tournName = (currentTournObj?.name || 'TURNIR').toUpperCase();
@@ -1147,38 +1131,45 @@ export default function Standings() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
+                  alignItems: 'center',
                   background: activeExportBg
-                    ? `linear-gradient(rgba(8, 12, 22, 0.88), rgba(6, 9, 18, 0.94)), url(${activeExportBg}) center/cover no-repeat`
-                    : 'radial-gradient(ellipse at 50% 0%, #0d1e3d 0%, #060a12 75%)',
+                    ? `linear-gradient(rgba(3, 7, 24, 0.55), rgba(3, 7, 24, 0.70)), url(${activeExportBg}) center/cover no-repeat`
+                    : 'radial-gradient(ellipse at 50% 0%, #0c1844 0%, #030718 75%)',
                   color: '#ffffff',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
                   boxSizing: 'border-box',
-                  padding: '24px 32px'
+                  padding: '24px 28px'
                 }}
               >
                 {/* Top Header */}
-                <div style={{ height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '10px' }}>
+                <div style={{ height: '115px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', width: '1024px' }}>
                   {/* Left Emblem */}
                   <div style={{ width: '220px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {isCollab ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <img src={currentTournObj?.org1?.logo_url || currentOrg?.logo_url || '/logo-for-jadval.png'} alt="" style={{ height: '65px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                        <img src={currentTournObj?.org1?.logo_url || currentOrg?.logo_url || '/logo-for-jadval.png'} alt="" style={{ height: '70px', objectFit: 'contain' }} crossOrigin="anonymous" />
                         <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 'bold' }}>✕</span>
-                        <img src={currentTournObj?.org2?.logo_url || '/llf-logo.png'} alt="" style={{ height: '55px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                        <img src={currentTournObj?.org2?.logo_url || '/llf-logo.png'} alt="" style={{ height: '60px', objectFit: 'contain' }} crossOrigin="anonymous" />
                       </div>
                     ) : (
-                      <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt="" style={{ maxHeight: '75px', maxWidth: '200px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                      currentOrg?.logo_url ? (
+                        <img src={currentOrg.logo_url} alt="" style={{ maxHeight: '85px', maxWidth: '200px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '24px', fontWeight: '900', letterSpacing: '1px' }}>AMATORA</span>
+                        </div>
+                      )
                     )}
                   </div>
 
                   {/* Center: Tournament Logo / Title */}
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     {currentTournObj?.logo_url ? (
-                      <img src={currentTournObj.logo_url} alt="" style={{ maxHeight: '85px', maxWidth: '420px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                      <img src={currentTournObj.logo_url} alt="" style={{ maxHeight: '90px', maxWidth: '420px', objectFit: 'contain' }} crossOrigin="anonymous" />
                     ) : (
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '14px', color: '#94a3b8', fontWeight: '800', letterSpacing: '3px' }}>{orgName}</div>
-                        <div style={{ fontSize: '30px', color: '#ffffff', fontWeight: '900', letterSpacing: '2px', textTransform: 'uppercase' }}>{tournName}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', color: tournColor, fontWeight: '800', letterSpacing: '3px' }}>{orgName}</span>
+                        <span style={{ fontSize: '26px', color: '#ffffff', fontWeight: '900', letterSpacing: '2px', textTransform: 'uppercase' }}>{tournName}</span>
                       </div>
                     )}
                   </div>
@@ -1186,262 +1177,342 @@ export default function Standings() {
                   {/* Right Brand / Media Logo */}
                   <div style={{ width: '220px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                     {mainSponsorLogo ? (
-                      <img src={mainSponsorLogo} alt="" style={{ maxHeight: '70px', maxWidth: '200px', objectFit: 'contain' }} crossOrigin="anonymous" />
+                      <img src={mainSponsorLogo} alt="" style={{ maxHeight: '75px', maxWidth: '200px', objectFit: 'contain' }} crossOrigin="anonymous" />
                     ) : (
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '18px', fontWeight: '900', color: '#ffffff', letterSpacing: '1px' }}>{orgName}</div>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#38bdf8', letterSpacing: '2px' }}>MEDIA</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <span style={{ fontSize: '19px', fontWeight: '900', color: '#ffffff', letterSpacing: '1px' }}>{orgName}</span>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: tournColor, letterSpacing: '2px' }}>FUTBOL MEDIA</span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Center Section: Left Rotated Title + Table + Right Zone Labels */}
-                <div style={{ flex: 1, display: 'flex', gap: '16px', alignItems: 'stretch', minHeight: 0 }}>
+                {/* Center Section: Left Rotated Title + Compact Table & Right Zone Column */}
+                <div style={{
+                  width: '1024px',
+                  display: 'flex',
+                  gap: '16px',
+                  alignItems: 'flex-start',
+                  justifyContent: 'flex-start',
+                  paddingLeft: '20px'
+                }}>
                   
-                  {/* Left Vertical Column with Rotated Title */}
+                  {/* Left Column with Rotated Title (Side-by-side parallel lines) */}
                   <div style={{
-                    width: '65px',
+                    width: '95px',
+                    height: `${Math.min(zone2Limit, teamCount) * tournRowHeight}px`,
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    backdropFilter: 'blur(16px)',
-                    borderRadius: '14px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    padding: '10px 0'
+                    position: 'relative'
                   }}>
                     <div style={{
-                      writingMode: 'vertical-rl',
-                      transform: 'rotate(180deg)',
+                      width: `${Math.min(640, (Math.min(zone2Limit, teamCount) * tournRowHeight) - 10)}px`,
+                      height: '95px',
+                      position: 'absolute',
+                      transform: 'rotate(-90deg)',
                       display: 'flex',
-                      alignItems: 'center',
+                      flexDirection: 'column',
                       justifyContent: 'center',
-                      gap: '14px',
-                      whiteSpace: 'nowrap'
+                      alignItems: 'center',
+                      gap: '8px'
                     }}>
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: tournColor, letterSpacing: '3px' }}>
-                        {orgName} {tournName}
+                      <span style={{
+                        fontSize: '16.5px',
+                        fontWeight: '800',
+                        color: tournColor,
+                        letterSpacing: '7.5px',
+                        textTransform: 'uppercase',
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {`${orgName} ${tournName.includes('LIGA') ? tournName : `${tournName} LIGASI`}`}
                       </span>
-                      <span style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', letterSpacing: '4px' }}>
+                      <span style={{
+                        fontSize: '56px',
+                        fontWeight: '900',
+                        color: '#ffffff',
+                        letterSpacing: '4.5px',
+                        textTransform: 'uppercase',
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap'
+                      }}>
                         TURNIR JADVALI
                       </span>
                     </div>
                   </div>
 
-                  {/* Center Table Container */}
+                  {/* Unified Table + Bracket Container */}
                   <div style={{
-                    flex: 1,
+                    width: `${tournTableWidth}px`,
                     display: 'flex',
                     flexDirection: 'column',
-                    background: 'rgba(255, 255, 255, 0.035)',
-                    backdropFilter: 'blur(20px)',
-                    borderRadius: '16px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    borderRadius: '4px'
                   }}>
-                    {/* Table Header */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      background: 'rgba(255, 255, 255, 0.07)',
-                      padding: '10px 14px',
-                      borderBottom: '2px solid rgba(255, 255, 255, 0.15)',
-                      fontSize: tFontSize,
-                      fontWeight: '900',
-                      color: '#ffffff'
-                    }}>
-                      <div style={{ width: '40px', textAlign: 'center' }}>#</div>
-                      <div style={{ flex: 1, paddingLeft: '12px' }}>JAMOALAR</div>
-                      <div style={{ width: '68px', textAlign: 'center' }}>O'YIN</div>
-                      <div style={{ width: '68px', textAlign: 'center' }}>T/N</div>
-                      <div style={{ width: '74px', textAlign: 'center' }}>OCHKO</div>
-                    </div>
-
-                    {/* Table Body */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                      {standings.map((t, idx) => {
-                        const rank = idx + 1;
-                        const isZone1End = rank === zone1Limit;
-                        const isZone2End = rank === zone2Limit;
-                        const inZone1 = rank <= zone1Limit;
-                        const inZone2 = rank > zone1Limit && rank <= zone2Limit;
-
-                        let borderBottomStyle = '1px solid rgba(255, 255, 255, 0.04)';
-                        if (isZone1End && rank < teamCount) {
-                          borderBottomStyle = `2.5px solid ${tournColor}`;
-                        } else if (isZone2End && rank < teamCount) {
-                          borderBottomStyle = '2.5px solid #ef4444';
-                        }
-
-                        let rowBg = idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'transparent';
-                        if (inZone1) rowBg = `${tournColor}14`;
-                        else if (inZone2) rowBg = 'rgba(56, 189, 248, 0.03)';
-
-                        return (
-                          <div
-                            key={t.id || idx}
-                            style={{
-                              height: `${computedRowHeight}px`,
-                              display: 'flex',
-                              alignItems: 'center',
-                              padding: '0 14px',
-                              background: rowBg,
-                              borderBottom: borderBottomStyle,
-                              boxSizing: 'border-box',
-                              fontSize: tFontSize
-                            }}
-                          >
-                            <div style={{
-                              width: '40px',
-                              textAlign: 'center',
-                              fontWeight: '900',
-                              color: inZone1 ? tournColor : (inZone2 ? '#38bdf8' : '#cbd5e1')
-                            }}>
-                              {rank}
-                            </div>
-
-                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', paddingLeft: '12px', minWidth: 0, gap: '10px' }}>
-                              {t.logo_url ? (
-                                <img
-                                  src={t.logo_url}
-                                  alt=""
-                                  crossOrigin="anonymous"
-                                  style={{ width: tLogoSize, height: tLogoSize, borderRadius: '50%', objectFit: 'contain', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}
-                                  onError={(e) => { e.target.style.display = 'none'; }}
-                                />
-                              ) : (
-                                <div style={{ width: tLogoSize, height: tLogoSize, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: '900', flexShrink: 0 }}>
-                                  {(t.name || '?')[0]}
-                                </div>
-                              )}
-                              <span style={{
-                                color: '#ffffff',
-                                fontWeight: '800',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.3px',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                              }}>
-                                {t.name}
-                              </span>
-                            </div>
-
-                            <div style={{ width: '68px', textAlign: 'center', color: '#e2e8f0', fontWeight: '700' }}>
-                              {t.played ?? 0}
-                            </div>
-
-                            <div style={{ width: '68px', textAlign: 'center', color: (t.gd > 0 ? '#38bdf8' : t.gd < 0 ? '#f87171' : '#cbd5e1'), fontWeight: '800' }}>
-                              {t.gd ?? 0}
-                            </div>
-
-                            <div style={{ width: '74px', textAlign: 'center', color: '#ffffff', fontWeight: '900' }}>
-                              {t.points ?? 0}
-                            </div>
+                    <div style={{ display: 'flex', width: `${tournTableWidth}px` }}>
+                      {/* Table Container */}
+                      <div style={{
+                        width: `${tournTableWidth - tournBracketWidth}px`,
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}>
+                        {/* Table Header */}
+                        <div style={{
+                          height: '38px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                          fontSize: tFontSize,
+                          fontWeight: '900',
+                          color: '#ffffff',
+                          letterSpacing: '1px',
+                          boxSizing: 'border-box'
+                        }}>
+                          {/* Left Header (# & JAMOALAR) */}
+                          <div style={{
+                            width: `${tournLeftBlockWidth}px`,
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '0 10px',
+                            background: activeExportBg ? 'rgba(7, 18, 48, 0.95)' : '#07153B',
+                            boxSizing: 'border-box'
+                          }}>
+                            <div style={{ width: '38px', textAlign: 'center' }}>#</div>
+                            <div style={{ flex: 1, paddingLeft: '8px' }}>JAMOALAR</div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
 
-                  {/* Right Side Column with Bracket Zone Labels */}
-                  <div style={{
-                    width: '46px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    backdropFilter: 'blur(16px)',
-                    borderRadius: '14px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    overflow: 'hidden'
-                  }}>
-                    {/* Zone 1 Label: 1\8 FINAL */}
-                    <div style={{
-                      flex: Math.min(zone1Limit, teamCount),
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderBottom: teamCount > zone1Limit ? `2.5px solid ${tournColor}` : 'none',
-                      background: `${tournColor}18`
-                    }}>
-                      <span style={{
-                        writingMode: 'vertical-rl',
-                        transform: 'rotate(180deg)',
-                        fontSize: '13px',
-                        fontWeight: '900',
-                        color: tournColor,
-                        letterSpacing: '3px',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {zone1Label}
-                      </span>
-                    </div>
+                          {/* Right Header (O'YIN, T/N, OCHKO) */}
+                          <div style={{
+                            width: `${tournStatsWidth}px`,
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            background: activeExportBg ? 'rgba(23, 63, 181, 0.95)' : '#173FB5',
+                            boxSizing: 'border-box'
+                          }}>
+                            <div style={{ width: '56px', textAlign: 'center' }}>O'YIN</div>
+                            <div style={{ width: '56px', textAlign: 'center' }}>T/N</div>
+                            <div style={{ width: '72px', textAlign: 'center' }}>OCHKO</div>
+                          </div>
+                        </div>
 
-                    {/* Zone 2 Label: 1\16 FINAL */}
-                    {teamCount > zone1Limit && (
-                      <div style={{
-                        flex: Math.min(zone2Limit - zone1Limit, Math.max(0, teamCount - zone1Limit)),
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderBottom: teamCount > zone2Limit ? '2px solid #ef4444' : 'none',
-                        background: 'rgba(56, 189, 248, 0.06)'
-                      }}>
-                        <span style={{
-                          writingMode: 'vertical-rl',
-                          transform: 'rotate(180deg)',
-                          fontSize: '13px',
-                          fontWeight: '900',
-                          color: '#38bdf8',
-                          letterSpacing: '3px',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {zone2Label}
-                        </span>
+                        {/* Table Body */}
+                        <div style={{ width: `${tournTableWidth - tournBracketWidth}px`, display: 'flex', flexDirection: 'column' }}>
+                          {standings.map((t, idx) => {
+                            const rank = idx + 1;
+                            const inZone1 = rank <= zone1Limit;
+                            const inZone2 = rank > zone1Limit && rank <= zone2Limit;
+                            const inZone3 = rank > zone2Limit;
+
+                            const isZone1End = rank === zone1Limit;
+                            const isZone2End = rank === zone2Limit;
+
+                            let borderBottomStyle = '1px solid rgba(255, 255, 255, 0.05)';
+                            if (isZone1End && rank < teamCount) {
+                              borderBottomStyle = `3.5px solid ${tournColor}`;
+                            } else if (isZone2End && rank < teamCount) {
+                              borderBottomStyle = '3.5px solid #EF4444';
+                            }
+
+                            const leftBg = inZone3
+                              ? (activeExportBg ? 'rgba(19, 67, 223, 0.90)' : '#1343DF')
+                              : (activeExportBg ? 'rgba(7, 18, 48, 0.90)' : '#07153B');
+
+                            const rightBg = inZone3
+                              ? (activeExportBg ? 'rgba(19, 67, 223, 0.90)' : '#1343DF')
+                              : (activeExportBg ? 'rgba(23, 63, 181, 0.92)' : '#173FB5');
+
+                            return (
+                              <div
+                                key={t.id || idx}
+                                style={{
+                                  width: `${tournTableWidth - tournBracketWidth}px`,
+                                  height: `${tournRowHeight}px`,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  borderBottom: borderBottomStyle,
+                                  boxSizing: 'border-box',
+                                  fontSize: tFontSize
+                                }}
+                              >
+                                {/* Left Team Info Section */}
+                                <div style={{
+                                  width: `${tournLeftBlockWidth}px`,
+                                  height: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  padding: '0 10px',
+                                  background: leftBg,
+                                  boxSizing: 'border-box'
+                                }}>
+                                  <div style={{
+                                    width: '38px',
+                                    textAlign: 'center',
+                                    fontWeight: '900',
+                                    color: '#FFFFFF'
+                                  }}>
+                                    {rank}
+                                  </div>
+
+                                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', paddingLeft: '8px', minWidth: 0, gap: '8px' }}>
+                                    {t.logo_url ? (
+                                      <img
+                                        src={t.logo_url}
+                                        alt=""
+                                        crossOrigin="anonymous"
+                                        style={{ width: tLogoSize, height: tLogoSize, borderRadius: '50%', objectFit: 'contain', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}
+                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                      />
+                                    ) : (
+                                      <div style={{ width: tLogoSize, height: tLogoSize, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: '900', flexShrink: 0 }}>
+                                        {(t.name || '?')[0]}
+                                      </div>
+                                    )}
+                                    <span style={{
+                                      color: '#ffffff',
+                                      fontWeight: '800',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.3px',
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis'
+                                    }}>
+                                      {t.name}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Right Stats Section (Royal Blue Block) */}
+                                <div style={{
+                                  width: `${tournStatsWidth}px`,
+                                  height: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  background: rightBg,
+                                  boxSizing: 'border-box'
+                                }}>
+                                  <div style={{ width: '56px', textAlign: 'center', color: '#FFFFFF', fontWeight: '700' }}>
+                                    {t.played ?? 0}
+                                  </div>
+
+                                  <div style={{ width: '56px', textAlign: 'center', color: '#FFFFFF', fontWeight: '800' }}>
+                                    {t.gd ?? 0}
+                                  </div>
+
+                                  <div style={{ width: '72px', textAlign: 'center', color: '#FFFFFF', fontWeight: '900' }}>
+                                    {t.points ?? 0}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    )}
 
-                    {/* Zone 3 Label: TURNIRNI TARK ETADIGANLAR */}
-                    {teamCount > zone2Limit && (
+                      {/* Right Bracket Column */}
                       <div style={{
-                        flex: Math.max(0, teamCount - zone2Limit),
+                        width: `${tournBracketWidth}px`,
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'rgba(239, 68, 68, 0.08)'
+                        flexDirection: 'column',
+                        background: activeExportBg ? 'rgba(23, 63, 181, 0.92)' : '#173FB5'
                       }}>
-                        <span style={{
-                          writingMode: 'vertical-rl',
-                          transform: 'rotate(180deg)',
-                          fontSize: '12px',
-                          fontWeight: '900',
-                          color: '#ef4444',
-                          letterSpacing: '3px',
-                          whiteSpace: 'nowrap'
+                        {/* Top spacer matching header */}
+                        <div style={{ height: '38px', background: activeExportBg ? 'rgba(23, 63, 181, 0.95)' : '#173FB5', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }} />
+
+                        {/* Zone 1 */}
+                        <div style={{
+                          height: `${Math.min(zone1Limit, teamCount) * tournRowHeight}px`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderBottom: teamCount > zone1Limit ? `3.5px solid ${tournColor}` : 'none',
+                          background: activeExportBg ? 'rgba(23, 63, 181, 0.92)' : '#173FB5'
                         }}>
-                          {zone3Label}
-                        </span>
+                          <span style={{
+                            writingMode: 'vertical-rl',
+                            fontSize: '13px',
+                            fontWeight: '900',
+                            color: '#FFFFFF',
+                            letterSpacing: '2px',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {zone1Label}
+                          </span>
+                        </div>
+
+                        {/* Zone 2 */}
+                        {teamCount > zone1Limit && (
+                          <div style={{
+                            height: `${Math.min(zone2Limit - zone1Limit, Math.max(0, teamCount - zone1Limit)) * tournRowHeight}px`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderBottom: teamCount > zone2Limit ? '3.5px solid #EF4444' : 'none',
+                            background: activeExportBg ? 'rgba(23, 63, 181, 0.92)' : '#173FB5'
+                          }}>
+                            <span style={{
+                              writingMode: 'vertical-rl',
+                              fontSize: '13px',
+                              fontWeight: '900',
+                              color: '#FFFFFF',
+                              letterSpacing: '2px',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {zone2Label}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Zone 3 */}
+                        {teamCount > zone2Limit && (
+                          <div style={{
+                            height: `${Math.max(0, teamCount - zone2Limit) * tournRowHeight}px`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: activeExportBg ? 'rgba(19, 67, 223, 0.90)' : '#1343DF'
+                          }}>
+                            <span style={{
+                              writingMode: 'vertical-rl',
+                              fontSize: '12px',
+                              fontWeight: '900',
+                              color: '#FFFFFF',
+                              letterSpacing: '3px',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {zone3Label}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+
+                    {/* Bottom Accent Bar */}
+                    <div
+                      style={{
+                        width: `${tournTableWidth}px`,
+                        height: '22px',
+                        background: activeExportBg ? 'rgba(19, 67, 223, 0.90)' : '#1343DF'
+                      }}
+                    />
                   </div>
                 </div>
 
                 {/* Bottom Social Handle */}
-                <div style={{ height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '10px' }}>
+                <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '8px' }}>
                   <div style={{
-                    padding: '6px 20px',
-                    borderRadius: '20px',
-                    background: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    color: '#cbd5e1',
-                    fontSize: '13.5px',
+                    padding: '6px 26px',
+                    borderRadius: '22px',
+                    background: 'rgba(5, 12, 35, 0.85)',
+                    border: '1.2px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF',
+                    fontSize: '14px',
                     fontWeight: '800',
-                    letterSpacing: '1px'
+                    letterSpacing: '1.2px'
                   }}>
-                    @{((currentOrg?.name || selectedTournObj?.name || 'amatora')).toLowerCase().replace(/\s+/g, '_')}
+                    @{((currentOrg?.slug || currentOrg?.name || selectedTournObj?.name || 'havas_football')).toLowerCase().replace(/[^a-z0-9]/g, '_')}
                   </div>
                 </div>
               </div>
