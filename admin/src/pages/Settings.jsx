@@ -765,13 +765,13 @@ const Settings = () => {
       const filePath = `tournaments/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('applications')
+        .from('player-photos')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('applications')
+        .from('player-photos')
         .getPublicUrl(filePath);
 
       await supabase.from('tournaments').update({ logo_url: publicUrl }).eq('id', logoUploadTournId);
@@ -795,13 +795,13 @@ const Settings = () => {
       const filePath = `tournaments/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('applications')
+        .from('player-photos')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('applications')
+        .from('player-photos')
         .getPublicUrl(filePath);
 
       await supabase.from('tournaments').update({ export_bg_url: publicUrl }).eq('id', bgUploadTournId);
