@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
 import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { getActiveOrgTournaments, getTournamentLeagues, getTournamentTeams, getStageDisplayTitle } from '../utils/tournamentUtils';
+import { getActiveOrgTournaments, getTournamentLeagues, getTournamentTeams, getStageDisplayTitle, parseTournamentTier } from '../utils/tournamentUtils';
 import { Download, Save, ShieldAlert, Upload, Sparkles, AlertCircle, X, Check, Trophy, Edit, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './Standings.css';
@@ -350,11 +350,45 @@ export default function Standings() {
         setTopRedCards([]);
         return;
       }
-      const tournLeagues = tournamentLeaguesMap[selectedTournamentId] || [];
-      filteredTeams = getTournamentTeams(tournLeagues, teams);
-      const filteredTeamIds = new Set(filteredTeams.map(t => t.id));
-      // In tournament view, strictly only include matches belonging to this tournament
+
       relevantMatches = matches.filter(m => String(m.tournament_id) === String(selectedTournamentId));
+      let tournLeagues = tournamentLeaguesMap[selectedTournamentId] || [];
+
+      // If no leagues directly linked, check parent tournament (e.g. 2-darajali Europa ligasi)
+      if (tournLeagues.length === 0) {
+        const curTourn = tournaments.find(t => String(t.id) === String(selectedTournamentId));
+        if (curTourn?.description && curTourn.description.includes('PARENT:')) {
+          const pMatch = curTourn.description.match(/PARENT:(\d+)/);
+          if (pMatch && pMatch[1]) {
+            tournLeagues = tournamentLeaguesMap[pMatch[1]] || [];
+          }
+        }
+      }
+
+      const teamMap = new Map();
+      if (tournLeagues.length > 0) {
+        const leagueTeams = getTournamentTeams(tournLeagues, teams);
+        leagueTeams.forEach(t => teamMap.set(t.id, t));
+      }
+
+      // Always include any team that has a match in this tournament
+      relevantMatches.forEach(m => {
+        if (m.home_team_id) {
+          const ht = teams.find(t => t.id === m.home_team_id);
+          if (ht) teamMap.set(ht.id, ht);
+        }
+        if (m.away_team_id) {
+          const at = teams.find(t => t.id === m.away_team_id);
+          if (at) teamMap.set(at.id, at);
+        }
+      });
+
+      // Fallback to all teams of the organization if neither leagues nor matches found
+      if (teamMap.size === 0) {
+        teams.forEach(t => teamMap.set(t.id, t));
+      }
+
+      filteredTeams = Array.from(teamMap.values());
     } else {
       // Filter teams by selected league
       filteredTeams = teams.filter(t => (t.league || 'Super liga').includes(selectedLeague));
@@ -1062,6 +1096,8 @@ export default function Standings() {
           const isTourn = viewMode === 'tournament';
           const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
           const currentTournObj = tournaments.find(t => String(t.id) === String(selectedTournamentId));
+          const parsedTourn = parseTournamentTier(currentTournObj);
+          const tournColor = parsedTourn.color || '#38bdf8';
           const isCollab = isTourn ? currentTournObj?.isCollab : currentLeagueObj?.isCollab;
 
           if (isTourn) {
@@ -1185,7 +1221,7 @@ export default function Standings() {
                       gap: '14px',
                       whiteSpace: 'nowrap'
                     }}>
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#94a3b8', letterSpacing: '3px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: tournColor, letterSpacing: '3px' }}>
                         {orgName} {tournName}
                       </span>
                       <span style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', letterSpacing: '4px' }}>
@@ -1234,13 +1270,13 @@ export default function Standings() {
 
                         let borderBottomStyle = '1px solid rgba(255, 255, 255, 0.04)';
                         if (isZone1End && rank < teamCount) {
-                          borderBottomStyle = '2.5px solid #22c55e';
+                          borderBottomStyle = `2.5px solid ${tournColor}`;
                         } else if (isZone2End && rank < teamCount) {
                           borderBottomStyle = '2.5px solid #ef4444';
                         }
 
                         let rowBg = idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'transparent';
-                        if (inZone1) rowBg = 'rgba(34, 197, 94, 0.04)';
+                        if (inZone1) rowBg = `${tournColor}14`;
                         else if (inZone2) rowBg = 'rgba(56, 189, 248, 0.03)';
 
                         return (
@@ -1261,7 +1297,7 @@ export default function Standings() {
                               width: '40px',
                               textAlign: 'center',
                               fontWeight: '900',
-                              color: inZone1 ? '#22c55e' : (inZone2 ? '#38bdf8' : '#cbd5e1')
+                              color: inZone1 ? tournColor : (inZone2 ? '#38bdf8' : '#cbd5e1')
                             }}>
                               {rank}
                             </div>
@@ -1328,15 +1364,15 @@ export default function Standings() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      borderBottom: teamCount > zone1Limit ? '2px solid #22c55e' : 'none',
-                      background: 'rgba(34, 197, 94, 0.08)'
+                      borderBottom: teamCount > zone1Limit ? `2.5px solid ${tournColor}` : 'none',
+                      background: `${tournColor}18`
                     }}>
                       <span style={{
                         writingMode: 'vertical-rl',
                         transform: 'rotate(180deg)',
                         fontSize: '13px',
                         fontWeight: '900',
-                        color: '#22c55e',
+                        color: tournColor,
                         letterSpacing: '3px',
                         whiteSpace: 'nowrap'
                       }}>

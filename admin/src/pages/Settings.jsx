@@ -5,30 +5,7 @@ import { Settings as SettingsIcon, KeyRound, Mail, Check, AlertCircle, Trophy, P
 import ImageCropperModal from '../components/ImageCropperModal';
 import './Settings.css';
 
-function parseTournamentTier(t) {
-  let tier = t?.tier ? Number(t.tier) : 1;
-  let parentId = t?.parent_tournament_id ? Number(t.parent_tournament_id) : null;
-  let cleanDesc = t?.description || '';
-
-  if (cleanDesc && cleanDesc.includes('[TIER:')) {
-    const match = cleanDesc.match(/\[TIER:(\d+)(?:\|PARENT:(\d+|null)?)?\]\s*(.*)/s);
-    if (match) {
-      if (!t?.tier) tier = Number(match[1]) || 1;
-      if (!t?.parent_tournament_id && match[2] && match[2] !== 'null') {
-        parentId = Number(match[2]);
-      }
-      cleanDesc = match[3] || '';
-    }
-  }
-
-  return { tier, parentId, cleanDescription: cleanDesc };
-}
-
-function formatTournamentDescription(tier, parentId, userDesc) {
-  const meta = `[TIER:${tier}|PARENT:${parentId || ''}]`;
-  const trimmed = (userDesc || '').trim();
-  return trimmed ? `${meta}\n${trimmed}` : meta;
-}
+import { parseTournamentTier, formatTournamentDescription, DEFAULT_TOURNAMENT_COLORS } from '../utils/tournamentUtils';
 
 const Settings = () => {
   const { currentOrg, orgId, adminRole, updateCurrentOrg } = useOrg();
@@ -426,6 +403,7 @@ const Settings = () => {
   const [tournamentDuration, setTournamentDuration] = useState(90);
   const [tournamentTier, setTournamentTier] = useState(1);
   const [tournamentParentId, setTournamentParentId] = useState(null);
+  const [tournamentColor, setTournamentColor] = useState('#38bdf8');
   const [tournamentStatus, setTournamentStatus] = useState('active');
   const [savingTournament, setSavingTournament] = useState(false);
   const [deletingTournamentId, setDeletingTournamentId] = useState(null);
@@ -641,6 +619,7 @@ const Settings = () => {
     setTournamentDuration(tourn.match_duration || 90);
     setTournamentTier(parsed.tier);
     setTournamentParentId(parsed.parentId);
+    setTournamentColor(parsed.color || '#38bdf8');
     setTournamentStatus(tourn.status || 'active');
     setIsTournamentModalOpen(true);
   };
@@ -656,6 +635,7 @@ const Settings = () => {
     setTournamentDuration(90);
     setTournamentTier(1);
     setTournamentParentId(null);
+    setTournamentColor('#38bdf8');
     setTournamentStatus('active');
     setIsTournamentModalOpen(false);
   };
@@ -666,7 +646,7 @@ const Settings = () => {
     setSavingTournament(true);
 
     try {
-      const descToSave = formatTournamentDescription(tournamentTier, tournamentTier === 2 ? tournamentParentId : null, tournamentDesc);
+      const descToSave = formatTournamentDescription(tournamentTier, tournamentTier === 2 ? tournamentParentId : null, tournamentDesc, tournamentColor);
 
       const basePayload = {
         name: tournamentName.trim(),
@@ -1883,6 +1863,10 @@ const Settings = () => {
                                           🥈 2-DARAJALI {pObj ? `(${pObj.name})` : ''}
                                         </span>
                                       )}
+                                      <span className="junior-badge" style={{ background: `${parsed.color}20`, color: parsed.color, borderColor: `${parsed.color}45`, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: parsed.color, display: 'inline-block' }} />
+                                        RANG
+                                      </span>
                                     </>
                                   );
                                 })()}
@@ -2644,6 +2628,62 @@ const Settings = () => {
                   </select>
                 </div>
               )}
+
+              {/* Turnir Rangi (Tournament Color Picker & Presets) */}
+              <div className="form-group" style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <label style={{ fontSize: '13px', color: '#e2e8f0', fontWeight: '800', margin: 0 }}>
+                    🎨 Turnir rangi (Jadval va Eksport detallari uchun)
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: tournamentColor, border: '2px solid #fff', display: 'inline-block' }} />
+                    <span style={{ fontSize: '12px', color: tournamentColor, fontWeight: '800' }}>{tournamentColor}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                  {DEFAULT_TOURNAMENT_COLORS.map(c => (
+                    <button
+                      key={c.hex}
+                      type="button"
+                      title={c.label}
+                      onClick={() => setTournamentColor(c.hex)}
+                      style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '50%',
+                        backgroundColor: c.hex,
+                        border: tournamentColor.toLowerCase() === c.hex.toLowerCase() ? '3px solid #ffffff' : '1px solid rgba(255,255,255,0.25)',
+                        boxShadow: tournamentColor.toLowerCase() === c.hex.toLowerCase() ? `0 0 10px ${c.hex}` : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'transform 0.15s ease'
+                      }}
+                    >
+                      {tournamentColor.toLowerCase() === c.hex.toLowerCase() && (
+                        <Check size={14} color="#ffffff" strokeWidth={3} />
+                      )}
+                    </button>
+                  ))}
+                  {/* Custom Color Input */}
+                  <input
+                    type="color"
+                    value={tournamentColor.startsWith('#') && tournamentColor.length === 7 ? tournamentColor : '#38bdf8'}
+                    onChange={e => setTournamentColor(e.target.value)}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      padding: 0,
+                      border: 'none',
+                      borderRadius: '50%',
+                      cursor: 'pointer',
+                      background: 'none'
+                    }}
+                    title="Boshqa rang tanlash"
+                  />
+                </div>
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="form-group">

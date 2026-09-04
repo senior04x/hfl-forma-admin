@@ -145,3 +145,48 @@ export function getTournamentTeams(tournamentLeagues, allTeams = []) {
 
   return Array.from(matchingTeamsMap.values());
 }
+
+export const DEFAULT_TOURNAMENT_COLORS = [
+  { label: 'Moviy (Sky Blue)', hex: '#38bdf8' },
+  { label: 'Oltin (Gold)', hex: '#f59e0b' },
+  { label: 'Pushti (Pink)', hex: '#ec4899' },
+  { label: 'Binafsha (Purple)', hex: '#8b5cf6' },
+  { label: 'Zumrad (Emerald)', hex: '#10b981' },
+  { label: 'Qizil (Crimson)', hex: '#ef4444' },
+  { label: 'Turkuaz (Cyan)', hex: '#06b6d4' },
+  { label: 'To\'q sariq (Orange)', hex: '#f97316' },
+  { label: 'Kumush (Silver)', hex: '#94a3b8' },
+];
+
+export function parseTournamentTier(t) {
+  let tier = t?.tier ? Number(t.tier) : 1;
+  let parentId = t?.parent_tournament_id ? Number(t.parent_tournament_id) : null;
+  let color = t?.color || null;
+  let cleanDesc = t?.description || '';
+
+  if (cleanDesc && cleanDesc.includes('[TIER:')) {
+    const match = cleanDesc.match(/\[TIER:(\d+)(?:\|PARENT:([^|\]]+))?(?:\|COLOR:([^|\]]+))?\]\s*(.*)/s);
+    if (match) {
+      if (!t?.tier) tier = Number(match[1]) || 1;
+      if (!t?.parent_tournament_id && match[2] && match[2] !== 'null') {
+        parentId = Number(match[2]);
+      }
+      if (match[3] && match[3] !== 'null' && match[3] !== '') {
+        color = match[3];
+      }
+      cleanDesc = match[4] || '';
+    }
+  }
+
+  if (!color || color === 'null') {
+    color = '#38bdf8';
+  }
+
+  return { tier, parentId, color, cleanDescription: cleanDesc };
+}
+
+export function formatTournamentDescription(tier, parentId, userDesc, color) {
+  const meta = `[TIER:${tier}|PARENT:${parentId || ''}|COLOR:${color || '#38bdf8'}]`;
+  const trimmed = (userDesc || '').trim();
+  return trimmed ? `${meta}\n${trimmed}` : meta;
+}
