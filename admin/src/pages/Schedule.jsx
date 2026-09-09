@@ -789,14 +789,24 @@ const Schedule = () => {
   }, [exportLeague, activeLeagues, allSponsors, orgId]);
 
   useEffect(() => {
-    const leagueMatches = matches.filter(m => m.league === exportLeague && m.round);
-    if (leagueMatches.length > 0) {
-      const maxR = Math.max(...leagueMatches.map(m => Number(m.round)));
-      setExportRound(maxR.toString());
+    if (viewMode === 'tournament') {
+      const tournMatches = matches.filter(m => String(m.tournament_id) === String(selectedTournamentId) && m.round);
+      if (tournMatches.length > 0) {
+        const maxR = Math.max(...tournMatches.map(m => Number(m.round)));
+        setExportRound(maxR.toString());
+      } else {
+        setExportRound('1');
+      }
     } else {
-      setExportRound('1');
+      const leagueMatches = matches.filter(m => !m.tournament_id && m.league === exportLeague && m.round);
+      if (leagueMatches.length > 0) {
+        const maxR = Math.max(...leagueMatches.map(m => Number(m.round)));
+        setExportRound(maxR.toString());
+      } else {
+        setExportRound('1');
+      }
     }
-  }, [matches, exportLeague]);
+  }, [matches, exportLeague, viewMode, selectedTournamentId]);
 
   const handleExportYtThumbnail = async (match) => {
     setSelectedMatchForYtExport(match);
@@ -941,7 +951,7 @@ const Schedule = () => {
     if (data) setTeams((data || []).filter(t => !t.is_archived && t.status !== 'archived'));
   };
 
-  const fetchMatches = async (leaguesList = activeLeagues) => {
+  const fetchMatches = async (leaguesList = activeLeagues, tournsList = tournaments) => {
     let query = supabase
       .from('matches')
       .select(`
@@ -952,7 +962,19 @@ const Schedule = () => {
       .order('match_date', { ascending: true })
       .order('match_time', { ascending: true });
 
-    query = applyOrgAndCollabFilter(query, orgId, leaguesList);
+    const collabLeagueNames = (leaguesList || []).filter(l => l.isCollab).map(l => l.name);
+    const collabTournIds = (tournsList || []).filter(t => t.isCollab).map(t => t.id);
+
+    const orConditions = [`organization_id.eq.${orgId}`];
+    if (collabLeagueNames.length > 0) {
+      const escaped = collabLeagueNames.map(n => `"${n.replace(/"/g, '""')}"`).join(',');
+      orConditions.push(`league.in.(${escaped})`);
+    }
+    if (collabTournIds.length > 0) {
+      orConditions.push(`tournament_id.in.(${collabTournIds.join(',')})`);
+    }
+
+    query = query.or(orConditions.join(','));
 
     const { data } = await query;
     if (data) {
@@ -1078,9 +1100,10 @@ const Schedule = () => {
 
       const parsedOrgId = Number(orgId);
       const validOrgId = Number.isInteger(parsedOrgId) ? parsedOrgId : undefined;
+      const selectedTournObj = isTournament ? tournaments.find(t => String(t.id) === String(matchTournamentId)) : null;
 
       const baseMatchData = {
-        league: isTournament ? null : selectedLeague,
+        league: isTournament ? (selectedTournObj?.name || 'Turnir') : selectedLeague,
         tournament_id: isTournament ? Number(matchTournamentId) : null,
         stage: isTournament ? (matchStage || 'group') : null,
         home_team_id: homeTeamId,
@@ -1088,8 +1111,8 @@ const Schedule = () => {
         match_date: matchDate,
         match_time: matchTime,
         location: location,
-        youtube_link: youtubeLink,
-        round: (!isTournament || matchStage === 'group') && matchRound ? parseInt(matchRound) : null,
+        youtube_link: youtubeLink || null,
+        round: (!isTournament || matchStage === 'group') && matchRound ? parseInt(matchRound, 10) : 1,
       };
 
       if (validOrgId !== undefined) {
@@ -1098,7 +1121,7 @@ const Schedule = () => {
 
       const matchData = {
         ...baseMatchData,
-        importance: importance,
+        importance: importance || 'oddiy',
       };
 
       let savedMatchId = editingMatch?.id;
@@ -1129,6 +1152,11 @@ const Schedule = () => {
             ...baseMatchData,
             status: 'scheduled'
           }]).select();
+          if (fallbackRes.error) {
+            console.error('Match insert error:', fallbackRes.error);
+            alert('O\'yin yaratishda xatolik yuz berdi: ' + (fallbackRes.error.message || JSON.stringify(fallbackRes.error)));
+            return;
+          }
           savedMatchId = fallbackRes.data ? fallbackRes.data[0]?.id : null;
         } else if (data && data.length > 0) {
           savedMatchId = data[0].id;
@@ -1137,6 +1165,19 @@ const Schedule = () => {
 
       setIsModalOpen(false);
       setEditingMatch(null);
+
+      // Agar turnir o'yini yaratilgan bo'lsa, avtomatik turnir ko'rinishiga o'tkazamiz
+      if (isTournament) {
+        setViewMode('tournament');
+        setSelectedTournamentId(String(matchTournamentId));
+        if (matchStage) {
+          setSelectedStage(matchStage);
+        }
+        if (matchRound) {
+          setExportRound(String(matchRound));
+        }
+      }
+
       await fetchMatches();
 
       // AUTOMATIC YouTube Live stream creation & thumbnail upload when YouTube is connected
@@ -1307,17 +1348,29 @@ const Schedule = () => {
 
   const availableTeams = React.useMemo(() => {
     if (matchCompetitionType === 'tournament') {
-      const currentTournLeagues = tournamentLeaguesMap[matchTournamentId] || [];
-      return getTournamentTeams(currentTournLeagues, teams);
+      let currentTournLeagues = tournamentLeaguesMap[matchTournamentId] || [];
+      if (currentTournLeagues.length === 0) {
+        const curTourn = tournaments.find(t => String(t.id) === String(matchTournamentId));
+        if (curTourn?.description && curTourn.description.includes('PARENT:')) {
+          const pMatch = curTourn.description.match(/PARENT:(\d+)/);
+          if (pMatch && pMatch[1]) {
+            currentTournLeagues = tournamentLeaguesMap[pMatch[1]] || [];
+          }
+        }
+      }
+      const tournTeams = getTournamentTeams(currentTournLeagues, teams);
+      if (tournTeams.length > 0) return tournTeams;
+      return teams; // Fallback to all organization teams so user can always choose teams
     }
     // Oddiy liga
-    if (!selectedLeague) return [];
-    return teams.filter(t => {
+    if (!selectedLeague) return teams;
+    const filtered = teams.filter(t => {
       if (!t.league) return false;
       const tLeagues = t.league.split(',').map(s => s.trim().toLowerCase());
       return tLeagues.includes(selectedLeague.trim().toLowerCase());
     });
-  }, [matchCompetitionType, matchTournamentId, tournamentLeaguesMap, selectedLeague, teams]);
+    return filtered.length > 0 ? filtered : teams;
+  }, [matchCompetitionType, matchTournamentId, tournamentLeaguesMap, selectedLeague, teams, tournaments]);
 
   const availableRounds = (() => {
     if (viewMode === 'tournament') {
@@ -1331,10 +1384,10 @@ const Schedule = () => {
     return Array.from({ length: 30 }, (_, i) => i + 1);
   })();
 
-  // Match Schedule Day & Part Groups (Splits matches by day; max 8 matches per 1x1 image chunk)
-  const scheduleDayGroups = React.useMemo(() => {
+  // Filtered matches for current view mode, filters, and status
+  const filteredMatches = React.useMemo(() => {
     const isTournView = viewMode === 'tournament';
-    const filteredList = matches
+    return matches
       .filter(m => {
         if (isTournView) {
           if (!m.tournament_id) return false;
@@ -1358,9 +1411,12 @@ const Schedule = () => {
         return m.status === filterStatus;
       })
       .sort(compareMatches);
+  }, [matches, viewMode, selectedTournamentId, selectedStage, exportRound, exportLeague, filterStatus]);
 
+  // Match Schedule Day & Part Groups (Splits matches by day; max 8 matches per 1x1 image chunk)
+  const scheduleDayGroups = React.useMemo(() => {
     const map = new Map();
-    filteredList.forEach(m => {
+    filteredMatches.forEach(m => {
       const d = m.match_date ? String(m.match_date).trim() : (m.date ? String(m.date).trim() : 'Belgilanmagan');
       if (!map.has(d)) map.set(d, []);
       map.get(d).push(m);
@@ -1389,7 +1445,7 @@ const Schedule = () => {
     });
 
     return groups;
-  }, [matches, viewMode, selectedTournamentId, selectedStage, exportRound, exportLeague, filterStatus]);
+  }, [filteredMatches]);
 
   return (
     <div className="schedule-page">
@@ -1552,7 +1608,8 @@ const Schedule = () => {
                     <div className="filter-field">
                       <label><Layers size={14} /> Tur</label>
                       <div className="custom-select-wrapper">
-                        <select value={exportRound || '1'} onChange={e => setExportRound(e.target.value)}>
+                        <select value={exportRound || ''} onChange={e => setExportRound(e.target.value)}>
+                          <option value="">Barcha turlar</option>
                           {availableRounds.map(r => (
                             <option key={r} value={r}>{r}-Tur</option>
                           ))}
@@ -1647,31 +1704,7 @@ const Schedule = () => {
         } : {}}
       >
         <div className="matches-grid">
-          {matches
-            .filter(m => {
-              if (viewMode === 'tournament') {
-                if (!m.tournament_id) return false;
-                if (selectedTournamentId && String(m.tournament_id) !== String(selectedTournamentId)) return false;
-                if (selectedStage) {
-                  if (selectedStage === 'group') {
-                    if (m.stage && m.stage !== 'group') return false;
-                    if (exportRound && m.round && String(m.round) !== String(exportRound)) return false;
-                  } else {
-                    if (m.stage !== selectedStage) return false;
-                  }
-                }
-              } else {
-                if (m.tournament_id) return false;
-                if (exportLeague && m.league !== exportLeague) return false;
-                if (exportRound && m.round && String(m.round) !== String(exportRound)) return false;
-              }
-
-              if (filterStatus === 'all') return true;
-              if (filterStatus === 'live') return m.status === 'first_half' || m.status === 'second_half' || m.status === 'half_time';
-              return m.status === filterStatus;
-            })
-            .sort(compareMatches)
-            .map(match => {
+          {filteredMatches.map(match => {
               const isDeleting = deletingMatchIds.includes(match.id);
               const mImportance = match.importance || 'oddiy';
               const cardImportanceStyle = mImportance === 'markaziy'
@@ -1820,7 +1853,7 @@ const Schedule = () => {
               </div>
             );
             })}
-          {matches.filter(m => m.league === exportLeague && (!exportRound || m.round == exportRound)).length === 0 && (
+          {filteredMatches.length === 0 && (
             <div className="no-matches-box"><Calendar size={36} /><p>O'yinlar topilmadi.</p></div>
           )}
         </div>
