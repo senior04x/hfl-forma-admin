@@ -2510,7 +2510,7 @@ const Schedule = () => {
                           )}
                           {activeExportChunk && (
                             <div style={{ marginTop: '6px', background: 'rgba(56, 189, 248, 0.2)', border: '1px solid #38BDF8', padding: '3px 14px', borderRadius: '10px', color: '#38BDF8', fontSize: '15px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
-                              {activeExportChunk.formattedDate}{activeExportChunk.totalChunks > 1 ? ` • ${activeExportChunk.chunkIndex + 1}-QISM` : ''}
+                              {activeExportChunk.formattedDate}
                             </div>
                           )}
                         </div>
