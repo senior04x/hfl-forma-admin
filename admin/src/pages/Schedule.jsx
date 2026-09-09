@@ -1823,13 +1823,13 @@ const Schedule = () => {
                        match.round && <div className="match-league-badge round-badge">{match.round}-Tur</div>
                      )}
                      {mImportance === 'markaziy' && (
-                       <div style={{ background: 'rgba(255, 230, 0, 0.25)', color: '#ffe600', border: '1px solid #ffe600', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>
-                         ⭐ MARKAZIY
+                       <div title="Markaziy o'yin" style={{ background: 'rgba(255, 230, 0, 0.25)', color: '#ffe600', border: '1px solid #ffe600', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: '900', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                         ⭐
                        </div>
                      )}
                      {mImportance === 'ortacha' && (
-                       <div style={{ background: 'rgba(14, 165, 233, 0.25)', color: '#38bdf8', border: '1px solid #0ea5e9', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>
-                         ⚡ SHIDDATLI
+                       <div title="O'rtacha o'yin" style={{ background: 'rgba(14, 165, 233, 0.25)', color: '#38bdf8', border: '1px solid #0ea5e9', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: '900', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                         ⚡
                        </div>
                      )}
                   </div>
