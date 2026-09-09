@@ -2307,31 +2307,36 @@ const Schedule = () => {
               }}
             >
               {/* Header */}
-              <div className="export-header" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', width: '100%' }}>
-                <div className="export-logo-left" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
+              <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', height: '110px' }}>
+                <div className="export-logo-left" style={{ width: isCollab ? '260px' : '220px', display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
                   {isCollab ? (
-                    <>
-                      <img src={org1Logo} alt="Org 1" crossOrigin="anonymous" style={{ height: '95px', objectFit: 'contain', background: 'transparent' }} />
-                      <img src="/x.png" crossOrigin="anonymous" style={{ height: '16px', objectFit: 'contain', opacity: 0.8, background: 'transparent' }} />
-                      <img src={org2Logo} alt="Org 2" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain', background: 'transparent' }} />
-                    </>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <img src={org1Logo} alt="Org 1" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain', background: 'transparent' }} />
+                      <span style={{ color: '#94a3b8', fontSize: '15px', fontWeight: 'bold' }}>✕</span>
+                      <img src={org2Logo} alt="Org 2" crossOrigin="anonymous" style={{ height: '70px', objectFit: 'contain', background: 'transparent' }} />
+                    </div>
                   ) : (
-                    <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain', background: 'transparent' }} />
+                    <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ maxHeight: '90px', maxWidth: '200px', objectFit: 'contain', background: 'transparent' }} />
                   )}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 10px' }}>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
                   {currentLeagueObj?.logo_url ? (
-                    <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: '110px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                    <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: '105px', maxWidth: '420px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
                   ) : (
                     <h2 style={{ color: '#fff', fontSize: '42px', fontWeight: '900', textTransform: 'uppercase', margin: 0, fontStyle: 'italic', letterSpacing: '1px' }}>{exportLeague}</h2>
                   )}
                 </div>
 
-                <div className="export-logo-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <div className="export-logo-right" style={{ width: isCollab ? '260px' : '220px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                   {mainSponsorLogo ? (
-                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: '85px', maxWidth: '240px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', display: 'block' }} />
-                  ) : null}
+                    <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: '80px', maxWidth: '200px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', display: 'block' }} />
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <span style={{ fontSize: '20px', fontWeight: '900', color: '#ffffff', letterSpacing: '1px' }}>{(currentOrg?.name || 'AMATORA').toUpperCase()}</span>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#00ff66', letterSpacing: '2px' }}>FUTBOL MEDIA</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2484,23 +2489,23 @@ const Schedule = () => {
                   return (
                     <>
                       {/* Header */}
-                      <div className="export-header" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginBottom: '8px', width: '100%' }}>
-                        <div className="export-logo-left" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>
+                      <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', width: '100%', height: '115px' }}>
+                        <div className="export-logo-left" style={{ width: isCollab ? '240px' : '220px', display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
                           {isCollab ? (
-                            <>
-                              <img src={org1Logo} alt="Org 1" crossOrigin="anonymous" style={{ height: totalCount > 6 ? '90px' : '95px', objectFit: 'contain', background: 'transparent' }} />
-                              <img src="/x.png" crossOrigin="anonymous" style={{ height: '16px', objectFit: 'contain', opacity: 0.7, background: 'transparent' }} />
-                              <img src={org2Logo} alt="Org 2" crossOrigin="anonymous" style={{ height: totalCount > 6 ? '75px' : '80px', objectFit: 'contain', background: 'transparent' }} />
-                            </>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <img src={org1Logo} alt="Org 1" crossOrigin="anonymous" style={{ height: totalCount > 6 ? '70px' : '75px', objectFit: 'contain', background: 'transparent' }} />
+                              <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 'bold' }}>✕</span>
+                              <img src={org2Logo} alt="Org 2" crossOrigin="anonymous" style={{ height: totalCount > 6 ? '60px' : '65px', objectFit: 'contain', background: 'transparent' }} />
+                            </div>
                           ) : (
-                            <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: totalCount > 6 ? '95px' : '100px', objectFit: 'contain', background: 'transparent' }} />
+                            <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ maxHeight: totalCount > 6 ? '85px' : '90px', maxWidth: '200px', objectFit: 'contain', background: 'transparent' }} />
                           )}
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 10px' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
                           {isTournView ? (
                             selectedTournObj?.logo_url ? (
-                              <img src={selectedTournObj.logo_url} alt={selectedTournObj.name} style={{ maxHeight: totalCount > 6 ? '100px' : '105px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                              <img src={selectedTournObj.logo_url} alt={selectedTournObj.name} style={{ maxHeight: totalCount > 6 ? '90px' : '95px', maxWidth: '420px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
                             ) : (
                               <h2 style={{ color: '#fff', fontSize: '34px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>
                                 {selectedTournObj?.name || 'TURNIR'} {selectedStage && selectedStage !== 'group' ? `(${getStageDisplayTitle(selectedStage)})` : (exportRound ? `(${exportRound}-TUR)` : '')}
@@ -2508,7 +2513,7 @@ const Schedule = () => {
                             )
                           ) : (
                             currentLeagueObj?.logo_url ? (
-                              <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: totalCount > 6 ? '100px' : '105px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                              <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: totalCount > 6 ? '90px' : '95px', maxWidth: '420px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
                             ) : (
                               <h2 style={{ color: '#fff', fontSize: '34px', fontWeight: '900', textTransform: 'uppercase', margin: 0 }}>
                                 {exportLeague} {exportRound ? `(${exportRound}-TUR)` : ''}
@@ -2522,10 +2527,15 @@ const Schedule = () => {
                           )}
                         </div>
 
-                        <div className="export-logo-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <div className="export-logo-right" style={{ width: isCollab ? '240px' : '220px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                           {mainSponsorLogo ? (
-                            <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: totalCount > 6 ? '80px' : '85px', maxWidth: '240px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', display: 'block' }} />
-                          ) : null}
+                            <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: totalCount > 6 ? '75px' : '80px', maxWidth: '200px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', display: 'block' }} />
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                              <span style={{ fontSize: '18px', fontWeight: '900', color: '#ffffff', letterSpacing: '1px' }}>{(currentOrg?.name || 'AMATORA').toUpperCase()}</span>
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#00ff66', letterSpacing: '2px' }}>FUTBOL MEDIA</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
