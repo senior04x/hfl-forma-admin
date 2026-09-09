@@ -2281,7 +2281,11 @@ const Schedule = () => {
       <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
         {(() => {
           const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
-          const isCollab = currentLeagueObj?.isCollab;
+          const isMatchTourn = !!selectedMatchForYtExport?.tournament_id;
+          const matchTournObj = isMatchTourn ? tournaments.find(t => String(t.id) === String(selectedMatchForYtExport.tournament_id)) : null;
+          const isCollab = isMatchTourn ? !!matchTournObj?.isCollab : !!currentLeagueObj?.isCollab;
+          const org1Logo = (isMatchTourn ? matchTournObj?.org1?.logo_url : currentLeagueObj?.org1?.logo_url) || currentOrg?.logo_url || '/logo-for-jadval.png';
+          const org2Logo = (isMatchTourn ? matchTournObj?.org2?.logo_url : currentLeagueObj?.org2?.logo_url) || '/llf-logo.png';
 
           return (
             <div 
@@ -2303,20 +2307,20 @@ const Schedule = () => {
               }}
             >
               {/* Header */}
-              <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                <div className="export-logo-left" style={{ width: '280px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
+              <div className="export-header" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', width: '100%' }}>
+                <div className="export-logo-left" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', justifyContent: 'flex-start' }}>
                   {isCollab ? (
                     <>
-                      <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: '95px', objectFit: 'contain', background: 'transparent' }} />
+                      <img src={org1Logo} alt="Org 1" crossOrigin="anonymous" style={{ height: '95px', objectFit: 'contain', background: 'transparent' }} />
                       <img src="/x.png" crossOrigin="anonymous" style={{ height: '16px', objectFit: 'contain', opacity: 0.8, background: 'transparent' }} />
-                      <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain', background: 'transparent' }} />
+                      <img src={org2Logo} alt="Org 2" crossOrigin="anonymous" style={{ height: '80px', objectFit: 'contain', background: 'transparent' }} />
                     </>
                   ) : (
                     <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: '100px', objectFit: 'contain', background: 'transparent' }} />
                   )}
                 </div>
 
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 10px' }}>
                   {currentLeagueObj?.logo_url ? (
                     <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: '110px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
                   ) : (
@@ -2324,7 +2328,7 @@ const Schedule = () => {
                   )}
                 </div>
 
-                <div className="export-logo-right" style={{ width: '280px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: '20px', boxSizing: 'border-box' }}>
+                <div className="export-logo-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                   {mainSponsorLogo ? (
                     <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: '85px', maxWidth: '240px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', display: 'block' }} />
                   ) : null}
@@ -2411,12 +2415,15 @@ const Schedule = () => {
       <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
         {(() => {
           const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
-          const isCollab = currentLeagueObj?.isCollab;
 
           return (
             <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px 45px 20px 45px', boxSizing: 'border-box' }}>
                 {(() => {
                   const isTournView = viewMode === 'tournament';
+                  const isCollab = isTournView ? !!selectedTournObj?.isCollab : !!currentLeagueObj?.isCollab;
+                  const org1Logo = (isTournView ? selectedTournObj?.org1?.logo_url : currentLeagueObj?.org1?.logo_url) || currentOrg?.logo_url || '/logo-for-jadval.png';
+                  const org2Logo = (isTournView ? selectedTournObj?.org2?.logo_url : currentLeagueObj?.org2?.logo_url) || '/llf-logo.png';
+
                   const filteredList = matches
                     .filter(m => {
                       if (isTournView) {
@@ -2477,20 +2484,20 @@ const Schedule = () => {
                   return (
                     <>
                       {/* Header */}
-                      <div className="export-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', width: '100%' }}>
-                        <div className="export-logo-left" style={{ width: '280px', minWidth: '280px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>
+                      <div className="export-header" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginBottom: '8px', width: '100%' }}>
+                        <div className="export-logo-left" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', justifyContent: 'flex-start' }}>
                           {isCollab ? (
                             <>
-                              <img src={currentLeagueObj.org1?.logo_url || '/logo-for-jadval.png'} alt="Org 1" crossOrigin="anonymous" style={{ height: totalCount > 6 ? '90px' : '95px', objectFit: 'contain', background: 'transparent' }} />
+                              <img src={org1Logo} alt="Org 1" crossOrigin="anonymous" style={{ height: totalCount > 6 ? '90px' : '95px', objectFit: 'contain', background: 'transparent' }} />
                               <img src="/x.png" crossOrigin="anonymous" style={{ height: '16px', objectFit: 'contain', opacity: 0.7, background: 'transparent' }} />
-                              <img src={currentLeagueObj.org2?.logo_url || '/llf-logo.png'} alt="Org 2" crossOrigin="anonymous" style={{ height: totalCount > 6 ? '75px' : '80px', objectFit: 'contain', background: 'transparent' }} />
+                              <img src={org2Logo} alt="Org 2" crossOrigin="anonymous" style={{ height: totalCount > 6 ? '75px' : '80px', objectFit: 'contain', background: 'transparent' }} />
                             </>
                           ) : (
                             <img src={currentOrg?.logo_url || '/logo-for-jadval.png'} alt={currentOrg?.name || 'HFL'} crossOrigin="anonymous" style={{ height: totalCount > 6 ? '95px' : '100px', objectFit: 'contain', background: 'transparent' }} />
                           )}
                         </div>
 
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 10px' }}>
                           {isTournView ? (
                             selectedTournObj?.logo_url ? (
                               <img src={selectedTournObj.logo_url} alt={selectedTournObj.name} style={{ maxHeight: totalCount > 6 ? '100px' : '105px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
@@ -2515,7 +2522,7 @@ const Schedule = () => {
                           )}
                         </div>
 
-                        <div className="export-logo-right" style={{ width: '280px', minWidth: '280px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: '20px', boxSizing: 'border-box' }}>
+                        <div className="export-logo-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                           {mainSponsorLogo ? (
                             <img src={mainSponsorLogo} alt="Bosh Homiy" crossOrigin="anonymous" style={{ maxHeight: totalCount > 6 ? '80px' : '85px', maxWidth: '240px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', display: 'block' }} />
                           ) : null}
