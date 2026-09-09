@@ -894,8 +894,8 @@ const Schedule = () => {
     }
   };
 
-  // Kunlar bo'yicha eksport: kunda 8 tadan ko'p o'yin bo'lsa, qismlarga bo'lib barcha rasmlarni avtomatik yuklaydi
-  const handleExportDay = async (dayGroup) => {
+  // Kunlar bo'yicha eksport: kunda 8 tadan ko'p o'yin bo'lsa, qismlarga teng bo'lib barcha rasmlarni yoki alohida qismni yuklaydi
+  const handleExportDay = async (dayGroup, specificChunkIdx = null) => {
     if (!exportRef.current || isExporting) return;
     setIsExporting(true);
     try {
@@ -903,14 +903,19 @@ const Schedule = () => {
       const cleanTitle = (isTournExport ? (selectedTournObj?.name || 'turnir') : exportLeague)
         .replace(/[^a-zA-Z0-9_\u0400-\u04FF]/g, '_');
 
-      for (let cIdx = 0; cIdx < dayGroup.chunks.length; cIdx++) {
+      const chunksToExport = (specificChunkIdx !== null && specificChunkIdx !== undefined)
+        ? [{ cIdx: specificChunkIdx, chunk: dayGroup.chunks[specificChunkIdx] }]
+        : dayGroup.chunks.map((chunk, cIdx) => ({ cIdx, chunk }));
+
+      for (let i = 0; i < chunksToExport.length; i++) {
+        const { cIdx, chunk } = chunksToExport[i];
         setActiveExportChunk({
           dayNumber: dayGroup.dayNumber,
           date: dayGroup.date,
           formattedDate: dayGroup.formattedDate,
           chunkIndex: cIdx,
           totalChunks: dayGroup.chunks.length,
-          matches: dayGroup.chunks[cIdx]
+          matches: chunk
         });
 
         // Wait for state update and re-render
@@ -925,13 +930,13 @@ const Schedule = () => {
         const dataUrl = canvas.toDataURL('image/png');
         const link = document.createElement('a');
         const partSuffix = dayGroup.chunks.length > 1 ? `_qism_${cIdx + 1}` : '';
-        link.download = `jadval_${cleanTitle}_${dayGroup.dayNumber}_kun_${dayGroup.formattedDate.replace(/\./g, '_')}${partSuffix}.png`;
+        link.download = `jadval_${cleanTitle}_${dayGroup.formattedDate.replace(/\./g, '_')}${partSuffix}.png`;
         link.href = dataUrl;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
 
-        if (cIdx < dayGroup.chunks.length - 1) {
+        if (i < chunksToExport.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 350));
         }
       }
@@ -1413,7 +1418,7 @@ const Schedule = () => {
       .sort(compareMatches);
   }, [matches, viewMode, selectedTournamentId, selectedStage, exportRound, exportLeague, filterStatus]);
 
-  // Match Schedule Day & Part Groups (Splits matches by day; max 8 matches per 1x1 image chunk)
+  // Match Schedule Day & Part Groups (Splits matches by day; agar 8 tadan ko'p o'yin bo'lsa, teng qismlarga bo'linadi, masalan 12 ta o'yin bo'lsa 6 va 6 tadan)
   const scheduleDayGroups = React.useMemo(() => {
     const map = new Map();
     filteredMatches.forEach(m => {
@@ -1430,9 +1435,17 @@ const Schedule = () => {
         : 'Belgilanmagan';
 
       const chunks = [];
-      const CHUNK_SIZE = 8;
-      for (let i = 0; i < matchesList.length; i += CHUNK_SIZE) {
-        chunks.push(matchesList.slice(i, i + CHUNK_SIZE));
+      if (matchesList.length <= 8) {
+        chunks.push(matchesList);
+      } else {
+        // 8 tadan ko'p o'yin bo'lsa, qismlarga teng bo'linadi (masalan: 12 ta bo'lsa 6 va 6 tadan)
+        const numChunks = Math.max(2, Math.ceil(matchesList.length / 8));
+        let startIndex = 0;
+        for (let c = 0; c < numChunks; c++) {
+          const chunkSize = Math.ceil((matchesList.length - startIndex) / (numChunks - c));
+          chunks.push(matchesList.slice(startIndex, startIndex + chunkSize));
+          startIndex += chunkSize;
+        }
       }
 
       groups.push({
@@ -1637,46 +1650,121 @@ const Schedule = () => {
           </div>
         )}
 
-        {/* PNG Eksport Buttonlari (Kunlar bo'yicha) */}
+        {/* PNG Eksport Buttonlari (Sanalar bo'yicha) */}
         {scheduleDayGroups.length > 0 ? (
           <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ fontSize: '13px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-              📅 Kunlar bo'yicha yuklab olish (1x1 format):
+              📅 Sanalar bo'yicha yuklab olish (1x1 format):
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '14px' }}>
               {scheduleDayGroups.map(dayGroup => (
-                <button
+                <div
                   key={dayGroup.date}
-                  type="button"
-                  onClick={() => handleExportDay(dayGroup)}
-                  disabled={isExporting}
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     justifyContent: 'space-between',
-                    padding: '12px 18px',
-                    borderRadius: '12px',
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.25) 100%)',
-                    border: '1px solid rgba(59, 130, 246, 0.4)',
-                    color: '#fff',
-                    cursor: isExporting ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease',
-                    textAlign: 'left'
+                    padding: '14px 18px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%)',
+                    border: '1px solid rgba(59, 130, 246, 0.35)',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+                    gap: '12px'
                   }}
                 >
-                  <div>
-                    <div style={{ fontWeight: '900', fontSize: '15px', color: '#60a5fa' }}>
-                      📅 {dayGroup.dayNumber}-kun ({dayGroup.formattedDate})
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: '900', fontSize: '16px', color: '#60a5fa', letterSpacing: '0.5px' }}>
+                        📅 {dayGroup.formattedDate}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginTop: '3px' }}>
+                        {dayGroup.matches.length} ta o'yin {dayGroup.chunks.length > 1 ? `• ${dayGroup.chunks.length} ta qism (${dayGroup.chunks.map(c => c.length).join(' va ')} tadan)` : '• 1 ta rasm'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginTop: '3px' }}>
-                      {dayGroup.matches.length} ta o'yin {dayGroup.chunks.length > 1 ? `• ${dayGroup.chunks.length} ta rasm (8 tadan)` : '• 1 ta rasm'}
+
+                    {dayGroup.chunks.length === 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleExportDay(dayGroup)}
+                        disabled={isExporting}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: '#3b82f6',
+                          border: 'none',
+                          color: '#fff',
+                          padding: '9px 16px',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: '800',
+                          cursor: isExporting ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <Download size={15} />
+                        <span>{isExporting ? 'Yuklanmoqda...' : 'Yuklab olish'}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {dayGroup.chunks.length > 1 && (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                      {dayGroup.chunks.map((chunk, cIdx) => (
+                        <button
+                          key={cIdx}
+                          type="button"
+                          onClick={() => handleExportDay(dayGroup, cIdx)}
+                          disabled={isExporting}
+                          style={{
+                            flex: 1,
+                            minWidth: '110px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '5px',
+                            background: 'rgba(59, 130, 246, 0.18)',
+                            border: '1px solid rgba(59, 130, 246, 0.45)',
+                            color: '#93c5fd',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: '800',
+                            cursor: isExporting ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          <Download size={13} />
+                          <span>{cIdx + 1}-qism ({chunk.length} ta)</span>
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() => handleExportDay(dayGroup)}
+                        disabled={isExporting}
+                        style={{
+                          flex: 1,
+                          minWidth: '130px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          background: '#3b82f6',
+                          border: 'none',
+                          color: '#fff',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          cursor: isExporting ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        <Download size={14} />
+                        <span>Barchasini yuklash</span>
+                      </button>
                     </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#3b82f6', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '800' }}>
-                    <Download size={15} />
-                    <span>{isExporting ? 'Yuklanmoqda...' : (dayGroup.chunks.length > 1 ? `${dayGroup.chunks.length} ta rasm yuklash` : 'Yuklab olish')}</span>
-                  </div>
-                </button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -2422,7 +2510,7 @@ const Schedule = () => {
                           )}
                           {activeExportChunk && (
                             <div style={{ marginTop: '6px', background: 'rgba(56, 189, 248, 0.2)', border: '1px solid #38BDF8', padding: '3px 14px', borderRadius: '10px', color: '#38BDF8', fontSize: '15px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
-                              {activeExportChunk.dayNumber}-KUN ({activeExportChunk.formattedDate}){activeExportChunk.totalChunks > 1 ? ` • ${activeExportChunk.chunkIndex + 1}-QISM` : ''}
+                              {activeExportChunk.formattedDate}{activeExportChunk.totalChunks > 1 ? ` • ${activeExportChunk.chunkIndex + 1}-QISM` : ''}
                             </div>
                           )}
                         </div>
