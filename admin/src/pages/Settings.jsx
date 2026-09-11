@@ -369,6 +369,7 @@ const Settings = () => {
   const [matchDuration, setMatchDuration] = useState(90);
   const [leagueSeason, setLeagueSeason] = useState('2026/2027');
   const [leagueStatus, setLeagueStatus] = useState('active');
+  const [leagueTier, setLeagueTier] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [creatingLeague, setCreatingLeague] = useState(false);
@@ -926,6 +927,7 @@ const Settings = () => {
     setMatchDuration(league.match_duration || 90);
     setLeagueSeason(league.season || '2026/2027');
     setLeagueStatus(league.status || 'active');
+    setLeagueTier([1, 2].includes(Number(league.tier)) ? String(league.tier) : '');
     setStartDate(league.start_date || league.startDate || '');
     setEndDate(league.end_date || league.endDate || '');
     setMessage({ type: '', text: '' });
@@ -940,6 +942,7 @@ const Settings = () => {
     setMatchDuration(90);
     setLeagueSeason('2026/2027');
     setLeagueStatus('active');
+    setLeagueTier('');
     setStartDate('');
     setEndDate('');
     setIsLeagueModalOpen(false);
@@ -947,7 +950,11 @@ const Settings = () => {
 
   const handleSaveLeague = async (e) => {
     e.preventDefault();
-    if (!leagueName.trim()) return;
+    if (!leagueName.trim() || creatingLeague) return;
+    if (![1, 2].includes(Number(leagueTier))) {
+      setMessage({ type: 'error', text: 'Liga darajasini tanlang.' });
+      return;
+    }
     setCreatingLeague(true);
     setMessage({ type: '', text: '' });
 
@@ -971,6 +978,7 @@ const Settings = () => {
         // Safe update payload containing columns guaranteed to exist
         const safePayload = {
           name: cleanName,
+          tier: Number(leagueTier),
           logo_url: leagueLogo.trim() || null,
           is_junior: isJunior,
           duration: matchDuration ? Number(matchDuration) : 60,
@@ -986,11 +994,12 @@ const Settings = () => {
 
         // Try updating full payload first; fallback to safePayload if optional columns don't exist
         try {
-          const { error: sErr } = await client.from('leagues').update(fullPayload).eq('id', targetId);
+          const { error: sErr } = await client.from('leagues').update(fullPayload).eq('id', targetId).select('id').single();
           if (sErr) throw sErr;
         } catch (e) {
-          const { error: baseErr } = await client.from('leagues').update(safePayload).eq('id', targetId);
-          if (baseErr) console.warn('Base update warning:', baseErr);
+          if (!['42703', 'PGRST204'].includes(e.code)) throw e;
+          const { error: baseErr } = await client.from('leagues').update(safePayload).eq('id', targetId).select('id').single();
+          if (baseErr) throw baseErr;
         }
 
         if (matchDuration && targetId) {
@@ -1009,6 +1018,7 @@ const Settings = () => {
       } else {
         const safeInsertPayload = {
           name: cleanName,
+          tier: Number(leagueTier),
           logo_url: leagueLogo.trim() || null,
           organization_id: orgId,
           is_junior: isJunior,
@@ -1029,8 +1039,9 @@ const Settings = () => {
           if (error) throw error;
           newLeague = data;
         } catch (e) {
+          if (!['42703', 'PGRST204'].includes(e.code)) throw e;
           const { data, error: baseErr } = await client.from('leagues').insert(safeInsertPayload).select().single();
-          if (baseErr) console.warn('Base insert warning:', baseErr);
+          if (baseErr) throw baseErr;
           newLeague = data;
         }
 
@@ -1045,6 +1056,7 @@ const Settings = () => {
         setMatchDuration(90);
         setLeagueSeason('2026/2027');
         setLeagueStatus('active');
+        setLeagueTier('');
         setStartDate('');
         setEndDate('');
         setIsLeagueModalOpen(false);
@@ -1052,7 +1064,7 @@ const Settings = () => {
       fetchLeaguesAndOrgs();
     } catch (err) {
       console.error('Save league error:', err);
-      setMessage({ type: 'error', text: 'Liga saqlashda xato: ' + (err.message || JSON.stringify(err)) });
+      setMessage({ type: 'error', text: 'Liga saqlanmadi. Ulanishni tekshiring va qayta urinib ko‘ring.' });
     } finally {
       setCreatingLeague(false);
     }
@@ -1541,6 +1553,9 @@ const Settings = () => {
                           <div className="league-card-bottom">
                             <div className="league-card-name-section">
                               <h4 className="league-title">{l.name}</h4>
+                              <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                                {[1, 2].includes(Number(l.tier)) ? `${l.tier}-darajali` : 'Daraja belgilanmagan'}
+                              </span>
                               <div className="league-badges-wrap">
                                 <span className="junior-badge" style={{ background: 'rgba(0, 255, 135, 0.15)', color: '#00ff87', borderColor: 'rgba(0, 255, 135, 0.3)' }}>
                                   📅 {l.season || '2026/2027'}
@@ -2287,6 +2302,15 @@ const Settings = () => {
                     onChange={e => setLeagueName(e.target.value)}
                     required
                   />
+                </div>
+
+                <div className="settings-form-group">
+                  <label htmlFor="league-tier">Liga darajasi</label>
+                  <select id="league-tier" value={leagueTier} onChange={e => setLeagueTier(e.target.value)} required>
+                    <option value="" disabled>Darajani tanlang</option>
+                    <option value="1">1-darajali</option>
+                    <option value="2">2-darajali</option>
+                  </select>
                 </div>
 
                 {/* Liga Logosi */}
