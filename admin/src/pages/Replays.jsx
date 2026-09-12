@@ -491,19 +491,11 @@ const Replays = () => {
                                 });
                               }}
                             />
-                            <div className="video-overlay-badge">
-                              <span className="minute-badge">{event.minute ? `${event.minute}'` : `Gol #${idx+1}`}</span>
-                              {getEventBadge(event.event_type)}
-                            </div>
                           </div>
                         ) : (
                           <div className="video-placeholder-box">
                             <Film size={32} className="text-muted" />
                             <span>Video biriktirilmagan</span>
-                            <div className="video-overlay-badge">
-                              <span className="minute-badge">{event.minute ? `${event.minute}'` : `Gol #${idx+1}`}</span>
-                              {getEventBadge(event.event_type)}
-                            </div>
                           </div>
                         )}
                       </div>
@@ -526,8 +518,19 @@ const Replays = () => {
                           </div>
 
                           <div className="player-text-info">
-                            <div className="player-name">
-                              {player ? `${player.first_name} ${player.last_name}` : 'Muallif belgilanmagan'}
+                            <div className="player-name-row">
+                              <span className="player-name">
+                                {player ? `${player.first_name} ${player.last_name}` : 'Muallif belgilanmagan'}
+                              </span>
+                              {event.minute && (
+                                <span className="minute-tag">{event.minute}'</span>
+                              )}
+                              {event.event_type === 'penalty_goal' && (
+                                <span className="type-tag penalty">Penalti</span>
+                              )}
+                              {event.event_type === 'own_goal' && (
+                                <span className="type-tag own-goal">Avtogol</span>
+                              )}
                             </div>
                             <div className="team-subtext">
                               {team?.logo_url && (
