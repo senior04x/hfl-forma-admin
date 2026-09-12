@@ -15,7 +15,8 @@ import {
   Newspaper,
   Archive,
   Trophy,
-  ShieldAlert
+  ShieldAlert,
+  Film
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
@@ -72,6 +73,7 @@ const Layout = () => {
     { path: '/transfers', label: 'Transferlar', icon: <ArrowLeftRight size={20} /> },
     { path: '/profile-updates', label: "Ma'lumotlar almashinuvi", icon: <RefreshCw size={20} /> },
     { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> },
+    { path: '/replays', label: 'Replaylar', icon: <Film size={20} /> },
     { path: '/standings', label: 'Turnir jadvali', icon: <LayoutDashboard size={20} /> },
     { path: '/tournaments', label: 'Turnirlar', icon: <Trophy size={20} /> },
     { path: '/cards', label: 'Kartochkalar', icon: <ShieldAlert size={20} /> },

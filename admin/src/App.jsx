@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import News from './pages/News';
 import ObsScoreboard from './pages/ObsScoreboard';
 import Archive from './pages/Archive';
+import Replays from './pages/Replays';
 import Layout from './components/Layout';
 import ImageViewer from './components/ImageViewer';
 
@@ -43,6 +44,7 @@ function App() {
           <Route path="/sponsors" element={<Sponsors />} />
           <Route path="/news" element={<News />} />
           <Route path="/archive" element={<Archive />} />
+          <Route path="/replays" element={<Replays />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/tournaments" element={<Settings key="tournaments" section="tournaments" />} />
         </Route>
