@@ -144,6 +144,7 @@ const Replays = () => {
     setMatchEvents([]);
 
     try {
+      // 1. Fetch match events with player and team relations
       const { data: eventsData, error: evErr } = await supabase
         .from('match_events')
         .select(`
@@ -157,21 +158,39 @@ const Replays = () => {
           replay_video_url,
           created_at,
           player:player_id (id, first_name, last_name, player_number, photo_url),
-          assist_player:assist_player_id (id, first_name, last_name, player_number),
           team:team_id (id, name, logo_url)
         `)
         .eq('match_id', match.id)
         .order('minute', { ascending: true })
         .order('created_at', { ascending: true });
 
-      if (evErr) throw evErr;
+      if (evErr) {
+        console.error('Error loading match replay events:', evErr);
+        throw evErr;
+      }
 
       // Filter to goals / replays
       const goalsAndReplays = (eventsData || []).filter(e => 
         ['goal', 'penalty_goal', 'own_goal'].includes(e.event_type) || e.replay_video_url
       );
 
-      setMatchEvents(goalsAndReplays);
+      // 2. Fetch assist players safely if any exist
+      const assistIds = [...new Set(goalsAndReplays.map(e => e.assist_player_id).filter(Boolean))];
+      let assistMap = new Map();
+      if (assistIds.length > 0) {
+        const { data: assistPlayers } = await supabase
+          .from('players')
+          .select('id, first_name, last_name, player_number')
+          .in('id', assistIds);
+        (assistPlayers || []).forEach(p => assistMap.set(p.id, p));
+      }
+
+      const finalEvents = goalsAndReplays.map(e => ({
+        ...e,
+        assist_player: e.assist_player_id ? assistMap.get(e.assist_player_id) : null
+      }));
+
+      setMatchEvents(finalEvents);
     } catch (err) {
       console.error('Error loading match replay events:', err);
     } finally {
@@ -456,7 +475,8 @@ const Replays = () => {
                           <div className="video-lazy-wrapper">
                             <video 
                               src={event.replay_video_url} 
-                              preload="none" 
+                              preload="metadata" 
+                              playsInline
                               controls 
                               className="lazy-video-element"
                               onPlay={(e) => {
