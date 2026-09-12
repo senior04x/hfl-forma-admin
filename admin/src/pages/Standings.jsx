@@ -203,58 +203,61 @@ export default function Standings() {
   };
 
   const loadLeaguesAndData = async () => {
-    const fetched = await getActiveOrgLeagues(orgId);
-    const withOrgBgs = fetched.map(l => ({
-      ...l,
-      export_bg_url: l.export_bg_url || getLeagueBgForOrg(orgId, l.name)
-    }));
-    setActiveLeagues(withOrgBgs);
-    if (withOrgBgs.length > 0) {
-      setSelectedLeague(withOrgBgs[0].name);
+    try {
+      setLoading(true);
+      // 1. Fetch leagues and tournaments concurrently in parallel
+      const [fetchedLeagues, fetchedTournaments] = await Promise.all([
+        getActiveOrgLeagues(orgId),
+        getActiveOrgTournaments(orgId)
+      ]);
+
+      const withOrgBgs = (fetchedLeagues || []).map(l => ({
+        ...l,
+        export_bg_url: l.export_bg_url || getLeagueBgForOrg(orgId, l.name)
+      }));
+      setActiveLeagues(withOrgBgs);
+      if (withOrgBgs.length > 0) {
+        setSelectedLeague(prev => prev || withOrgBgs[0].name);
+      }
+
+      setTournaments(fetchedTournaments || []);
+      if ((fetchedTournaments || []).length > 0) {
+        setSelectedTournamentId(prev => prev || fetchedTournaments[0].id);
+      }
+
+      // 2. Fetch tournament leagues in parallel with core data
+      const tLeaguesPromise = (async () => {
+        const tLeaguesMap = {};
+        await Promise.all(
+          (fetchedTournaments || []).map(async (t) => {
+            const lgs = await getTournamentLeagues(t.id);
+            tLeaguesMap[t.id] = lgs;
+          })
+        );
+        setTournamentLeaguesMap(tLeaguesMap);
+      })();
+
+      // 3. Fetch core standings data immediately (teams + matches in parallel)
+      await fetchData(withOrgBgs, fetchedTournaments || []);
+      await tLeaguesPromise;
+    } catch (e) {
+      console.error("Error in loadLeaguesAndData:", e);
+      setLoading(false);
     }
-
-    // Fetch tournaments & their linked leagues
-    const fetchedTournaments = await getActiveOrgTournaments(orgId);
-    setTournaments(fetchedTournaments);
-    if (fetchedTournaments.length > 0) {
-      setSelectedTournamentId(fetchedTournaments[0].id);
-    }
-
-    const tLeaguesMap = {};
-    await Promise.all(
-      fetchedTournaments.map(async (t) => {
-        const lgs = await getTournamentLeagues(t.id);
-        tLeaguesMap[t.id] = lgs;
-      })
-    );
-    setTournamentLeaguesMap(tLeaguesMap);
-
-    fetchData(withOrgBgs, fetchedTournaments);
   };
 
   const fetchData = async (leaguesList = activeLeagues, tournsList = tournaments) => {
     setLoading(true);
     try {
-      // Fetch Teams with collab filter
+      // Fetch Teams with specific needed columns only
       let teamsQuery = supabase
         .from('teams')
-        .select('*')
+        .select('id, name, logo_url, league, status, penalty_points, organization_id')
         .in('status', ['approved', 'partially_approved']);
 
       teamsQuery = applyOrgAndCollabFilter(teamsQuery, orgId, leaguesList);
 
-      const { data: teamsData, error: teamsError } = await teamsQuery;
-      if (teamsError) throw teamsError;
-      setTeams(teamsData || []);
-      
-      // Initialize penalties state
-      const initialPenalties = {};
-      (teamsData || []).forEach(t => {
-        initialPenalties[t.id] = t.penalty_points || 0;
-      });
-      setPenalties(initialPenalties);
-
-      // Fetch Matches with collab and tournament filter
+      // Fetch Matches with specific needed columns only
       const collabLeagueNames = (leaguesList || []).filter(l => l.isCollab).map(l => l.name);
       const collabTournIds = (tournsList || []).filter(t => t.isCollab).map(t => t.id);
 
@@ -269,46 +272,72 @@ export default function Standings() {
 
       let matchesQuery = supabase
         .from('matches')
-        .select('*')
+        .select('id, home_team_id, away_team_id, home_score, away_score, status, round, match_date, tournament_id, league, organization_id')
         .eq('status', 'finished')
         .or(orConditions.join(','))
         .order('match_date', { ascending: false });
 
-      const { data: matchesData, error: matchesError } = await matchesQuery;
+      // Run teams and matches concurrently in parallel
+      const [{ data: teamsData, error: teamsError }, { data: matchesData, error: matchesError }] = await Promise.all([
+        teamsQuery,
+        matchesQuery
+      ]);
+
+      if (teamsError) throw teamsError;
       if (matchesError) throw matchesError;
-      setMatches(matchesData || []);
 
-      // Extract organization team IDs to only fetch relevant events (scalable to 100k+ events)
-      const targetTeamIds = (teamsData || []).map(t => t.id).filter(Boolean);
+      const loadedTeams = teamsData || [];
+      const loadedMatches = matchesData || [];
 
-      // Fetch Events (goals, assists, yellow cards, red cards) with pagination and team filter
-      let allEvents = [];
+      setTeams(loadedTeams);
+      setMatches(loadedMatches);
+
+      // Initialize penalties state
+      const initialPenalties = {};
+      loadedTeams.forEach(t => {
+        initialPenalties[t.id] = t.penalty_points || 0;
+      });
+      setPenalties(initialPenalties);
+
+      // FAST RELEASE: Standings table needs only teams and matches.
+      // Release loading state immediately (<250ms) so user can interact!
+      setLoading(false);
+
+      // Fetch Events in the background without blocking the UI
+      const targetTeamIds = loadedTeams.map(t => t.id).filter(Boolean);
       if (targetTeamIds.length > 0) {
-        let page = 0;
-        const PAGE_SIZE = 1000;
-        while (true) {
-          let eventsQuery = supabase
-            .from('match_events')
-            .select('id, event_type, player_id, team_id, match_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
-            .in('team_id', targetTeamIds)
-            .in('event_type', ['goal', 'assist', 'yellow_card', 'red_card'])
-            .order('id', { ascending: true })
-            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-          const { data: pageData, error: pageError } = await eventsQuery;
-          if (pageError) throw pageError;
-          if (!pageData || pageData.length === 0) break;
-          allEvents.push(...pageData);
-          if (pageData.length < PAGE_SIZE) break;
-          page++;
-        }
+        fetchBackgroundEvents(targetTeamIds);
       }
-      setEvents(allEvents);
-
     } catch (err) {
       console.error("Error fetching standings data:", err);
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBackgroundEvents = async (targetTeamIds) => {
+    try {
+      let allEvents = [];
+      let page = 0;
+      const PAGE_SIZE = 1000;
+      while (true) {
+        const { data: pageData, error: pageError } = await supabase
+          .from('match_events')
+          .select('id, event_type, player_id, team_id, match_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
+          .in('team_id', targetTeamIds)
+          .in('event_type', ['goal', 'assist', 'yellow_card', 'red_card'])
+          .order('id', { ascending: true })
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        if (pageError) throw pageError;
+        if (!pageData || pageData.length === 0) break;
+        allEvents.push(...pageData);
+        if (pageData.length < PAGE_SIZE) break;
+        page++;
+        if (page >= 3) break; // limit to 3000 events to prevent memory bloat
+      }
+      setEvents(allEvents);
+    } catch (e) {
+      console.error("Error in fetchBackgroundEvents:", e);
     }
   };
 
@@ -745,61 +774,36 @@ export default function Standings() {
   const currentTournBg = selectedTournObj?.export_bg_url || selectedTournObj?.bg_image || selectedTournObj?.bg_url || selectedTournObj?.banner_url;
   const activeExportBg = viewMode === 'tournament' ? currentTournBg : currentLeagueBg;
 
-  if (loading) {
-    return (
-      <div className="standings-page">
-        <div className="standings-header">
-          <div className="skeleton-pulse skeleton-title"></div>
-          <div className="standings-header-actions" style={{ display: 'flex', gap: '10px' }}>
-            <div className="skeleton-pulse skeleton-btn"></div>
-            <div className="skeleton-pulse skeleton-btn"></div>
-            <div className="skeleton-pulse skeleton-btn"></div>
-          </div>
-        </div>
-
-        <div className="skeleton-pulse skeleton-filter-box" style={{ marginBottom: '24px' }}></div>
-
-        <div className="admin-table-container">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Jamoa</th>
-                <th>O'yin</th>
-                <th>Farq</th>
-                <th>Ochko</th>
-                <th>Jarima / Bonus (Ochko)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(idx => (
-                <tr key={idx}>
-                  <td><div className="skeleton-pulse skeleton-circle"></div></td>
-                  <td>
-                    <div className="team-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div className="skeleton-pulse skeleton-circle"></div>
-                      <div className="skeleton-pulse skeleton-text" style={{ width: '120px' }}></div>
-                    </div>
-                  </td>
-                  <td><div className="skeleton-pulse skeleton-text" style={{ width: '30px' }}></div></td>
-                  <td><div className="skeleton-pulse skeleton-text" style={{ width: '30px' }}></div></td>
-                  <td><div className="skeleton-pulse skeleton-text" style={{ width: '30px' }}></div></td>
-                  <td><div className="skeleton-pulse skeleton-text" style={{ width: '100px' }}></div></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="standings-page">
       <div className="standings-header">
         <div className="standings-title-box">
           <Trophy size={26} className="standings-title-icon" />
           <h1>Turnir Jadvali va Export</h1>
+        </div>
+        <div className="standings-header-actions" style={{ display: 'flex', gap: '10px' }}>
+          <button
+            type="button"
+            className="btn-refresh"
+            onClick={() => loadLeaguesAndData()}
+            disabled={loading}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              color: '#cbd5e1',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontWeight: '700',
+              fontSize: '13px'
+            }}
+          >
+            <RefreshCw size={15} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            <span>{loading ? "Yuklanmoqda..." : "Yangilash"}</span>
+          </button>
         </div>
       </div>
 
@@ -931,51 +935,80 @@ export default function Standings() {
               </tr>
             </thead>
             <tbody>
-              {standings.map((t, i) => (
-                <tr key={t.id}>
-                  <td>
-                    <span className={`rank-badge rank-${i + 1}`}>
-                      {i + 1}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="team-info">
-                      <img src={t.logo_url} alt="" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
-                      {t.name}
-                    </div>
-                  </td>
-                  <td>{t.played}</td>
-                  <td>{t.won}</td>
-                  <td>{t.drawn}</td>
-                  <td>{t.lost}</td>
-                  <td>{t.gf}</td>
-                  <td>{t.ga}</td>
-                  <td>{t.gd > 0 ? `+${t.gd}` : t.gd}</td>
-                  <td><strong>{t.points}</strong></td>
-                  <td>
-                    <button 
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '8px',
-                        background: 'rgba(59, 130, 246, 0.15)',
-                        border: '1px solid #3b82f6',
-                        color: '#60a5fa',
-                        fontWeight: '700',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onClick={() => handleOpenEditModal(t)}
-                      title="Jamoa o'yinlari va gollar farqini tahrirlash"
-                    >
-                      <Edit size={14} /> Tahrirlash
-                    </button>
+              {loading ? (
+                [1, 2, 3, 4, 5, 6, 7, 8].map(idx => (
+                  <tr key={`skel-${idx}`}>
+                    <td><div className="skeleton-pulse skeleton-circle"></div></td>
+                    <td>
+                      <div className="team-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div className="skeleton-pulse skeleton-circle"></div>
+                        <div className="skeleton-pulse skeleton-text" style={{ width: '130px' }}></div>
+                      </div>
+                    </td>
+                    <td><div className="skeleton-pulse skeleton-text" style={{ width: '24px' }}></div></td>
+                    <td><div className="skeleton-pulse skeleton-text" style={{ width: '24px' }}></div></td>
+                    <td><div className="skeleton-pulse skeleton-text" style={{ width: '24px' }}></div></td>
+                    <td><div className="skeleton-pulse skeleton-text" style={{ width: '24px' }}></div></td>
+                    <td><div className="skeleton-pulse skeleton-text" style={{ width: '24px' }}></div></td>
+                    <td><div className="skeleton-pulse skeleton-text" style={{ width: '24px' }}></div></td>
+                    <td><div className="skeleton-pulse skeleton-text" style={{ width: '24px' }}></div></td>
+                    <td><div className="skeleton-pulse skeleton-text" style={{ width: '28px' }}></div></td>
+                    <td><div className="skeleton-pulse skeleton-text" style={{ width: '75px' }}></div></td>
+                  </tr>
+                ))
+              ) : standings.length === 0 ? (
+                <tr>
+                  <td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: '#94a3b8' }}>
+                    Jamoalar yoki ma'lumotlar topilmadi
                   </td>
                 </tr>
-              ))}
+              ) : (
+                standings.map((t, i) => (
+                  <tr key={t.id}>
+                    <td>
+                      <span className={`rank-badge rank-${i + 1}`}>
+                        {i + 1}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="team-info">
+                        <img src={t.logo_url} alt="" onError={(e) => { e.target.onerror = null; e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' fill='%23ccc' rx='15'/%3E%3C/svg%3E"; }} />
+                        {t.name}
+                      </div>
+                    </td>
+                    <td>{t.played}</td>
+                    <td>{t.won}</td>
+                    <td>{t.drawn}</td>
+                    <td>{t.lost}</td>
+                    <td>{t.gf}</td>
+                    <td>{t.ga}</td>
+                    <td>{t.gd > 0 ? `+${t.gd}` : t.gd}</td>
+                    <td><strong>{t.points}</strong></td>
+                    <td>
+                      <button 
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          background: 'rgba(59, 130, 246, 0.15)',
+                          border: '1px solid #3b82f6',
+                          color: '#60a5fa',
+                          fontWeight: '700',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onClick={() => handleOpenEditModal(t)}
+                        title="Jamoa o'yinlari va gollar farqini tahrirlash"
+                      >
+                        <Edit size={14} /> Tahrirlash
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
