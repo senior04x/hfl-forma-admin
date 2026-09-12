@@ -1104,21 +1104,65 @@ export default function Standings() {
             const teamCount = standings.length;
             const canvasHeight = 1920;
             const tFontSize = teamCount > 35 ? '13.5px' : teamCount > 24 ? '15px' : teamCount > 16 ? '16.5px' : '18px';
-            const tLogoSize = teamCount > 35 ? '20px' : teamCount > 24 ? '24px' : teamCount > 16 ? '28px' : '34px';
+            const tLogoSize = teamCount > 35 ? '21px' : teamCount > 24 ? '25px' : teamCount > 16 ? '29px' : '34px';
             const tournRowHeight = teamCount > 35 ? 31 : teamCount > 24 ? 33 : teamCount > 16 ? 38 : 44;
-            const tournTableWidth = 710;
-            const tournStatsWidth = 184;
-            const tournBracketWidth = 54;
-            const tournLeftBlockWidth = tournTableWidth - tournStatsWidth - tournBracketWidth; // 472px
+            const tournTableWidth = 730;
+            const tournStatsWidth = 190;
+            const tournBracketWidth = 56;
+            const tournLeftBlockWidth = tournTableWidth - tournStatsWidth - tournBracketWidth; // 484px
 
-            const zone1Limit = 8;
-            const zone2Limit = 24;
-            const zone1Label = '1\\8 FINAL';
-            const zone2Label = '1\\16 FINAL';
-            const zone3Label = 'TURNIRNI TARK ETADIGANLAR';
+            // Helper to convert hex to RGBA
+            const hexToRgba = (hex, alpha = 1) => {
+              if (!hex || typeof hex !== 'string') return `rgba(56, 189, 248, ${alpha})`;
+              let c = hex.replace('#', '').trim();
+              if (c.length === 3) c = c.split('').map(x => x + x).join('');
+              if (c.length !== 6) return `rgba(56, 189, 248, ${alpha})`;
+              const r = parseInt(c.substring(0, 2), 16);
+              const g = parseInt(c.substring(2, 4), 16);
+              const b = parseInt(c.substring(4, 6), 16);
+              return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            };
+
+            // Calculate zone limits based on teamCount
+            let zone1Limit = 8;
+            let zone2Limit = 24;
+            let zone1Label = '1\\8 FINAL';
+            let zone2Label = '1\\16 FINAL';
+            let zone3Label = 'TURNIRNI TARK ETADIGANLAR';
+
+            if (teamCount < 16) {
+              zone1Limit = 4;
+              zone2Limit = 8;
+              zone1Label = 'CHORAK FINAL';
+              zone2Label = '1\\8 FINAL';
+            } else if (teamCount < 24) {
+              zone1Limit = 8;
+              zone2Limit = 16;
+              zone1Label = '1\\8 FINAL';
+              zone2Label = '1\\16 FINAL';
+            }
+
+            const zone1Count = Math.min(zone1Limit, teamCount);
+            const zone2Count = teamCount > zone1Limit ? Math.min(zone2Limit - zone1Limit, teamCount - zone1Limit) : 0;
+            const zone3Count = teamCount > zone2Limit ? (teamCount - zone2Limit) : 0;
+
+            const zone1Height = zone1Count * tournRowHeight;
+            const zone2Height = zone2Count * tournRowHeight;
+            const zone3Height = zone3Count * tournRowHeight;
+            const totalRowsHeight = teamCount * tournRowHeight;
 
             const orgName = (currentOrg?.name || 'AMATORA').toUpperCase();
             const tournName = (currentTournObj?.name || 'TURNIR').toUpperCase();
+
+            // Dynamic tournament color theme
+            const headerStatsBg = hexToRgba(tournColor, 0.95);
+            const statsColZone1Bg = hexToRgba(tournColor, 0.28);
+            const statsColZone2Bg = hexToRgba(tournColor, 0.20);
+            const statsColZone3Bg = 'rgba(12, 22, 48, 0.90)';
+
+            const bracketZone1Bg = hexToRgba(tournColor, 0.38);
+            const bracketZone2Bg = hexToRgba(tournColor, 0.22);
+            const bracketZone3Bg = 'rgba(15, 23, 42, 0.90)';
 
             return (
               <div
@@ -1142,7 +1186,7 @@ export default function Standings() {
                 }}
               >
                 {/* Top Header */}
-                <div style={{ height: '115px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', width: '1024px' }}>
+                <div style={{ height: '115px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', width: '1024px', boxSizing: 'border-box' }}>
                   {/* Left Emblem */}
                   <div style={{ width: '220px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {isCollab ? (
@@ -1187,30 +1231,33 @@ export default function Standings() {
                   </div>
                 </div>
 
-                {/* Center Section: Left Rotated Title + Compact Table & Right Zone Column */}
+                {/* Center Section: Left Rotated Title + Unified Table & Bracket Column */}
                 <div style={{
                   width: '1024px',
                   display: 'flex',
                   gap: '16px',
-                  alignItems: 'flex-start',
+                  alignItems: 'center',
                   justifyContent: 'flex-start',
-                  paddingLeft: '20px'
+                  paddingLeft: '18px',
+                  boxSizing: 'border-box'
                 }}>
                   
-                  {/* Left Column with Rotated Title (Side-by-side parallel lines) */}
+                  {/* Left Column with Rotated Title (Centered against the table) */}
                   <div style={{
                     width: '95px',
-                    height: `${Math.min(zone2Limit, teamCount) * tournRowHeight}px`,
+                    height: `${totalRowsHeight + 38}px`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    position: 'relative'
+                    position: 'relative',
+                    boxSizing: 'border-box'
                   }}>
                     <div style={{
-                      width: `${Math.min(640, (Math.min(zone2Limit, teamCount) * tournRowHeight) - 10)}px`,
+                      width: `${Math.min(760, totalRowsHeight + 20)}px`,
                       height: '95px',
                       position: 'absolute',
                       transform: 'rotate(-90deg)',
+                      transformOrigin: 'center center',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'center',
@@ -1242,27 +1289,33 @@ export default function Standings() {
                     </div>
                   </div>
 
-                  {/* Unified Table + Bracket Container */}
+                  {/* Unified Table + Bracket Container (Glassmorphism & To'q Ko'k) */}
                   <div style={{
                     width: `${tournTableWidth}px`,
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden',
-                    borderRadius: '4px'
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.14)',
+                    boxShadow: `0 18px 45px rgba(0, 0, 0, 0.65), 0 0 25px ${hexToRgba(tournColor, 0.15)}`,
+                    boxSizing: 'border-box',
+                    background: 'rgba(5, 12, 35, 0.75)',
+                    backdropFilter: 'blur(12px)'
                   }}>
-                    <div style={{ display: 'flex', width: `${tournTableWidth}px` }}>
-                      {/* Table Container */}
+                    <div style={{ display: 'flex', width: `${tournTableWidth}px`, boxSizing: 'border-box' }}>
+                      {/* Table Columns Container */}
                       <div style={{
                         width: `${tournTableWidth - tournBracketWidth}px`,
                         display: 'flex',
-                        flexDirection: 'column'
+                        flexDirection: 'column',
+                        boxSizing: 'border-box'
                       }}>
                         {/* Table Header */}
                         <div style={{
                           height: '38px',
                           display: 'flex',
                           alignItems: 'center',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.14)',
                           fontSize: tFontSize,
                           fontWeight: '900',
                           color: '#ffffff',
@@ -1276,7 +1329,8 @@ export default function Standings() {
                             display: 'flex',
                             alignItems: 'center',
                             padding: '0 10px',
-                            background: activeExportBg ? 'rgba(7, 18, 48, 0.95)' : '#07153B',
+                            background: 'rgba(5, 12, 35, 0.95)',
+                            borderRight: '1px solid rgba(255, 255, 255, 0.1)',
                             boxSizing: 'border-box'
                           }}>
                             <div style={{ width: '38px', textAlign: 'center' }}>#</div>
@@ -1289,17 +1343,17 @@ export default function Standings() {
                             height: '100%',
                             display: 'flex',
                             alignItems: 'center',
-                            background: activeExportBg ? 'rgba(23, 63, 181, 0.95)' : '#173FB5',
+                            background: headerStatsBg,
                             boxSizing: 'border-box'
                           }}>
-                            <div style={{ width: '56px', textAlign: 'center' }}>O'YIN</div>
-                            <div style={{ width: '56px', textAlign: 'center' }}>T/N</div>
-                            <div style={{ width: '72px', textAlign: 'center' }}>OCHKO</div>
+                            <div style={{ width: '58px', textAlign: 'center' }}>O'YIN</div>
+                            <div style={{ width: '58px', textAlign: 'center' }}>T/N</div>
+                            <div style={{ width: '74px', textAlign: 'center' }}>OCHKO</div>
                           </div>
                         </div>
 
                         {/* Table Body */}
-                        <div style={{ width: `${tournTableWidth - tournBracketWidth}px`, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ width: `${tournTableWidth - tournBracketWidth}px`, display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
                           {standings.map((t, idx) => {
                             const rank = idx + 1;
                             const inZone1 = rank <= zone1Limit;
@@ -1309,20 +1363,23 @@ export default function Standings() {
                             const isZone1End = rank === zone1Limit;
                             const isZone2End = rank === zone2Limit;
 
-                            let borderBottomStyle = '1px solid rgba(255, 255, 255, 0.05)';
+                            let borderBottomStyle = '1px solid rgba(255, 255, 255, 0.06)';
                             if (isZone1End && rank < teamCount) {
                               borderBottomStyle = `3.5px solid ${tournColor}`;
                             } else if (isZone2End && rank < teamCount) {
                               borderBottomStyle = '3.5px solid #EF4444';
                             }
 
+                            // Alternating deep navy rows with glassmorphism
                             const leftBg = inZone3
-                              ? (activeExportBg ? 'rgba(19, 67, 223, 0.90)' : '#1343DF')
-                              : (activeExportBg ? 'rgba(7, 18, 48, 0.90)' : '#07153B');
+                              ? (idx % 2 === 0 ? 'rgba(8, 16, 38, 0.90)' : 'rgba(4, 9, 24, 0.90)')
+                              : (idx % 2 === 0 ? 'rgba(7, 18, 48, 0.90)' : 'rgba(5, 12, 35, 0.90)');
 
-                            const rightBg = inZone3
-                              ? (activeExportBg ? 'rgba(19, 67, 223, 0.90)' : '#1343DF')
-                              : (activeExportBg ? 'rgba(23, 63, 181, 0.92)' : '#173FB5');
+                            const rightBg = inZone1 
+                              ? statsColZone1Bg 
+                              : inZone2 
+                              ? statsColZone2Bg 
+                              : statsColZone3Bg;
 
                             return (
                               <div
@@ -1345,13 +1402,14 @@ export default function Standings() {
                                   alignItems: 'center',
                                   padding: '0 10px',
                                   background: leftBg,
+                                  borderRight: '1px solid rgba(255, 255, 255, 0.08)',
                                   boxSizing: 'border-box'
                                 }}>
                                   <div style={{
                                     width: '38px',
                                     textAlign: 'center',
                                     fontWeight: '900',
-                                    color: '#FFFFFF'
+                                    color: inZone1 ? tournColor : '#FFFFFF'
                                   }}>
                                     {rank}
                                   </div>
@@ -1384,7 +1442,7 @@ export default function Standings() {
                                   </div>
                                 </div>
 
-                                {/* Right Stats Section (Royal Blue Block) */}
+                                {/* Right Stats Section */}
                                 <div style={{
                                   width: `${tournStatsWidth}px`,
                                   height: '100%',
@@ -1393,15 +1451,15 @@ export default function Standings() {
                                   background: rightBg,
                                   boxSizing: 'border-box'
                                 }}>
-                                  <div style={{ width: '56px', textAlign: 'center', color: '#FFFFFF', fontWeight: '700' }}>
+                                  <div style={{ width: '58px', textAlign: 'center', color: '#FFFFFF', fontWeight: '700' }}>
                                     {t.played ?? 0}
                                   </div>
 
-                                  <div style={{ width: '56px', textAlign: 'center', color: '#FFFFFF', fontWeight: '800' }}>
+                                  <div style={{ width: '58px', textAlign: 'center', color: '#FFFFFF', fontWeight: '800' }}>
                                     {t.gd ?? 0}
                                   </div>
 
-                                  <div style={{ width: '72px', textAlign: 'center', color: '#FFFFFF', fontWeight: '900' }}>
+                                  <div style={{ width: '74px', textAlign: 'center', color: '#FFFFFF', fontWeight: '900' }}>
                                     {t.points ?? 0}
                                   </div>
                                 </div>
@@ -1411,97 +1469,126 @@ export default function Standings() {
                         </div>
                       </div>
 
-                      {/* Right Bracket Column */}
+                      {/* Right Bracket Column (100% Parallel Row Heights) */}
                       <div style={{
                         width: `${tournBracketWidth}px`,
                         display: 'flex',
                         flexDirection: 'column',
-                        background: activeExportBg ? 'rgba(23, 63, 181, 0.92)' : '#173FB5'
+                        boxSizing: 'border-box',
+                        borderLeft: '1px solid rgba(255, 255, 255, 0.12)'
                       }}>
-                        {/* Top spacer matching header */}
-                        <div style={{ height: '38px', background: activeExportBg ? 'rgba(23, 63, 181, 0.95)' : '#173FB5', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }} />
+                        {/* Top spacer matching header height */}
+                        <div style={{ 
+                          height: '38px', 
+                          background: headerStatsBg, 
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.14)',
+                          boxSizing: 'border-box'
+                        }} />
 
-                        {/* Zone 1 */}
-                        <div style={{
-                          height: `${Math.min(zone1Limit, teamCount) * tournRowHeight}px`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderBottom: teamCount > zone1Limit ? `3.5px solid ${tournColor}` : 'none',
-                          background: activeExportBg ? 'rgba(23, 63, 181, 0.92)' : '#173FB5'
-                        }}>
-                          <span style={{
-                            writingMode: 'vertical-rl',
-                            fontSize: '13px',
-                            fontWeight: '900',
-                            color: '#FFFFFF',
-                            letterSpacing: '2px',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {zone1Label}
-                          </span>
-                        </div>
-
-                        {/* Zone 2 */}
-                        {teamCount > zone1Limit && (
+                        {/* Zone 1 (e.g. 1/8 FINAL) */}
+                        {zone1Count > 0 && (
                           <div style={{
-                            height: `${Math.min(zone2Limit - zone1Limit, Math.max(0, teamCount - zone1Limit)) * tournRowHeight}px`,
+                            width: `${tournBracketWidth}px`,
+                            height: `${zone1Height}px`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            borderBottom: teamCount > zone2Limit ? '3.5px solid #EF4444' : 'none',
-                            background: activeExportBg ? 'rgba(23, 63, 181, 0.92)' : '#173FB5'
+                            position: 'relative',
+                            overflow: 'hidden',
+                            borderBottom: zone2Count > 0 ? `3.5px solid ${tournColor}` : 'none',
+                            background: bracketZone1Bg,
+                            boxSizing: 'border-box'
                           }}>
-                            <span style={{
-                              writingMode: 'vertical-rl',
-                              fontSize: '13px',
+                            <div style={{
+                              whiteSpace: 'nowrap',
+                              transform: 'rotate(90deg)',
+                              transformOrigin: 'center center',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: teamCount > 35 ? '13px' : '14px',
                               fontWeight: '900',
                               color: '#FFFFFF',
-                              letterSpacing: '2px',
-                              whiteSpace: 'nowrap'
+                              letterSpacing: '2.5px',
+                              textAlign: 'center',
+                              userSelect: 'none'
                             }}>
-                              {zone2Label}
-                            </span>
+                              {zone1Label}
+                            </div>
                           </div>
                         )}
 
-                        {/* Zone 3 */}
-                        {teamCount > zone2Limit && (
+                        {/* Zone 2 (e.g. 1/16 FINAL) */}
+                        {zone2Count > 0 && (
                           <div style={{
-                            height: `${Math.max(0, teamCount - zone2Limit) * tournRowHeight}px`,
+                            width: `${tournBracketWidth}px`,
+                            height: `${zone2Height}px`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            background: activeExportBg ? 'rgba(19, 67, 223, 0.90)' : '#1343DF'
+                            position: 'relative',
+                            overflow: 'hidden',
+                            borderBottom: zone3Count > 0 ? '3.5px solid #EF4444' : 'none',
+                            background: bracketZone2Bg,
+                            boxSizing: 'border-box'
                           }}>
-                            <span style={{
-                              writingMode: 'vertical-rl',
-                              fontSize: '12px',
+                            <div style={{
+                              whiteSpace: 'nowrap',
+                              transform: 'rotate(90deg)',
+                              transformOrigin: 'center center',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: teamCount > 35 ? '13px' : '14px',
                               fontWeight: '900',
                               color: '#FFFFFF',
-                              letterSpacing: '3px',
-                              whiteSpace: 'nowrap'
+                              letterSpacing: '2.5px',
+                              textAlign: 'center',
+                              userSelect: 'none'
+                            }}>
+                              {zone2Label}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Zone 3 (TURNIRNI TARK ETADIGANLAR) */}
+                        {zone3Count > 0 && (
+                          <div style={{
+                            width: `${tournBracketWidth}px`,
+                            height: `${zone3Height}px`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            background: bracketZone3Bg,
+                            boxSizing: 'border-box'
+                          }}>
+                            <div style={{
+                              whiteSpace: 'nowrap',
+                              transform: 'rotate(90deg)',
+                              transformOrigin: 'center center',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: teamCount > 35 ? '12px' : '13px',
+                              fontWeight: '900',
+                              color: '#FFFFFF',
+                              letterSpacing: '2px',
+                              textAlign: 'center',
+                              userSelect: 'none'
                             }}>
                               {zone3Label}
-                            </span>
+                            </div>
                           </div>
                         )}
                       </div>
                     </div>
-
-                    {/* Bottom Accent Bar */}
-                    <div
-                      style={{
-                        width: `${tournTableWidth}px`,
-                        height: '22px',
-                        background: activeExportBg ? 'rgba(19, 67, 223, 0.90)' : '#1343DF'
-                      }}
-                    />
                   </div>
                 </div>
 
                 {/* Bottom Social Handle */}
-                <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '8px' }}>
+                <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '8px', boxSizing: 'border-box' }}>
                   <div style={{
                     padding: '6px 26px',
                     borderRadius: '22px',
@@ -1510,7 +1597,8 @@ export default function Standings() {
                     color: '#FFFFFF',
                     fontSize: '14px',
                     fontWeight: '800',
-                    letterSpacing: '1.2px'
+                    letterSpacing: '1.2px',
+                    backdropFilter: 'blur(8px)'
                   }}>
                     @{((currentOrg?.slug || currentOrg?.name || selectedTournObj?.name || 'havas_football')).toLowerCase().replace(/[^a-z0-9]/g, '_')}
                   </div>
