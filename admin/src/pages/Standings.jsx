@@ -1101,15 +1101,67 @@ export default function Standings() {
           const isCollab = isTourn ? currentTournObj?.isCollab : currentLeagueObj?.isCollab;
 
           if (isTourn) {
-            const teamCount = standings.length;
+            const teamCount = Math.max(1, standings.length);
             const canvasHeight = 1920;
-            const tFontSize = teamCount > 35 ? '13.5px' : teamCount > 24 ? '15px' : teamCount > 16 ? '16.5px' : '18px';
-            const tLogoSize = teamCount > 35 ? '21px' : teamCount > 24 ? '25px' : teamCount > 16 ? '29px' : '34px';
-            const tournRowHeight = teamCount > 35 ? 31 : teamCount > 24 ? 33 : teamCount > 16 ? 38 : 44;
-            const tournTableWidth = 730;
-            const tournStatsWidth = 190;
-            const tournBracketWidth = 56;
-            const tournLeftBlockWidth = tournTableWidth - tournStatsWidth - tournBracketWidth; // 484px
+
+            const isShowSponsors = checkIsShowSponsors(currentTournObj, currentTournObj?.name);
+            const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
+            const hasSecondarySponsors = isShowSponsors && secondarySponsors.length > 0;
+
+            // Mathematical calculation of vertical space inside 1920px canvas
+            // Vertical budget:
+            // Canvas height: 1920px
+            // Outer padding top/bottom: 24px * 2 = 48px
+            // Header height: 110px
+            // Header bottom margin: 12px
+            // Table header height: 38px
+            // Footer (Sponsors + Social Handle): hasSecondarySponsors ? 86px : 42px
+            // Spacing margin above footer: 12px
+            const verticalChrome = 48 + 110 + 12 + 38 + (hasSecondarySponsors ? 86 : 42) + 12;
+            const availableForRows = 1920 - verticalChrome; // ~1614px (with sponsors) or ~1658px (without)
+
+            // Dynamic row height calculated mathematically to fill vertical space without huge empty voids
+            const calculatedRowHeight = Math.floor(availableForRows / teamCount);
+            // Cap between 36px (for 40+ teams) and 58px (for <= 20 teams)
+            const tournRowHeight = Math.min(58, Math.max(36, calculatedRowHeight));
+
+            // Dynamic font and element sizing scaled to row height
+            let tFontSize = '15px';
+            let tLogoSize = '26px';
+            let tScoreFontSize = '15.5px';
+            let tRankWidth = '42px';
+
+            if (tournRowHeight >= 52) {
+              tFontSize = '17.5px';
+              tLogoSize = '34px';
+              tScoreFontSize = '18px';
+              tRankWidth = '46px';
+            } else if (tournRowHeight >= 45) {
+              tFontSize = '16.5px';
+              tLogoSize = '30px';
+              tScoreFontSize = '17px';
+              tRankWidth = '44px';
+            } else if (tournRowHeight >= 38) {
+              tFontSize = '15px';
+              tLogoSize = '26px';
+              tScoreFontSize = '15.5px';
+              tRankWidth = '42px';
+            } else {
+              tFontSize = '13.5px';
+              tLogoSize = '22px';
+              tScoreFontSize = '14px';
+              tRankWidth = '38px';
+            }
+
+            // Horizontal layout budgeting (Total Canvas: 1080px)
+            // Left Rotated Title: 90px
+            // Gap: 18px
+            // Table: 850px
+            // Total Center Block: 958px (centered in 1080px with ~61px margins)
+            const tournTableWidth = 850;
+            const tournStatsWidth = 210;
+            const tournBracketWidth = 62;
+            const tournLeftBlockWidth = tournTableWidth - tournStatsWidth - tournBracketWidth; // 578px
 
             // Helper to convert hex to RGBA
             const hexToRgba = (hex, alpha = 1) => {
@@ -1186,7 +1238,7 @@ export default function Standings() {
                 }}
               >
                 {/* Top Header */}
-                <div style={{ height: '115px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', width: '1024px', boxSizing: 'border-box' }}>
+                <div style={{ height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '4px', width: '1024px', boxSizing: 'border-box' }}>
                   {/* Left Emblem */}
                   <div style={{ width: '220px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {isCollab ? (
@@ -1235,16 +1287,15 @@ export default function Standings() {
                 <div style={{
                   width: '1024px',
                   display: 'flex',
-                  gap: '16px',
+                  gap: '18px',
                   alignItems: 'center',
-                  justifyContent: 'flex-start',
-                  paddingLeft: '18px',
+                  justifyContent: 'center',
                   boxSizing: 'border-box'
                 }}>
                   
                   {/* Left Column with Rotated Title (Centered against the table) */}
                   <div style={{
-                    width: '95px',
+                    width: '90px',
                     height: `${totalRowsHeight + 38}px`,
                     display: 'flex',
                     alignItems: 'center',
@@ -1253,8 +1304,8 @@ export default function Standings() {
                     boxSizing: 'border-box'
                   }}>
                     <div style={{
-                      width: `${Math.min(760, totalRowsHeight + 20)}px`,
-                      height: '95px',
+                      width: `${totalRowsHeight + 38}px`,
+                      height: '90px',
                       position: 'absolute',
                       transform: 'rotate(-90deg)',
                       transformOrigin: 'center center',
@@ -1262,13 +1313,13 @@ export default function Standings() {
                       flexDirection: 'column',
                       justifyContent: 'center',
                       alignItems: 'center',
-                      gap: '8px'
+                      gap: '6px'
                     }}>
                       <span style={{
-                        fontSize: '16.5px',
+                        fontSize: '15px',
                         fontWeight: '800',
                         color: tournColor,
-                        letterSpacing: '7.5px',
+                        letterSpacing: '6px',
                         textTransform: 'uppercase',
                         textAlign: 'center',
                         whiteSpace: 'nowrap'
@@ -1276,10 +1327,10 @@ export default function Standings() {
                         {`${orgName} ${tournName.includes('LIGA') ? tournName : `${tournName} LIGASI`}`}
                       </span>
                       <span style={{
-                        fontSize: '56px',
+                        fontSize: '52px',
                         fontWeight: '900',
                         color: '#ffffff',
-                        letterSpacing: '4.5px',
+                        letterSpacing: '4px',
                         textTransform: 'uppercase',
                         textAlign: 'center',
                         whiteSpace: 'nowrap'
@@ -1333,7 +1384,7 @@ export default function Standings() {
                             borderRight: '1px solid rgba(255, 255, 255, 0.1)',
                             boxSizing: 'border-box'
                           }}>
-                            <div style={{ width: '38px', textAlign: 'center' }}>#</div>
+                            <div style={{ width: tRankWidth, textAlign: 'center' }}>#</div>
                             <div style={{ flex: 1, paddingLeft: '8px' }}>JAMOALAR</div>
                           </div>
 
@@ -1346,9 +1397,9 @@ export default function Standings() {
                             background: headerStatsBg,
                             boxSizing: 'border-box'
                           }}>
-                            <div style={{ width: '58px', textAlign: 'center' }}>O'YIN</div>
-                            <div style={{ width: '58px', textAlign: 'center' }}>T/N</div>
-                            <div style={{ width: '74px', textAlign: 'center' }}>OCHKO</div>
+                            <div style={{ width: '64px', textAlign: 'center' }}>O'YIN</div>
+                            <div style={{ width: '64px', textAlign: 'center' }}>T/N</div>
+                            <div style={{ width: '82px', textAlign: 'center' }}>OCHKO</div>
                           </div>
                         </div>
 
@@ -1406,9 +1457,10 @@ export default function Standings() {
                                   boxSizing: 'border-box'
                                 }}>
                                   <div style={{
-                                    width: '38px',
+                                    width: tRankWidth,
                                     textAlign: 'center',
                                     fontWeight: '900',
+                                    fontSize: tScoreFontSize,
                                     color: inZone1 ? tournColor : '#FFFFFF'
                                   }}>
                                     {rank}
@@ -1451,15 +1503,15 @@ export default function Standings() {
                                   background: rightBg,
                                   boxSizing: 'border-box'
                                 }}>
-                                  <div style={{ width: '58px', textAlign: 'center', color: '#FFFFFF', fontWeight: '700' }}>
+                                  <div style={{ width: '64px', textAlign: 'center', color: '#FFFFFF', fontWeight: '800', fontSize: tScoreFontSize }}>
                                     {t.played ?? 0}
                                   </div>
 
-                                  <div style={{ width: '58px', textAlign: 'center', color: '#FFFFFF', fontWeight: '800' }}>
+                                  <div style={{ width: '64px', textAlign: 'center', color: '#FFFFFF', fontWeight: '800', fontSize: tScoreFontSize }}>
                                     {t.gd ?? 0}
                                   </div>
 
-                                  <div style={{ width: '74px', textAlign: 'center', color: '#FFFFFF', fontWeight: '900' }}>
+                                  <div style={{ width: '82px', textAlign: 'center', color: inZone1 ? tournColor : '#FFFFFF', fontWeight: '900', fontSize: tournRowHeight >= 45 ? '18px' : '16.5px' }}>
                                     {t.points ?? 0}
                                   </div>
                                 </div>
@@ -1506,7 +1558,7 @@ export default function Standings() {
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: teamCount > 35 ? '13px' : '14px',
+                              fontSize: tournRowHeight >= 45 ? '14px' : '13px',
                               fontWeight: '900',
                               color: '#FFFFFF',
                               letterSpacing: '2.5px',
@@ -1539,7 +1591,7 @@ export default function Standings() {
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: teamCount > 35 ? '13px' : '14px',
+                              fontSize: tournRowHeight >= 45 ? '14px' : '13px',
                               fontWeight: '900',
                               color: '#FFFFFF',
                               letterSpacing: '2.5px',
@@ -1571,7 +1623,7 @@ export default function Standings() {
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: teamCount > 35 ? '12px' : '13px',
+                              fontSize: tournRowHeight >= 45 ? '13px' : '12px',
                               fontWeight: '900',
                               color: '#FFFFFF',
                               letterSpacing: '2px',
@@ -1587,20 +1639,73 @@ export default function Standings() {
                   </div>
                 </div>
 
-                {/* Bottom Social Handle */}
-                <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '8px', boxSizing: 'border-box' }}>
+                {/* Footer: Secondary Sponsors + Social Handle */}
+                <div style={{
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  boxSizing: 'border-box'
+                }}>
+                  {/* Secondary Sponsors Banner */}
+                  {hasSecondarySponsors && (
+                    <div style={{
+                      width: '100%',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      boxSizing: 'border-box'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '32px'
+                      }}>
+                        {secondarySponsors.map((s, idx) => (
+                          <React.Fragment key={s.id || idx}>
+                            <img
+                              src={s.logo_url}
+                              alt={s.name || ''}
+                              crossOrigin="anonymous"
+                              style={{
+                                height: '36px',
+                                maxWidth: '120px',
+                                objectFit: 'contain',
+                                filter: 'grayscale(100%) brightness(1.25)',
+                                opacity: 0.85
+                              }}
+                            />
+                            {idx < secondarySponsors.length - 1 && (
+                              <div style={{ height: '20px', width: '1.5px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Social Handle */}
                   <div style={{
-                    padding: '6px 26px',
-                    borderRadius: '22px',
-                    background: 'rgba(5, 12, 35, 0.85)',
-                    border: '1.2px solid rgba(255, 255, 255, 0.2)',
-                    color: '#FFFFFF',
-                    fontSize: '14px',
-                    fontWeight: '800',
-                    letterSpacing: '1.2px',
-                    backdropFilter: 'blur(8px)'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}>
-                    @{((currentOrg?.slug || currentOrg?.name || selectedTournObj?.name || 'havas_football')).toLowerCase().replace(/[^a-z0-9]/g, '_')}
+                    <div style={{
+                      padding: '5px 24px',
+                      borderRadius: '20px',
+                      background: 'rgba(5, 12, 35, 0.85)',
+                      border: '1.2px solid rgba(255, 255, 255, 0.2)',
+                      color: '#FFFFFF',
+                      fontSize: '13.5px',
+                      fontWeight: '800',
+                      letterSpacing: '1.2px',
+                      backdropFilter: 'blur(8px)'
+                    }}>
+                      @{((currentOrg?.slug || currentOrg?.name || selectedTournObj?.name || 'havas_football')).toLowerCase().replace(/[^a-z0-9]/g, '_')}
+                    </div>
                   </div>
                 </div>
               </div>
