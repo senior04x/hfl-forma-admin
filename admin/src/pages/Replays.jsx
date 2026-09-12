@@ -17,7 +17,8 @@ import {
   RefreshCw,
   ExternalLink,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Play
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
@@ -52,6 +53,7 @@ const Replays = () => {
   const [currentMatch, setCurrentMatch] = useState(null);
   const [matchEvents, setMatchEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [activeVideoId, setActiveVideoId] = useState(null);
 
   const [copiedId, setCopiedId] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
@@ -475,23 +477,42 @@ const Replays = () => {
 
                   return (
                     <div key={event.id} className={`replay-item-card ${hasVideo ? 'has-video' : 'no-video'}`}>
-                      {/* Video Player */}
+                      {/* Video Player (On-demand Lazy Loading: only 1 video loads when clicked) */}
                       <div className="replay-video-container">
                         {hasVideo ? (
-                          <div className="video-lazy-wrapper">
-                            <video 
-                              src={event.replay_video_url} 
-                              preload="metadata" 
-                              playsInline
-                              controls 
-                              className="lazy-video-element"
-                              onPlay={(e) => {
-                                document.querySelectorAll('video').forEach(v => {
-                                  if (v !== e.target) v.pause();
-                                });
-                              }}
-                            />
-                          </div>
+                          activeVideoId === event.id ? (
+                            <div className="video-lazy-wrapper active-playing-wrapper">
+                              <video 
+                                src={event.replay_video_url} 
+                                autoPlay
+                                playsInline
+                                controls 
+                                preload="auto"
+                                className="lazy-video-element"
+                              />
+                              <button 
+                                type="button"
+                                className="btn-close-video"
+                                title="Videoni to'xtatish"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveVideoId(null);
+                                }}
+                              >
+                                <X size={15} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div 
+                              className="video-click-to-play-placeholder"
+                              onClick={() => setActiveVideoId(event.id)}
+                            >
+                              <div className="play-button-glow">
+                                <Play size={24} className="play-icon-triangle" fill="#ffffff" />
+                              </div>
+                              <span className="play-action-text">Ko'rish uchun bosing</span>
+                            </div>
+                          )
                         ) : (
                           <div className="video-placeholder-box">
                             <Film size={32} className="text-muted" />
