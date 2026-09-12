@@ -44,6 +44,7 @@ function App() {
           <Route path="/news" element={<News />} />
           <Route path="/archive" element={<Archive />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/tournaments" element={<Settings key="tournaments" section="tournaments" />} />
         </Route>
         <Route path="/match/:id" element={<MatchControl />} />
         <Route path="/obs/scoreboard/:id" element={<ObsScoreboard />} />
@@ -57,4 +58,3 @@ function App() {
 }
 
 export default App;
-

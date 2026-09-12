@@ -67,6 +67,10 @@
 
 .sidebar {
     width: 250px;
+    flex-shrink: 0;
+    min-height: 0;
+    max-height: 100dvh;
+    overflow: hidden;
     background-color: #050910 !important;
     color: white;
     display: flex;
@@ -76,6 +80,7 @@
 }
 
 .sidebar-header {
+    flex-shrink: 0;
     padding: 30px;
     text-align: center;
 }
@@ -125,6 +130,10 @@
 
 .sidebar-nav {
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
     padding: 20px 0;
 }
 
@@ -160,6 +169,7 @@
 }
 
 .sidebar-footer {
+    flex-shrink: 0;
     padding: 20px;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -186,6 +196,8 @@
 
 .main-content {
     flex: 1;
+    min-width: 0;
+    min-height: 0;
     padding: 40px;
     overflow-y: auto;
     background-color: #0b0f19;
@@ -214,6 +226,7 @@
         right: 0;
         width: 100%;
         height: auto;
+        max-height: calc(100dvh - 70px);
         bottom: auto;
         padding-top: 0;
         transform: translateY(-150%);

@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Newspaper,
   Archive,
+  Trophy,
   ShieldAlert
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
@@ -72,6 +73,7 @@ const Layout = () => {
     { path: '/profile-updates', label: "Ma'lumotlar almashinuvi", icon: <RefreshCw size={20} /> },
     { path: '/schedule', label: "O'yinlar jadvali", icon: <Calendar size={20} /> },
     { path: '/standings', label: 'Turnir jadvali', icon: <LayoutDashboard size={20} /> },
+    { path: '/tournaments', label: 'Turnirlar', icon: <Trophy size={20} /> },
     { path: '/cards', label: 'Kartochkalar', icon: <ShieldAlert size={20} /> },
     { path: '/sponsors', label: 'Homiylar', icon: <Calendar size={20} /> },
     { path: '/news', label: 'Yangiliklar', icon: <Newspaper size={20} /> },
@@ -215,5 +217,4 @@ const Layout = () => {
 };
 
 export default Layout;
-
 

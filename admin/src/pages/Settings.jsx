@@ -7,7 +7,8 @@ import './Settings.css';
 
 import { parseTournamentTier, formatTournamentDescription, DEFAULT_TOURNAMENT_COLORS } from '../utils/tournamentUtils';
 
-const Settings = () => {
+const Settings = ({ section = 'settings' }) => {
+  const tournamentsOnly = section === 'tournaments';
   const { currentOrg, orgId, adminRole, updateCurrentOrg } = useOrg();
   const [userEmail, setUserEmail] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -1317,7 +1318,7 @@ const Settings = () => {
       <div className="settings-header">
         <SettingsIcon size={28} />
         <div>
-          <h1>Hisob va Ligalar Sozlamalari</h1>
+          <h1>{tournamentsOnly ? 'Turnirlar' : 'Hisob va Ligalar Sozlamalari'}</h1>
           <p>{currentOrg?.name} ({adminRole === 'super_admin' ? 'Super Admin' : 'Tashkilot Admini'})</p>
         </div>
       </div>
@@ -1433,7 +1434,7 @@ const Settings = () => {
       ) : (
         <>
           {/* Incoming Collab Requests Banner */}
-          {incomingCollabs.filter(c => c.status === 'pending').length > 0 && (
+          {!tournamentsOnly && incomingCollabs.filter(c => c.status === 'pending').length > 0 && (
             <div className="collab-incoming-banner">
               <div className="collab-incoming-header">
                 <Users size={20} />
@@ -1464,6 +1465,7 @@ const Settings = () => {
 
           <div className="settings-grid">
             {/* Dynamic League Management Card */}
+            {!tournamentsOnly && (
             <div className="settings-card full-width">
               <div className="settings-card-header">
                 <Trophy size={20} />
@@ -1484,7 +1486,7 @@ const Settings = () => {
                         : null;
 
                       // Faqat ligani asl yaratgan/egasi bo'lgan tashkilot (owner) boshqaruv huquqiga ega
-                      const isOwner = l.isOwn !== false && l.organization_id === orgId;
+                      const isOwner = l.isOwn !== false && String(l.organization_id) === String(orgId);
 
                       return (
                         <div key={l.id} className={`league-card-drawn ${editingLeague?.id === l.id ? 'editing' : ''}`}>
@@ -1703,6 +1705,7 @@ const Settings = () => {
               </div>
             </div>
 
+            )}
             {/* Hidden file inputs for Tournaments */}
             <input 
               type="file" 
@@ -1722,7 +1725,7 @@ const Settings = () => {
             {/* ========================================================================= */}
             {/* TASHKILOT TURNIRLARI BOSHQARUVI                                           */}
             {/* ========================================================================= */}
-            <div className="settings-card" style={{ marginTop: '30px' }}>
+            <div className="settings-card full-width" style={{ marginTop: tournamentsOnly ? 0 : '30px' }}>
               <div className="settings-card-header" style={{ justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Award size={22} color="#00FF66" />
@@ -1782,7 +1785,7 @@ const Settings = () => {
                 ) : (
                   <div className="leagues-grid">
                     {tournaments.map(t => {
-                      const isOwner = t.isOwn !== false && t.organization_id === orgId;
+                      const isOwner = t.isOwn !== false && String(t.organization_id) === String(orgId);
                       const linkedLeagues = allTournamentLeagues
                         .filter(tl => tl.tournament_id === t.id)
                         .map(tl => tl.league)
@@ -2045,6 +2048,7 @@ const Settings = () => {
             </div>
 
             {/* Organization Logo Card */}
+            {!tournamentsOnly && <>
             <div className="settings-card">
               <div className="settings-card-header">
                 <Building2 size={20} />
@@ -2269,6 +2273,7 @@ const Settings = () => {
                 </button>
               </form>
             </div>
+            </>}
           </div>
         </>
       )}
@@ -2290,6 +2295,9 @@ const Settings = () => {
             <form onSubmit={(e) => {
               handleSaveLeague(e);
             }} className="league-modal-form">
+              {message.type === 'error' && message.text && (
+                <div className="settings-alert error" role="alert">{message.text}</div>
+              )}
               <div className="league-modal-grid">
                 {/* Liga Nomi */}
                 <div className="settings-form-group">
