@@ -169,9 +169,9 @@ const Replays = () => {
           match_id,
           team_id,
           player_id,
-          assist_player_id,
           event_type,
           minute,
+          details,
           replay_video_url,
           created_at,
           player:player_id (id, first_name, last_name, player_number, photo_url),
@@ -181,29 +181,16 @@ const Replays = () => {
         .order('minute', { ascending: true })
         .order('created_at', { ascending: true });
 
-      if (evErr) throw evErr;
+      if (evErr) {
+        console.error('Error fetching match_events:', evErr);
+        throw evErr;
+      }
 
       const goalsAndReplays = (eventsData || []).filter(e => 
         ['goal', 'penalty_goal', 'own_goal'].includes(e.event_type) || e.replay_video_url
       );
 
-      // Fetch assist players if any
-      const assistIds = [...new Set(goalsAndReplays.map(e => e.assist_player_id).filter(Boolean))];
-      let assistMap = new Map();
-      if (assistIds.length > 0) {
-        const { data: assistPlayers } = await supabase
-          .from('players')
-          .select('id, first_name, last_name, player_number')
-          .in('id', assistIds);
-        (assistPlayers || []).forEach(p => assistMap.set(p.id, p));
-      }
-
-      const finalEvents = goalsAndReplays.map(e => ({
-        ...e,
-        assist_player: e.assist_player_id ? assistMap.get(e.assist_player_id) : null
-      }));
-
-      setMatchEvents(finalEvents);
+      setMatchEvents(goalsAndReplays);
     } catch (err) {
       console.error('Error loading match details:', err);
     } finally {
