@@ -1108,22 +1108,35 @@ export default function Standings() {
             const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
             const hasSecondarySponsors = isShowSponsors && secondarySponsors.length > 0;
 
-            // Mathematical calculation of vertical space inside 1920px canvas
-            // Vertical budget:
-            // Canvas height: 1920px
-            // Outer padding top/bottom: 24px * 2 = 48px
-            // Header height: 110px
-            // Header bottom margin: 12px
-            // Table header height: 38px
-            // Footer (Sponsors + Social Handle): hasSecondarySponsors ? 86px : 42px
-            // Spacing margin above footer: 12px
-            const verticalChrome = 48 + 110 + 12 + 38 + (hasSecondarySponsors ? 86 : 42) + 12;
-            const availableForRows = 1920 - verticalChrome; // ~1614px (with sponsors) or ~1658px (without)
+            // Dimensions and symmetrical vertical spacing
+            const headerHeight = 110;
+            const footerHeight = hasSecondarySponsors ? 44 : 0;
+            const tableHeaderHeight = 38;
 
-            // Dynamic row height calculated mathematically to fill vertical space without huge empty voids
-            const calculatedRowHeight = Math.floor(availableForRows / teamCount);
-            // Cap between 36px (for 40+ teams) and 58px (for <= 20 teams)
-            const tournRowHeight = Math.min(58, Math.max(36, calculatedRowHeight));
+            // Mathematical calculation of row height based on team count
+            let tournRowHeight = 40;
+            if (teamCount > 35) {
+              tournRowHeight = 40;
+            } else if (teamCount > 28) {
+              tournRowHeight = 44;
+            } else if (teamCount > 20) {
+              tournRowHeight = 50;
+            } else if (teamCount > 14) {
+              tournRowHeight = 56;
+            } else {
+              tournRowHeight = 60;
+            }
+
+            const totalRowsHeight = teamCount * tournRowHeight;
+            const totalTableHeight = tableHeaderHeight + totalRowsHeight;
+
+            // Mathematical symmetry:
+            // 1. edgeMargin (top padding above header === bottom padding below footer)
+            // 2. tableGap (gap between header & table === gap between table & footer)
+            const remainingSpace = Math.max(0, canvasHeight - headerHeight - totalTableHeight - footerHeight);
+            const halfRemaining = Math.floor(remainingSpace / 2);
+            const tableGap = Math.max(18, Math.floor(halfRemaining * 0.47));
+            const edgeMargin = Math.max(18, Math.floor((remainingSpace - (2 * tableGap)) / 2));
 
             // Dynamic font and element sizing scaled to row height
             let tFontSize = '15px';
@@ -1154,10 +1167,6 @@ export default function Standings() {
             }
 
             // Horizontal layout budgeting (Total Canvas: 1080px)
-            // Left Rotated Title: 90px
-            // Gap: 18px
-            // Table: 850px
-            // Total Center Block: 958px (centered in 1080px with ~61px margins)
             const tournTableWidth = 850;
             const tournStatsWidth = 210;
             const tournBracketWidth = 62;
@@ -1201,7 +1210,6 @@ export default function Standings() {
             const zone1Height = zone1Count * tournRowHeight;
             const zone2Height = zone2Count * tournRowHeight;
             const zone3Height = zone3Count * tournRowHeight;
-            const totalRowsHeight = teamCount * tournRowHeight;
 
             const orgName = (currentOrg?.name || 'AMATORA').toUpperCase();
             const tournName = (currentTournObj?.name || 'TURNIR').toUpperCase();
@@ -1226,7 +1234,7 @@ export default function Standings() {
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'space-between',
+                  justifyContent: 'flex-start',
                   alignItems: 'center',
                   background: activeExportBg
                     ? `linear-gradient(rgba(3, 7, 24, 0.55), rgba(3, 7, 24, 0.70)), url(${activeExportBg}) center/cover no-repeat`
@@ -1234,11 +1242,22 @@ export default function Standings() {
                   color: '#ffffff',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
                   boxSizing: 'border-box',
-                  padding: '24px 28px'
+                  paddingTop: `${edgeMargin}px`,
+                  paddingBottom: `${edgeMargin}px`,
+                  paddingLeft: '28px',
+                  paddingRight: '28px'
                 }}
               >
                 {/* Top Header */}
-                <div style={{ height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '4px', width: '1024px', boxSizing: 'border-box' }}>
+                <div style={{
+                  height: `${headerHeight}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '1024px',
+                  marginBottom: `${tableGap}px`,
+                  boxSizing: 'border-box'
+                }}>
                   {/* Left Emblem */}
                   <div style={{ width: '220px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {isCollab ? (
@@ -1286,17 +1305,19 @@ export default function Standings() {
                 {/* Center Section: Left Rotated Title + Unified Table & Bracket Column */}
                 <div style={{
                   width: '1024px',
+                  height: `${totalTableHeight}px`,
                   display: 'flex',
                   gap: '18px',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  marginBottom: `${tableGap}px`,
                   boxSizing: 'border-box'
                 }}>
                   
                   {/* Left Column with Rotated Title (Centered against the table) */}
                   <div style={{
                     width: '90px',
-                    height: `${totalRowsHeight + 38}px`,
+                    height: `${totalTableHeight}px`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1304,7 +1325,7 @@ export default function Standings() {
                     boxSizing: 'border-box'
                   }}>
                     <div style={{
-                      width: `${totalRowsHeight + 38}px`,
+                      width: `${totalTableHeight}px`,
                       height: '90px',
                       position: 'absolute',
                       transform: 'rotate(-90deg)',
@@ -1639,75 +1660,44 @@ export default function Standings() {
                   </div>
                 </div>
 
-                {/* Footer: Secondary Sponsors + Social Handle */}
-                <div style={{
-                  width: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '12px',
-                  boxSizing: 'border-box'
-                }}>
-                  {/* Secondary Sponsors Banner */}
-                  {hasSecondarySponsors && (
-                    <div style={{
-                      width: '100%',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      boxSizing: 'border-box'
-                    }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '32px'
-                      }}>
-                        {secondarySponsors.map((s, idx) => (
-                          <React.Fragment key={s.id || idx}>
-                            <img
-                              src={s.logo_url}
-                              alt={s.name || ''}
-                              crossOrigin="anonymous"
-                              style={{
-                                height: '36px',
-                                maxWidth: '120px',
-                                objectFit: 'contain',
-                                filter: 'grayscale(100%) brightness(1.25)',
-                                opacity: 0.85
-                              }}
-                            />
-                            {idx < secondarySponsors.length - 1 && (
-                              <div style={{ height: '20px', width: '1.5px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
-                            )}
-                          </React.Fragment>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Social Handle */}
+                {/* Footer: Secondary Sponsors Banner (No @hfl) */}
+                {hasSecondarySponsors && (
                   <div style={{
+                    width: '100%',
+                    height: `${footerHeight}px`,
                     display: 'flex',
+                    justifyContent: 'center',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    boxSizing: 'border-box'
                   }}>
                     <div style={{
-                      padding: '5px 24px',
-                      borderRadius: '20px',
-                      background: 'rgba(5, 12, 35, 0.85)',
-                      border: '1.2px solid rgba(255, 255, 255, 0.2)',
-                      color: '#FFFFFF',
-                      fontSize: '13.5px',
-                      fontWeight: '800',
-                      letterSpacing: '1.2px',
-                      backdropFilter: 'blur(8px)'
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '32px'
                     }}>
-                      @{((currentOrg?.slug || currentOrg?.name || selectedTournObj?.name || 'havas_football')).toLowerCase().replace(/[^a-z0-9]/g, '_')}
+                      {secondarySponsors.map((s, idx) => (
+                        <React.Fragment key={s.id || idx}>
+                          <img
+                            src={s.logo_url}
+                            alt={s.name || ''}
+                            crossOrigin="anonymous"
+                            style={{
+                              height: '38px',
+                              maxWidth: '125px',
+                              objectFit: 'contain',
+                              filter: 'grayscale(100%) brightness(1.25)',
+                              opacity: 0.85
+                            }}
+                          />
+                          {idx < secondarySponsors.length - 1 && (
+                            <div style={{ height: '22px', width: '1.5px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
+                          )}
+                        </React.Fragment>
+                      ))}
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             );
           }
