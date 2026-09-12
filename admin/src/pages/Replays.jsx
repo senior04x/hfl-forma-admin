@@ -477,19 +477,36 @@ const Replays = () => {
 
                   return (
                     <div key={event.id} className={`replay-item-card ${hasVideo ? 'has-video' : 'no-video'}`}>
-                      {/* Video Player (On-demand Lazy Loading: only 1 video loads when clicked) */}
+                      {/* Video Player: Video frame acts as snapshot poster, overlay in center */}
                       <div className="replay-video-container">
                         {hasVideo ? (
-                          activeVideoId === event.id ? (
-                            <div className="video-lazy-wrapper active-playing-wrapper">
-                              <video 
-                                src={event.replay_video_url} 
-                                autoPlay
-                                playsInline
-                                controls 
-                                preload="auto"
-                                className="lazy-video-element"
-                              />
+                          <div 
+                            className={`video-lazy-wrapper ${activeVideoId === event.id ? 'active-playing-wrapper' : 'preview-wrapper'}`}
+                            onClick={() => {
+                              if (activeVideoId !== event.id) {
+                                setActiveVideoId(event.id);
+                              }
+                            }}
+                          >
+                            <video 
+                              key={`${event.id}-${activeVideoId === event.id ? 'playing' : 'poster'}`}
+                              src={activeVideoId === event.id ? event.replay_video_url : `${event.replay_video_url}#t=${(idx % 4) + 1.5}`}
+                              preload="metadata"
+                              muted={activeVideoId !== event.id}
+                              controls={activeVideoId === event.id}
+                              autoPlay={activeVideoId === event.id}
+                              playsInline
+                              className={`lazy-video-element ${activeVideoId === event.id ? 'is-playing' : 'is-poster'}`}
+                            />
+
+                            {activeVideoId !== event.id ? (
+                              <div className="video-click-to-play-overlay">
+                                <div className="play-button-glow">
+                                  <Play size={24} className="play-icon-triangle" fill="#ffffff" />
+                                </div>
+                                <span className="play-action-text">Ko'rish uchun bosing</span>
+                              </div>
+                            ) : (
                               <button 
                                 type="button"
                                 className="btn-close-video"
@@ -501,18 +518,8 @@ const Replays = () => {
                               >
                                 <X size={15} />
                               </button>
-                            </div>
-                          ) : (
-                            <div 
-                              className="video-click-to-play-placeholder"
-                              onClick={() => setActiveVideoId(event.id)}
-                            >
-                              <div className="play-button-glow">
-                                <Play size={24} className="play-icon-triangle" fill="#ffffff" />
-                              </div>
-                              <span className="play-action-text">Ko'rish uchun bosing</span>
-                            </div>
-                          )
+                            )}
+                          </div>
                         ) : (
                           <div className="video-placeholder-box">
                             <Film size={32} className="text-muted" />
