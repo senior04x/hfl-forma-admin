@@ -760,33 +760,68 @@ const Schedule = () => {
   };
 
   useEffect(() => {
-    if (!exportLeague) return;
-    const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
+    if (viewMode === 'tournament') {
+      const currentTournObj = tournaments.find(t => String(t.id) === String(selectedTournamentId));
+      if (!currentTournObj) {
+        setScheduleBanner('');
+        setYtBanner('');
+        return;
+      }
 
-    const scheduleSponsorKey = `BANNER_SCHEDULE_${orgId}_${exportLeague}`;
-    const scheduleSponsorRow = allSponsors.find(s => s.name === scheduleSponsorKey);
+      const scheduleSponsorKey = `BANNER_SCHEDULE_${orgId}_TOURN_${currentTournObj.id}`;
+      const scheduleSponsorNameKey = `BANNER_SCHEDULE_${orgId}_${currentTournObj.name}`;
+      const scheduleSponsorRow = allSponsors.find(s => s.name === scheduleSponsorKey || s.name === scheduleSponsorNameKey);
 
-    const dbUrl = currentLeagueObj?.schedule_banner_url || currentLeagueObj?.export_bg_url || scheduleSponsorRow?.logo_url;
-    if (dbUrl) {
-      setScheduleBanner(dbUrl);
+      const dbUrl = currentTournObj.export_bg_url || currentTournObj.schedule_banner_url || currentTournObj.banner_url || currentTournObj.bg_url || currentTournObj.bg_image || scheduleSponsorRow?.logo_url;
+      if (dbUrl) {
+        setScheduleBanner(dbUrl);
+      } else {
+        const localKey = `hfl_schedule_banner_${orgId}_tourn_${currentTournObj.id}`;
+        const savedLocal = localStorage.getItem(localKey);
+        setScheduleBanner(savedLocal || '');
+      }
+
+      const ytSponsorKey = `BANNER_YT_${orgId}_TOURN_${currentTournObj.id}`;
+      const ytSponsorNameKey = `BANNER_YT_${orgId}_${currentTournObj.name}`;
+      const ytSponsorRow = allSponsors.find(s => s.name === ytSponsorKey || s.name === ytSponsorNameKey);
+
+      const ytDbUrl = currentTournObj.yt_banner_url || currentTournObj.export_bg_url || currentTournObj.banner_url || ytSponsorRow?.logo_url;
+      if (ytDbUrl) {
+        setYtBanner(ytDbUrl);
+      } else {
+        const ytLocalKey = `hfl_yt_banner_${orgId}_tourn_${currentTournObj.id}`;
+        const savedYtLocal = localStorage.getItem(ytLocalKey);
+        setYtBanner(savedYtLocal || '');
+      }
     } else {
-      const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
-      const savedLocal = localStorage.getItem(localKey);
-      setScheduleBanner(savedLocal || '');
-    }
+      if (!exportLeague) return;
+      const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
 
-    const ytSponsorKey = `BANNER_YT_${orgId}_${exportLeague}`;
-    const ytSponsorRow = allSponsors.find(s => s.name === ytSponsorKey);
+      const scheduleSponsorKey = `BANNER_SCHEDULE_${orgId}_${exportLeague}`;
+      const scheduleSponsorRow = allSponsors.find(s => s.name === scheduleSponsorKey);
 
-    const ytDbUrl = currentLeagueObj?.yt_banner_url || currentLeagueObj?.banner_url || ytSponsorRow?.logo_url;
-    if (ytDbUrl) {
-      setYtBanner(ytDbUrl);
-    } else {
-      const ytLocalKey = `hfl_yt_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
-      const savedYtLocal = localStorage.getItem(ytLocalKey);
-      setYtBanner(savedYtLocal || '');
+      const dbUrl = currentLeagueObj?.schedule_banner_url || currentLeagueObj?.export_bg_url || scheduleSponsorRow?.logo_url;
+      if (dbUrl) {
+        setScheduleBanner(dbUrl);
+      } else {
+        const localKey = `hfl_schedule_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
+        const savedLocal = localStorage.getItem(localKey);
+        setScheduleBanner(savedLocal || '');
+      }
+
+      const ytSponsorKey = `BANNER_YT_${orgId}_${exportLeague}`;
+      const ytSponsorRow = allSponsors.find(s => s.name === ytSponsorKey);
+
+      const ytDbUrl = currentLeagueObj?.yt_banner_url || currentLeagueObj?.banner_url || ytSponsorRow?.logo_url;
+      if (ytDbUrl) {
+        setYtBanner(ytDbUrl);
+      } else {
+        const ytLocalKey = `hfl_yt_banner_${orgId}_${currentLeagueObj?.id || exportLeague}`;
+        const savedYtLocal = localStorage.getItem(ytLocalKey);
+        setYtBanner(savedYtLocal || '');
+      }
     }
-  }, [exportLeague, activeLeagues, allSponsors, orgId]);
+  }, [viewMode, selectedTournamentId, tournaments, exportLeague, activeLeagues, allSponsors, orgId]);
 
   useEffect(() => {
     if (viewMode === 'tournament') {
@@ -2280,8 +2315,16 @@ const Schedule = () => {
       {/* HIDDEN YOUTUBE THUMBNAIL 16:9 EXPORT TEMPLATE */}
       <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
         {(() => {
-          const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
+          const isTournMatch = Boolean(selectedMatchForYtExport?.tournament_id || (viewMode === 'tournament' && !selectedMatchForYtExport?.league));
+          const matchTournObj = isTournMatch ? (tournaments.find(t => String(t.id) === String(selectedMatchForYtExport?.tournament_id)) || selectedTournObj) : null;
+          const matchTournBg = matchTournObj?.yt_banner_url || matchTournObj?.export_bg_url || matchTournObj?.banner_url || matchTournObj?.bg_url || matchTournObj?.bg_image;
+
+          const currentLeagueObj = !isTournMatch ? (activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague)) : null;
           const isCollab = currentLeagueObj?.isCollab;
+
+          const effectiveYtBg = isTournMatch
+            ? (matchTournBg || (ytBanner && ytBanner !== currentLeagueObj?.yt_banner_url ? ytBanner : ''))
+            : (ytBanner || currentLeagueObj?.yt_banner_url || currentLeagueObj?.banner_url || '');
 
           return (
             <div 
@@ -2290,13 +2333,13 @@ const Schedule = () => {
               style={{ 
                 width: '1280px', 
                 height: '720px', 
-                backgroundImage: ytBanner ? `linear-gradient(rgba(10, 13, 18, 0.45), rgba(10, 13, 18, 0.75)), url(${ytBanner})` : 'linear-gradient(135deg, #0b0f19 0%, #050910 100%)', 
+                backgroundImage: effectiveYtBg ? `linear-gradient(rgba(10, 13, 18, 0.45), rgba(10, 13, 18, 0.75)), url(${effectiveYtBg})` : 'linear-gradient(135deg, #0b0f19 0%, #050910 100%)', 
                 backgroundSize: 'cover', 
                 backgroundPosition: 'center', 
                 position: 'relative', 
                 display: 'flex', 
                 flexDirection: 'column', 
-                justify: 'space-between',
+                justifyContent: 'space-between',
                 padding: '10px 45px 25px 45px', 
                 boxSizing: 'border-box',
                 fontFamily: "'Outfit', 'Inter', sans-serif"
@@ -2317,7 +2360,13 @@ const Schedule = () => {
                 </div>
 
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-                  {currentLeagueObj?.logo_url ? (
+                  {isTournMatch ? (
+                    matchTournObj?.logo_url ? (
+                      <img src={matchTournObj.logo_url} alt={matchTournObj.name} style={{ maxHeight: '110px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
+                    ) : (
+                      <h2 style={{ color: '#fff', fontSize: '38px', fontWeight: '900', textTransform: 'uppercase', margin: 0, fontStyle: 'italic', letterSpacing: '1px' }}>{matchTournObj?.name || 'Turnir'}</h2>
+                    )
+                  ) : currentLeagueObj?.logo_url ? (
                     <img src={currentLeagueObj.logo_url} alt={exportLeague} style={{ maxHeight: '110px', maxWidth: '400px', width: 'auto', height: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', display: 'block', margin: '0 auto' }} crossOrigin="anonymous" />
                   ) : (
                     <h2 style={{ color: '#fff', fontSize: '42px', fontWeight: '900', textTransform: 'uppercase', margin: 0, fontStyle: 'italic', letterSpacing: '1px' }}>{exportLeague}</h2>
@@ -2410,11 +2459,37 @@ const Schedule = () => {
 
       <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -100 }}>
         {(() => {
-          const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague);
+          const isTournView = viewMode === 'tournament';
+          const currentTournObj = isTournView ? (tournaments.find(t => String(t.id) === String(selectedTournamentId)) || selectedTournObj) : null;
+          const currentTournBg = currentTournObj?.export_bg_url || currentTournObj?.schedule_banner_url || currentTournObj?.banner_url || currentTournObj?.bg_url || currentTournObj?.bg_image;
+
+          const currentLeagueObj = !isTournView ? (activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(exportLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === exportLeague)) : null;
           const isCollab = currentLeagueObj?.isCollab;
+          const currentLeagueBg = currentLeagueObj?.schedule_banner_url || currentLeagueObj?.export_bg_url;
+
+          // For tournament: ALWAYS prefer the tournament's background. NEVER fall back to league background!
+          const effectiveBg = isTournView
+            ? (currentTournBg || (scheduleBanner && scheduleBanner !== currentLeagueBg ? scheduleBanner : ''))
+            : (scheduleBanner || currentLeagueBg || '');
 
           return (
-            <div ref={exportRef} className="schedule-export-container 1x1-poster-export" style={{ width: '1080px', height: '1080px', backgroundImage: scheduleBanner ? `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${scheduleBanner})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px 45px 20px 45px', boxSizing: 'border-box' }}>
+            <div 
+              ref={exportRef} 
+              className="schedule-export-container 1x1-poster-export" 
+              style={{ 
+                width: '1080px', 
+                height: '1080px', 
+                backgroundImage: effectiveBg ? `linear-gradient(rgba(10, 13, 18, 0.75), rgba(10, 13, 18, 0.88)), url(${effectiveBg})` : 'linear-gradient(135deg, #0b0f19 0%, #050910 100%)', 
+                backgroundSize: 'cover', 
+                backgroundPosition: 'center', 
+                position: 'relative', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                justifyContent: 'space-between', 
+                padding: '24px 45px 20px 45px', 
+                boxSizing: 'border-box' 
+              }}
+            >
                 {(() => {
                   const isTournView = viewMode === 'tournament';
                   const filteredList = matches
