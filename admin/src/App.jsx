@@ -45,6 +45,7 @@ function App() {
           <Route path="/news" element={<News />} />
           <Route path="/archive" element={<Archive />} />
           <Route path="/replays" element={<Replays />} />
+          <Route path="/replays/:matchId" element={<Replays />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/tournaments" element={<Settings key="tournaments" section="tournaments" />} />
         </Route>

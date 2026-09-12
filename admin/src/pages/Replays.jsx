@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Film, 
   Video, 
@@ -25,6 +26,8 @@ import { getActiveOrgLeagues } from '../utils/leagueUtils';
 import './Replays.css';
 
 const Replays = () => {
+  const { matchId } = useParams();
+  const navigate = useNavigate();
   const { currentOrg, orgId } = useOrg();
 
   // Data states
@@ -37,7 +40,7 @@ const Replays = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   // Filter states
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterType, setFilterType] = useState('all'); // 'all' | 'league' | 'tournament'
   const [selectedLeague, setSelectedLeague] = useState('all');
   const [selectedTournament, setSelectedTournament] = useState('all');
@@ -46,14 +49,14 @@ const Replays = () => {
   const [onlyWithReplays, setOnlyWithReplays] = useState(true);
 
   // Selected Match Detail state
-  const [selectedMatch, setSelectedMatch] = useState(null);
+  const [currentMatch, setCurrentMatch] = useState(null);
   const [matchEvents, setMatchEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
 
   const [copiedId, setCopiedId] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
 
-  // Load initial data (Leagues, Tournaments, Matches, and replay counts)
+  // 1. Initial Data Load (Matches, Teams, Leagues, Tournaments)
   useEffect(() => {
     if (!orgId) return;
     loadAllData();
@@ -63,7 +66,7 @@ const Replays = () => {
     try {
       setLoading(true);
 
-      // 1. Fetch Leagues and Tournaments in parallel
+      // Leagues and Tournaments
       const [leaguesData, tournamentsData] = await Promise.all([
         getActiveOrgLeagues(orgId),
         getActiveOrgTournaments(orgId),
@@ -75,7 +78,7 @@ const Replays = () => {
         .filter(l => l.isCollab)
         .map(l => l.name);
 
-      // 2. Fetch Teams for quick name/logo lookups
+      // Teams
       let teamsQuery = supabase
         .from('teams')
         .select('id, name, logo_url, league, organization_id');
@@ -90,7 +93,7 @@ const Replays = () => {
       (teamsData || []).forEach(t => tMap.set(t.id, t));
       setTeamsMap(tMap);
 
-      // 3. Fetch Matches (optimized select)
+      // Matches
       let matchesQuery = supabase
         .from('matches')
         .select('id, league, tournament_id, round, stage, home_team_id, away_team_id, home_score, away_score, match_date, match_time, status, organization_id')
@@ -109,7 +112,7 @@ const Replays = () => {
       const loadedMatches = matchesData || [];
       setMatches(loadedMatches);
 
-      // 4. Fetch Replay count per match to show badges and fast filtering
+      // Replay count per match
       if (loadedMatches.length > 0) {
         const matchIds = loadedMatches.map(m => m.id);
         const { data: replayEvents } = await supabase
@@ -132,19 +135,33 @@ const Replays = () => {
     }
   };
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    loadAllData();
-  };
+  // 2. URL-based Match Selection (Persists on page refresh / F5)
+  useEffect(() => {
+    if (!matchId) {
+      setCurrentMatch(null);
+      setMatchEvents([]);
+      return;
+    }
 
-  // Load events (goals with replays) when a match is selected
-  const handleSelectMatch = async (match) => {
-    setSelectedMatch(match);
+    loadMatchDetails(matchId);
+  }, [matchId, matches, teamsMap]);
+
+  const loadMatchDetails = async (targetId) => {
     setLoadingEvents(true);
-    setMatchEvents([]);
-
     try {
-      // 1. Fetch match events with player and team relations
+      // Find match from loaded matches or query directly
+      let foundMatch = matches.find(m => String(m.id) === String(targetId));
+      if (!foundMatch) {
+        const { data: mData } = await supabase
+          .from('matches')
+          .select('id, league, tournament_id, round, stage, home_team_id, away_team_id, home_score, away_score, match_date, match_time, status')
+          .eq('id', targetId)
+          .single();
+        foundMatch = mData;
+      }
+      setCurrentMatch(foundMatch);
+
+      // Fetch match_events
       const { data: eventsData, error: evErr } = await supabase
         .from('match_events')
         .select(`
@@ -160,21 +177,17 @@ const Replays = () => {
           player:player_id (id, first_name, last_name, player_number, photo_url),
           team:team_id (id, name, logo_url)
         `)
-        .eq('match_id', match.id)
+        .eq('match_id', targetId)
         .order('minute', { ascending: true })
         .order('created_at', { ascending: true });
 
-      if (evErr) {
-        console.error('Error loading match replay events:', evErr);
-        throw evErr;
-      }
+      if (evErr) throw evErr;
 
-      // Filter to goals / replays
       const goalsAndReplays = (eventsData || []).filter(e => 
         ['goal', 'penalty_goal', 'own_goal'].includes(e.event_type) || e.replay_video_url
       );
 
-      // 2. Fetch assist players safely if any exist
+      // Fetch assist players if any
       const assistIds = [...new Set(goalsAndReplays.map(e => e.assist_player_id).filter(Boolean))];
       let assistMap = new Map();
       if (assistIds.length > 0) {
@@ -192,13 +205,29 @@ const Replays = () => {
 
       setMatchEvents(finalEvents);
     } catch (err) {
-      console.error('Error loading match replay events:', err);
+      console.error('Error loading match details:', err);
     } finally {
       setLoadingEvents(false);
     }
   };
 
-  // Available rounds calculation based on current match list / filters
+  const handleSelectMatch = (match) => {
+    navigate(`/replays/${match.id}`);
+  };
+
+  const handleBackToList = () => {
+    navigate('/replays');
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    if (matchId) {
+      loadMatchDetails(matchId);
+    }
+    loadAllData();
+  };
+
+  // Available rounds calculation
   const availableRounds = useMemo(() => {
     const rounds = new Set();
     matches.forEach(m => {
@@ -209,35 +238,19 @@ const Replays = () => {
     return Array.from(rounds).sort((a, b) => Number(a) - Number(b));
   }, [matches]);
 
-  // Filter matches based on user filter selections
+  // Filter matches
   const filteredMatches = useMemo(() => {
     return matches.filter(m => {
-      // 1. Only with replays filter
       const replaysCount = matchReplaysCount.get(m.id) || 0;
-      if (onlyWithReplays && replaysCount === 0) {
-        return false;
-      }
+      if (onlyWithReplays && replaysCount === 0) return false;
 
-      // 2. Filter Type (League vs Tournament)
       if (filterType === 'league' && m.tournament_id) return false;
       if (filterType === 'tournament' && !m.tournament_id) return false;
 
-      // 3. Selected League
-      if (selectedLeague !== 'all') {
-        if (m.league !== selectedLeague) return false;
-      }
+      if (selectedLeague !== 'all' && m.league !== selectedLeague) return false;
+      if (selectedTournament !== 'all' && String(m.tournament_id) !== String(selectedTournament)) return false;
+      if (selectedRound !== 'all' && String(m.round) !== String(selectedRound)) return false;
 
-      // 4. Selected Tournament
-      if (selectedTournament !== 'all') {
-        if (String(m.tournament_id) !== String(selectedTournament)) return false;
-      }
-
-      // 5. Selected Round
-      if (selectedRound !== 'all') {
-        if (String(m.round) !== String(selectedRound)) return false;
-      }
-
-      // 6. Search Query (Team names or league name)
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const homeTeam = teamsMap.get(m.home_team_id)?.name?.toLowerCase() || '';
@@ -252,7 +265,7 @@ const Replays = () => {
     });
   }, [matches, matchReplaysCount, onlyWithReplays, filterType, selectedLeague, selectedTournament, selectedRound, searchQuery, teamsMap]);
 
-  // Stats calculation
+  // Stats
   const totalReplaysCount = useMemo(() => {
     let count = 0;
     matchReplaysCount.forEach(v => { count += v; });
@@ -265,16 +278,16 @@ const Replays = () => {
     return count;
   }, [matchReplaysCount]);
 
-  // Download Video function (direct MP4 blob download with clean filename)
+  // Download video
   const handleDownloadVideo = async (event, match) => {
     if (!event.replay_video_url) return;
     setDownloadingId(event.id);
 
     try {
-      const homeTeam = teamsMap.get(match.home_team_id)?.name || 'Home';
-      const awayTeam = teamsMap.get(match.away_team_id)?.name || 'Away';
+      const homeTeam = teamsMap.get(match?.home_team_id)?.name || 'Home';
+      const awayTeam = teamsMap.get(match?.away_team_id)?.name || 'Away';
       const playerName = event.player ? `${event.player.first_name}_${event.player.last_name}` : 'Goal';
-      const minute = event.minute ? `${event.minute}m` : 'Goal';
+      const minute = event.minute ? `${event.minute}m` : 'Replay';
       const safeFilename = `${minute}_${homeTeam}_vs_${awayTeam}_${playerName}.mp4`
         .replace(/[^a-zA-Z0-9_\-\.]/g, '_');
 
@@ -291,14 +304,13 @@ const Replays = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.warn('Direct blob download failed, falling back to new window download:', err);
+      console.warn('Direct blob download failed, falling back:', err);
       window.open(event.replay_video_url, '_blank');
     } finally {
       setDownloadingId(null);
     }
   };
 
-  // Copy Link function
   const handleCopyLink = (url, id) => {
     if (!url) return;
     navigator.clipboard.writeText(url);
@@ -328,136 +340,143 @@ const Replays = () => {
 
   return (
     <div className="replays-page">
-      {/* Top Header Banner */}
-      <div className="replays-header">
-        <div className="header-title-block">
-          <div className="header-icon-box">
-            <Film size={26} className="text-white" />
-          </div>
-          <div>
-            <h1 className="header-title">O'yin Replaylari va Gollar</h1>
-            <p className="header-subtitle">
-              OBS orqali yozib olingan gollar va replay videolarini ko'rish va montaj uchun yuklab olish
-            </p>
-          </div>
-        </div>
+      {/* Agar o'yin ichida bo'lsa: Katta header o'rniga faqat ixcham Nav Header ko'rsatiladi */}
+      {matchId ? (
+        <div className="detail-compact-nav">
+          <button className="btn-back-compact" onClick={handleBackToList} title="Orqaga">
+            <ArrowLeft size={18} />
+            <span className="back-text">Orqaga</span>
+          </button>
 
-        {/* Stats and Refresh Action */}
-        <div className="header-actions">
-          <div className="stat-pill">
-            <span className="stat-num">{totalReplaysCount}</span>
-            <span className="stat-label">Jami Replaylar</span>
+          <div className="detail-tags-compact">
+            {currentMatch?.tournament_id ? (
+              <span className="tag-compact tournament"><Trophy size={13} /> Turnir</span>
+            ) : (
+              <span className="tag-compact league">{currentMatch?.league}</span>
+            )}
+            {currentMatch?.round && (
+              <span className="tag-compact round">
+                {getStageDisplayTitle(currentMatch?.stage, currentMatch?.round)}
+              </span>
+            )}
+            <span className="tag-compact date">
+              <Calendar size={13} /> {currentMatch?.match_date}
+            </span>
           </div>
-          <div className="stat-pill highlight">
-            <span className="stat-num">{matchesWithReplaysCount}</span>
-            <span className="stat-label">Replayli O'yinlar</span>
-          </div>
+
           <button 
-            className={`btn-refresh ${refreshing ? 'spinning' : ''}`} 
+            className={`btn-refresh-compact ${refreshing ? 'spinning' : ''}`} 
             onClick={handleRefresh}
             title="Yangilash"
           >
-            <RefreshCw size={18} />
+            <RefreshCw size={16} />
           </button>
         </div>
-      </div>
+      ) : (
+        /* O'yinlar ro'yxatida: Asosiy banner */
+        <div className="replays-header">
+          <div className="header-title-block">
+            <div className="header-icon-box">
+              <Film size={24} className="text-white" />
+            </div>
+            <div>
+              <h1 className="header-title">Replaylar & Gollar</h1>
+              <p className="header-subtitle">Montaj va tahlil uchun replay videolari</p>
+            </div>
+          </div>
 
-      {/* Main Container */}
+          <div className="header-actions">
+            <div className="stat-pill">
+              <span className="stat-num">{totalReplaysCount}</span>
+              <span className="stat-label">Replaylar</span>
+            </div>
+            <div className="stat-pill highlight">
+              <span className="stat-num">{matchesWithReplaysCount}</span>
+              <span className="stat-label">O'yinlar</span>
+            </div>
+            <button 
+              className={`btn-refresh ${refreshing ? 'spinning' : ''}`} 
+              onClick={handleRefresh}
+              title="Yangilash"
+            >
+              <RefreshCw size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
       <div className="replays-content">
-        {/* If match is selected, show detail view */}
-        {selectedMatch ? (
+        {matchId ? (
+          /* Match Detail View */
           <div className="replay-detail-view">
-            {/* Back to match list button */}
-            <div className="detail-top-nav">
-              <button className="btn-back" onClick={() => setSelectedMatch(null)}>
-                <ArrowLeft size={18} />
-                <span>O'yinlar ro'yxatiga qaytish</span>
-              </button>
-
-              <div className="detail-match-info-tag">
-                {selectedMatch.tournament_id ? (
-                  <span className="tag-tournament">
-                    <Trophy size={14} /> Turnir
-                  </span>
-                ) : (
-                  <span className="tag-league">{selectedMatch.league}</span>
-                )}
-                {selectedMatch.round && (
-                  <span className="tag-round">
-                    {getStageDisplayTitle(selectedMatch.stage, selectedMatch.round)}
-                  </span>
-                )}
-                <span className="tag-date">
-                  <Calendar size={14} /> {selectedMatch.match_date} {selectedMatch.match_time?.slice(0, 5)}
-                </span>
-              </div>
-            </div>
-
             {/* Match Header Scorecard */}
-            <div className="detail-match-card">
-              <div className="team-side home">
-                {teamsMap.get(selectedMatch.home_team_id)?.logo_url ? (
-                  <img 
-                    src={teamsMap.get(selectedMatch.home_team_id).logo_url} 
-                    alt="Home" 
-                    className="team-logo-lg" 
-                  />
-                ) : (
-                  <div className="team-logo-placeholder">⚽</div>
-                )}
-                <span className="team-name-lg">{teamsMap.get(selectedMatch.home_team_id)?.name || 'Home'}</span>
-              </div>
-
-              <div className="score-center">
-                <div className="score-display-lg">
-                  {selectedMatch.home_score ?? 0} : {selectedMatch.away_score ?? 0}
-                </div>
-                <div className="match-status-badge">
-                  {selectedMatch.status === 'live' || selectedMatch.status === 'first_half' || selectedMatch.status === 'second_half' ? (
-                    <span className="live-dot-pulse">● Jonli efir</span>
-                  ) : selectedMatch.status === 'finished' ? (
-                    'Tugagan'
+            {currentMatch && (
+              <div className="detail-match-card">
+                {/* Home Team */}
+                <div className="team-side home">
+                  {teamsMap.get(currentMatch.home_team_id)?.logo_url ? (
+                    <img 
+                      src={teamsMap.get(currentMatch.home_team_id).logo_url} 
+                      alt="Home" 
+                      className="team-logo-lg" 
+                    />
                   ) : (
-                    'Kutilmoqda'
+                    <div className="team-logo-placeholder">⚽</div>
                   )}
+                  <span className="team-name-lg">{teamsMap.get(currentMatch.home_team_id)?.name || 'Home'}</span>
+                </div>
+
+                {/* Score Center */}
+                <div className="score-center">
+                  <div className="score-display-lg">
+                    {currentMatch.home_score ?? 0} : {currentMatch.away_score ?? 0}
+                  </div>
+                  <div className="match-status-badge">
+                    {currentMatch.status === 'live' || currentMatch.status === 'first_half' || currentMatch.status === 'second_half' ? (
+                      <span className="live-dot-pulse">● Jonli</span>
+                    ) : currentMatch.status === 'finished' ? (
+                      'Tugagan'
+                    ) : (
+                      'Kutilmoqda'
+                    )}
+                  </div>
+                </div>
+
+                {/* Away Team */}
+                <div className="team-side away">
+                  {teamsMap.get(currentMatch.away_team_id)?.logo_url ? (
+                    <img 
+                      src={teamsMap.get(currentMatch.away_team_id).logo_url} 
+                      alt="Away" 
+                      className="team-logo-lg" 
+                    />
+                  ) : (
+                    <div className="team-logo-placeholder">⚽</div>
+                  )}
+                  <span className="team-name-lg">{teamsMap.get(currentMatch.away_team_id)?.name || 'Away'}</span>
                 </div>
               </div>
+            )}
 
-              <div className="team-side away">
-                {teamsMap.get(selectedMatch.away_team_id)?.logo_url ? (
-                  <img 
-                    src={teamsMap.get(selectedMatch.away_team_id).logo_url} 
-                    alt="Away" 
-                    className="team-logo-lg" 
-                  />
-                ) : (
-                  <div className="team-logo-placeholder">⚽</div>
-                )}
-                <span className="team-name-lg">{teamsMap.get(selectedMatch.away_team_id)?.name || 'Away'}</span>
+            {/* Replay Videos Section Header */}
+            <div className="replays-section-header-compact">
+              <div className="section-title-compact">
+                <Video size={18} className="text-emerald" />
+                <h2>Gollar & Replay Videolari ({matchEvents.length})</h2>
               </div>
-            </div>
-
-            {/* Replay Videos List */}
-            <div className="replays-section-header">
-              <div className="section-title">
-                <Video size={20} className="text-emerald" />
-                <h2>O'yin Gollari va Replay Videolari ({matchEvents.length})</h2>
-              </div>
-              <p className="section-desc">
-                Montaj qilish uchun har bir videoni to'g'ridan-to'g'ri yuklab olishingiz yoki ko'rishingiz mumkin
-              </p>
             </div>
 
             {loadingEvents ? (
               <div className="loading-state">
-                <RefreshCw size={28} className="spinning" />
-                <p>Replay videolari va gollar yuklanmoqda...</p>
+                <RefreshCw size={26} className="spinning" />
+                <p>Replaylar yuklanmoqda...</p>
               </div>
             ) : matchEvents.length === 0 ? (
               <div className="empty-state-box">
-                <Film size={44} className="text-muted" />
-                <h3>Ushbu o'yinda hozircha replay videolari mavjud emas</h3>
-                <p>OBS avtomatik yuklagichi orqali gol urilganda replay videolari shu yerda paydo bo'ladi.</p>
+                <Film size={40} className="text-muted" />
+                <h3>Ushbu o'yinda hozircha replay videosi yo'q</h3>
+                <p>OBS orqali gol urilganda replay videolari shu yerda paydo bo'ladi.</p>
               </div>
             ) : (
               <div className="replay-cards-grid">
@@ -469,7 +488,7 @@ const Replays = () => {
 
                   return (
                     <div key={event.id} className={`replay-item-card ${hasVideo ? 'has-video' : 'no-video'}`}>
-                      {/* Video lazy player / preview box */}
+                      {/* Video Player */}
                       <div className="replay-video-container">
                         {hasVideo ? (
                           <div className="video-lazy-wrapper">
@@ -492,7 +511,7 @@ const Replays = () => {
                           </div>
                         ) : (
                           <div className="video-placeholder-box">
-                            <Film size={36} className="text-muted" />
+                            <Film size={32} className="text-muted" />
                             <span>Video biriktirilmagan</span>
                             <div className="video-overlay-badge">
                               <span className="minute-badge">{event.minute ? `${event.minute}'` : `Gol #${idx+1}`}</span>
@@ -502,7 +521,7 @@ const Replays = () => {
                         )}
                       </div>
 
-                      {/* Author / Player & Team Details below video */}
+                      {/* Author Details Below Video */}
                       <div className="replay-meta-footer">
                         {/* Player info */}
                         <div className="player-profile-row">
@@ -532,7 +551,7 @@ const Replays = () => {
                           </div>
                         </div>
 
-                        {/* Assist player if any */}
+                        {/* Assist info */}
                         {assist && (
                           <div className="assist-row">
                             <span className="assist-label">👟 Assist:</span>
@@ -540,12 +559,12 @@ const Replays = () => {
                           </div>
                         )}
 
-                        {/* Action buttons (Download MP4 & Copy URL) */}
+                        {/* Icon-based Action Buttons (sig'adigan ixcham tugmalar) */}
                         {hasVideo && (
                           <div className="replay-actions-row">
                             <button
                               className="btn-action-download"
-                              onClick={() => handleDownloadVideo(event, selectedMatch)}
+                              onClick={() => handleDownloadVideo(event, currentMatch)}
                               disabled={downloadingId === event.id}
                               title="Montaj uchun MP4 yuklab olish"
                             >
@@ -556,38 +575,28 @@ const Replays = () => {
                                 </>
                               ) : (
                                 <>
-                                  <Download size={15} />
+                                  <Download size={16} />
                                   <span>Yuklab olish (MP4)</span>
                                 </>
                               )}
                             </button>
 
                             <button
-                              className="btn-action-copy"
+                              className="btn-action-icon"
                               onClick={() => handleCopyLink(event.replay_video_url, event.id)}
-                              title="To'g'ridan-to'g'ri havolani nusxalash"
+                              title="Havolani nusxalash"
                             >
-                              {copiedId === event.id ? (
-                                <>
-                                  <Check size={15} className="text-emerald" />
-                                  <span>Nusxalandi!</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy size={15} />
-                                  <span>Havola</span>
-                                </>
-                              )}
+                              {copiedId === event.id ? <Check size={16} className="text-emerald" /> : <Copy size={16} />}
                             </button>
 
                             <a
                               href={event.replay_video_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="btn-action-open"
+                              className="btn-action-icon"
                               title="Yangi oynada ochish"
                             >
-                              <ExternalLink size={15} />
+                              <ExternalLink size={16} />
                             </a>
                           </div>
                         )}
@@ -608,14 +617,13 @@ const Replays = () => {
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
               >
                 <div className="filter-header-title">
-                  <Filter size={18} className="text-emerald" />
-                  <span>Filtrlar va Saralash</span>
+                  <Filter size={17} className="text-emerald" />
+                  <span>Filtrlar</span>
                   {(selectedLeague !== 'all' || selectedTournament !== 'all' || selectedRound !== 'all' || !onlyWithReplays || searchQuery) && (
                     <span className="active-filter-badge">Faol</span>
                   )}
                 </div>
                 <div className="filter-header-right">
-                  <span className="filter-toggle-hint">{isFilterOpen ? 'Yopish' : 'Ochish'}</span>
                   {isFilterOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
               </div>
@@ -626,18 +634,18 @@ const Replays = () => {
                   <div className="filter-grid">
                     {/* Search query input */}
                     <div className="filter-group full-width">
-                      <label>Jamoa yoki o'yin qidirish</label>
+                      <label>Jamoa qidirish</label>
                       <div className="search-input-wrapper">
-                        <Search size={16} className="search-icon" />
+                        <Search size={15} className="search-icon" />
                         <input 
                           type="text"
-                          placeholder="Jamoa nomi yoki liga bo'yicha qidiring..."
+                          placeholder="Jamoa nomi..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                         />
                         {searchQuery && (
                           <button className="clear-search-btn" onClick={() => setSearchQuery('')}>
-                            <X size={14} />
+                            <X size={13} />
                           </button>
                         )}
                       </div>
@@ -656,11 +664,11 @@ const Replays = () => {
                       >
                         <option value="all">Barchasi (Liga & Turnir)</option>
                         <option value="league">Faqat Ligalar</option>
-                        <option value="tournament">Faqat Turnirlar / Kuboklar</option>
+                        <option value="tournament">Faqat Turnirlar</option>
                       </select>
                     </div>
 
-                    {/* League Select (if not tournament-only) */}
+                    {/* League Select */}
                     {filterType !== 'tournament' && (
                       <div className="filter-group">
                         <label>Liga</label>
@@ -671,17 +679,17 @@ const Replays = () => {
                           <option value="all">Barcha Ligalar</option>
                           {leagues.map((l) => (
                             <option key={l.id || l.name} value={l.name}>
-                              {l.name} {l.isCollab ? '(Hamkorlik)' : ''}
+                              {l.name}
                             </option>
                           ))}
                         </select>
                       </div>
                     )}
 
-                    {/* Tournament Select (if not league-only) */}
+                    {/* Tournament Select */}
                     {filterType !== 'league' && (
                       <div className="filter-group">
-                        <label>Turnir / Kubok</label>
+                        <label>Turnir</label>
                         <select 
                           value={selectedTournament} 
                           onChange={(e) => setSelectedTournament(e.target.value)}
@@ -696,9 +704,9 @@ const Replays = () => {
                       </div>
                     )}
 
-                    {/* Round (Tur) Select */}
+                    {/* Round Select */}
                     <div className="filter-group">
-                      <label>Tur (Bosqich)</label>
+                      <label>Tur</label>
                       <select 
                         value={selectedRound} 
                         onChange={(e) => setSelectedRound(e.target.value)}
@@ -721,11 +729,11 @@ const Replays = () => {
                         checked={onlyWithReplays} 
                         onChange={(e) => setOnlyWithReplays(e.target.checked)} 
                       />
-                      <span>Faqat Replay videosi bor o'yinlarni ko'rsatish</span>
+                      <span>Faqat Replayli o'yinlar</span>
                     </label>
 
                     <button className="btn-reset-filters" onClick={resetFilters}>
-                      Filtrlarni tozalash
+                      Tozalash
                     </button>
                   </div>
                 </div>
@@ -735,20 +743,19 @@ const Replays = () => {
             {/* Match Cards List */}
             <div className="matches-list-section">
               <div className="matches-results-header">
-                <h3>O'yinlar ro'yxati ({filteredMatches.length})</h3>
-                <span className="results-subtitle">Replaylarni ko'rish uchun o'yin kartasiga bosing</span>
+                <h3>O'yinlar ({filteredMatches.length})</h3>
+                <span className="results-subtitle">Replaylarni ko'rish uchun tanlang</span>
               </div>
 
               {loading ? (
                 <div className="loading-state">
-                  <RefreshCw size={32} className="spinning" />
-                  <p>O'yinlar va replay ma'lumotlari yuklanmoqda...</p>
+                  <RefreshCw size={28} className="spinning" />
+                  <p>O'yinlar yuklanmoqda...</p>
                 </div>
               ) : filteredMatches.length === 0 ? (
                 <div className="empty-state-box">
-                  <Film size={44} className="text-muted" />
-                  <h3>Tanlangan filtrlarga mos o'yin topilmadi</h3>
-                  <p>Filtrlarni o'zgartirib yoki tozalab qayta urinib ko'ring.</p>
+                  <Film size={40} className="text-muted" />
+                  <h3>O'yin topilmadi</h3>
                   <button className="btn-reset-filters mt-2" onClick={resetFilters}>
                     Filtrlarni tozalash
                   </button>
@@ -767,11 +774,11 @@ const Replays = () => {
                         className={`match-overview-card ${replaysCount > 0 ? 'has-replays' : ''}`}
                         onClick={() => handleSelectMatch(match)}
                       >
-                        {/* Top Info Header */}
+                        {/* Top Info */}
                         <div className="card-top-bar">
                           <div className="competition-badge">
                             {match.tournament_id ? (
-                              <span className="badge-tournament"><Trophy size={13} /> Turnir</span>
+                              <span className="badge-tournament"><Trophy size={12} /> Turnir</span>
                             ) : (
                               <span className="badge-league">{match.league}</span>
                             )}
@@ -783,20 +790,19 @@ const Replays = () => {
                           </div>
 
                           <div className="match-timing">
-                            <Calendar size={13} />
+                            <Calendar size={12} />
                             <span>{match.match_date}</span>
                             {match.match_time && (
                               <>
-                                <Clock size={13} className="ml-1" />
+                                <Clock size={12} className="ml-1" />
                                 <span>{match.match_time.slice(0, 5)}</span>
                               </>
                             )}
                           </div>
                         </div>
 
-                        {/* Teams & Score Row */}
+                        {/* Teams & Score */}
                         <div className="card-teams-body">
-                          {/* Home Team */}
                           <div className="team-col home">
                             {homeTeam?.logo_url ? (
                               <img src={homeTeam.logo_url} alt="Home" className="team-logo-md" />
@@ -806,7 +812,6 @@ const Replays = () => {
                             <span className="team-name-md">{homeTeam?.name || 'Home'}</span>
                           </div>
 
-                          {/* Score Center */}
                           <div className="score-col">
                             <div className="score-text">
                               {match.home_score ?? 0} : {match.away_score ?? 0}
@@ -820,7 +825,6 @@ const Replays = () => {
                             )}
                           </div>
 
-                          {/* Away Team */}
                           <div className="team-col away">
                             {awayTeam?.logo_url ? (
                               <img src={awayTeam.logo_url} alt="Away" className="team-logo-md" />
@@ -831,12 +835,12 @@ const Replays = () => {
                           </div>
                         </div>
 
-                        {/* Card Bottom: Replay Counter Badge & Enter action */}
+                        {/* Card Bottom */}
                         <div className="card-bottom-bar">
                           {replaysCount > 0 ? (
                             <div className="replays-count-badge active">
-                              <Film size={14} />
-                              <span>{replaysCount} ta replay video</span>
+                              <Film size={13} />
+                              <span>{replaysCount} ta replay</span>
                             </div>
                           ) : (
                             <div className="replays-count-badge empty">
@@ -845,8 +849,8 @@ const Replays = () => {
                           )}
 
                           <div className="open-action">
-                            <span>Gollarni ko'rish</span>
-                            <ChevronRight size={16} />
+                            <span>Ko'rish</span>
+                            <ChevronRight size={15} />
                           </div>
                         </div>
                       </div>
