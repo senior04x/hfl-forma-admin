@@ -252,7 +252,7 @@ export default function Standings() {
       // Fetch Teams with specific needed columns only
       let teamsQuery = supabase
         .from('teams')
-        .select('id, name, logo_url, league, status, penalty_points, organization_id')
+        .select('id, name, logo_url, league, status, penalty_points, organization_id, is_archived')
         .in('status', ['approved', 'partially_approved']);
 
       teamsQuery = applyOrgAndCollabFilter(teamsQuery, orgId, leaguesList);
