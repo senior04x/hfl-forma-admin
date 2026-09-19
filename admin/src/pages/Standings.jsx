@@ -567,7 +567,7 @@ export default function Standings() {
       .filter(p => p.goals > 0)
       .map(p => ({
         ...p,
-        playedMatches: p.matchIds.size > 0 ? p.matchIds.size : (tableMap[p.teamId]?.played || 1)
+        playedMatches: tableMap[p.teamId]?.raw_played ?? 0
       }))
       .sort((a, b) => b.goals - a.goals)
       .slice(0, 5);
@@ -576,7 +576,7 @@ export default function Standings() {
       .filter(p => p.assists > 0)
       .map(p => ({
         ...p,
-        playedMatches: p.matchIds.size > 0 ? p.matchIds.size : (tableMap[p.teamId]?.played || 1)
+        playedMatches: tableMap[p.teamId]?.raw_played ?? 0
       }))
       .sort((a, b) => b.assists - a.assists)
       .slice(0, 5);
@@ -1973,7 +1973,7 @@ export default function Standings() {
                                   }} 
                                 />
                                 <div style={{ flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                                <div style={{ width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800' }}>{p.playedMatches || 1}</div>
+                                <div style={{ width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800' }}>{p.playedMatches ?? 0}</div>
                                 <div style={{ width: '30px', textAlign: 'center', fontWeight: '900', fontSize: '17.5px' }}>{p.goals}</div>
                               </div>
                             ))
@@ -2007,7 +2007,7 @@ export default function Standings() {
                                   }} 
                                 />
                                 <div style={{ flex: 1, textTransform: 'uppercase', fontSize: '15.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                                <div style={{ width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800' }}>{p.playedMatches || 1}</div>
+                                <div style={{ width: '30px', textAlign: 'center', fontSize: '16px', fontWeight: '800' }}>{p.playedMatches ?? 0}</div>
                                 <div style={{ width: '30px', textAlign: 'center', fontWeight: '900', fontSize: '17.5px' }}>{p.assists}</div>
                               </div>
                             ))
