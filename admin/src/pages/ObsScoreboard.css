@@ -316,9 +316,9 @@ html, body {
 .obs-prematch h1 { font-size: clamp(18px, 1.7vw, 32px); text-transform: uppercase; }
 .obs-prematch small { display: block; font-size: clamp(10px, .75vw, 14px); letter-spacing: 2px; color: #d0d7e2; margin-bottom: 6px; }
 .obs-prematch-competition-logo { width: 100%; height: 72px; object-fit: contain; justify-self: center; }
-.obs-prematch-teams { display: grid; grid-template-columns: minmax(0, 1fr) 7% minmax(0, 1fr); align-items: stretch; padding: 4cqw; gap: 2cqw; }
-.obs-prematch-team { min-width: 0; display: grid; grid-template-rows: 23cqw 8cqw minmax(0, 1fr); align-items: center; }
-.obs-prematch-identity { display: flex; align-items: center; gap: 22px; min-height: 90px; }
+.obs-prematch-teams { display: grid; grid-template-columns: minmax(0, 1fr) 7% minmax(0, 1fr); grid-template-rows: 13cqw 6cqw minmax(3cqw, auto) auto minmax(0, 1fr); align-items: center; padding: 4cqw; column-gap: 2cqw; row-gap: 1cqw; }
+.obs-prematch-team { --obs-team-column: 1; display: contents; }
+.obs-prematch-identity { display: contents; }
 .obs-prematch-identity > div { min-width: 0; }
 .obs-prematch h2 { font-size: clamp(20px, 2vw, 38px); text-transform: uppercase; }
 .obs-prematch-crest { width: clamp(56px, 5vw, 96px); height: clamp(56px, 5vw, 96px); flex-shrink: 0; object-fit: contain; }
@@ -333,12 +333,8 @@ html, body {
 .obs-prematch-photo { width: 66px; height: 76px; object-fit: cover; object-position: top; flex-shrink: 0; }
 .obs-prematch h3 { font-size: clamp(16px, 1.35vw, 26px); }
 .obs-prematch-scorer > strong { margin-left: auto; text-align: center; font-size: 32px; color: var(--obs-prematch-accent); }
-.obs-prematch-team-away { text-align: right; }
-.obs-prematch-team-away .obs-prematch-identity,
+.obs-prematch-team-away { --obs-team-column: 3; text-align: right; }
 .obs-prematch-team-away .obs-prematch-scorer { flex-direction: row-reverse; }
-.obs-prematch-team-away .obs-prematch-standing,
-.obs-prematch-team-away .obs-prematch-form { justify-content: flex-end; }
-.obs-prematch-team-away .obs-prematch-form > span { order: 1; margin-right: 0; margin-left: 8px; }
 .obs-prematch-team-away .obs-prematch-scorer > strong { margin-left: 0; margin-right: auto; }
 .obs-prematch-scorer > div { min-width: 0; }
 .obs-prematch-placeholder { display: inline-grid; place-items: center; background: rgba(255,255,255,.06); color: #cbd5e1; }
@@ -349,18 +345,15 @@ html, body {
 .obs-prematch header > span:last-child { font-size: 2.2cqw; }
 .obs-prematch small { font-size: 1.5cqw; letter-spacing: .15cqw; }
 .obs-prematch-competition-logo { height: 10cqw; }
-.obs-prematch-identity { display: grid; grid-template-rows: 13cqw 6cqw 2cqw; justify-items: center; gap: 1cqw; min-height: 0; text-align: center; }
 .obs-prematch-identity > div { display: contents; }
-.obs-prematch h2 { font-size: 3cqw; align-self: center; }
-.obs-prematch-crest { width: 13cqw; height: 13cqw; }
-.obs-prematch-standing { font-size: 1.8cqw; gap: 1cqw; margin-top: 0; justify-content: center; }
-.obs-prematch-team-away .obs-prematch-standing { justify-content: center; }
-.obs-prematch-versus { align-self: start; margin-top: 14.6cqw; line-height: 1; font-size: 4.8cqw; }
-.obs-prematch-form { flex-wrap: wrap; gap: .8cqw; margin: 2cqw 0; font-size: 1.5cqw; }
+.obs-prematch h2 { grid-column: var(--obs-team-column); grid-row: 2; font-size: 3cqw; text-align: center; }
+.obs-prematch-crest { grid-column: var(--obs-team-column); grid-row: 1; justify-self: center; width: 13cqw; height: 13cqw; }
+.obs-prematch-standing { grid-column: var(--obs-team-column); grid-row: 3; font-size: 1.8cqw; gap: 1cqw; margin-top: 0; justify-content: center; text-align: center; }
+.obs-prematch-versus { grid-column: 2; grid-row: 1; align-self: center; line-height: 1; font-size: 4.8cqw; }
+.obs-prematch-form { grid-column: var(--obs-team-column); grid-row: 4; flex-wrap: wrap; justify-content: center; text-align: center; gap: .8cqw; margin: 1cqw 0; font-size: 1.5cqw; }
 .obs-prematch-form > span { width: 100%; margin: 0 0 1cqw; font-size: 1.4cqw; }
-.obs-prematch-team-away .obs-prematch-form > span { order: 0; margin: 0 0 1cqw; }
 .obs-prematch-form b { width: 3cqw; height: 3cqw; }
-.obs-prematch-scorer { flex-wrap: wrap; align-self: stretch; align-content: center; gap: 1.5cqw; margin-top: 2cqw; padding-top: 2cqw; }
+.obs-prematch-scorer { grid-column: var(--obs-team-column); grid-row: 5; flex-wrap: wrap; align-self: stretch; align-content: center; gap: 1.5cqw; margin-top: 2cqw; padding-top: 2cqw; }
 .obs-prematch-photo { width: 9cqw; height: 12cqw; }
 .obs-prematch-scorer > div { flex: 1; }
 .obs-prematch h3 { font-size: 2.5cqw; }
