@@ -49,14 +49,21 @@ serve(async (req) => {
     // ============================================
     const { data: otpRecord, error: otpError } = await supabaseAdmin
       .from('otp_codes')
-      .select('phone, code, expires_at, is_used')
+      .select('phone, code, expires_at, is_used, attempts')
       .eq('phone', cleanPhone)
-      .eq('code', code)
       .maybeSingle();
 
-    if (otpError || !otpRecord) {
+    if (otpError) {
+      console.error('OTP lookup error:', otpError);
       return new Response(
-        JSON.stringify({ error: 'Invalid OTP code' }),
+        JSON.stringify({ error: 'Database error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!otpRecord) {
+      return new Response(
+        JSON.stringify({ error: 'No OTP code found for this phone' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -78,6 +85,46 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // ============================================
+    // Brute-force protection: Check attempts
+    // ============================================
+    const attempts = otpRecord.attempts || 0;
+    if (attempts >= 5) {
+      // Too many failed attempts - block this OTP
+      await supabaseAdmin
+        .from('otp_codes')
+        .update({ is_used: true })
+        .eq('phone', cleanPhone);
+
+      return new Response(
+        JSON.stringify({
+          error: 'Too many failed attempts. Please request a new OTP code.',
+          attemptsRemaining: 0
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if provided code matches
+    if (otpRecord.code !== code) {
+      // Incorrect code - increment attempts
+      const newAttempts = attempts + 1;
+      await supabaseAdmin
+        .from('otp_codes')
+        .update({ attempts: newAttempts })
+        .eq('phone', cleanPhone);
+
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid OTP code',
+          attemptsRemaining: 5 - newAttempts
+        }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Code is correct - proceed with captain lookup
 
     // ============================================
     // 2. Find team where this phone is captain
