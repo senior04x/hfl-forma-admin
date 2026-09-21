@@ -266,6 +266,76 @@ html, body {
 }
 
 /* ================== LOWER THIRD PLAYER GRAPHIC ================== */
+.obs-prematch-anchor {
+  position: fixed;
+  left: 7%;
+  right: 7%;
+  bottom: 7%;
+  color: #fff;
+  pointer-events: none;
+}
+.obs-prematch {
+  --obs-prematch-accent: #cbd5e1;
+  background: rgba(13, 18, 25, .72);
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-top: 4px solid var(--obs-prematch-accent);
+  box-shadow: 0 20px 65px rgba(0, 0, 0, .35);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  isolation: isolate;
+}
+.obs-prematch-backdrop {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: .28;
+  filter: blur(6px);
+  z-index: -1;
+}
+.obs-prematch-content {
+  background: linear-gradient(110deg, rgba(255,255,255,.07), transparent 50%, rgba(255,255,255,.04));
+}
+.obs-prematch header, .obs-prematch footer {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 18px 32px;
+}
+.obs-prematch header { border-bottom: 1px solid rgba(255,255,255,.18); }
+.obs-prematch header > span:last-child { margin-left: auto; font-size: clamp(12px, 1.2vw, 22px); font-weight: 700; }
+.obs-prematch h1, .obs-prematch h2, .obs-prematch h3 { margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
+.obs-prematch h1 { font-size: clamp(18px, 1.7vw, 32px); text-transform: uppercase; }
+.obs-prematch small { display: block; font-size: clamp(10px, .75vw, 14px); letter-spacing: 2px; color: #d0d7e2; margin-bottom: 6px; }
+.obs-prematch-competition-logo { width: 68px; height: 58px; object-fit: contain; }
+.obs-prematch-teams { display: grid; grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1fr); align-items: center; padding: 26px 32px; gap: 22px; }
+.obs-prematch-team { min-width: 0; }
+.obs-prematch-identity { display: flex; align-items: center; gap: 22px; min-height: 90px; }
+.obs-prematch-identity > div { min-width: 0; }
+.obs-prematch h2 { font-size: clamp(20px, 2vw, 38px); text-transform: uppercase; }
+.obs-prematch-crest { width: clamp(56px, 5vw, 96px); height: clamp(56px, 5vw, 96px); flex-shrink: 0; object-fit: contain; }
+.obs-prematch-standing { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 12px; font-size: clamp(11px, 1vw, 18px); }
+.obs-prematch-standing strong { color: var(--obs-prematch-accent); }
+.obs-prematch-versus { text-align: center; font-size: clamp(30px, 3vw, 58px); font-weight: 900; font-style: italic; color: var(--obs-prematch-accent); }
+.obs-prematch-form { display: flex; align-items: center; gap: 7px; margin-top: 18px; font-size: 12px; }
+.obs-prematch-form > span { margin-right: 8px; letter-spacing: 1px; }
+.obs-prematch-form b { width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.3); }
+.obs-form-G { background: #176549; } .obs-form-D { background: #475569; } .obs-form-M { background: #923c42; }
+.obs-prematch-scorer { display: flex; align-items: center; gap: 16px; padding-top: 18px; margin-top: 18px; border-top: 1px solid rgba(255,255,255,.18); }
+.obs-prematch-photo { width: 66px; height: 76px; object-fit: cover; object-position: top; flex-shrink: 0; }
+.obs-prematch h3 { font-size: clamp(16px, 1.35vw, 26px); }
+.obs-prematch-scorer > strong { margin-left: auto; text-align: center; font-size: 32px; color: var(--obs-prematch-accent); }
+.obs-prematch-placeholder { display: inline-grid; place-items: center; background: rgba(255,255,255,.06); color: #cbd5e1; }
+.obs-prematch footer { justify-content: space-between; background: rgba(0,0,0,.25); border-top: 1px solid rgba(255,255,255,.15); font-size: clamp(12px, 1.1vw, 20px); }
+.obs-prematch footer strong { font-variant-numeric: tabular-nums; color: var(--obs-prematch-accent); }
+@media (max-width: 900px) {
+  .obs-prematch-anchor { left: 4%; right: 4%; bottom: 5%; }
+  .obs-prematch-teams { grid-template-columns: minmax(0,1fr) 40px minmax(0,1fr); gap: 12px; padding: 18px; }
+  .obs-prematch-identity { gap: 12px; }
+  .obs-prematch-form > span { display: none; }
+  .obs-prematch header, .obs-prematch footer { padding: 12px 18px; }
+}
+
 .obs-lower-third-container {
   position: fixed;
   bottom: 80px;
