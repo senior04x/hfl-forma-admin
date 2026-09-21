@@ -5,7 +5,8 @@ export function selectStreamMatch(matches, now = Date.now()) {
     .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
   if (live.length) return live[0];
   // Fixture dates are stored in the organization's Uzbekistan local time.
-  return matches.filter(m => m.status === 'scheduled' && m.match_date && m.match_time)
+  // Skip postponed matches (is_postponed === true) when selecting next scheduled match.
+  return matches.filter(m => m.status === 'scheduled' && m.match_date && m.match_time && m.is_postponed !== true)
     .map(m => ({ match: m, time: Date.parse(`${m.match_date}T${m.match_time}+05:00`) }))
     .filter(m => Number.isFinite(m.time) && m.time >= now)
     .sort((a, b) => a.time - b.time || String(a.match.id).localeCompare(String(b.match.id)))[0]?.match || null;

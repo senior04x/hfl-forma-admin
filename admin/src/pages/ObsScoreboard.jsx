@@ -93,7 +93,7 @@ const ObsScoreboard = () => {
       const version = ++request;
       try {
         const data = await readPages(() => supabase.from('matches')
-          .select('id, organization_id, status, location, match_date, match_time, updated_at')
+          .select('id, organization_id, status, location, match_date, match_time, updated_at, is_postponed')
           .eq('organization_id', targetOrgId).in('status', [...LIVE_STATUSES, 'scheduled']).order('id'));
         if (cancelled || version !== request) return;
         candidates.clear();
