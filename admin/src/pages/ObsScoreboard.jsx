@@ -92,12 +92,31 @@ const ObsScoreboard = () => {
     const findLiveMatch = async () => {
       const version = ++request;
       try {
-        const data = await readPages(() => supabase.from('matches')
-          .select('id, organization_id, status, location, match_date, match_time, updated_at, is_postponed')
-          .eq('organization_id', targetOrgId).in('status', [...LIVE_STATUSES, 'scheduled']).order('id'));
+        // Try with is_postponed first (if column exists in DB)
+        let data;
+        try {
+          data = await readPages(() => supabase.from('matches')
+            .select('id, organization_id, status, location, match_date, match_time, updated_at, is_postponed')
+            .eq('organization_id', targetOrgId).in('status', [...LIVE_STATUSES, 'scheduled']).order('id'));
+        } catch (colErr) {
+          // Fallback: if is_postponed column doesn't exist, query without it
+          data = await readPages(() => supabase.from('matches')
+            .select('id, organization_id, status, location, match_date, match_time, updated_at')
+            .eq('organization_id', targetOrgId).in('status', [...LIVE_STATUSES, 'scheduled']).order('id'));
+        }
         if (cancelled || version !== request) return;
+        // Merge is_postponed from localStorage if DB column not available
+        let postponedMap = {};
+        try {
+          postponedMap = JSON.parse(localStorage.getItem(`hfl_postponed_${targetOrgId}`) || '{}');
+        } catch (e) {}
         candidates.clear();
-        data.forEach(m => candidates.set(m.id, m));
+        data.forEach(m => {
+          candidates.set(m.id, {
+            ...m,
+            is_postponed: m.is_postponed != null ? m.is_postponed : !!postponedMap[m.id]
+          });
+        });
         selectCandidate();
       } catch { /* Keep the current overlay on temporary connection failure. */ }
     };
