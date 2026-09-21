@@ -299,7 +299,7 @@ html, body {
 .obs-prematch-content {
   height: 100%;
   display: grid;
-  grid-template-rows: 18% minmax(0, 1fr) 14%;
+  grid-template-rows: 14% 40% minmax(0, 1fr) 12%;
   background: linear-gradient(110deg, rgba(255,255,255,.07), transparent 50%, rgba(255,255,255,.04));
 }
 .obs-prematch header, .obs-prematch footer {
@@ -316,7 +316,7 @@ html, body {
 .obs-prematch h1 { font-size: clamp(18px, 1.7vw, 32px); text-transform: uppercase; }
 .obs-prematch small { display: block; font-size: clamp(10px, .75vw, 14px); letter-spacing: 2px; color: #d0d7e2; margin-bottom: 6px; }
 .obs-prematch-competition-logo { width: 100%; height: 72px; object-fit: contain; justify-self: center; }
-.obs-prematch-teams { display: grid; grid-template-columns: minmax(0, 1fr) 7% minmax(0, 1fr); grid-template-rows: 13cqw 6cqw minmax(3cqw, auto) auto minmax(0, 1fr); align-items: center; padding: 4cqw; column-gap: 2cqw; row-gap: 1cqw; }
+.obs-prematch-teams { display: grid; grid-template-columns: minmax(0, 1fr) 7% minmax(0, 1fr); grid-template-rows: 20cqw 6cqw minmax(3cqw, auto); align-items: center; padding: 3cqw 4cqw; column-gap: 2cqw; row-gap: 1cqw; }
 .obs-prematch-team { --obs-team-column: 1; display: contents; }
 .obs-prematch-identity { display: contents; }
 .obs-prematch-identity > div { min-width: 0; }
@@ -347,7 +347,7 @@ html, body {
 .obs-prematch-competition-logo { height: 10cqw; }
 .obs-prematch-identity > div { display: contents; }
 .obs-prematch h2 { grid-column: var(--obs-team-column); grid-row: 2; font-size: 3cqw; text-align: center; }
-.obs-prematch-crest { grid-column: var(--obs-team-column); grid-row: 1; justify-self: center; width: 13cqw; height: 13cqw; }
+.obs-prematch-crest { grid-column: var(--obs-team-column); grid-row: 1; justify-self: center; width: 20cqw; height: 20cqw; border-radius: 50%; }
 .obs-prematch-standing { grid-column: var(--obs-team-column); grid-row: 3; font-size: 1.8cqw; gap: 1cqw; margin-top: 0; justify-content: center; text-align: center; }
 .obs-prematch-versus { grid-column: 2; grid-row: 1; align-self: center; line-height: 1; font-size: 4.8cqw; }
 .obs-prematch-form { grid-column: var(--obs-team-column); grid-row: 4; flex-wrap: wrap; justify-content: center; text-align: center; gap: .8cqw; margin: 1cqw 0; font-size: 1.5cqw; }
@@ -360,6 +360,28 @@ html, body {
 .obs-prematch-goals { display: block; margin-top: 1cqw; font-size: 3cqw; color: var(--obs-prematch-accent); }
 .obs-prematch-goals span { font-size: 1.6cqw; letter-spacing: .15cqw; }
 .obs-prematch footer { flex-direction: column; justify-content: center; font-size: 2cqw; gap: 1.5cqw; text-align: center; }
+.obs-prematch-details { position: relative; min-height: 0; margin: 0 4cqw; border-top: 1px solid rgba(255,255,255,.18); overflow: hidden; }
+.obs-prematch-slide { position: absolute; inset: 0 0 3cqw; display: grid; grid-template-rows: 5cqw minmax(0,1fr); opacity: 0; transform: translate3d(0, 12px, 0); transition: opacity .5s ease, transform .5s ease; pointer-events: none; }
+.obs-prematch-slide.is-active { opacity: 1; transform: translate3d(0,0,0); }
+.obs-prematch-slide h4 { margin: 0; align-self: center; text-align: center; font-size: 1.7cqw; letter-spacing: .18cqw; font-weight: 500; color: #d0d7e2; }
+.obs-prematch-detail-pair { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8cqw; align-items: center; }
+.obs-prematch-detail { min-width: 0; text-align: center; }
+.obs-prematch-detail .obs-prematch-form { margin: 0; gap: 1cqw; }
+.obs-prematch-detail .obs-prematch-form b { width: 5cqw; height: 5cqw; border-radius: .7cqw; font-size: 2.4cqw; }
+.obs-prematch-detail .obs-prematch-scorer { margin: 0; padding: 0; border: 0; text-align: left; }
+.obs-prematch-detail-away .obs-prematch-scorer { flex-direction: row-reverse; text-align: right; }
+.obs-prematch-detail .obs-prematch-photo { width: 12cqw; height: 15cqw; border-radius: 2cqw; }
+.obs-prematch-metrics { display: grid; gap: 1.5cqw; margin: 0; }
+.obs-prematch-metrics > div { display: flex; align-items: center; justify-content: space-between; gap: 1cqw; border-bottom: 1px solid rgba(255,255,255,.12); padding-bottom: .8cqw; }
+.obs-prematch-metrics dt { font-size: 1.6cqw; color: #d0d7e2; }
+.obs-prematch-metrics dd { margin: 0; font-size: 3.2cqw; font-weight: 700; }
+.obs-prematch-slide-dots { position: absolute; bottom: 1cqw; width: 100%; display: flex; justify-content: center; gap: .8cqw; }
+.obs-prematch-slide-dots i { width: .7cqw; height: .7cqw; border-radius: 50%; background: rgba(255,255,255,.25); transition: background .5s; }
+.obs-prematch-slide-dots i.is-active { background: var(--obs-prematch-accent); }
+.obs-prematch-details-empty { height: 100%; display: grid; place-items: center; font-size: 2cqw; color: #d0d7e2; }
+@media (prefers-reduced-motion: reduce) {
+  .obs-prematch-slide { transition: opacity .15s; transform: none; }
+}
 /* Keep the two-second light sweep; animate composited layers instead of clipping a blurred surface. */
 .obs-prematch.transformer-enter { animation: obsPrematchIn 2s cubic-bezier(.23, 1, .32, 1) both; }
 .obs-prematch.transformer-exit { animation: obsPrematchOut 2s cubic-bezier(.23, 1, .32, 1) both; }

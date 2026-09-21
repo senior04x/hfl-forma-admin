@@ -18,15 +18,26 @@ function Team({ team, stats, away = false }) {
           <span>{stats.standing.points} OCHKO</span><span>{stats.standing.played} O‘YIN</span></div>}
       </div>
     </div>
-    {stats?.standing?.form.length > 0 && <div className="obs-prematch-form"><span>SO‘NGGI O‘YINLAR</span>
-      {stats.standing.form.map((result, i) => <b key={i} className={`obs-form-${result}`}>{result}</b>)}
-    </div>}
-    {stats?.scorer && <div className="obs-prematch-scorer">
+  </div>;
+}
+
+function Detail({ stats, mode, away }) {
+  const standing = stats?.standing;
+  return <div className={`obs-prematch-detail${away ? ' obs-prematch-detail-away' : ''}`}>
+    {mode === 'form' && (standing?.form.length ? <div className="obs-prematch-form">
+      {standing.form.map((result, i) => <b key={i} className={`obs-form-${result}`}>{result}</b>)}
+    </div> : <small>NATIJA HALI YO‘Q</small>)}
+    {mode === 'scorers' && (stats?.scorer ? <div className="obs-prematch-scorer">
       <Photo src={stats.scorer.photo} className="obs-prematch-photo" fallback={stats.scorer.name.charAt(0)} />
       <div><small>JAMOA TO‘PURARI</small><h3>{stats.scorer.name}</h3>
         <strong className="obs-prematch-goals">{stats.scorer.goals} <span>GOL</span></strong>
       </div>
-    </div>}
+    </div> : <small>GOL HALI QAYD ETILMAGAN</small>)}
+    {mode === 'comparison' && (standing ? <dl className="obs-prematch-metrics">
+      <div><dt>O‘YIN</dt><dd>{standing.played}</dd></div>
+      <div><dt>URILGAN GOL</dt><dd>{standing.gf}</dd></div>
+      <div><dt>O‘TKAZILGAN</dt><dd>{standing.ga}</dd></div>
+    </dl> : <small>STATISTIKA MAVJUD EMAS</small>)}
   </div>;
 }
 
@@ -50,6 +61,21 @@ export default function ObsPrematch({ match, homeTeam, awayTeam, leagueData, lea
 }
 
 export function ObsPrematchView({ match, homeTeam, awayTeam, leagueData, leagueLogo, exiting, onExited, data, now }) {
+  const modesKey = [
+    (data?.home?.standing?.form.length || data?.away?.standing?.form.length) && 'form',
+    (data?.home?.scorer || data?.away?.scorer) && 'scorers',
+    (data?.home?.standing || data?.away?.standing) && 'comparison',
+  ].filter(Boolean).join(',');
+  const modes = modesKey ? modesKey.split(',') : [];
+  const [slide, setSlide] = useState(0);
+  useEffect(() => {
+    setSlide(0);
+    const count = modesKey ? modesKey.split(',').length : 0;
+    if (count < 2 || exiting) return;
+    const interval = setInterval(() => setSlide(previous => (previous + 1) % count), 8000);
+    return () => clearInterval(interval);
+  }, [modesKey, exiting, match.id]);
+  const labels = { form: 'SO‘NGGI 5 O‘YIN', scorers: 'JAMOALAR TO‘PURARLARI', comparison: 'JAMOALAR STATISTIKASI' };
   const tournament = data?.tournament;
   const color = tournament ? parseTournamentTier(tournament).color : null;
   const safeColor = /^#[0-9a-f]{6}$/i.test(color || '') ? color : null;
@@ -71,6 +97,18 @@ export function ObsPrematchView({ match, homeTeam, awayTeam, leagueData, leagueL
         </header>
         <div className="obs-prematch-teams"><Team team={homeTeam} stats={data?.home} />
           <div className="obs-prematch-versus">VS</div><Team team={awayTeam} stats={data?.away} away /></div>
+        <div className="obs-prematch-details">
+          {modes.map((mode, index) => <div key={mode} aria-hidden={slide % modes.length !== index}
+            className={`obs-prematch-slide${slide % modes.length === index ? ' is-active' : ''}`}>
+            <h4>{labels[mode]}</h4>
+            <div className="obs-prematch-detail-pair"><Detail stats={data?.home} mode={mode} />
+              <Detail stats={data?.away} mode={mode} away /></div>
+          </div>)}
+          {!modes.length && <div className="obs-prematch-details-empty">{getStageDisplayTitle(match.stage, match.round)} • O‘YIN OLDIDAN</div>}
+          {modes.length > 1 && <div className="obs-prematch-slide-dots" aria-hidden="true">
+            {modes.map((mode, index) => <i key={mode} className={slide % modes.length === index ? 'is-active' : ''} />)}
+          </div>}
+        </div>
         <footer><span>{[match.match_date?.split('-').reverse().join('.'), match.match_time?.slice(0, 5), match.location].filter(Boolean).join(' • ')}</span>
           <strong>{remaining > 0 ? `BOSHLANISHIGA ${countdown}` : 'BOSHLANISH ARAFASIDA'}</strong></footer>
       </div>
