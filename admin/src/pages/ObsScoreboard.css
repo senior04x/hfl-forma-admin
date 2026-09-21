@@ -302,12 +302,12 @@ html, body {
   gap: 22px;
   padding: 18px 32px;
 }
-.obs-prematch header { border-bottom: 1px solid rgba(255,255,255,.18); }
+.obs-prematch header { display: grid; grid-template-columns: minmax(0, 1fr) clamp(90px, 10vw, 192px) minmax(0, 1fr); border-bottom: 1px solid rgba(255,255,255,.18); }
 .obs-prematch header > span:last-child { margin-left: auto; font-size: clamp(12px, 1.2vw, 22px); font-weight: 700; }
 .obs-prematch h1, .obs-prematch h2, .obs-prematch h3 { margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
 .obs-prematch h1 { font-size: clamp(18px, 1.7vw, 32px); text-transform: uppercase; }
 .obs-prematch small { display: block; font-size: clamp(10px, .75vw, 14px); letter-spacing: 2px; color: #d0d7e2; margin-bottom: 6px; }
-.obs-prematch-competition-logo { width: 68px; height: 58px; object-fit: contain; }
+.obs-prematch-competition-logo { width: 100%; height: 72px; object-fit: contain; justify-self: center; }
 .obs-prematch-teams { display: grid; grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1fr); align-items: center; padding: 26px 32px; gap: 22px; }
 .obs-prematch-team { min-width: 0; }
 .obs-prematch-identity { display: flex; align-items: center; gap: 22px; min-height: 90px; }
@@ -325,6 +325,14 @@ html, body {
 .obs-prematch-photo { width: 66px; height: 76px; object-fit: cover; object-position: top; flex-shrink: 0; }
 .obs-prematch h3 { font-size: clamp(16px, 1.35vw, 26px); }
 .obs-prematch-scorer > strong { margin-left: auto; text-align: center; font-size: 32px; color: var(--obs-prematch-accent); }
+.obs-prematch-team-away { text-align: right; }
+.obs-prematch-team-away .obs-prematch-identity,
+.obs-prematch-team-away .obs-prematch-scorer { flex-direction: row-reverse; }
+.obs-prematch-team-away .obs-prematch-standing,
+.obs-prematch-team-away .obs-prematch-form { justify-content: flex-end; }
+.obs-prematch-team-away .obs-prematch-form > span { order: 1; margin-right: 0; margin-left: 8px; }
+.obs-prematch-team-away .obs-prematch-scorer > strong { margin-left: 0; margin-right: auto; }
+.obs-prematch-scorer > div { min-width: 0; }
 .obs-prematch-placeholder { display: inline-grid; place-items: center; background: rgba(255,255,255,.06); color: #cbd5e1; }
 .obs-prematch footer { justify-content: space-between; background: rgba(0,0,0,.25); border-top: 1px solid rgba(255,255,255,.15); font-size: clamp(12px, 1.1vw, 20px); }
 .obs-prematch footer strong { font-variant-numeric: tabular-nums; color: var(--obs-prematch-accent); }

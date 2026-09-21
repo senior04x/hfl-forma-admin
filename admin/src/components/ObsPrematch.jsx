@@ -9,8 +9,8 @@ function Photo({ src, className, fallback = '◆' }) {
     : <span className={`${className} obs-prematch-placeholder`}>{fallback}</span>;
 }
 
-function Team({ team, stats }) {
-  return <div className="obs-prematch-team">
+function Team({ team, stats, away = false }) {
+  return <div className={`obs-prematch-team${away ? ' obs-prematch-team-away' : ''}`}>
     <div className="obs-prematch-identity">
       <Photo src={team?.logo_url} className="obs-prematch-crest" />
       <div><h2>{team?.name || 'Jamoa'}</h2>
@@ -63,12 +63,13 @@ export function ObsPrematchView({ match, homeTeam, awayTeam, leagueData, leagueL
       onAnimationEnd={e => { if (e.target === e.currentTarget && e.animationName === 'unfoldOut') onExited(); }}>
       {background && <div className="obs-prematch-backdrop" style={{ backgroundImage: `url(${background})` }} />}
       <div className="obs-prematch-content">
-        <header><Photo src={tournament?.logo_url || (!match.tournament_id ? leagueData?.logo_url || leagueLogo : null)} className="obs-prematch-competition-logo" />
+        <header>
           <div><small>O‘YIN OLDIDAN</small><h1>{tournament?.name || match.league || 'FUTBOL'}</h1></div>
+          <Photo src={tournament?.logo_url || (!match.tournament_id ? leagueData?.logo_url || leagueLogo : null)} className="obs-prematch-competition-logo" />
           <span>{getStageDisplayTitle(match.stage, match.round)}</span>
         </header>
         <div className="obs-prematch-teams"><Team team={homeTeam} stats={data?.home} />
-          <div className="obs-prematch-versus">VS</div><Team team={awayTeam} stats={data?.away} /></div>
+          <div className="obs-prematch-versus">VS</div><Team team={awayTeam} stats={data?.away} away /></div>
         <footer><span>{[match.match_date?.split('-').reverse().join('.'), match.match_time?.slice(0, 5), match.location].filter(Boolean).join(' • ')}</span>
           <strong>{remaining > 0 ? `BOSHLANISHIGA ${countdown}` : 'BOSHLANISH ARAFASIDA'}</strong></footer>
       </div>
