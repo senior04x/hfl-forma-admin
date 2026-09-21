@@ -2,6 +2,64 @@
 
 ## Available Functions
 
+### `verify-otp`
+Verify OTP code and create team captain session token.
+
+**Endpoint:** `https://[project-ref].supabase.co/functions/v1/verify-otp`
+
+**Method:** `POST`
+
+**Request Body:**
+```json
+{
+  "phone": "+998901234567",
+  "code": "1234"
+}
+```
+
+**Security Checks:**
+1. Verify OTP code exists in `otp_codes` table
+2. Check code not already used (`is_used=false`)
+3. Check code not expired (`expires_at > now`)
+4. Find team where phone is `captain_phone` (manager role check)
+5. If captain: create `team_sessions` token (24h expiry)
+6. Mark OTP as used
+
+**Response (200) - Captain:**
+```json
+{
+  "success": true,
+  "role": "captain",
+  "sessionToken": "uuid-token",
+  "expiresAt": "2026-09-23T00:00:00.000Z",
+  "team": {
+    "id": "uuid",
+    "name": "Team Name",
+    "logo_url": "https://...",
+    "organization_id": 123
+  },
+  "canRequestTransfers": true,
+  "message": "OTP verified. Session token created."
+}
+```
+
+**Response (200) - Player (not captain):**
+```json
+{
+  "success": true,
+  "role": "player",
+  "message": "OTP verified, but you are not a team captain",
+  "canRequestTransfers": false
+}
+```
+
+**Error Responses:**
+- 400: Missing fields or invalid phone format
+- 401: Invalid, used, or expired OTP code
+- 500: Database or session creation error
+
+---
+
 ### `request-transfer`
 Create team-initiated transfer request with security validation.
 
