@@ -23,8 +23,9 @@ function Team({ team, stats, away = false }) {
     </div>}
     {stats?.scorer && <div className="obs-prematch-scorer">
       <Photo src={stats.scorer.photo} className="obs-prematch-photo" fallback={stats.scorer.name.charAt(0)} />
-      <div><small>JAMOA TO‘PURARI</small><h3>{stats.scorer.name}</h3></div>
-      <strong>{stats.scorer.goals}<small>GOL</small></strong>
+      <div><small>JAMOA TO‘PURARI</small><h3>{stats.scorer.name}</h3>
+        <strong className="obs-prematch-goals">{stats.scorer.goals} <span>GOL</span></strong>
+      </div>
     </div>}
   </div>;
 }
@@ -60,7 +61,7 @@ export function ObsPrematchView({ match, homeTeam, awayTeam, leagueData, leagueL
   return <div className="obs-prematch-anchor">
     <section className={`obs-prematch transformer-wrapper ${exiting ? 'transformer-exit' : 'transformer-enter'}`}
       style={safeColor ? { '--obs-prematch-accent': safeColor } : undefined}
-      onAnimationEnd={e => { if (e.target === e.currentTarget && e.animationName === 'unfoldOut') onExited(); }}>
+      onAnimationEnd={e => { if (e.target === e.currentTarget && e.animationName === 'obsPrematchOut') onExited(); }}>
       {background && <div className="obs-prematch-backdrop" style={{ backgroundImage: `url(${background})` }} />}
       <div className="obs-prematch-content">
         <header>
