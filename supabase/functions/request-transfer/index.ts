@@ -150,6 +150,21 @@ serve(async (req) => {
       );
     }
 
+    // Check if player belongs to the same organization
+    const playerOrgId = player.teams?.organization_id;
+    const requestingOrgId = requestingTeam.organization_id;
+
+    if (playerOrgId !== requestingOrgId) {
+      return new Response(
+        JSON.stringify({
+          error: 'Player belongs to a different organization',
+          playerOrganizationId: playerOrgId,
+          yourOrganizationId: requestingOrgId
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // ============================================
     // 5. Verify transfer window is open
     // ============================================
