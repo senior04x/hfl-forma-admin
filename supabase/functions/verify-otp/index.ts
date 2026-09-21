@@ -147,7 +147,75 @@ serve(async (req) => {
 
     if (!captainTeam) {
       // Phone verified but user is NOT a team captain
-      // Mark OTP as used but don't create session
+      // Check if user is a player (applications table)
+      const { data: playerData, error: playerError } = await supabaseAdmin
+        .from('applications')
+        .select('id, team_id, first_name, last_name, phone')
+        .ilike('phone', `%${cleanPhone}%`)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (playerError) {
+        console.error('Player lookup error:', playerError);
+      }
+
+      // Select most relevant player record:
+      // Prefer: has team_id (active player), then most recent
+      let selectedPlayer = null;
+      if (playerData && playerData.length > 0) {
+        // First try to find active player (with team_id)
+        selectedPlayer = playerData.find(p => p.team_id) || playerData[0];
+      }
+
+      if (selectedPlayer) {
+        // Player found - create player session
+        const sessionToken = crypto.randomUUID();
+        const sessionExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        const { error: sessionError } = await supabaseAdmin
+          .from('player_sessions')
+          .insert({
+            token: sessionToken,
+            phone: cleanPhone,
+            player_id: selectedPlayer.id,
+            expires_at: sessionExpiresAt.toISOString()
+          });
+
+        if (sessionError) {
+          console.error('Player session creation error:', sessionError);
+          return new Response(
+            JSON.stringify({ error: 'Failed to create player session', details: sessionError.message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Mark OTP as used
+        await supabaseAdmin
+          .from('otp_codes')
+          .update({ is_used: true })
+          .eq('phone', cleanPhone)
+          .eq('code', code);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            role: 'player',
+            sessionToken: sessionToken,
+            expiresAt: sessionExpiresAt.toISOString(),
+            player: {
+              id: selectedPlayer.id,
+              firstName: selectedPlayer.first_name,
+              lastName: selectedPlayer.last_name,
+              hasTeam: !!selectedPlayer.team_id
+            },
+            canRequestTransfers: true,
+            message: 'OTP verified. Player session token created.'
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Neither captain nor player found
       await supabaseAdmin
         .from('otp_codes')
         .update({ is_used: true })
@@ -157,8 +225,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: true,
-          role: 'player',
-          message: 'OTP verified, but you are not a team captain',
+          role: 'unknown',
+          message: 'OTP verified, but no captain or player account found',
           canRequestTransfers: false
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
