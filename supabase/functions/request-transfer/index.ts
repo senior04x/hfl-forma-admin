@@ -1,6 +1,7 @@
 // Edge Function: request-transfer
 // Purpose: Create team-initiated transfer request with security validation
 // Called by: Team captain from client site (after OTP verification)
+// Auth: Bearer token from team_sessions (created after OTP verification)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -8,8 +9,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 interface TransferRequest {
   player_id: string;
-  captain_phone: string; // OTP-verified phone from client
-  new_team_id: string; // Team requesting the player
+  new_team_id: string; // Team requesting the player (must match session)
   reason: string;
 }
 
@@ -20,14 +20,22 @@ serve(async (req) => {
   }
 
   try {
-    // Parse request body
-    const { player_id, captain_phone, new_team_id, reason }: TransferRequest = await req.json();
-
-    // Validate required fields
-    if (!player_id || !captain_phone || !new_team_id || !reason) {
+    // ============================================
+    // 1. Verify Bearer token from Authorization header
+    // ============================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Missing or invalid Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '').trim();
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: 'Empty authorization token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -37,15 +45,61 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // ============================================
-    // 1. Verify captain authorization
-    // ============================================
-    // Captain must be the one who requested (phone matches team captain_phone)
-    const cleanPhone = captain_phone.replace(/\D/g, '').slice(-9);
+    // Verify token in team_sessions
+    const { data: session, error: sessionError } = await supabaseAdmin
+      .from('team_sessions')
+      .select('id, phone, team_id, expires_at')
+      .eq('token', token)
+      .maybeSingle();
 
+    if (sessionError || !session) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired session token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if token expired
+    const now = new Date();
+    const expiresAt = new Date(session.expires_at);
+    if (expiresAt < now) {
+      return new Response(
+        JSON.stringify({ error: 'Session token expired. Please verify OTP again.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Parse request body
+    const { player_id, new_team_id, reason }: TransferRequest = await req.json();
+
+    // Validate required fields
+    if (!player_id || !new_team_id || !reason) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: player_id, new_team_id, reason' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ============================================
+    // 2. Verify requesting team matches session team
+    // ============================================
+    if (session.team_id !== new_team_id) {
+      return new Response(
+        JSON.stringify({
+          error: 'Unauthorized: Token belongs to different team',
+          sessionTeamId: session.team_id,
+          requestedTeamId: new_team_id
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ============================================
+    // 3. Get requesting team details
+    // ============================================
     const { data: requestingTeam, error: teamError } = await supabaseAdmin
       .from('teams')
-      .select('id, name, organization_id, captain_phone')
+      .select('id, name, logo_url, organization_id, captain_phone')
       .eq('id', new_team_id)
       .single();
 
@@ -56,17 +110,18 @@ serve(async (req) => {
       );
     }
 
-    // Verify captain phone matches
+    // Double-check: session phone matches team captain phone (extra security layer)
+    const sessionPhone = session.phone.replace(/\D/g, '').slice(-9);
     const teamCaptainPhone = requestingTeam.captain_phone?.replace(/\D/g, '').slice(-9);
-    if (teamCaptainPhone !== cleanPhone) {
+    if (sessionPhone !== teamCaptainPhone) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized: Not the team captain' }),
+        JSON.stringify({ error: 'Session phone mismatch with team captain' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // ============================================
-    // 2. Verify player is in another team
+    // 4. Verify player is in another team
     // ============================================
     const { data: player, error: playerError } = await supabaseAdmin
       .from('applications')
@@ -96,7 +151,7 @@ serve(async (req) => {
     }
 
     // ============================================
-    // 3. Verify transfer window is open
+    // 5. Verify transfer window is open
     // ============================================
     const { data: org, error: orgError } = await supabaseAdmin
       .from('organizations')
@@ -119,7 +174,7 @@ serve(async (req) => {
     }
 
     // ============================================
-    // 4. Check for existing pending transfer
+    // 6. Check for existing pending transfer
     // ============================================
     const { data: existingTransfer } = await supabaseAdmin
       .from('transfers')
@@ -136,7 +191,7 @@ serve(async (req) => {
     }
 
     // ============================================
-    // 5. Create transfer request
+    // 7. Create transfer request
     // ============================================
     const transferData = {
       player_id: player.id,
@@ -170,7 +225,7 @@ serve(async (req) => {
     }
 
     // ============================================
-    // 6. Success response
+    // 8. Success response
     // ============================================
     // Note: Bot will be notified via Supabase Realtime
     // (bot listens to transfers table INSERT events)
