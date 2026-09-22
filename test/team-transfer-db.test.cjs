@@ -30,7 +30,7 @@ test('atomic captain OTP and transfer creation', async () => {
       INSERT INTO applications VALUES ('${id(4)}','${id(2)}','Ali','Vali','photo.png'),
         ('${id(5)}','${id(3)}','Other','Player','other.png');
     `);
-    for (const file of ['20260922_enforce_player_confirmation.sql', '20260923_atomic_team_transfers.sql']) {
+    for (const file of ['20260922_enforce_player_confirmation.sql', '20260923_atomic_team_transfers.sql', '20260924_admin_only_transfer_decisions.sql']) {
       await db.exec(readFileSync(resolve(__dirname, '../migrations', file), 'utf8'));
     }
     const issue = () => db.exec(`INSERT INTO otp_codes(phone,code,expires_at,is_used)

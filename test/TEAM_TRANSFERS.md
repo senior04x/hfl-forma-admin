@@ -7,7 +7,7 @@ PostgreSQL WASM runtime outside the repository; no production connection is used
 $runtime = Join-Path $env:TEMP 'amatora-transfer-db-tests'
 npm install --prefix $runtime --no-save --package-lock=false --ignore-scripts @electric-sql/pglite
 $env:PGLITE_MODULE = Join-Path $runtime 'node_modules/@electric-sql/pglite'
-node --test test/transfer-consent.test.cjs test/team-transfer-db.test.cjs test/team-transfer-http.test.mjs
+node --test test/transfer-consent.test.cjs test/transfer-admin-decision.test.cjs test/team-transfer-db.test.cjs test/team-transfer-http.test.mjs
 ```
 
 PGlite executes the real PL/pgSQL against minimal schema fixtures. Promise batches
@@ -22,6 +22,12 @@ Apply migrations in this explicit dependency order (not alphabetical order):
 3. `20260922_add_player_sessions.sql`
 4. `20260922_enforce_player_confirmation.sql`
 5. `20260923_atomic_team_transfers.sql`
+6. `20260924_admin_only_transfer_decisions.sql`
+
+Current flow: captain requests, bot notifies without action buttons, organization
+admin approves/rejects. The final migration supersedes the old consent trigger;
+player_confirmed remains only for compatibility. The consent test covers the
+historical migration; the admin-decision test covers the final upgrade and policy.
 
 `verify-otp` now serves captain login only: `{phone, code, team_id?}`. If the
 verified phone owns multiple teams, supply the selected team ID; the DB still

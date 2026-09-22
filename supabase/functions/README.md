@@ -32,6 +32,9 @@ The RPC checks session expiry, current captain phone, player membership, matchin
 organization, transfer window and existing pending transfers. It locks the player
 row to serialize competing requests through this RPC. The result is a pending
 transfer with `player_confirmed=false`; it does not claim a notification was sent.
+Only the authenticated admin of the owning organization can approve/reject.
+`player_confirmed` is a compatibility field, not an approval requirement.
+The bot will send an informational notification without accept/reject buttons.
 Bot delivery is a separate integration stage.
 
 ## Access and deployment
