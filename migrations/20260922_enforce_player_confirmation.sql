@@ -1,46 +1,64 @@
--- Migration: Enforce Player Confirmation for Team-Initiated Transfers
--- Date: 2026-09-22
--- Description: Database-level constraint to prevent approval without player confirmation
-
--- ============================================
--- Trigger Function: Check player confirmation before approval
--- ============================================
+-- Apply AFTER 20260922_team_initiated_transfers.sql.
+-- RLS controls organization membership; this trigger protects player consent.
+BEGIN;
 
 CREATE OR REPLACE FUNCTION public.check_player_confirmation_before_approval()
-RETURNS TRIGGER AS $$
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public
+AS $$
 BEGIN
-    -- Only check if status is changing TO 'approved'
-    -- (OLD.status IS DISTINCT FROM 'approved' ensures we're not already approved)
-    IF NEW.status = 'approved' AND (OLD.status IS NULL OR OLD.status IS DISTINCT FROM 'approved') THEN
-
-        -- Check if this is a team-initiated transfer
-        -- (requested_by_team_id IS NOT NULL means team initiated it)
-        IF NEW.requested_by_team_id IS NOT NULL THEN
-
-            -- Check if player has confirmed
-            IF NEW.player_confirmed = false OR NEW.player_confirmed IS NULL THEN
-                RAISE EXCEPTION 'Player has not confirmed this transfer. Team-initiated transfers require player confirmation before approval.';
-            END IF;
-
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.requested_by_team_id IS NOT NULL
+           AND (NEW.status IS DISTINCT FROM 'pending'
+                OR NEW.player_confirmed IS DISTINCT FROM false) THEN
+            RAISE EXCEPTION 'New team transfers must await player confirmation';
         END IF;
-        -- For player-initiated transfers (requested_by_team_id IS NULL), no check needed
-
+        RETURN NEW;
     END IF;
 
+    -- Keep the participants for whom consent was requested immutable.
+    IF OLD.requested_by_team_id IS NOT NULL OR NEW.requested_by_team_id IS NOT NULL THEN
+        IF ROW(NEW.requested_by_team_id, NEW.player_id, NEW.old_team_id,
+               NEW.new_team_id, NEW.organization_id)
+           IS DISTINCT FROM
+           ROW(OLD.requested_by_team_id, OLD.player_id, OLD.old_team_id,
+               OLD.new_team_id, OLD.organization_id) THEN
+            RAISE EXCEPTION 'Team transfer participants cannot be changed';
+        END IF;
+
+        -- Only trusted server code (the bot) can record player consent.
+        -- A missing JWT role must fail closed too.
+        IF NEW.player_confirmed IS DISTINCT FROM OLD.player_confirmed THEN
+            IF auth.role() IS DISTINCT FROM 'service_role' THEN
+                RAISE EXCEPTION 'Only the player confirmation service can record consent';
+            END IF;
+            IF OLD.status IS DISTINCT FROM 'pending'
+               OR NEW.status IS DISTINCT FROM 'pending'
+               OR OLD.player_confirmed IS TRUE
+               OR NEW.player_confirmed IS DISTINCT FROM true THEN
+                RAISE EXCEPTION 'Player consent requires a pending transfer';
+            END IF;
+        END IF;
+
+        IF OLD.status IN ('approved', 'rejected') AND NEW.status IS DISTINCT FROM OLD.status THEN
+            RAISE EXCEPTION 'Completed team transfers cannot be reopened';
+        END IF;
+
+        IF NEW.status = 'approved' AND OLD.status IS DISTINCT FROM 'approved'
+           AND (OLD.player_confirmed IS DISTINCT FROM true
+                OR NEW.player_confirmed IS DISTINCT FROM true) THEN
+            RAISE EXCEPTION 'Player has not confirmed this transfer';
+        END IF;
+    END IF;
+    -- Legacy player-initiated transfers retain their existing behavior.
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
-
--- ============================================
--- Trigger: Apply check before UPDATE
--- ============================================
+$$;
 
 DROP TRIGGER IF EXISTS enforce_player_confirmation ON public.transfers;
-
 CREATE TRIGGER enforce_player_confirmation
-    BEFORE UPDATE ON public.transfers
-    FOR EACH ROW
-    EXECUTE FUNCTION public.check_player_confirmation_before_approval();
+    BEFORE INSERT OR UPDATE ON public.transfers
+    FOR EACH ROW EXECUTE FUNCTION public.check_player_confirmation_before_approval();
 
-COMMENT ON FUNCTION public.check_player_confirmation_before_approval() IS 'Prevents approval of team-initiated transfers without player confirmation - database-level enforcement';
-COMMENT ON TRIGGER enforce_player_confirmation ON public.transfers IS 'Enforces player_confirmed=true requirement for team-initiated transfers before status=approved';
+COMMIT;
