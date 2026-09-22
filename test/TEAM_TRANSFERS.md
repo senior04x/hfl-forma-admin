@@ -23,6 +23,12 @@ Apply migrations in this explicit dependency order (not alphabetical order):
 4. `20260922_enforce_player_confirmation.sql`
 5. `20260923_atomic_team_transfers.sql`
 6. `20260924_admin_only_transfer_decisions.sql`
+7. `20260925_transfer_notifications.sql`
+
+Queue test: `node --test test/transfer-notification-queue.test.cjs` with the same
+PGLITE_MODULE environment. This validates transactional enqueue, ordering,
+deduplication, stale claims and denied anonymous access. The bot worker is
+disabled until explicitly enabled after rollout; no historical backfill occurs.
 
 Current flow: captain requests, bot notifies without action buttons, organization
 admin approves/rejects. The final migration supersedes the old consent trigger;
