@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const matchesUrl = getUrl('matches.html');
     const standingsUrl = getUrl('standings.html');
     const applyUrl = getUrl('apply.html');
+    const transferOrg = window.orgSlug || new URLSearchParams(window.location.search).get('org');
+    const transfersUrl = '/transfers.html' + (transferOrg ? '?org=' + encodeURIComponent(transferOrg) : '');
 
     // Insert Navbar at the top of the body (without Havas Liga text)
     const navbarHTML = `
@@ -39,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <a href="${teamsUrl}" class="${window.location.pathname.includes('teams') || window.location.pathname.includes('team-details') ? 'active' : ''}">Jamoalar</a>
                 <a href="${matchesUrl}" class="${window.location.pathname.includes('matches') || window.location.pathname.includes('match-details') ? 'active' : ''}">O'yinlar</a>
                 <a href="${standingsUrl}" class="${window.location.pathname.includes('standings') ? 'active' : ''}">Turnir jadvali</a>
+                <a href="${transfersUrl}">Transferlar</a>
                 <a href="${applyUrl}" class="nav-btn">Ro'yxatdan o'tish</a>
             </div>
             

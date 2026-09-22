@@ -29,6 +29,7 @@ test('atomic captain OTP and transfer creation', async () => {
         ('${id(2)}','Old','old.png',7,'901111111'), ('${id(3)}','Foreign','foreign.png',8,'902222222');
       INSERT INTO applications VALUES ('${id(4)}','${id(2)}','Ali','Vali','photo.png'),
         ('${id(5)}','${id(3)}','Other','Player','other.png');
+      ALTER TABLE applications ADD COLUMN status text DEFAULT 'approved';
     `);
     for (const file of ['20260922_enforce_player_confirmation.sql', '20260923_atomic_team_transfers.sql', '20260924_admin_only_transfer_decisions.sql']) {
       await db.exec(readFileSync(resolve(__dirname, '../migrations', file), 'utf8'));
@@ -54,6 +55,9 @@ test('atomic captain OTP and transfer creation', async () => {
     assert.equal((await request(id(4),hash(9))).status,401);
     assert.equal((await request(id(4),hash(1),id(2))).status,403);
     assert.equal((await request(id(5))).status,403);
+    await db.exec(`UPDATE applications SET status='pending' WHERE id='${id(4)}'`);
+    assert.equal((await request()).status,400);
+    await db.exec(`UPDATE applications SET status='approved' WHERE id='${id(4)}'`);
     await db.exec('UPDATE organizations SET transfer_window_open=false WHERE id=7');
     assert.equal((await request()).status,403);
     await db.exec('UPDATE organizations SET transfer_window_open=true WHERE id=7');
@@ -73,7 +77,10 @@ test('atomic captain OTP and transfer creation', async () => {
     assert.equal((await request()).status,401);
     await issue();
     await db.exec(`INSERT INTO teams VALUES ('${id(6)}','Second','',7,'901234567')`);
-    assert.equal((await verify('1234',hash(3))).status,409);
+    const choices = await verify('1234',hash(3));
+    assert.equal(choices.status,409);
+    assert.equal(choices.teams.length,2);
+    assert.ok(choices.teams.every(team=>!('captain_phone' in team)));
     assert.equal((await verify('1234',hash(3),id(6))).status,200);
     await issue();
     // A failed session insert must roll back OTP consumption, enabling retry.

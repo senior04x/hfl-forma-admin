@@ -57,3 +57,15 @@ test('errors never expose database internals or issue a token', async () => {
   const body = await (await rejected(req({phone:'901234567',code:'1234'}))).json();
   assert.equal(body.sessionToken,undefined);
 });
+
+test('page validates action and cursor; client organization is never forwarded', async () => {
+  let args;
+  const handler = createTransferHandler('page',async(name,params)=>{
+    args={name,params}; return {data:{status:200,items:[]}};
+  });
+  assert.equal((await handler(req({action:'history',organization_id:999},'Bearer '+token))).status,200);
+  assert.deepEqual(args,{name:'team_transfer_page',params:{p_token_hash:await tokenHash(token),
+    p_action:'history',p_query:'',p_after:null}});
+  assert.equal((await handler(req({action:'drop'},'Bearer '+token))).status,400);
+  assert.equal((await handler(req({action:'players',after:'invalid'},'Bearer '+token))).status,400);
+});

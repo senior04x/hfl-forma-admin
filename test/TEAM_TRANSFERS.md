@@ -7,7 +7,7 @@ PostgreSQL WASM runtime outside the repository; no production connection is used
 $runtime = Join-Path $env:TEMP 'amatora-transfer-db-tests'
 npm install --prefix $runtime --no-save --package-lock=false --ignore-scripts @electric-sql/pglite
 $env:PGLITE_MODULE = Join-Path $runtime 'node_modules/@electric-sql/pglite'
-node --test test/transfer-consent.test.cjs test/transfer-admin-decision.test.cjs test/team-transfer-db.test.cjs test/team-transfer-http.test.mjs
+node --test test/transfer-consent.test.cjs test/transfer-admin-decision.test.cjs test/team-transfer-db.test.cjs test/team-transfer-http.test.mjs test/team-transfer-page.test.cjs test/transfer-notification-queue.test.cjs
 ```
 
 PGlite executes the real PL/pgSQL against minimal schema fixtures. Promise batches
@@ -24,6 +24,7 @@ Apply migrations in this explicit dependency order (not alphabetical order):
 5. `20260923_atomic_team_transfers.sql`
 6. `20260924_admin_only_transfer_decisions.sql`
 7. `20260925_transfer_notifications.sql`
+8. `20260926_team_transfer_page.sql`
 
 Queue test: `node --test test/transfer-notification-queue.test.cjs` with the same
 PGLITE_MODULE environment. This validates transactional enqueue, ordering,
@@ -31,7 +32,7 @@ deduplication, stale claims and denied anonymous access. The bot worker is
 disabled until explicitly enabled after rollout; no historical backfill occurs.
 
 Current flow: captain requests, bot notifies without action buttons, organization
-admin approves/rejects. The final migration supersedes the old consent trigger;
+admin approves/rejects. The admin-only migration supersedes the old consent trigger;
 player_confirmed remains only for compatibility. The consent test covers the
 historical migration; the admin-decision test covers the final upgrade and policy.
 
@@ -52,7 +53,13 @@ The RPCs are executable only by service_role; Edge handlers perform input checks
 and call them without forwarding caller credentials. The DB transaction locks the
 OTP/player rows, checks authority and inserts the session/request atomically.
 The pending check serializes requests through this RPC; it does not claim to
-control unrelated legacy service-role writers. No notifications are sent yet.
+control unrelated legacy service-role writers. Bot delivery stays disabled until rollout.
+
+The captain page uses `team-transfer-page` for session-scoped context, prefix
+player search, own request history and logout. Lists have 20-row cursor pages.
+Search excludes unapproved applications, the captain's team and other organizations.
+Multi-team OTP responses include only team IDs/names after successful code verification.
+See [client checks](../client/TRANSFER_PAGE.md) for offline browser tests.
 
 Before deployment, verify live OTP RLS/grants and all legacy OTP issuers/verifiers:
 untrusted clients must not read codes or reset attempts. The existing backend login

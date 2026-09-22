@@ -70,7 +70,11 @@ BEGIN
         SELECT count(*) INTO v_count FROM public.teams
         WHERE public.transfer_phone(captain_phone) = p_phone;
         IF v_count > 1 THEN
-            RETURN jsonb_build_object('status', 409, 'error', 'Select your captain team');
+            RETURN jsonb_build_object('status', 409, 'error', 'Select your captain team',
+                'teams', (SELECT jsonb_agg(jsonb_build_object('id',c.id,'name',c.name)) FROM (
+                    SELECT id,name FROM public.teams WHERE public.transfer_phone(captain_phone)=p_phone
+                    ORDER BY id LIMIT 50
+                ) c));
         END IF;
     END IF;
     SELECT * INTO v_team FROM public.teams
@@ -122,7 +126,8 @@ BEGIN
     END IF;
     -- Lock the player so concurrent requests see the first committed pending row.
     SELECT * INTO v_player FROM public.applications WHERE id = p_player_id FOR UPDATE;
-    IF NOT FOUND OR v_player.team_id IS NULL OR v_player.team_id = v_team.id THEN
+    IF NOT FOUND OR v_player.team_id IS NULL OR v_player.team_id = v_team.id
+       OR v_player.status IS DISTINCT FROM 'approved' THEN
         RETURN jsonb_build_object('status', 400, 'error', 'Player must belong to another team');
     END IF;
     SELECT * INTO v_old FROM public.teams WHERE id = v_player.team_id FOR SHARE;

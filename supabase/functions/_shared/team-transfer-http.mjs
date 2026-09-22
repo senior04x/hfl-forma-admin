@@ -38,14 +38,25 @@ export function createTransferHandler(kind, rpc) {
       } else {
         const bearer = req.headers.get('Authorization')?.match(/^Bearer ([0-9a-f]{64})$/i);
         if (!bearer) return reply(401, { error: 'Invalid session' });
-        if (typeof body.player_id !== 'string' || !uuid.test(body.player_id)
-            || typeof body.reason !== 'string' || !body.reason.trim() || body.reason.trim().length > 1000
-            || (body.new_team_id != null && (typeof body.new_team_id !== 'string' || !uuid.test(body.new_team_id)))) {
-          return reply(400, { error: 'Invalid request' });
+        if (kind === 'page') {
+          if (!['context', 'players', 'history', 'logout'].includes(body.action)
+              || (body.query != null && (typeof body.query !== 'string' || body.query.length > 80))
+              || (body.after != null && (typeof body.after !== 'string' || !uuid.test(body.after)))) {
+            return reply(400, { error: 'Invalid request' });
+          }
+          name = 'team_transfer_page';
+          params = { p_token_hash: await tokenHash(bearer[1]), p_action: body.action,
+            p_query: body.query ?? '', p_after: body.after ?? null };
+        } else {
+          if (typeof body.player_id !== 'string' || !uuid.test(body.player_id)
+              || typeof body.reason !== 'string' || !body.reason.trim() || body.reason.trim().length > 1000
+              || (body.new_team_id != null && (typeof body.new_team_id !== 'string' || !uuid.test(body.new_team_id)))) {
+            return reply(400, { error: 'Invalid request' });
+          }
+          name = 'request_team_transfer';
+          params = { p_token_hash: await tokenHash(bearer[1]), p_player_id: body.player_id,
+            p_reason: body.reason.trim(), p_team_id: body.new_team_id ?? null };
         }
-        name = 'request_team_transfer';
-        params = { p_token_hash: await tokenHash(bearer[1]), p_player_id: body.player_id,
-          p_reason: body.reason.trim(), p_team_id: body.new_team_id ?? null };
       }
       const { data, error } = await rpc(name, params);
       if (error || !data || ![200, 201, 400, 401, 403, 409, 429].includes(data.status)) {

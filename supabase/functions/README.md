@@ -8,7 +8,8 @@ and owner approval. See [migration order and tests](../../test/TEAM_TRANSFERS.md
 POST body: `{ "phone": "+998901234567", "code": "1234", "team_id": "optional-team-uuid" }`.
 Captain-only login for the team-initiated transfer flow. The DB matches the
 verified phone to teams.captain_phone; team_id never grants authority by itself.
-For multiple captain teams, team_id is required. Players keep their existing
+For multiple captain teams, a verified code returns 409 with team IDs/names;
+resubmit with the selected team_id and same code. Players keep their existing
 backend login and will receive invitations, rather than create new transfers.
 
 Success returns `success`, `role: "captain"`, `sessionToken`, `expiresAt`, `team`
@@ -35,11 +36,21 @@ transfer with `player_confirmed=false`; it does not claim a notification was sen
 Only the authenticated admin of the owning organization can approve/reject.
 `player_confirmed` is a compatibility field, not an approval requirement.
 The bot will send an informational notification without accept/reject buttons.
-Bot delivery is a separate integration stage.
+Bot delivery uses the durable notification queue and remains disabled until rollout.
+
+## team-transfer-page
+
+POST with `Authorization: Bearer <sessionToken>`.
+Body: `{ "action": "context|players|history|logout", "query": "optional prefix", "after": "optional cursor uuid" }`.
+Current captain ownership and session expiry are checked for every action.
+Player search requires 2-80 characters and returns approved players in other teams
+of the same organization. History includes only the session team's requests,
+newest first. Both lists return up to 20 `items` and `next_cursor`.
+Logout revokes the session. No phone or Telegram identifiers are returned.
 
 ## Access and deployment
 
-`supabase/config.toml` disables gateway JWT verification for these two functions
+`supabase/config.toml` disables gateway JWT verification for these three functions
 because they use custom OTP/session authentication. Their RPCs can be executed
 only by service_role. Client credentials are never forwarded to the admin client.
 Do not invoke these RPCs directly from clients.

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#080b10">
+  <title>Transferlar — AMATORA</title>
+  <link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/transfers.css">
+  <script type="module" src="/js/transfers.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" id="home-link" href="/index.html">AMATORA<span>JAMOA KABINETI</span></a>
+    <a id="teams-link" href="/teams.html">Jamoalar ↗</a>
+  </header>
+  <main>
+    <div class="intro"><p class="eyebrow">JAMOANGIZNING KEYINGI QADAMI</p>
+      <h1>Transferlar<span>.</span></h1>
+      <p>O'yinchini tanlang. Ariza yuboring. Qarorni admin qabul qiladi.</p>
+    </div>
+    <p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
+    <section id="login-panel" class="login-grid">
+      <div class="panel login-card">
+        <p class="eyebrow">01 / SARDOR SIFATIDA KIRISH</p>
+        <h2>Jamoangiz nomidan ariza yuboring</h2>
+        <p class="muted">Telegram botda o'z telefon raqamingizni yuboring. Kelgan kodni shu yerga kiriting.</p>
+        <a class="button telegram" href="https://t.me/amatora_bot?start=transfer" target="_blank" rel="noopener noreferrer">Telegram botni ochish ↗</a>
+        <form id="login-form">
+          <label for="phone">Sardorning telefon raqami</label>
+          <input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="+998 90 123 45 67" maxlength="25" required>
+          <label for="otp">Tasdiqlash kodi</label>
+          <input id="otp" name="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4}" maxlength="4" placeholder="4 xonali kod" required>
+          <div id="team-choice" hidden><label for="captain-team">Jamoangizni tanlang</label><select id="captain-team"></select></div>
+          <button id="login-submit" type="submit" class="button primary">Kabinetga kirish →</button>
+        </form>
+      </div>
+      <aside class="panel flow-card"><span class="flow-number">3 QADAM</span><h2>Hammasi aniq.</h2>
+        <ol class="flow"><li><strong>O'yinchini toping</strong><p>O'z tashkilotingizdagi boshqa jamoa tarkibidan.</p></li>
+          <li><strong>Sababni yozing</strong><p>O'yinchiga bot orqali xabar beriladi.</p></li>
+          <li><strong>Admin qarorini kuzating</strong><p>Natija arizalar ro'yxatida ko'rinadi.</p></li></ol>
+        <p class="flow-foot">Arizani faqat jamoa sardori yuboradi.</p>
+      </aside>
+    </section>
+    <section id="workspace" hidden>
+      <div class="panel team-bar"><div><p class="eyebrow">SIZNING JAMOANGIZ</p><h2 id="team-name"></h2></div>
+        <div class="team-actions"><span id="window-status" class="badge"></span><button id="logout" class="button quiet" type="button">Chiqish</button></div></div>
+      <div class="workspace-grid">
+        <section class="panel search-panel" aria-labelledby="search-heading">
+          <div class="section-title"><span class="step">01</span><h2 id="search-heading">O'yinchi topish</h2></div>
+          <label for="player-query">Ism yoki familiya</label>
+          <input id="player-query" type="search" placeholder="Kamida 2 ta harf kiriting" maxlength="80" autocomplete="off">
+          <p id="search-status" class="muted" aria-live="polite">Qidirish uchun ism yoki familiyaning boshini yozing.</p>
+          <ul id="players" class="list"></ul>
+          <button id="players-more" class="button quiet more" type="button" hidden>Yana ko'rsatish</button>
+        </section>
+        <section class="panel history-panel" aria-labelledby="history-heading">
+          <div class="section-title"><span class="step">02</span><h2 id="history-heading">Yuborilgan arizalar</h2></div>
+          <button id="refresh-history" class="button quiet refresh" type="button">↻ Yangilash</button>
+          <p id="history-status" class="muted" aria-live="polite"></p>
+          <ul id="history" class="list"></ul>
+          <button id="history-more" class="button quiet more" type="button" hidden>Oldingi arizalar</button>
+        </section>
+      </div>
+    </section>
+    <dialog id="request-dialog" aria-labelledby="request-heading">
+      <form id="request-form"><p class="eyebrow">YANGI TRANSFER ARIZASI</p><h2 id="request-heading"></h2><p id="selected-team" class="muted"></p>
+        <label for="reason">Transfer sababi</label><textarea id="reason" rows="4" maxlength="1000" required placeholder="Nega bu o'yinchini jamoangizga olmoqchisiz?"></textarea>
+        <p class="muted">O'yinchiga xabar beriladi. Arizani admin ko'rib chiqadi.</p>
+        <p id="request-error" class="error-text" role="alert" hidden></p>
+        <div class="dialog-actions"><button id="cancel-request" type="button" class="button quiet">Bekor qilish</button><button id="send-request" type="submit" class="button primary">Ariza yuborish</button></div>
+      </form>
+    </dialog>
+  </main>
+  <footer>AMATORA · O'yin davom etadi.</footer>
+</body>
+</html>

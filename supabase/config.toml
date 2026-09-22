@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.request-transfer]
 verify_jwt = false
+
+[functions.team-transfer-page]
+verify_jwt = false
