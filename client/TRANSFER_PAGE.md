@@ -6,7 +6,8 @@ the player receives a bot notification without action buttons.
 
 Tokens stay in memory, never browser storage. Refreshing requires OTP login again.
 Required server functions: `verify-otp`, `request-transfer`, `team-transfer-page`.
-Deployment is pending owner approval and completion of the admin phase.
+Deployment is pending owner approval and production preflight. Admin decisions
+require the atomic membership migration documented in the organization tests.
 
 ## Offline checks
 

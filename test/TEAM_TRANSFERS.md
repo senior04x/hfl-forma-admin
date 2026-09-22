@@ -7,7 +7,7 @@ PostgreSQL WASM runtime outside the repository; no production connection is used
 $runtime = Join-Path $env:TEMP 'amatora-transfer-db-tests'
 npm install --prefix $runtime --no-save --package-lock=false --ignore-scripts @electric-sql/pglite
 $env:PGLITE_MODULE = Join-Path $runtime 'node_modules/@electric-sql/pglite'
-node --test test/transfer-consent.test.cjs test/transfer-admin-decision.test.cjs test/team-transfer-db.test.cjs test/team-transfer-http.test.mjs test/team-transfer-page.test.cjs test/transfer-notification-queue.test.cjs
+node --test test/transfer-consent.test.cjs test/transfer-admin-decision.test.cjs test/team-transfer-db.test.cjs test/team-transfer-http.test.mjs test/team-transfer-page.test.cjs test/transfer-notification-queue.test.cjs test/transfer-membership.test.cjs
 ```
 
 PGlite executes the real PL/pgSQL against minimal schema fixtures. Promise batches
@@ -25,6 +25,7 @@ Apply migrations in this explicit dependency order (not alphabetical order):
 6. `20260924_admin_only_transfer_decisions.sql`
 7. `20260925_transfer_notifications.sql`
 8. `20260926_team_transfer_page.sql`
+9. `20260927_atomic_admin_transfer.sql`
 
 Queue test: `node --test test/transfer-notification-queue.test.cjs` with the same
 PGLITE_MODULE environment. This validates transactional enqueue, ordering,
@@ -60,6 +61,45 @@ player search, own request history and logout. Lists have 20-row cursor pages.
 Search excludes unapproved applications, the captain's team and other organizations.
 Multi-team OTP responses include only team IDs/names after successful code verification.
 See [client checks](../client/TRANSFER_PAGE.md) for offline browser tests.
+
+## Admin approval phase
+
+`z_apply_transfer_membership` runs on the status UPDATE itself, so both action
+buttons and the edit dialog commit status, application team, career and the
+notification queue together. It checks the signed Auth user against the verified
+`admin_users.id/organization_id/role` schema. `organization_users` has no Auth
+user UUID; it is not used for this authorization. No `players` writes are made:
+the live transfer FK points to `applications.id`.
+
+Requests can be reviewed after the window closes. A stale player membership or
+career mismatch blocks approval. Legacy reversals remain supported unless the
+player has moved again; career `transfer_id` prevents an old reversal even after
+the player later returns to the same team. Team-initiated decisions stay final.
+Participants are read-only in the edit dialog. Status writes match the previously
+loaded status and require one returned row, preventing silent RLS/no-row success.
+Lists are organization-scoped and fetched in 30-row pages without polling.
+
+Existing open career dates are preserved. If none exists, the former membership
+is recorded at the first observed transfer time (`joined_at = left_at`). This is
+an observation, not a claim about the historical joining date. Existing approved
+transfers are not replayed. Before rollout, inspect duplicate open career rows:
+the unique index deliberately fails instead of deleting or guessing history.
+
+Offline admin browser test (all Supabase and notification traffic mocked/blocked):
+
+```powershell
+$env:PLAYWRIGHT_MODULE = Join-Path $env:TEMP 'amatora-transfer-ui-tests/node_modules/playwright'
+$env:TRANSFER_BROWSER_PATH = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
+node --test test/transfer-admin-ui.test.cjs
+```
+
+Use the client test instructions above to install the temporary Playwright runtime.
+For manual review after approved staging rollout: run `npm run dev` in `admin`,
+open Transfers with a test organization admin, approve/reject a test request,
+then verify one current career record and the changed application team. A repeat
+click must not add another career row. Do not test real users or toggle the live
+window: the existing window toggle sends Expo notifications. UI errors never
+display raw database messages.
 
 Before deployment, verify live OTP RLS/grants and all legacy OTP issuers/verifiers:
 untrusted clients must not read codes or reset attempts. The existing backend login
