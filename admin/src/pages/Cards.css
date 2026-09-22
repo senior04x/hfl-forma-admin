@@ -862,3 +862,25 @@
   border-color: rgba(239, 68, 68, 0.35);
   color: #ef4444;
 }
+.cards-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 18px 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.cards-pagination button {
+  padding: 10px 16px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #1e293b;
+  color: #f8fafc;
+  cursor: pointer;
+}
+
+.cards-pagination button:disabled { opacity: 0.45; cursor: default; }
+.cards-export-summary { color: #cbd5e1; line-height: 1.6; }

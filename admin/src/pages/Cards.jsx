@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
+import { getActiveOrgLeagues } from '../utils/leagueUtils';
 import { 
   ShieldAlert, 
   Search, 
@@ -14,9 +14,10 @@ import {
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Cards.css';
+import { getActiveOrgTournaments } from '../utils/tournamentUtils';
+import { CARD_PAGE_SIZE, loadCardPage } from '../utils/cardsData';
 
 const DEFAULT_PLAYER_AVATAR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40' fill='%2364748b'%3E%3Cpath d='M20 20a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm0 4c-7.33 0-14 3.67-14 11v2h28v-2c0-7.33-6.67-11-14-11z'/%3E%3C/svg%3E";
-const DEFAULT_TEAM_LOGO = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100&auto=format&fit=crop&q=80";
 
 // Transliterates Uzbek Cyrillic text to Latin to prevent corrupt characters in jsPDF
 function cyrillicToLatin(text) {
@@ -39,396 +40,127 @@ function cyrillicToLatin(text) {
 export default function Cards() {
   const { currentOrg, orgId } = useOrg();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeLeagues, setActiveLeagues] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
+  const [mode, setMode] = useState('league');
   const [selectedLeague, setSelectedLeague] = useState('');
+  const [selectedTournament, setSelectedTournament] = useState('');
   const [selectedRound, setSelectedRound] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-
-  const [teams, setTeams] = useState([]);
-  const [matches, setMatches] = useState([]);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [processedCardPlayers, setPlayers] = useState([]);
   const [events, setEvents] = useState([]);
-  const [playersList, setPlayersList] = useState([]);
-
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
+  const [catalogOrg, setCatalogOrg] = useState(null);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [selectedPlayerModal, setSelectedPlayerModal] = useState(null);
-  const [modalEvents, setModalEvents] = useState([]);
-  const [modalLoading, setModalLoading] = useState(false);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const exportAbort = React.useRef(null);
+
+  const competition = mode === 'league'
+    ? activeLeagues.find(item => item.name === selectedLeague)
+    : tournaments.find(item => String(item.id) === String(selectedTournament));
+  const competitionTitle = competition?.name || '';
+  const scope = React.useMemo(() => ({ orgId, competition, mode, round: selectedRound }),
+    [orgId, competition, mode, selectedRound]);
 
   useEffect(() => {
-    loadLeaguesAndData();
+    let cancelled = false;
+    setCatalogOrg(null);
+    setPlayers([]);
+    setEvents([]);
+    setSelectedPlayerModal(null);
+    setShowPdfModal(false);
+    setPage(0);
+    if (!orgId) return;
+    Promise.all([getActiveOrgLeagues(orgId), getActiveOrgTournaments(orgId)])
+      .then(([leagues, cups]) => {
+        if (cancelled) return;
+        setActiveLeagues(leagues);
+        setTournaments(cups);
+        setSelectedLeague(leagues[0]?.name || '');
+        setSelectedTournament(cups[0]?.id || '');
+        setSelectedRound('all');
+        setCatalogOrg(orgId);
+      }).catch(() => {
+        if (!cancelled) setError("Musobaqalarni yuklab bo'lmadi.");
+      });
+    return () => { cancelled = true; };
   }, [orgId]);
 
-  const loadLeaguesAndData = async () => {
-    const fetched = await getActiveOrgLeagues(orgId);
-    setActiveLeagues(fetched);
-    if (fetched.length > 0 && !selectedLeague) {
-      setSelectedLeague(fetched[0].name);
-    }
-    fetchData(fetched);
-  };
+  useEffect(() => {
+    const timer = setTimeout(() => { setSearch(searchQuery); setPage(0); }, 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const fetchData = async (leaguesList = activeLeagues) => {
+  useEffect(() => {
+    const controller = new AbortController();
+    setPlayers([]);
+    setEvents([]);
+    setHasNext(false);
+    setError('');
+    setSelectedPlayerModal(null);
+    if (!competition || catalogOrg !== orgId) { setLoading(false); return; }
     setLoading(true);
-    try {
-      const dbClient = supabase || supabase;
+    loadCardPage(supabase, scope, page, search, controller.signal)
+      .then(result => {
+        if (controller.signal.aborted) return;
+        setPlayers(result.players);
+        setEvents(result.events);
+        setHasNext(result.hasNext);
+      }).catch(() => {
+        if (!controller.signal.aborted) setError("Kartochkalarni yuklab bo'lmadi. Qayta urinib ko'ring.");
+      }).finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [scope, competition, catalogOrg, orgId, page, search, retry]);
 
-      // 1. Fetch Teams (Lightweight)
-      let teamsQuery = dbClient.from('teams').select('id, name, logo_url, league');
-      if (orgId) {
-        teamsQuery = applyOrgAndCollabFilter(teamsQuery, orgId, leaguesList);
-      }
-      const { data: teamsData } = await teamsQuery;
-      setTeams(teamsData || []);
+  useEffect(() => () => exportAbort.current?.abort(), [scope, search]);
 
-      // 2. Fetch Matches (Lightweight)
-      let matchesQuery = dbClient.from('matches').select('id, round, league, organization_id');
-      if (orgId) {
-        matchesQuery = applyOrgAndCollabFilter(matchesQuery, orgId, leaguesList);
-      }
-      const { data: matchesData } = await matchesQuery;
-      setMatches(matchesData || []);
-
-      // 3. Fetch Events (Lightweight: NO deep joins upfront!)
-      const { data: eventsData, error: eventsError } = await dbClient
-        .from('match_events')
-        .select('id, event_type, player_id, team_id, match_id')
-        .in('event_type', ['yellow_card', 'red_card']);
-
-      let loadedEvents = eventsData || [];
-      setEvents(loadedEvents);
-
-      // 4. Fetch Players for fallback info (Lightweight)
-      const { data: appsData } = await dbClient
-        .from('applications')
-        .select('id, first_name, last_name, player_number, photo_url, team_id');
-      setPlayersList(appsData || []);
-
-    } catch (err) {
-      console.error("Error fetching cards data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const matchMap = {};
-  matches.forEach(m => {
-    matchMap[m.id] = m;
+  const modalLoading = false;
+  const modalEvents = events.filter(event => event.player_id === selectedPlayerModal?.id).map(event => {
+    const match = event.match || {};
+    return {
+      id: event.id, type: event.event_type, minute: event.minute,
+      homeTeamName: match.home_team?.name || '1-jamoa',
+      homeTeamLogo: match.home_team?.logo_url,
+      awayTeamName: match.away_team?.name || '2-jamoa',
+      awayTeamLogo: match.away_team?.logo_url,
+      hasScore: match.home_score != null && match.away_score != null,
+      homeScore: match.home_score, awayScore: match.away_score,
+      league: competitionTitle, round: match.round ? match.round + '-tur' : '',
+      date: match.match_date ? new Date(match.match_date).toLocaleDateString('uz-UZ') : '',
+      time: match.match_time?.slice(0, 5) || '',
+    };
   });
-
-  const playerAppMap = {};
-  playersList.forEach(p => {
-    playerAppMap[p.id] = p;
-  });
-
-  const teamMap = {};
-  teams.forEach(t => {
-    teamMap[t.id] = t;
-  });
-
-  // Dynamic rounds for active selected league
-  let maxRound = 0;
-  matches.forEach(m => {
-    const isLeagueMatch = (m.league || '').includes(selectedLeague) || 
-      (teamMap[m.home_team_id]?.league || '').includes(selectedLeague);
-    if (isLeagueMatch && m.round && parseInt(m.round) > maxRound) {
-      maxRound = parseInt(m.round);
-    }
-  });
-
-  events.forEach(e => {
-    const teamLeague = e.team?.league || teamMap[e.team_id]?.league || e.match?.league || '';
-    if (selectedLeague && teamLeague.includes(selectedLeague)) {
-      const r = e.match?.round || matchMap[e.match_id]?.round;
-      if (r && parseInt(r) > maxRound) {
-        maxRound = parseInt(r);
-      }
-    }
-  });
-
-  if (maxRound === 0) maxRound = 1;
-
-  const roundOptions = [];
-  for (let i = 1; i <= maxRound; i++) roundOptions.push(i);
-
-  // Process and Filter Cards
-  const processedCardPlayers = (() => {
-    const cardMap = {};
-
-    events.forEach(e => {
-      if (!e.player_id) return;
-      if (e.event_type !== 'yellow_card' && e.event_type !== 'red_card') return;
-
-      // 1. League Filter
-      const eventTeam = teamMap[e.team_id] || e.team;
-      const teamLeague = eventTeam?.league || e.match?.league || '';
-      const isLeagueMatch = !selectedLeague || teamLeague.includes(selectedLeague);
-      if (!isLeagueMatch) return;
-
-      // 2. Round Filter
-      if (selectedRound && selectedRound !== 'all') {
-        const evRound = e.match?.round !== undefined && e.match?.round !== null 
-          ? e.match.round 
-          : matchMap[e.match_id]?.round;
-        if (evRound !== undefined && evRound !== null && String(evRound) !== String(selectedRound)) {
-          return;
-        }
-      }
-
-      // Aggregate
-      if (!cardMap[e.player_id]) {
-        const appInfo = playerAppMap[e.player_id];
-        const pObj = e.player || {};
-
-        const firstName = pObj.first_name || appInfo?.first_name || '';
-        const lastName = pObj.last_name || appInfo?.last_name || '';
-        const fullName = `${firstName} ${lastName}`.trim() || "Noma'lum o'yinchi";
-        const photoUrl = pObj.photo_url || appInfo?.photo_url || '';
-        const playerNumber = pObj.player_number || appInfo?.player_number || '';
-
-        cardMap[e.player_id] = {
-          id: e.player_id,
-          name: fullName,
-          firstName,
-          lastName,
-          photoUrl: photoUrl || '',
-          playerNumber: playerNumber ? `#${playerNumber}` : '',
-          teamId: e.team_id,
-          teamName: eventTeam?.name || 'Noma\'lum jamoa',
-          teamLogo: eventTeam?.logo_url || '',
-          yellowCards: 0,
-          redCards: 0,
-          totalCards: 0
-        };
-      }
-
-      if (e.event_type === 'yellow_card') {
-        cardMap[e.player_id].yellowCards += 1;
-        cardMap[e.player_id].totalCards += 1;
-      } else if (e.event_type === 'red_card') {
-        cardMap[e.player_id].redCards += 1;
-        cardMap[e.player_id].totalCards += 1;
-      }
-    });
-
-    let list = Object.values(cardMap);
-
-    // Apply Search Filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter(p => 
-        p.name.toLowerCase().includes(q) ||
-        p.teamName.toLowerCase().includes(q) ||
-        p.playerNumber.includes(q)
-      );
-    }
-
-    // Sort: Red Cards DESC, then Yellow Cards DESC, then Name ASC
-    list.sort((a, b) => {
-      if (b.redCards !== a.redCards) return b.redCards - a.redCards;
-      if (b.yellowCards !== a.yellowCards) return b.yellowCards - a.yellowCards;
-      return a.name.localeCompare(b.name);
-    });
-
-    return list;
-  })();
-
-  // Fetch player match card events on-demand ONLY when modal is opened
-  const handlePlayerClick = async (player) => {
-    setSelectedPlayerModal(player);
-    setModalLoading(true);
-    setModalEvents([]);
-
-    try {
-      const pId = String(player.id);
-      const { data } = await supabase
-        .from('match_events')
-        .select(`
-          id, 
-          event_type, 
-          minute, 
-          match:match_id(
-            id, round, league, match_date, match_time, home_score, away_score, 
-            home_team_id, away_team_id,
-            home_team:home_team_id(id, name, logo_url), 
-            away_team:away_team_id(id, name, logo_url)
-          )
-        `)
-        .eq('player_id', pId)
-        .in('event_type', ['yellow_card', 'red_card']);
-
-      if (data && data.length > 0) {
-        const formatted = data.map((e) => {
-          const m = e.match || matchMap[e.match_id] || matchMap[String(e.match_id)] || {};
-          const homeTeamObj = (typeof m.home_team === 'object' && m.home_team) || teamMap[m.home_team_id] || teamMap[String(m.home_team_id)];
-          const awayTeamObj = (typeof m.away_team === 'object' && m.away_team) || teamMap[m.away_team_id] || teamMap[String(m.away_team_id)];
-
-          const homeTeamName = homeTeamObj?.name || m.home_team_name || "1-jamoa";
-          const homeTeamLogo = homeTeamObj?.logo_url || "";
-          const awayTeamName = awayTeamObj?.name || m.away_team_name || "2-jamoa";
-          const awayTeamLogo = awayTeamObj?.logo_url || "";
-
-          const roundMatch = String(m.round || m.tour || '').match(/\d+/);
-          const roundNum = roundMatch ? parseInt(roundMatch[0], 10) : 0;
-          const dateStr = m.match_date || '';
-          const timeStr = m.match_time || '';
-          let formattedDate = '';
-          if (dateStr) {
-            try {
-              const d = new Date(dateStr);
-              formattedDate = d.toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            } catch { formattedDate = dateStr; }
-          }
-          let formattedTime = '';
-          if (timeStr) {
-            formattedTime = timeStr.slice(0, 5);
-          }
-
-          const hasScore = m.home_score !== null && m.home_score !== undefined && m.away_score !== null && m.away_score !== undefined;
-          const homeScore = m.home_score ?? 0;
-          const awayScore = m.away_score ?? 0;
-
-          return {
-            id: e.id,
-            type: e.event_type,
-            minute: e.minute,
-            homeTeamName,
-            homeTeamLogo,
-            awayTeamName,
-            awayTeamLogo,
-            hasScore,
-            homeScore,
-            awayScore,
-            league: m.league || '',
-            round: roundNum > 0 ? `${roundNum}-tur` : '',
-            date: formattedDate,
-            time: formattedTime,
-          };
-        }).sort((a, b) => {
-          const rA = parseInt(a.round) || 0;
-          const rB = parseInt(b.round) || 0;
-          return rA - rB;
-        });
-
-        setModalEvents(formatted);
-      } else {
-        setModalEvents([]);
-      }
-    } catch (err) {
-      console.error('Error fetching player modal events:', err);
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  // PDF Export Modal State
-  const [showPdfModal, setShowPdfModal] = useState(false);
-  const [pdfLeague, setPdfLeague] = useState('all');
-  const [pdfRound, setPdfRound] = useState('all');
-  const [pdfTeamId, setPdfTeamId] = useState('all');
-
-  // Available teams for PDF modal (dynamically filtered by selected PDF league)
-  const pdfAvailableTeams = React.useMemo(() => {
-    if (!pdfLeague || pdfLeague === 'all') return teams;
-    return teams.filter(t => (t.league || '').toLowerCase().trim() === pdfLeague.toLowerCase().trim());
-  }, [teams, pdfLeague]);
-
-  // Filtered players list strictly for PDF Export according to selected modal filters
-  const pdfFilteredPlayers = React.useMemo(() => {
-    const cardMap = {};
-
-    events.forEach((e) => {
-      if (!e.player_id) return;
-      if (e.event_type !== 'yellow_card' && e.event_type !== 'red_card') return;
-
-      const teamObj = teamMap[e.team_id] || teamMap[String(e.team_id)];
-      const matchObj = matchMap[e.match_id] || matchMap[String(e.match_id)];
-
-      // 1. League Filter
-      const teamLeague = teamObj?.league || matchObj?.league || '';
-      if (pdfLeague && pdfLeague !== 'all' && teamLeague.toLowerCase().trim() !== pdfLeague.toLowerCase().trim()) {
-        return;
-      }
-
-      // 2. Round Filter
-      if (pdfRound && pdfRound !== 'all') {
-        const roundMatch = String(matchObj?.round || matchObj?.tour || '').match(/\d+/);
-        const evRound = roundMatch ? parseInt(roundMatch[0], 10) : 0;
-        if (evRound > 0 && String(evRound) !== String(pdfRound)) {
-          return;
-        }
-      }
-
-      // 3. Team Filter
-      if (pdfTeamId && pdfTeamId !== 'all') {
-        if (String(e.team_id) !== String(pdfTeamId)) {
-          return;
-        }
-      }
-
-      const pId = String(e.player_id);
-      if (!cardMap[pId]) {
-        const appInfo = playerAppMap[pId];
-        const firstName = appInfo?.first_name || '';
-        const lastName = appInfo?.last_name || '';
-        const fullName = `${firstName} ${lastName}`.trim() || `O'yinchi #${pId.slice(0, 5)}`;
-        const photoUrl = appInfo?.photo_url || '';
-        const playerNumber = appInfo?.player_number || '';
-        const teamName = teamObj?.name || `Jamoa #${e.team_id ? String(e.team_id).slice(0, 5) : '?'}`;
-
-        cardMap[pId] = {
-          id: pId,
-          name: fullName,
-          photoUrl,
-          playerNumber: playerNumber ? String(playerNumber) : '',
-          teamId: e.team_id,
-          teamName,
-          teamLogo: teamObj?.logo_url,
-          yellowCards: 0,
-          redCards: 0,
-          totalCards: 0,
-        };
-      }
-
-      if (e.event_type === 'yellow_card') {
-        cardMap[pId].yellowCards += 1;
-      } else if (e.event_type === 'red_card') {
-        cardMap[pId].redCards += 1;
-      }
-      cardMap[pId].totalCards = cardMap[pId].yellowCards + cardMap[pId].redCards;
-    });
-
-    const list = Object.values(cardMap).filter((p) => p.totalCards > 0);
-    list.sort((a, b) => {
-      if (b.redCards !== a.redCards) return b.redCards - a.redCards;
-      if (b.yellowCards !== a.yellowCards) return b.yellowCards - a.yellowCards;
-      return a.name.localeCompare(b.name);
-    });
-    return list;
-  }, [events, teamMap, matchMap, playerAppMap, pdfLeague, pdfRound, pdfTeamId]);
-
-  // Open PDF Modal
-  const handleOpenPdfModal = () => {
-    setPdfLeague(selectedLeague || 'all');
-    setPdfRound(selectedRound || 'all');
-    setPdfTeamId('all');
-    setShowPdfModal(true);
-  };
+  const handlePlayerClick = player => setSelectedPlayerModal(player);
+  const handleOpenPdfModal = () => setShowPdfModal(true);
 
   // Execute PDF Export
-  const executeExportPDF = () => {
-    if (isExportingPDF) return;
+  const executeExportPDF = async () => {
+    if (isExportingPDF || !competition) return;
     setIsExportingPDF(true);
+    const controller = new AbortController();
+    exportAbort.current = controller;
     try {
+      const pdfFilteredPlayers = [];
+      for (let exportPage = 0; ; exportPage++) {
+        const result = await loadCardPage(supabase, scope, exportPage, search, controller.signal);
+        if (controller.signal.aborted) return;
+        pdfFilteredPlayers.push(...result.players);
+        if (!result.hasNext) break;
+      }
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageWidth = doc.internal.pageSize.getWidth();
 
-      const leagueTitle = pdfLeague === 'all' ? 'Barcha Ligalar' : pdfLeague;
-      const roundTitle = pdfRound === 'all' ? 'Barcha turlar' : `${pdfRound}-tur`;
-      const selectedTeamObj = teams.find(t => String(t.id) === String(pdfTeamId));
-      const teamTitle = pdfTeamId === 'all' ? 'Barcha jamoalar' : (selectedTeamObj?.name || 'Jamoa');
-
-      const titleText = `${cyrillicToLatin(leagueTitle)} - ${cyrillicToLatin(roundTitle)} - ${cyrillicToLatin(teamTitle)}`;
+      const leagueTitle = competitionTitle;
+      const roundTitle = selectedRound === 'all' ? 'Barcha turlar' : selectedRound + '-tur';
+      const titleText = cyrillicToLatin(leagueTitle + ' - ' + roundTitle);
       const orgName = cyrillicToLatin(currentOrg?.name || 'Havas Futbol Ligasi');
 
       // Top Banner
@@ -499,25 +231,11 @@ export default function Cards() {
       setShowPdfModal(false);
     } catch (err) {
       console.error('PDF export error:', err);
-      alert('PDF yuklab olishda xatolik: ' + err.message);
+      if (!controller.signal.aborted) alert('PDF yuklab olishda xatolik. Qayta urinib ko‘ring.');
     } finally {
       setIsExportingPDF(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="cards-page">
-        <div className="cards-header">
-          <div className="skeleton-pulse skeleton-title" style={{ width: '160px', height: '30px' }}></div>
-        </div>
-        <div className="skeleton-pulse skeleton-filter-box" style={{ height: '80px', borderRadius: '12px', marginBottom: '14px' }}></div>
-        <div className="cards-table-card">
-          <div className="skeleton-pulse" style={{ height: '350px', width: '100%' }}></div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="cards-page">
@@ -530,7 +248,7 @@ export default function Cards() {
         <button 
           className="btn-export-pdf"
           onClick={handleOpenPdfModal}
-          disabled={isExportingPDF}
+          disabled={isExportingPDF || loading || !competition}
         >
           <FileText size={15} />
           <span>{'PDF Yuklab Olish'}</span>
@@ -540,32 +258,42 @@ export default function Cards() {
       {/* Filter & Controls Card */}
       <div className="cards-filter-card">
         <div className="cards-filter-row">
-          {/* League Filter */}
           <div className="filter-field">
-            <label>Liga</label>
+            <label>Musobaqa turi</label>
             <div className="custom-select-wrapper">
-              <select value={selectedLeague} onChange={(e) => { setSelectedLeague(e.target.value); setSelectedRound('all'); }}>
-                {activeLeagues.map(l => (
-                  <option key={l.id} value={l.name}>{l.name} {l.isCollab ? '(Co-Host)' : ''}</option>
-                ))}
-                {activeLeagues.length === 0 && <option value="">Ligalar yo'q</option>}
+              <select value={mode} onChange={e => { setMode(e.target.value); setSelectedRound('all'); setPage(0); }}>
+                <option value="league">Liga</option>
+                <option value="tournament">Turnir</option>
               </select>
             </div>
           </div>
-
-          {/* Round / Tur Filter */}
+          {/* Competition Filter */}
           <div className="filter-field">
-            <label>Tur</label>
+            <label>{mode === 'league' ? 'Liga' : 'Turnir'}</label>
             <div className="custom-select-wrapper">
-              <select value={selectedRound} onChange={(e) => setSelectedRound(e.target.value)}>
-                <option value="all">Barcha turlar</option>
-                {roundOptions.map(r => (
-                  <option key={r} value={r}>{r}-tur</option>
+              <select value={mode === 'league' ? selectedLeague : selectedTournament} onChange={e => {
+                if (mode === 'league') setSelectedLeague(e.target.value);
+                else setSelectedTournament(e.target.value);
+                setSelectedRound('all'); setPage(0);
+              }}>
+                {(mode === 'league' ? activeLeagues : tournaments).map(item => (
+                  <option key={item.id} value={mode === 'league' ? item.name : item.id}>
+                    {item.name} {item.isCollab ? '(Co-Host)' : ''}
+                  </option>
                 ))}
+                {!(mode === 'league' ? activeLeagues : tournaments).length && <option value="">Musobaqalar yo'q</option>}
               </select>
             </div>
           </div>
-
+          <div className="filter-field">
+            <label htmlFor="cards-round">Tur (bo'sh — barcha turlar)</label>
+            <input id="cards-round" className="filter-search-input" type="number" min="1" step="1"
+              value={selectedRound === 'all' ? '' : selectedRound} placeholder="Barcha turlar"
+              onChange={e => {
+                const value = e.target.value;
+                if (!value || /^[1-9]\d*$/.test(value)) { setSelectedRound(value || 'all'); setPage(0); }
+              }} />
+          </div>
           {/* Search Input */}
           <div className="filter-field">
             <label>Qidiruv</label>
@@ -585,7 +313,9 @@ export default function Cards() {
 
       {/* Main Table: No side scroll, ample room for names, team below name, crisp dividers */}
       <div className="cards-table-card">
-        {processedCardPlayers.length === 0 ? (
+        {loading ? <div className="cards-empty-container" role="status">Yuklanmoqda...</div> : error ? (
+          <div className="cards-empty-container" role="alert">{error}<button onClick={() => setRetry(value => value + 1)}>Qayta urinish</button></div>
+        ) : processedCardPlayers.length === 0 ? (
           <div className="cards-empty-container">
             <div className="cards-empty-icon">
               <ShieldCheck size={30} />
@@ -593,8 +323,8 @@ export default function Cards() {
             <h3>Kartochkalar mavjud emas</h3>
             <p>
               {selectedRound === 'all' 
-                ? `${selectedLeague}da kartochka olgan o'yinchilar yo'q.`
-                : `${selectedLeague} ${selectedRound}-turida kartochkalar qayd etilmagan.`
+                ? `${competitionTitle}da kartochka olgan o'yinchilar yo'q.`
+                : `${competitionTitle} ${selectedRound}-turida kartochkalar qayd etilmagan.`
               }
             </p>
           </div>
@@ -618,8 +348,8 @@ export default function Cards() {
                     title="Batafsil ma'lumotlarni ko'rish"
                   >
                     <td className="td-rank">
-                      <span className={`rank-pill ${idx === 0 ? 'top-1' : idx === 1 ? 'top-2' : idx === 2 ? 'top-3' : ''}`}>
-                        {idx + 1}
+                      <span className="rank-pill">
+                        {page * CARD_PAGE_SIZE + idx + 1}
                       </span>
                     </td>
 
@@ -686,6 +416,11 @@ export default function Cards() {
         )}
       </div>
 
+      <div className="cards-pagination" aria-label="Sahifalash">
+        <button disabled={loading || page === 0} onClick={() => setPage(value => value - 1)}>Oldingi</button>
+        <span>{page + 1}-sahifa · {CARD_PAGE_SIZE} tadan · Familiya bo'yicha</span>
+        <button disabled={loading || !hasNext} onClick={() => setPage(value => value + 1)}>Keyingi</button>
+      </div>
       {/* Player Detail Modal */}
       {selectedPlayerModal && (
         <div className="cards-modal-overlay" onClick={() => setSelectedPlayerModal(null)}>
@@ -824,71 +559,11 @@ export default function Cards() {
               </button>
             </div>
 
-            <p style={{ color: '#94a3b8', fontSize: '13px', margin: '4px 0 16px 0', lineHeight: 1.5 }}>
-              Kerakli liga, tur va jamoani tanlab, mos kartochkalar hisobotini PDF formatda yuklab oling.
+            <p className="cards-export-summary">
+              {competitionTitle} · {selectedRound === 'all' ? 'Barcha turlar' : selectedRound + '-tur'}
+              {search ? ' · Qidiruv: ' + search : ''}
+              <br />Tanlangan filtrlar bo'yicha barcha sahifalar PDFga yuklanadi.
             </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
-              {/* League Selector */}
-              <div className="filter-field">
-                <label style={{ color: '#cbd5e1', fontSize: '12.5px', fontWeight: 700, marginBottom: '4px', display: 'block' }}>1. Liga</label>
-                <select
-                  className="filter-select"
-                  style={{ width: '100%', height: '42px', backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', borderRadius: '10px', padding: '0 12px' }}
-                  value={pdfLeague}
-                  onChange={(e) => {
-                    setPdfLeague(e.target.value);
-                    setPdfTeamId('all'); // reset team when league changes
-                  }}
-                >
-                  <option value="all">Barcha ligalar</option>
-                  {activeLeagues.map((l) => (
-                    <option key={l.id} value={l.name}>{l.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Round Selector */}
-              <div className="filter-field">
-                <label style={{ color: '#cbd5e1', fontSize: '12.5px', fontWeight: 700, marginBottom: '4px', display: 'block' }}>2. Tur</label>
-                <select
-                  className="filter-select"
-                  style={{ width: '100%', height: '42px', backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', borderRadius: '10px', padding: '0 12px' }}
-                  value={pdfRound}
-                  onChange={(e) => setPdfRound(e.target.value)}
-                >
-                  <option value="all">Barcha turlar</option>
-                  {roundsList.map((r) => (
-                    <option key={r} value={r}>{r}-tur</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Team Selector */}
-              <div className="filter-field">
-                <label style={{ color: '#cbd5e1', fontSize: '12.5px', fontWeight: 700, marginBottom: '4px', display: 'block' }}>3. Jamoa</label>
-                <select
-                  className="filter-select"
-                  style={{ width: '100%', height: '42px', backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', borderRadius: '10px', padding: '0 12px' }}
-                  value={pdfTeamId}
-                  onChange={(e) => setPdfTeamId(e.target.value)}
-                >
-                  <option value="all">Barcha jamoalar</option>
-                  {pdfAvailableTeams.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Results Count Preview */}
-            <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.25)', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <ShieldAlert size={18} color="#38bdf8" />
-              <span style={{ fontSize: '13px', color: '#e2e8f0' }}>
-                Tanlangan parametrlar bo'yicha: <strong style={{ color: '#38bdf8' }}>{pdfFilteredPlayers.length} nafar o'yinchi</strong>
-              </span>
-            </div>
-
             {/* Download Button */}
             <button
               className="btn-export-pdf"
