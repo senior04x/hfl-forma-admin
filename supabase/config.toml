@@ -1,0 +1,7 @@
+# These handlers validate custom opaque sessions / OTP themselves.
+# Never forward the caller's Authorization header to the service-role client.
+[functions.verify-otp]
+verify_jwt = false
+
+[functions.request-transfer]
+verify_jwt = false

@@ -1,224 +1,49 @@
-# Supabase Edge Functions
+# Team transfer Edge Functions
 
-## Available Functions
+This branch is not deployed. Apply only with the completed bot/client/admin flow
+and owner approval. See [migration order and tests](../../test/TEAM_TRANSFERS.md).
 
-### `verify-otp`
-Verify OTP code and create team captain session token.
+## verify-otp
 
-**Endpoint:** `https://[project-ref].supabase.co/functions/v1/verify-otp`
+POST body: `{ "phone": "+998901234567", "code": "1234", "team_id": "optional-team-uuid" }`.
+Captain-only login for the team-initiated transfer flow. The DB matches the
+verified phone to teams.captain_phone; team_id never grants authority by itself.
+For multiple captain teams, team_id is required. Players keep their existing
+backend login and will receive invitations, rather than create new transfers.
 
-**Method:** `POST`
+Success returns `success`, `role: "captain"`, `sessionToken`, `expiresAt`, `team`
+and `canRequestTransfers`. The token has 32 random bytes and expires after 24 hours;
+only its SHA-256 digest is stored. Keep the raw token out of logs, URLs and
+localStorage. Existing experimental plaintext team sessions require fresh login.
 
-**Request Body:**
-```json
-{
-  "phone": "+998901234567",
-  "code": "1234"
-}
-```
+OTP verification, attempt increment/block, token insertion and OTP consumption
+are transactional. Five wrong attempts lock the code, including for a subsequent
+correct guess. New OTP issuance resets attempts for both bot and backend upserts.
+A failed session insertion rolls the transaction back.
 
-**Security Checks:**
-1. Verify OTP code exists in `otp_codes` table
-2. Check code not already used (`is_used=false`)
-3. Check code not expired (`expires_at > now`)
-4. Find team where phone is `captain_phone` (manager role check)
-5. If captain: create `team_sessions` token (24h expiry)
-6. Mark OTP as used
+## request-transfer
 
-**Response (200) - Captain:**
-```json
-{
-  "success": true,
-  "role": "captain",
-  "sessionToken": "uuid-token",
-  "expiresAt": "2026-09-23T00:00:00.000Z",
-  "team": {
-    "id": "uuid",
-    "name": "Team Name",
-    "logo_url": "https://...",
-    "organization_id": 123
-  },
-  "canRequestTransfers": true,
-  "message": "OTP verified. Session token created."
-}
-```
+POST with `Authorization: Bearer <sessionToken>`.
+Body: `{ "player_id": "application-uuid", "reason": "...", "new_team_id": "optional-team-uuid" }`.
+Reason is trimmed, 1-1000 characters. Requesting team and organization are derived
+from the session/database. An optional new_team_id must match that team.
 
-**Response (200) - Player (not captain):**
-```json
-{
-  "success": true,
-  "role": "player",
-  "message": "OTP verified, but you are not a team captain",
-  "canRequestTransfers": false
-}
-```
+The RPC checks session expiry, current captain phone, player membership, matching
+organization, transfer window and existing pending transfers. It locks the player
+row to serialize competing requests through this RPC. The result is a pending
+transfer with `player_confirmed=false`; it does not claim a notification was sent.
+Bot delivery is a separate integration stage.
 
-**Error Responses:**
-- 400: Missing fields or invalid phone format
-- 401: Invalid, used, or expired OTP code
-- 500: Database or session creation error
+## Access and deployment
 
----
+`supabase/config.toml` disables gateway JWT verification for these two functions
+because they use custom OTP/session authentication. Their RPCs can be executed
+only by service_role. Client credentials are never forwarded to the admin client.
+Do not invoke these RPCs directly from clients.
 
-### `request-transfer`
-Create team-initiated transfer request with security validation.
+The experimental `create-player-transfer` is not part of this flow and must not
+be deployed. Mobile UI migration to incoming invitations is still pending.
 
-**Endpoint:** `https://[project-ref].supabase.co/functions/v1/request-transfer`
-
-**Method:** `POST`
-
-**Authentication:** Bearer token (from `team_sessions` after OTP verification)
-
-**Headers:**
-```
-Authorization: Bearer <session-token>
-Content-Type: application/json
-```
-
-**Request Body:**
-```json
-{
-  "player_id": "uuid",
-  "new_team_id": "uuid",
-  "reason": "string"
-}
-```
-
-**Security Checks:**
-1. Verify Bearer token exists and not expired (from `team_sessions`)
-2. Verify `new_team_id` matches session's `team_id`
-3. Double-check session phone matches team captain phone
-4. Verify player is currently in another team
-5. Verify transfer window is open for the organization
-6. Check no existing pending transfer for this player
-
-**Response (201):**
-```json
-{
-  "success": true,
-  "transfer": { ... },
-  "message": "Transfer request created. Player will be notified via bot."
-}
-```
-
-**Error Responses:**
-- 400: Missing fields, player not in team, or player already in requesting team
-- 401: Missing/invalid/expired Bearer token
-- 403: Token belongs to different team, transfer window closed, or session phone mismatch
-- 404: Team, player, or organization not found
-- 409: Player already has pending transfer
-- 500: Internal server error
-
----
-
-## Deployment
-
-### Prerequisites
-- Supabase CLI installed: `npm install -g supabase`
-- Project linked: `supabase link --project-ref [your-project-ref]`
-
-### Deploy Single Function
-```bash
-supabase functions deploy request-transfer
-```
-
-### Deploy All Functions
-```bash
-supabase functions deploy
-```
-
-### Set Environment Variables
-```bash
-supabase secrets set SUPABASE_URL=https://[project-ref].supabase.co
-supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
-
-### Test Locally
-```bash
-supabase functions serve request-transfer
-```
-
-Then test with:
-```bash
-curl -X POST http://localhost:54321/functions/v1/request-transfer \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your-session-token>" \
-  -d '{
-    "player_id": "...",
-    "new_team_id": "...",
-    "reason": "Great player"
-  }'
-```
-
----
-
-## Integration
-
-### Step 1: OTP Verification (Backend/API)
-After successful OTP verification, create a session token:
-
-```typescript
-// In your verifyOTP endpoint/function:
-const sessionToken = crypto.randomUUID(); // or crypto.randomBytes(32).toString('hex')
-const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-await supabase.from('team_sessions').insert({
-  token: sessionToken,
-  phone: verifiedPhone,
-  team_id: teamId,
-  expires_at: expiresAt.toISOString()
-});
-
-// Return token to client
-return { success: true, sessionToken, expiresAt };
-```
-
-### Step 2: Store Token (Client)
-```typescript
-// After OTP verification success:
-localStorage.setItem('teamSessionToken', sessionToken);
-localStorage.setItem('teamSessionExpiry', expiresAt);
-```
-
-### Step 3: Use Token in Requests (Client)
-```typescript
-const sessionToken = localStorage.getItem('teamSessionToken');
-
-const response = await supabase.functions.invoke('request-transfer', {
-  headers: {
-    Authorization: `Bearer ${sessionToken}`,
-  },
-  body: {
-    player_id: selectedPlayer.id,
-    new_team_id: currentTeam.id,
-    reason: transferReason,
-  }
-});
-
-if (response.error) {
-  // Handle error (e.g., expired token -> re-verify OTP)
-  console.error('Transfer request failed:', response.error);
-} else {
-  console.log('Transfer requested:', response.data);
-}
-```
-
----
-
-## Bot Integration
-
-The bot listens to Supabase Realtime for new transfer records:
-
-```javascript
-supabase
-  .channel('transfers-insert')
-  .on('postgres_changes', {
-    event: 'INSERT',
-    schema: 'public',
-    table: 'transfers'
-  }, async (payload) => {
-    // Send notification to player via Telegram
-    // with inline buttons: Accept / Reject
-  })
-  .subscribe();
-```
+Production preflight must inspect all existing RLS policies and OTP readers,
+issuers and verifiers. These changes do not certify legacy backend authentication.
+Neither migrations nor Edge Functions have been applied to production here.
