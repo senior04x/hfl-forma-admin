@@ -1,12 +1,12 @@
 -- Migration: Team-Initiated Transfer System
 -- Date: 2026-09-22
--- Description: Add support for team-initiated transfers with player confirmation
+-- Description: Add support for team-initiated transfers and career history
 
 -- ============================================
 -- 1. Add new columns to transfers table
 -- ============================================
 
--- Player confirmation flag (required before admin approval)
+-- Compatibility flag retained for older clients; admin approval is authoritative.
 ALTER TABLE public.transfers
 ADD COLUMN IF NOT EXISTS player_confirmed boolean DEFAULT false;
 
@@ -16,7 +16,7 @@ ADD COLUMN IF NOT EXISTS requested_by_team_id uuid REFERENCES public.teams(id) O
 
 -- Add comment to requested_by_team_id
 COMMENT ON COLUMN public.transfers.requested_by_team_id IS 'Team that initiated the transfer request (for team-initiated transfers)';
-COMMENT ON COLUMN public.transfers.player_confirmed IS 'Player confirmation status - must be true before admin can approve';
+COMMENT ON COLUMN public.transfers.player_confirmed IS 'Legacy compatibility field; not used as an approval gate';
 
 -- ============================================
 -- 2. Create player_career_history table
@@ -115,7 +115,7 @@ CREATE POLICY "Org admins can delete org transfers" ON public.transfers
 -- - Public (anon): SELECT only
 -- - Authenticated admins: SELECT, UPDATE, DELETE (own org only)
 -- - Edge Function (service role): INSERT (transfer requests)
--- - Bot (service role): UPDATE (player confirmation)
+-- - Bot (service role): reads the durable notification queue only
 -- - No direct public INSERT/UPDATE/DELETE
 
 COMMENT ON TABLE public.transfers IS 'Transfer requests - admins can manage via authenticated session, new requests via Edge Function only';
