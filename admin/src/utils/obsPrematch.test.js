@@ -4,12 +4,21 @@ import { selectStreamMatch, calculateTable, readPages } from './obsPrematch.js';
 
 const now = Date.parse('2026-09-21T12:00:00+05:00');
 const fixture = (id, time, extra = {}) => ({ id, match_date: '2026-09-21', match_time: time, status: 'scheduled', ...extra });
-test('stream prioritizes live, then nearest future kickoff, not latest edit', () => {
+test('stream prioritizes live, then earliest scheduled kickoff even when delayed', () => {
   const matches = [fixture('later', '18:00:00', { updated_at: '2026-09-21' }), fixture('next', '13:00:00'), fixture('old', '11:00:00')];
-  assert.equal(selectStreamMatch(matches, now).id, 'next');
+  assert.equal(selectStreamMatch(matches, now).id, 'old');
   assert.equal(selectStreamMatch([...matches, fixture('live', '10:00:00', { status: 'half_time' })], now).id, 'live');
-  assert.equal(selectStreamMatch([fixture('old', '11:00:00'), fixture('finished', '14:00:00', { status: 'finished' })], now), null);
+  assert.equal(selectStreamMatch([fixture('old', '11:00:00'), fixture('finished', '14:00:00', { status: 'finished' })], now).id, 'old');
   assert.equal(selectStreamMatch([fixture('bad', null)], now), null);
+});
+
+test('delayed fixture stays across days and advances only when postponed or finished', () => {
+  const delayed = fixture('delayed', '11:00:00', { match_date: '2020-01-01' });
+  const next = fixture('next', '13:00:00');
+  assert.equal(selectStreamMatch([next, delayed]).id, 'delayed');
+  assert.equal(selectStreamMatch([next, { ...delayed, is_postponed: true }]).id, 'next');
+  assert.equal(selectStreamMatch([next, { ...delayed, status: 'finished' }]).id, 'next');
+  assert.equal(selectStreamMatch([{ ...delayed, is_postponed: true }, { ...next, is_postponed: true }]), null);
 });
 test('table honors competition overrides and excludes unfinished scores', () => {
   const teams = [{ id: 'a', penalty_points: -2 }, { id: 'b' }, { id: 'c', is_archived: true }];

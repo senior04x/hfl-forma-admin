@@ -1,6 +1,6 @@
 export const LIVE_STATUSES = ['first_half', 'second_half', 'half_time', 'break', 'extra_time', 'live', 'penalties'];
 
-export function selectStreamMatch(matches, now = Date.now()) {
+export function selectStreamMatch(matches) {
   const live = matches.filter(m => LIVE_STATUSES.includes(m.status))
     .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
   if (live.length) return live[0];
@@ -8,7 +8,8 @@ export function selectStreamMatch(matches, now = Date.now()) {
   // Skip postponed matches (is_postponed === true) when selecting next scheduled match.
   return matches.filter(m => m.status === 'scheduled' && m.match_date && m.match_time && m.is_postponed !== true)
     .map(m => ({ match: m, time: Date.parse(`${m.match_date}T${m.match_time}+05:00`) }))
-    .filter(m => Number.isFinite(m.time) && m.time >= now)
+    // Keep delayed fixtures until their status changes or they are postponed.
+    .filter(m => Number.isFinite(m.time))
     .sort((a, b) => a.time - b.time || String(a.match.id).localeCompare(String(b.match.id)))[0]?.match || null;
 }
 
