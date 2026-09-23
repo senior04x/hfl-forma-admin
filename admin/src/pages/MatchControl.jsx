@@ -1,4 +1,4 @@
-import { loadLeagueDuration, getHalfDurationSecs } from '../utils/matchDuration';
+import { loadLeagueDuration, loadTournamentDuration, getHalfDurationSecs } from '../utils/matchDuration';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
@@ -709,13 +709,14 @@ const MatchControl = () => {
     setLoading(true);
     try {
       // Fetch match using supabase to bypass RLS for shared control panel links
-      const { data: matchData } = await supabase
+      let { data: matchData } = await supabase
         .from('matches')
         .select('*')
         .eq('id', id)
         .single();
 
       if (!matchData) return;
+      matchData = await loadTournamentDuration(supabase, matchData);
       setMatch(matchData);
 
       if (matchData.league) {
@@ -796,7 +797,7 @@ const MatchControl = () => {
 
   // Dynamic Match Duration calculation from League / Match settings
   const halfDurationMins = getHalfDurationSecs(match, leagueData) / 60;
-  const matchDurationMins = Number(match?.match_duration || leagueData?.match_duration || (halfDurationMins * 2) || 60);
+  const matchDurationMins = Number(match?.tournamentDuration || match?.match_duration || leagueData?.match_duration || (halfDurationMins * 2) || 60);
   const halfDurationSecs = halfDurationMins * 60;
 
   // Calculate elapsed time (Count-UP: to'g'ri sanash) for Admin Panel Display

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadLeagueDuration, getHalfDurationSecs } from './matchDuration.js';
+import { loadLeagueDuration, loadTournamentDuration, getHalfDurationSecs } from './matchDuration.js';
 
 test('50-minute sponsor setting resolves to a 25-minute half on both displays', async () => {
   const db = { from(table) {
@@ -31,4 +31,29 @@ test('match duration overrides and default remain consistent', () => {
   assert.equal(getHalfDurationSecs({ half_duration: 20 }, { half_duration: 25 }), 1200);
   assert.equal(getHalfDurationSecs({ match_duration: 50 }, null), 1500);
   assert.equal(getHalfDurationSecs(null, null), 1800);
+});
+
+test('tournament duration overrides league and survives match realtime updates', async () => {
+  const db = { from(table) {
+    assert.equal(table, 'tournaments');
+    return { select(column) {
+      assert.equal(column, 'match_duration');
+      return { eq(column, id) {
+        assert.equal(column, 'id');
+        assert.equal(id, 'cup');
+        return { maybeSingle: async () => ({ data: { match_duration: 40 } }) };
+      } };
+    } };
+  } };
+  const match = await loadTournamentDuration(db, { tournament_id: 'cup', half_duration: 30 });
+  assert.equal(getHalfDurationSecs(match, { half_duration: 25 }), 1200);
+  assert.equal(getHalfDurationSecs({ ...match, half_duration: null, status: 'second_half' }, { half_duration: 25 }), 1200);
+});
+
+test('league fixtures need no tournament query and absent duration keeps fallback', async () => {
+  const match = { id: 'league-match' };
+  assert.equal(await loadTournamentDuration(null, match), match);
+  const db = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) };
+  const cup = { tournament_id: 'cup' };
+  assert.equal(await loadTournamentDuration(db, cup), cup);
 });

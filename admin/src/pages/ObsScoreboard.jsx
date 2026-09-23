@@ -1,4 +1,4 @@
-import { loadLeagueDuration, getHalfDurationSecs } from '../utils/matchDuration';
+import { loadLeagueDuration, loadTournamentDuration, getHalfDurationSecs } from '../utils/matchDuration';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
@@ -421,13 +421,15 @@ const ObsScoreboard = () => {
   const fetchData = async (matchId) => {
     const version = ++fetchVersion.current;
     try {
-      const { data: matchData } = await supabase
+      let { data: matchData } = await supabase
         .from('matches')
         .select('*')
         .eq('id', matchId)
         .maybeSingle();
       
       if (matchData) {
+        if (activeMatchRef.current !== matchId || version !== fetchVersion.current) return;
+        matchData = await loadTournamentDuration(supabase, matchData);
         if (activeMatchRef.current !== matchId || version !== fetchVersion.current) return;
         setMatch(matchData);
         setHomeTeam(null);
