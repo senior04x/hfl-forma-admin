@@ -1,4 +1,4 @@
--- Apply after all 20260922 transfer migrations. Not a production deployment.
+-- Apply after all 20260922 transfer migrations.
 BEGIN;
 
 CREATE OR REPLACE FUNCTION public.transfer_phone(value text)

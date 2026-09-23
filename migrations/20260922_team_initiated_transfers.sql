@@ -90,6 +90,9 @@ COMMENT ON COLUMN public.team_sessions.expires_at IS 'Token expiry time (typical
 DROP POLICY IF EXISTS "Allow public insert transfers" ON public.transfers;
 DROP POLICY IF EXISTS "Allow public update transfers" ON public.transfers;
 DROP POLICY IF EXISTS "Allow public delete transfers" ON public.transfers;
+DROP POLICY IF EXISTS "Org users can manage transfers" ON public.transfers;
+DROP POLICY IF EXISTS "Org admins can update org transfers" ON public.transfers;
+DROP POLICY IF EXISTS "Org admins can delete org transfers" ON public.transfers;
 
 -- Keep only public read access (anon + authenticated)
 -- Public INSERT removed - only Edge Function (service role) can create transfers
