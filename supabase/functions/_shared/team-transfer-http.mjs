@@ -40,14 +40,15 @@ export function createTransferHandler(kind, rpc, options = {}) {
         const bearer = req.headers.get('Authorization')?.match(/^Bearer ([0-9a-f]{64})$/i);
         if (!bearer) return reply(401, { error: 'Invalid session' });
         if (kind === 'page') {
-          if (!['context', 'players', 'history', 'logout'].includes(body.action)
+          if (!['context', 'teams', 'players', 'team_players', 'history', 'logout'].includes(body.action)
               || (body.query != null && (typeof body.query !== 'string' || body.query.length > 80))
-              || (body.after != null && (typeof body.after !== 'string' || !uuid.test(body.after)))) {
+              || (body.after != null && (typeof body.after !== 'string' || !uuid.test(body.after)))
+              || (body.team_id != null && (typeof body.team_id !== 'string' || !uuid.test(body.team_id)))) {
             return reply(400, { error: 'Invalid request' });
           }
           name = 'team_transfer_page';
           params = { p_token_hash: await tokenHash(bearer[1]), p_action: body.action,
-            p_query: body.query ?? '', p_after: body.after ?? null };
+            p_query: body.query ?? '', p_after: body.after ?? null, p_team_id: body.team_id ?? null };
         } else {
           if (typeof body.player_id !== 'string' || !uuid.test(body.player_id)
               || typeof body.reason !== 'string' || !body.reason.trim() || body.reason.trim().length > 1000
