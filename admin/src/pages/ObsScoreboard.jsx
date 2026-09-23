@@ -1,3 +1,4 @@
+import { loadLeagueDuration, getHalfDurationSecs } from '../utils/matchDuration';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
@@ -137,18 +138,6 @@ const ObsScoreboard = () => {
       supabase.removeChannel(streamChannel);
     };
   }, [id]);
-
-  // Dynamic Half Duration Calculation (from Match / League configuration)
-  const getHalfDurationSecs = (mObj, lObj) => {
-    const halfMins = Number(
-      mObj?.half_duration ||
-      lObj?.half_duration ||
-      (mObj?.match_duration ? Math.round(Number(mObj.match_duration) / 2) :
-      (lObj?.match_duration ? Math.round(Number(lObj.match_duration) / 2) : 30))
-    );
-    const calculatedSecs = (halfMins || 30) * 60;
-    return Math.max(calculatedSecs, baseTimerSecondsRef.current || 0);
-  };
 
   // Helper to apply persistent timer payload in OBS (Countdown Mode)
   const applyTimerPayload = (payload) => {
@@ -457,7 +446,8 @@ const ObsScoreboard = () => {
               const matchedL = lDataList.find(
                 (l) => l.name?.trim().toLowerCase() === matchData.league?.trim().toLowerCase()
               );
-              if (activeMatchRef.current === matchId && version === fetchVersion.current) setLeagueData(matchedL || null);
+              const resolvedLeague = await loadLeagueDuration(supabase, matchedL);
+              if (activeMatchRef.current === matchId && version === fetchVersion.current) setLeagueData(resolvedLeague);
             }
           } catch (e) {}
         }

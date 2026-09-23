@@ -1,3 +1,4 @@
+import { loadLeagueDuration, getHalfDurationSecs } from '../utils/matchDuration';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
@@ -725,42 +726,7 @@ const MatchControl = () => {
             .ilike('name', matchData.league.trim())
             .maybeSingle();
             
-          let halfDur = lData?.half_duration || lData?.half_minutes;
-          let matchDur = lData?.match_duration;
-
-          if (!halfDur && matchDur) {
-            halfDur = Math.round(matchDur / 2);
-          } else if (halfDur && !matchDur) {
-            matchDur = halfDur * 2;
-          }
-
-          if (!matchDur && lData?.id) {
-            const { data: spDur } = await supabase
-              .from('sponsors')
-              .select('logo_url')
-              .eq('name', `LEAGUE_DURATION_${lData.id}`)
-              .maybeSingle();
-            if (spDur?.logo_url) {
-              matchDur = Number(spDur.logo_url);
-              halfDur = Math.round(matchDur / 2);
-            }
-          }
-
-          if (!matchDur && lData?.id) {
-            const localDur = localStorage.getItem(`hfl_league_duration_${lData.id}`);
-            if (localDur) {
-              matchDur = Number(localDur);
-              halfDur = Math.round(matchDur / 2);
-            }
-          }
-
-          if (lData) {
-            setLeagueData({ 
-              ...lData, 
-              half_duration: halfDur || 30,
-              match_duration: matchDur || ((halfDur || 30) * 2)
-            });
-          }
+          if (lData) setLeagueData(await loadLeagueDuration(supabase, lData));
         } catch (lErr) {}
       }
 
@@ -829,7 +795,7 @@ const MatchControl = () => {
   };
 
   // Dynamic Match Duration calculation from League / Match settings
-  const halfDurationMins = Number(match?.half_duration || leagueData?.half_duration || (match?.match_duration ? Math.round(match.match_duration / 2) : (leagueData?.match_duration ? Math.round(leagueData.match_duration / 2) : 30)));
+  const halfDurationMins = getHalfDurationSecs(match, leagueData) / 60;
   const matchDurationMins = Number(match?.match_duration || leagueData?.match_duration || (halfDurationMins * 2) || 60);
   const halfDurationSecs = halfDurationMins * 60;
 
