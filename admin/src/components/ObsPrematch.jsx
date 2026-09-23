@@ -42,6 +42,7 @@ function Detail({ stats, mode, away }) {
 }
 
 export default function ObsPrematch({ match, homeTeam, awayTeam, leagueData, leagueLogo, exiting, onExited }) {
+  const compact = match.obs_prematch_compact === true;
   const [data, setData] = useState(null);
   const [now, setNow] = useState(Date.now());
   const { id, tournament_id, league, organization_id, home_team_id, away_team_id } = match;
@@ -57,10 +58,10 @@ export default function ObsPrematch({ match, homeTeam, awayTeam, leagueData, lea
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
-  return <ObsPrematchView {...{ match, homeTeam, awayTeam, leagueData, leagueLogo, exiting, onExited, data, now }} />;
+  return <ObsPrematchView {...{ match, homeTeam, awayTeam, leagueData, leagueLogo, exiting, onExited, data, now, compact }} />;
 }
 
-export function ObsPrematchView({ match, homeTeam, awayTeam, leagueData, leagueLogo, exiting, onExited, data, now }) {
+export function ObsPrematchView({ match, homeTeam, awayTeam, leagueData, leagueLogo, exiting, onExited, data, now, compact = false }) {
   const modesKey = [
     (data?.home?.standing?.form.length || data?.away?.standing?.form.length) && 'form',
     (data?.home?.scorer || data?.away?.scorer) && 'scorers',
@@ -84,12 +85,19 @@ export function ObsPrematchView({ match, homeTeam, awayTeam, leagueData, leagueL
   const remaining = Math.max(0, Math.ceil((kickoff - now) / 1000));
   const countdown = Number.isFinite(remaining) ? remaining >= 86400 ? `${Math.floor(remaining / 86400)} KUN`
     : [Math.floor(remaining / 3600), Math.floor(remaining % 3600 / 60), remaining % 60].map(n => String(n).padStart(2, '0')).join(':') : '';
-  return <div className="obs-prematch-anchor">
+  return <div className={`obs-prematch-anchor${compact ? ' is-compact' : ''}`}>
     <section className={`obs-prematch transformer-wrapper ${exiting ? 'transformer-exit' : 'transformer-enter'}`}
       style={safeColor ? { '--obs-prematch-accent': safeColor } : undefined}
       onAnimationEnd={e => { if (e.target === e.currentTarget && e.animationName === 'obsPrematchOut') onExited(); }}>
       {background && <div className="obs-prematch-backdrop" style={{ backgroundImage: `url(${background})` }} />}
-      <div className="obs-prematch-content">
+      <div className="obs-prematch-compact-row" aria-hidden={!compact}>
+        <Photo src={homeTeam?.logo_url} className="obs-compact-logo" />
+        <strong>{homeTeam?.name || match.home_team_name || 'Mezbon'}</strong>
+        <span className="obs-compact-divider">—</span>
+        <strong>{awayTeam?.name || match.away_team_name || 'Mehmon'}</strong>
+        <Photo src={awayTeam?.logo_url} className="obs-compact-logo" />
+      </div>
+      <div className="obs-prematch-content" aria-hidden={compact}>
         <header>
           <div><small>O‘YIN OLDIDAN</small><h1>{tournament?.name || match.league || 'FUTBOL'}</h1></div>
           <Photo src={tournament?.logo_url || (!match.tournament_id ? leagueData?.logo_url || leagueLogo : null)} className="obs-prematch-competition-logo" />

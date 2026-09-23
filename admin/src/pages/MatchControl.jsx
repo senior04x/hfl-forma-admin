@@ -1,3 +1,4 @@
+import { savePrematchMode } from '../utils/obsPrematchMode';
 import { loadLeagueDuration, loadTournamentDuration, getHalfDurationSecs } from '../utils/matchDuration';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -34,9 +35,23 @@ const ORPHAN_REPLAYS_BY_MATCH = new Map();
 const MatchControl = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  const [savingPrematch, setSavingPrematch] = useState(false);
+  const togglePrematch = async () => {
+    if (savingPrematch || match?.status !== 'scheduled') return;
+    setSavingPrematch(true);
+    try {
+      const saved = await savePrematchMode(supabase, id, !compactPrematch);
+      setMatch(previous => previous?.id === saved.id ? { ...previous, obs_prematch_compact: saved.obs_prematch_compact } : previous);
+    } catch {
+      alert("Anons holatini saqlab bo‘lmadi. Qayta urinib ko‘ring.");
+    } finally { setSavingPrematch(false); }
+  };
   const { currentOrg, orgId } = useOrg();
 
   const [match, setMatch] = useState(null);
+  const compactPrematch = match?.obs_prematch_compact === true;
+  const prematchModeAvailable = typeof match?.obs_prematch_compact === 'boolean';
   const [leagueData, setLeagueData] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
@@ -1420,6 +1435,12 @@ const MatchControl = () => {
           {match.league} • {match.location || '1-Maydon'}
         </div>
       </div>
+
+      {match.status === 'scheduled' && <button className="btn btn-secondary" onClick={togglePrematch}
+        disabled={savingPrematch || !prematchModeAvailable} aria-pressed={compactPrematch}
+        title={prematchModeAvailable ? 'OBS anons ko‘rinishi' : 'Avval OBS anons migratsiyasini qo‘llang va sahifani yangilang'} style={{ marginBottom: 16 }}>
+        {!prematchModeAvailable ? 'Anons boshqaruvi: migratsiya kerak' : savingPrematch ? 'Saqlanmoqda…' : compactPrematch ? 'To‘liq anons' : 'Anonsni ixchamlash'}
+      </button>}
 
       {/* Main Scoreboard */}
       <div className="scoreboard">
