@@ -13,7 +13,7 @@ export async function tokenHash(token) {
 }
 
 // Dependency injection keeps tests offline: no Telegram, no production DB.
-export function createTransferHandler(kind, rpc) {
+export function createTransferHandler(kind, rpc, options = {}) {
   return async req => {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     if (req.method !== 'POST') return reply(405, { error: 'Method not allowed' });
@@ -32,7 +32,8 @@ export function createTransferHandler(kind, rpc) {
         // This endpoint now authenticates the captain flow only. Player login
         // remains on the existing backend; invitations are handled separately.
         token = hex(crypto.getRandomValues(new Uint8Array(32)));
-        name = 'verify_team_transfer_otp';
+        const testLogin = options.testPhone === phone.slice(-9) && options.testCode === body.code;
+        name = testLogin ? 'create_test_team_session' : 'verify_team_transfer_otp';
         params = { p_phone: phone.slice(-9), p_code: body.code,
           p_token_hash: await tokenHash(token), p_team_id: body.team_id ?? null };
       } else {
