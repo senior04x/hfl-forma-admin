@@ -2,7 +2,7 @@ import { createTransferApi } from './transfer-api.mjs';
 const api = createTransferApi();
 const $ = id => document.getElementById(id);
 const state = { active:false, epoch:0, windowOpen:false, selected:null, submitting:false,
-    searchVersion:0, historyVersion:0, query:'', playersCursor:null, historyCursor:null };
+    searchVersion:0, historyVersion:0, query:'', playersCursor:null, historyCursor:null, preview:null };
 let searchAbort, debounce, expiryTimer;
 const el = (tag, text, className) => {
     const node = document.createElement(tag);
@@ -17,10 +17,12 @@ function notice(text, error = false) {
 function reset(message = '') {
     api.clear(); state.active=false; state.epoch++; state.searchVersion++; state.historyVersion++;
     state.selected=null; state.windowOpen=false; searchAbort?.abort(); clearTimeout(debounce); clearTimeout(expiryTimer);
-    $('workspace').hidden=true; $('login-panel').hidden=false;
-    $('request-dialog').close(); $('otp').value=''; $('reason').value=''; $('player-query').value='';
+    $('workspace').hidden=true;
+    $('request-dialog').close(); $('reason').value=''; $('player-query').value='';
     $('players').replaceChildren(); $('history').replaceChildren();
-    $('team-choice').hidden=true; $('captain-team').replaceChildren(); notice(message, Boolean(message));
+    notice(message, Boolean(message));
+    const next=`${location.pathname}${location.search}`;
+    location.replace(`/kabinet.html?next=${encodeURIComponent(next)}`);
 }
 function errorText(error, login = false) {
     if (error.status === 0) return 'Aloqa uzildi. Natijani tekshirish uchun arizalar ro‘yxatini yangilang.';
@@ -48,50 +50,42 @@ async function context() {
     for (const button of $('players').querySelectorAll('button')) button.disabled=!state.windowOpen || button.dataset.pending==='true';
     return state.windowOpen;
 }
-$('login-form').addEventListener('submit', async event => {
-    event.preventDefault(); if ($('login-submit').disabled) return;
-    const epoch=state.epoch; $('login-submit').disabled=true; $('login-submit').textContent='Tekshirilmoqda…'; notice('');
-    try {
-        const data=await api.login($('phone').value,$('otp').value,$('team-choice').hidden ? null : $('captain-team').value);
-        if (epoch!==state.epoch) return;
-        state.active=true; $('otp').value=''; $('login-panel').hidden=true; $('workspace').hidden=false;
-        expiryTimer=setTimeout(()=>reset('Sessiya tugadi. Qayta kiring.'),Math.min(data.expires-Date.now(),86400000));
-        await context();
-        if (state.active && epoch===state.epoch) await history(false);
-    } catch (error) {
-        if (epoch!==state.epoch || error.name==='AbortError') return;
-        if (error.status===409 && Array.isArray(error.data?.teams) && error.data.teams.length) {
-            $('captain-team').replaceChildren();
-            for (const team of error.data.teams) { const option=el('option',team.name); option.value=team.id; $('captain-team').append(option); }
-            $('team-choice').hidden=false; notice('Bir nechta jamoa topildi. Jamoangizni tanlab, qayta kiring.');
-        } else if (state.active) handleError(error);
-        else notice(errorText(error,true),true);
-    } finally { $('login-submit').disabled=false; $('login-submit').textContent='Kabinetga kirish →'; }
-});
-for (const field of ['phone','otp']) $(field).addEventListener('input',()=>{ $('team-choice').hidden=true; $('captain-team').replaceChildren(); });
-$('logout').addEventListener('click',async()=>{
-    const logout=api.logout(); reset();
-    const epoch=state.epoch;
-    try { await logout; } catch {
-        if (epoch===state.epoch && !state.active) notice('Chiqildi. Serverdagi sessiyani yopish tasdiqlanmadi; u muddati tugaganda yopiladi.',true);
-    }
-});
+function avatar(player,className='player-avatar') {
+    const name=[player.first_name,player.last_name].filter(Boolean).join(' '), initials=(player.first_name?.[0]||'')+(player.last_name?.[0]||'');
+    const node=player.photo_url ? document.createElement('img') : el('span',initials,className);
+    if(player.photo_url){node.className=`${className} photo`;node.src=player.photo_url;node.alt=`${name} rasmi`;node.loading='lazy';
+        node.addEventListener('error',()=>node.replaceWith(el('span',initials,className)),{once:true});}
+    return node;
+}
+function openPlayer(player) {
+    state.preview=player; const name=[player.first_name,player.last_name].filter(Boolean).join(' ')||'Ismi ko‘rsatilmagan';
+    $('player-detail-name').textContent=name; $('player-detail-photo').replaceChildren(avatar(player,'player-detail-avatar'));
+    const fields=[['Jamoasi',player.team_name],['Forma raqami',player.player_number!=null?`#${player.player_number}`:'—'],['Pozitsiyasi',player.position||'—'],['Holati','Tasdiqlangan o‘yinchi']];
+    $('player-detail-fields').replaceChildren(...fields.flatMap(([label,value])=>[el('dt',label),el('dd',value)]));
+    $('choose-player').disabled=!state.windowOpen||player.has_pending; $('choose-player').textContent=player.has_pending?'Ariza mavjud':'Transferga tanlash';
+    $('player-dialog').showModal();
+}
+function openRequest(player) {
+    state.selected=player; $('request-heading').textContent=[player.first_name,player.last_name].filter(Boolean).join(' ');
+    $('selected-team').textContent=[player.team_name,player.player_number!=null?`#${player.player_number}`:'',player.position].filter(Boolean).join(' · ');
+    $('reason').value=''; $('request-error').hidden=true; $('request-dialog').showModal(); $('reason').focus();
+}
+$('close-player').addEventListener('click',()=>$('player-dialog').close());
+$('choose-player').addEventListener('click',()=>{if(!state.preview)return;const player=state.preview;$('player-dialog').close();openRequest(player);});
 function playerRow(player) {
     const row=el('li',null,'player-row'); const person=el('div',null,'person');
-    person.append(el('strong',[player.first_name,player.last_name].filter(Boolean).join(' ')),el('p',player.team_name));
-    const button=el('button',player.has_pending ? 'Ariza mavjud' : 'Tanlash','button quiet');
+    const name=[player.first_name,player.last_name].filter(Boolean).join(' ');
+    const meta=[player.player_number!=null?`#${player.player_number}`:'',player.position,player.team_name].filter(Boolean).join(' · ');
+    const details=el('div',null,'player-info'); details.append(el('strong',name||'Ismi ko‘rsatilmagan'),el('p',meta)); person.append(avatar(player),details);
+    const button=el('button',player.has_pending ? 'Ariza mavjud' : 'Ko‘rish','button quiet');
     button.type='button'; button.dataset.pending=String(Boolean(player.has_pending)); button.disabled=!state.windowOpen || player.has_pending;
-    button.addEventListener('click',()=>{
-        if (!state.active || !state.windowOpen || state.submitting) return;
-        state.selected=player; $('request-heading').textContent=[player.first_name,player.last_name].filter(Boolean).join(' ');
-        $('selected-team').textContent=player.team_name; $('reason').value=''; $('request-error').hidden=true;
-        $('request-dialog').showModal(); $('reason').focus();
-    });
+    button.addEventListener('click',()=>openPlayer(player)); person.tabIndex=0; person.role='button'; person.addEventListener('click',()=>openPlayer(player));
+    person.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openPlayer(player);}});
     row.append(person,button); return row;
 }
 async function search(more = false) {
     if (!state.active) return;
-    const query=$('player-query').value.trim(); if (query.length<2) return;
+    const query=$('player-query').value.trim(); if (query.length===1) return;
     searchAbort?.abort(); searchAbort=new AbortController();
     const version=++state.searchVersion, epoch=state.epoch;
     if (!more) { state.query=query; state.playersCursor=null; $('players').replaceChildren(); }
@@ -107,7 +101,7 @@ async function search(more = false) {
 $('player-query').addEventListener('input',()=>{
     clearTimeout(debounce); searchAbort?.abort(); state.searchVersion++;
     $('players-more').hidden=true; $('players').replaceChildren();
-    if ($('player-query').value.trim().length<2) { $('search-status').textContent='Kamida 2 ta harf kiriting.'; return; }
+    if ($('player-query').value.trim().length===1) { $('search-status').textContent='Qidirish uchun kamida 2 ta harf kiriting.'; return; }
     debounce=setTimeout(()=>void search(),350);
 });
 $('players-more').addEventListener('click',()=>void search(true));
@@ -163,5 +157,11 @@ $('request-form').addEventListener('submit',async event=>{
 });
 // Preserve organization navigation without treating URL parameters as authority.
 const org=new URLSearchParams(location.search).get('org') || (location.pathname.split('/').filter(Boolean).length>1 ? location.pathname.split('/')[1] : '');
-if (org) for (const id of ['home-link','teams-link']) { const url=new URL($(id).href); url.searchParams.set('org',org); $(id).href=url.href; }
-window.addEventListener('pagehide',()=>reset());
+if (org) { const url=new URL($('home-link').href); url.searchParams.set('org',org); $('home-link').href=url.href; }
+async function boot() {
+    if (!api.hasSession()) { reset(); return; }
+    state.active=true; $('workspace').hidden=false;
+    try { await context(); if (state.active) await Promise.all([search(false),history(false)]); }
+    catch (error) { handleError(error); }
+}
+void boot();

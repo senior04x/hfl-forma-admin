@@ -29,6 +29,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         await fetchTeams();
         populateLeagues();
+        selectCaptainTeam();
+    }
+
+    function selectCaptainTeam() {
+        const requestedTeam = new URLSearchParams(location.search).get('team');
+        if (!requestedTeam) return;
+        let session;
+        try { session = JSON.parse(sessionStorage.getItem('amatora_captain_session') || 'null'); } catch { return; }
+        if (session?.teamId !== requestedTeam || session.expires <= Date.now()) return;
+        const team = allTeams.find(item => item.id === requestedTeam);
+        const league = team?.league?.split(',').map(value => value.trim()).find(Boolean);
+        if (!team || !league) return;
+        tournamentSelect.value = league;
+        tournamentSelect.dispatchEvent(new Event('change'));
+        teamSelect.value = team.id;
+        tournamentSelect.disabled = true;
+        teamSelect.disabled = true;
     }
 
     function populateLeagues() {
