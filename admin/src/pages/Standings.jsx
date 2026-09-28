@@ -5,6 +5,7 @@ import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUti
 import { getActiveOrgTournaments, getTournamentLeagues, getTournamentTeams, getStageDisplayTitle, parseTournamentTier } from '../utils/tournamentUtils';
 import { Download, Save, ShieldAlert, Upload, Sparkles, AlertCircle, X, Check, Trophy, Edit, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import TopScorersExport from '../components/TopScorersExport';
 import './Standings.css';
 
 const DEFAULT_LEAGUE_LOGOS = {
@@ -92,6 +93,7 @@ export default function Standings() {
 
   const [savingPenalty, setSavingPenalty] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [eventsReady, setEventsReady] = useState(false);
 
   const [mainSponsor, setMainSponsor] = useState(null);
   const [selectedSponsors, setSelectedSponsors] = useState([]);
@@ -189,6 +191,8 @@ export default function Standings() {
   };
 
   const exportRef = useRef(null);
+  const scorersExportRef = useRef(null);
+  const eventsRequestRef = useRef(0);
 
   useEffect(() => {
     loadLeaguesAndData();
@@ -248,6 +252,9 @@ export default function Standings() {
 
   const fetchData = async (leaguesList = activeLeagues, tournsList = tournaments) => {
     setLoading(true);
+    setEventsReady(false);
+    setEvents([]);
+    const eventsRequest = ++eventsRequestRef.current;
     try {
       // Fetch Teams with specific needed columns only
       let teamsQuery = supabase
@@ -306,7 +313,9 @@ export default function Standings() {
       // Fetch Events in the background without blocking the UI
       const targetTeamIds = loadedTeams.map(t => t.id).filter(Boolean);
       if (targetTeamIds.length > 0) {
-        fetchBackgroundEvents(targetTeamIds);
+        fetchBackgroundEvents(targetTeamIds, eventsRequest);
+      } else {
+        setEventsReady(true);
       }
     } catch (err) {
       console.error("Error fetching standings data:", err);
@@ -314,12 +323,13 @@ export default function Standings() {
     }
   };
 
-  const fetchBackgroundEvents = async (targetTeamIds) => {
+  const fetchBackgroundEvents = async (targetTeamIds, requestId) => {
     try {
       let allEvents = [];
       let page = 0;
       const PAGE_SIZE = 1000;
       while (true) {
+        if (requestId !== eventsRequestRef.current) return;
         const { data: pageData, error: pageError } = await supabase
           .from('match_events')
           .select('id, event_type, player_id, team_id, match_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
@@ -333,9 +343,10 @@ export default function Standings() {
         allEvents.push(...pageData);
         if (pageData.length < PAGE_SIZE) break;
         page++;
-        if (page >= 3) break; // limit to 3000 events to prevent memory bloat
       }
+      if (requestId !== eventsRequestRef.current) return;
       setEvents(allEvents);
+      setEventsReady(true);
     } catch (e) {
       console.error("Error in fetchBackgroundEvents:", e);
     }
@@ -705,18 +716,21 @@ export default function Standings() {
 
   const selectedTournObj = tournaments.find(t => String(t.id) === String(selectedTournamentId));
 
-  const executeExport = async () => {
+  const executeExport = async (type = 'standings') => {
     const isTourn = viewMode === 'tournament';
-    const targetRef = exportRef.current;
+    const isScorers = type === 'scorers';
+    const targetRef = isScorers ? scorersExportRef.current : exportRef.current;
     if (!targetRef || isExporting) return;
+    if (isScorers && (!eventsReady || loading || (!isTourn && !selectedLeague))) return;
     if (isTourn && !selectedTournamentId) {
       alert("Iltimos, eksport qilish uchun turnirni tanlang.");
       return;
     }
     setIsExporting(true);
     try {
+      if (isScorers) await document.fonts.ready;
       const canvas = await html2canvas(targetRef, {
-        scale: 2,
+        scale: isScorers ? 1 : 2,
         useCORS: true,
         backgroundColor: null
       });
@@ -724,7 +738,9 @@ export default function Standings() {
       const link = document.createElement('a');
       const targetName = (isTourn ? (selectedTournObj?.name || 'turnir') : selectedLeague).replace(/\s+/g, '_');
       const targetSub = isTourn ? 'turnir_jadvali' : selectedRound;
-      link.download = `${targetSub}_${targetName}.png`;
+      link.download = isScorers
+        ? `Topurarlar_Top10_${targetName}_${isTourn || !selectedRound || selectedRound === 'all' ? 'Barcha' : `${selectedRound}-tur`}.png`
+        : `${targetSub}_${targetName}.png`;
       link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
@@ -913,6 +929,9 @@ export default function Standings() {
             <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
               <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish (PNG)'}</span>
             </button>
+            <button className="btn-download" onClick={() => executeExport('scorers')} disabled={isExporting || loading || !eventsReady || !(viewMode === 'tournament' ? selectedTournamentId : selectedLeague)} style={{ flex: 1, minWidth: '220px' }}>
+              <Download size={18} /> <span>Bombardirlar Top-10 (PNG)</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1012,6 +1031,15 @@ export default function Standings() {
             </tbody>
           </table>
         </div>
+
+      <TopScorersExport
+        exportRef={scorersExportRef}
+        events={events} matches={matches} teams={teams}
+        competition={viewMode === 'tournament' ? selectedTournObj : currentLeagueObj}
+        organization={currentOrg} tournament={viewMode === 'tournament'}
+        round={selectedRound} background={activeExportBg} mainSponsor={mainSponsorLogo}
+        sponsors={checkIsShowSponsors(viewMode === 'tournament' ? selectedTournObj : currentLeagueObj, viewMode === 'tournament' ? selectedTournObj?.name : selectedLeague) ? selectedSponsors.filter(s => s.id !== mainSponsor?.id) : []}
+      />
 
       {/* STANDINGS EDIT OVERRIDE MODAL */}
       {editingTeam && (
