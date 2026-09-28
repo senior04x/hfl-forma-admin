@@ -1,14 +1,14 @@
 .top-scorers-poster { position: absolute; left: -9999px; top: 0; width: 1080px; height: 1080px; overflow: hidden; display: flex; flex-direction: column; background: #101824 center / cover no-repeat; color: white; font-family: 'Inter', sans-serif; }
 .top-scorers-poster * { box-sizing: border-box; }
 .top-scorers-header { height: 180px; flex-shrink: 0; padding: 65px 45px 5px; display: flex; align-items: center; justify-content: space-between; }
-.top-scorers-brand, .top-scorers-main-sponsor { width: 280px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; }
+.top-scorers-brand, .top-scorers-main-sponsor { width: 210px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; }
 .top-scorers-brand strong { color: #00ff66; font-size: 32px; letter-spacing: 1.5px; }
-.top-scorers-brand img { max-width: 240px; height: 105px; object-fit: contain; min-width: 0; }
-.top-scorers-brand img:not(:only-child) { max-width: 105px; }
+.top-scorers-brand img { max-width: 190px; height: 105px; object-fit: contain; min-width: 0; }
+.top-scorers-brand img:not(:only-child) { max-width: 90px; }
 .top-scorers-league { flex: 1; min-width: 0; text-align: center; font-size: 36px; font-weight: 900; text-transform: uppercase; overflow-wrap: anywhere; }
-.top-scorers-league img { width: 100%; height: 125px; object-fit: contain; }
+.top-scorers-league img { width: 100%; height: 125px; object-fit: contain; display: block; margin: 0 auto; }
 .top-scorers-main-sponsor { justify-content: flex-end; color: #ffffff99; font-size: 20px; font-weight: 900; }
-.top-scorers-main-sponsor img { max-width: 260px; height: 115px; object-fit: contain; }
+.top-scorers-main-sponsor img { max-width: 190px; height: 105px; object-fit: contain; }
 .top-scorers-content { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 45px; }
 .top-scorers-table { width: 86%; border: 1px solid #ffffff40; border-radius: 18px; overflow: hidden; background: #ffffff1f; }
 .top-scorers-heading { padding: 14px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #ffffff29; border-bottom: 1px solid #ffffff40; font-size: 22px; font-weight: 900; }

@@ -1,3 +1,5 @@
+import { SCORER_STAGES, matchesScorerFilter, scorerFilterLabel, isPlayerGoal } from '../utils/scorers';
+import { prepareExportImages } from '../utils/exportImages';
 import { flushSync } from 'react-dom';
 import SponsorLogo from '../components/SponsorLogo';
 import { loadStandingsData } from '../utils/standingsLoader';
@@ -200,6 +202,13 @@ export default function Standings() {
   const [dataError, setDataError] = useState('');
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [exportType, setExportType] = useState(null);
+  const [scorersStage, setScorersStage] = useState('all');
+  const [scorersRound, setScorersRound] = useState('all');
+  useEffect(() => {
+    setScorersStage('all');
+    setScorersRound('all');
+  }, [viewMode, selectedLeague, selectedTournamentId]);
+  const scorerRounds = [...new Set(matches.filter(m => matchesScorerFilter(m, scorersStage)).map(m => m.round).filter(r => r != null && r !== '').map(String))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   useEffect(() => {
     loadLeaguesAndData();
@@ -500,7 +509,7 @@ export default function Standings() {
       if (e.match_id) {
         playerStats[e.player_id].matchIds.add(e.match_id);
       }
-      if (e.event_type === 'goal') playerStats[e.player_id].goals += 1;
+      if (isPlayerGoal(e)) playerStats[e.player_id].goals += 1;
       if (e.event_type === 'assist') playerStats[e.player_id].assists += 1;
       if (e.event_type === 'yellow_card') playerStats[e.player_id].yellowCards += 1;
       if (e.event_type === 'red_card') playerStats[e.player_id].redCards += 1;
@@ -661,9 +670,9 @@ export default function Standings() {
     try {
       const targetRef = isScorers ? scorersExportRef.current : exportRef.current;
       if (!targetRef) throw new Error('Export template unavailable');
-      if (isScorers) await document.fonts.ready;
+      await prepareExportImages(targetRef);
       const canvas = await html2canvas(targetRef, {
-        scale: isScorers ? 1 : 2,
+        scale: 2,
         useCORS: true,
         backgroundColor: null
       });
@@ -672,7 +681,7 @@ export default function Standings() {
       const targetName = (isTourn ? (selectedTournObj?.name || 'turnir') : selectedLeague).replace(/\s+/g, '_');
       const targetSub = isTourn ? 'turnir_jadvali' : selectedRound;
       link.download = isScorers
-        ? `Topurarlar_Top10_${targetName}_${isTourn || !selectedRound || selectedRound === 'all' ? 'Barcha' : `${selectedRound}-tur`}.png`
+        ? `Topurarlar_Top10_${targetName}_${scorerFilterLabel(scorersStage, scorersRound).replace(/[^\p{L}\p{N}-]+/gu, '_')}.png`
         : `${targetSub}_${targetName}.png`;
       link.href = dataUrl;
       document.body.appendChild(link);
@@ -863,9 +872,27 @@ export default function Standings() {
             <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting || loading || !eventsReady} style={{ flex: 1, minWidth: '180px' }}>
               <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish (PNG)'}</span>
             </button>
-            <button className="btn-download" onClick={() => executeExport('scorers')} disabled={isExporting || loading || !eventsReady || !(viewMode === 'tournament' ? selectedTournamentId : selectedLeague)} style={{ flex: 1, minWidth: '220px' }}>
-              <Download size={18} /> <span>Bombardirlar Top-10 (PNG)</span>
-            </button>
+            <details className="scorers-export-panel">
+              <summary>Bombardirlar Top-10 <span>⌄</span></summary>
+              <div className="scorers-export-options">
+                {viewMode === 'tournament' && <label>Bosqich
+                  <select value={scorersStage} disabled={isExporting} onChange={e => { setScorersStage(e.target.value); setScorersRound('all'); }}>
+                    <option value="all">Barchasi</option>
+                    <option value="playoff">Pley-off — barcha bosqichlar</option>
+                    {SCORER_STAGES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </label>}
+                <label>Tur
+                  <select value={scorersRound} disabled={isExporting} onChange={e => setScorersRound(e.target.value)}>
+                    <option value="all">Barchasi</option>
+                    {scorerRounds.map(round => <option key={round} value={round}>{round}-tur</option>)}
+                  </select>
+                </label>
+                <button className="btn-download" onClick={() => executeExport('scorers')} disabled={isExporting || loading || !eventsReady || !(viewMode === 'tournament' ? selectedTournamentId : selectedLeague)}>
+                  <Download size={18} /> {isExporting ? 'Tayyorlanmoqda...' : 'Top-10 PNG yuklab olish'}
+                </button>
+              </div>
+            </details>
           </div>
         </div>
       </div>
@@ -969,10 +996,10 @@ export default function Standings() {
 
       {exportType === 'scorers' && <TopScorersExport
         exportRef={scorersExportRef}
-        events={events} matches={matches} teams={teams}
+        events={events} matches={matches}
         competition={viewMode === 'tournament' ? selectedTournObj : currentLeagueObj}
-        organization={currentOrg} tournament={viewMode === 'tournament'}
-        round={selectedRound} background={activeExportBg} mainSponsor={mainSponsorLogo}
+        organization={currentOrg} stage={scorersStage}
+        round={scorersRound} background={activeExportBg} mainSponsor={mainSponsorLogo}
         sponsors={checkIsShowSponsors(viewMode === 'tournament' ? selectedTournObj : currentLeagueObj, viewMode === 'tournament' ? selectedTournObj?.name : selectedLeague) ? selectedSponsors.filter(s => s.id !== mainSponsor?.id) : []}
       />}
 

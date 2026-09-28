@@ -1,29 +1,12 @@
 import React, { useMemo } from 'react';
 import { Medal } from 'lucide-react';
+import { calculateScorers, scorerFilterLabel } from '../utils/scorers';
 import SponsorLogo from './SponsorLogo';
 import './TopScorersExport.css';
 
-export default function TopScorersExport({ exportRef, events, matches, teams, competition, organization, tournament, round, background, mainSponsor, sponsors }) {
-  const scorers = useMemo(() => {
-    const teamIds = new Set(teams.filter(t => (t.league || '').split(',').map(s => s.trim()).includes(competition?.name)).map(t => String(t.id)));
-    const matchIds = new Set(matches.filter(m => {
-      if (tournament) return String(m.tournament_id) === String(competition?.id);
-      return !m.tournament_id && teamIds.has(String(m.home_team_id)) &&
-        (!round || round === 'all' || String(m.round) === String(round));
-    }).map(m => String(m.id)));
-    const players = new Map();
-    events.forEach(e => {
-      if (e.event_type !== 'goal' || !matchIds.has(String(e.match_id))) return;
-      const id = e.player_id || e.id;
-      if (!players.has(id)) players.set(id, {
-        id, name: [e.player?.first_name, e.player?.last_name].filter(Boolean).join(' ') || "O'yinchi",
-        team: e.team?.name || 'Jamoa', avatar: e.player?.photo_url || e.team?.logo_url, goals: 0,
-      });
-      players.get(id).goals += 1;
-    });
-    return [...players.values()].sort((a, b) => b.goals - a.goals).slice(0, 10);
-  }, [events, matches, teams, competition, tournament, round]);
-  const roundLabel = tournament || !round || round === 'all' ? 'BARCHA TURLAR' : `${round}-TUR`;
+export default function TopScorersExport({ exportRef, events, matches, competition, organization, stage = 'all', round = 'all', background, mainSponsor, sponsors }) {
+  const scorers = useMemo(() => calculateScorers(events, matches, stage, round), [events, matches, stage, round]);
+  const roundLabel = scorerFilterLabel(stage, round);
   return (
     <div ref={exportRef} className="top-scorers-poster" aria-hidden="true" style={background ? { backgroundImage: `linear-gradient(rgba(10,13,18,.82), rgba(10,13,18,.82)), url(${background})` } : undefined}>
       <header className="top-scorers-header">
