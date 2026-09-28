@@ -16,6 +16,21 @@ const goal = (id, match, player = 10, type = 'goal') => ({
 });
 const events = [goal(1, 1), goal(2, 2), goal(3, 3), goal(4, 4, 20, 'penalty_goal')];
 
+test('one player has separate totals for league and each tournament, including all filter', () => {
+  const mixedMatches = [
+    { id: 1, status: 'finished', tournament_id: null, league: 'Super liga' },
+    { id: 2, status: 'finished', tournament_id: 7 },
+    { id: 3, status: 'finished', tournament_id: 8 },
+    { id: 4, status: 'finished', tournament_id: null, league: 'Pro liga' },
+  ];
+  const mixedEvents = [goal(1, 1), goal(2, 1), goal(3, 2), goal(4, 3), goal(5, 3), goal(6, 3), goal(7, 4)];
+  const count = scope => calculateScorers(mixedEvents, mixedMatches, 'all', 'all', scope)[0]?.goals;
+  assert.equal(count({ tournament: false, name: 'Super liga' }), 2);
+  assert.equal(count({ tournament: true, id: '7' }), 1);
+  assert.equal(count({ tournament: true, id: 8 }), 3);
+  assert.equal(count({ tournament: true }), undefined);
+});
+
 test('defaults to all rounds and stages; filters playoff and individual stages', () => {
   assert.deepEqual(calculateScorers(events, matches).map(p => p.goals), [3, 1]);
   assert.deepEqual(calculateScorers(events, matches, 'group', '1').map(p => p.goals), [1]);

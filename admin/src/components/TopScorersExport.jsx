@@ -4,8 +4,10 @@ import { calculateScorers, scorerFilterLabel } from '../utils/scorers';
 import SponsorLogo from './SponsorLogo';
 import './TopScorersExport.css';
 
-export default function TopScorersExport({ exportRef, events, matches, competition, organization, stage = 'all', round = 'all', background, mainSponsor, sponsors }) {
-  const scorers = useMemo(() => calculateScorers(events, matches, stage, round), [events, matches, stage, round]);
+export default function TopScorersExport({ exportRef, events, matches, competition, tournament, organization, stage = 'all', round = 'all', background, mainSponsor, sponsors }) {
+  const scorers = useMemo(() => calculateScorers(events, matches, stage, round, {
+    tournament, id: competition?.id, name: competition?.name,
+  }), [events, matches, stage, round, tournament, competition?.id, competition?.name]);
   const roundLabel = scorerFilterLabel(stage, round);
   return (
     <div ref={exportRef} className="top-scorers-poster" aria-hidden="true" style={background ? { backgroundImage: `linear-gradient(rgba(10,13,18,.82), rgba(10,13,18,.82)), url(${background})` } : undefined}>

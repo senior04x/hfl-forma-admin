@@ -17,9 +17,17 @@ export function scorerFilterLabel(stage, round) {
   return [label, round !== 'all' ? `${round}-TUR` : null].filter(Boolean).join(' · ') || 'BARCHASI';
 }
 
-// Matches are already scoped to the selected competition by standingsLoader.
-export function calculateScorers(events, matches, stage = 'all', round = 'all') {
-  const matchIds = new Set(matches.filter(m => m.status === 'finished' && matchesScorerFilter(m, stage, round)).map(m => String(m.id)));
+// Recheck competition membership even when the loader supplies scoped matches.
+export function calculateScorers(events, matches, stage = 'all', round = 'all', scope) {
+  const matchIds = new Set(matches.filter(m => {
+    if (scope?.tournament) {
+      if (scope.id == null || m.tournament_id == null || String(m.tournament_id) !== String(scope.id)) return false;
+    } else if (scope) {
+      if (m.tournament_id != null) return false;
+      if (m.league && m.league.trim().toLowerCase() !== scope.name?.trim().toLowerCase()) return false;
+    }
+    return m.status === 'finished' && matchesScorerFilter(m, stage, round);
+  }).map(m => String(m.id)));
   const players = new Map();
   const seenEvents = new Set();
   for (const event of events) {

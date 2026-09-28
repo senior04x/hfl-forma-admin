@@ -998,7 +998,7 @@ export default function Standings() {
         exportRef={scorersExportRef}
         events={events} matches={matches}
         competition={viewMode === 'tournament' ? selectedTournObj : currentLeagueObj}
-        organization={currentOrg} stage={scorersStage}
+        organization={currentOrg} stage={scorersStage} tournament={viewMode === 'tournament'}
         round={scorersRound} background={activeExportBg} mainSponsor={mainSponsorLogo}
         sponsors={checkIsShowSponsors(viewMode === 'tournament' ? selectedTournObj : currentLeagueObj, viewMode === 'tournament' ? selectedTournObj?.name : selectedLeague) ? selectedSponsors.filter(s => s.id !== mainSponsor?.id) : []}
       />}
