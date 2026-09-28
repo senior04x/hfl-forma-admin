@@ -1,8 +1,11 @@
+import { flushSync } from 'react-dom';
+import SponsorLogo from '../components/SponsorLogo';
+import { loadStandingsData } from '../utils/standingsLoader';
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useOrg } from '../context/OrgContext';
-import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUtils';
-import { getActiveOrgTournaments, getTournamentLeagues, getTournamentTeams, getStageDisplayTitle, parseTournamentTier } from '../utils/tournamentUtils';
+import { getActiveOrgLeagues } from '../utils/leagueUtils';
+import { getActiveOrgTournaments, getTournamentTeams, getStageDisplayTitle, parseTournamentTier } from '../utils/tournamentUtils';
 import { Download, Save, ShieldAlert, Upload, Sparkles, AlertCircle, X, Check, Trophy, Edit, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import TopScorersExport from '../components/TopScorersExport';
@@ -192,10 +195,15 @@ export default function Standings() {
 
   const exportRef = useRef(null);
   const scorersExportRef = useRef(null);
-  const eventsRequestRef = useRef(0);
+  const metadataRequestRef = useRef(0);
+  const [metadataOrgId, setMetadataOrgId] = useState(null);
+  const [dataError, setDataError] = useState('');
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [exportType, setExportType] = useState(null);
 
   useEffect(() => {
     loadLeaguesAndData();
+    return () => { metadataRequestRef.current += 1; };
   }, [orgId]);
 
   const getLeagueBgForOrg = (targetOrgId, leagueName) => {
@@ -207,6 +215,7 @@ export default function Standings() {
   };
 
   const loadLeaguesAndData = async () => {
+    const request = ++metadataRequestRef.current;
     try {
       setLoading(true);
       // 1. Fetch leagues and tournaments concurrently in parallel
@@ -214,6 +223,7 @@ export default function Standings() {
         getActiveOrgLeagues(orgId),
         getActiveOrgTournaments(orgId)
       ]);
+      if (request !== metadataRequestRef.current) return;
 
       const withOrgBgs = (fetchedLeagues || []).map(l => ({
         ...l,
@@ -221,136 +231,58 @@ export default function Standings() {
       }));
       setActiveLeagues(withOrgBgs);
       if (withOrgBgs.length > 0) {
-        setSelectedLeague(prev => prev || withOrgBgs[0].name);
+        setSelectedLeague(prev => withOrgBgs.some(l => l.name === prev) ? prev : withOrgBgs[0].name);
       }
 
       setTournaments(fetchedTournaments || []);
       if ((fetchedTournaments || []).length > 0) {
-        setSelectedTournamentId(prev => prev || fetchedTournaments[0].id);
+        setSelectedTournamentId(prev => fetchedTournaments.some(t => String(t.id) === String(prev)) ? prev : fetchedTournaments[0].id);
       }
+      setMetadataOrgId(orgId);
 
-      // 2. Fetch tournament leagues in parallel with core data
-      const tLeaguesPromise = (async () => {
-        const tLeaguesMap = {};
-        await Promise.all(
-          (fetchedTournaments || []).map(async (t) => {
-            const lgs = await getTournamentLeagues(t.id);
-            tLeaguesMap[t.id] = lgs;
-          })
-        );
-        setTournamentLeaguesMap(tLeaguesMap);
-      })();
-
-      // 3. Fetch core standings data immediately (teams + matches in parallel)
-      await fetchData(withOrgBgs, fetchedTournaments || []);
-      await tLeaguesPromise;
     } catch (e) {
+      if (request !== metadataRequestRef.current) return;
       console.error("Error in loadLeaguesAndData:", e);
       setLoading(false);
     }
   };
 
-  const fetchData = async (leaguesList = activeLeagues, tournsList = tournaments) => {
-    setLoading(true);
-    setEventsReady(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    const competition = viewMode === 'tournament'
+      ? tournaments.find(t => String(t.id) === String(selectedTournamentId))
+      : activeLeagues.find(l => l.name === selectedLeague);
+    setTeams([]);
+    setMatches([]);
     setEvents([]);
-    const eventsRequest = ++eventsRequestRef.current;
-    try {
-      // Fetch Teams with specific needed columns only
-      let teamsQuery = supabase
-        .from('teams')
-        .select('id, name, logo_url, league, status, penalty_points, organization_id, is_archived')
-        .in('status', ['approved', 'partially_approved']);
-
-      teamsQuery = applyOrgAndCollabFilter(teamsQuery, orgId, leaguesList);
-
-      // Fetch Matches with specific needed columns only
-      const collabLeagueNames = (leaguesList || []).filter(l => l.isCollab).map(l => l.name);
-      const collabTournIds = (tournsList || []).filter(t => t.isCollab).map(t => t.id);
-
-      let orConditions = [`organization_id.eq.${orgId}`];
-      if (collabLeagueNames.length > 0) {
-        const escapedNames = collabLeagueNames.map(n => `"${n.replace(/"/g, '""')}"`).join(',');
-        orConditions.push(`league.in.(${escapedNames})`);
-      }
-      if (collabTournIds.length > 0) {
-        orConditions.push(`tournament_id.in.(${collabTournIds.join(',')})`);
-      }
-
-      let matchesQuery = supabase
-        .from('matches')
-        .select('id, home_team_id, away_team_id, home_score, away_score, status, round, match_date, tournament_id, league, organization_id')
-        .eq('status', 'finished')
-        .or(orConditions.join(','))
-        .order('match_date', { ascending: false });
-
-      // Run teams and matches concurrently in parallel
-      const [{ data: teamsData, error: teamsError }, { data: matchesData, error: matchesError }] = await Promise.all([
-        teamsQuery,
-        matchesQuery
-      ]);
-
-      if (teamsError) throw teamsError;
-      if (matchesError) throw matchesError;
-
-      const loadedTeams = teamsData || [];
-      const loadedMatches = matchesData || [];
-
-      setTeams(loadedTeams);
-      setMatches(loadedMatches);
-
-      // Initialize penalties state
-      const initialPenalties = {};
-      loadedTeams.forEach(t => {
-        initialPenalties[t.id] = t.penalty_points || 0;
-      });
-      setPenalties(initialPenalties);
-
-      // FAST RELEASE: Standings table needs only teams and matches.
-      // Release loading state immediately (<250ms) so user can interact!
+    setEventsReady(false);
+    setDataError('');
+    setLoading(true);
+    if (!orgId || metadataOrgId !== orgId || !competition) {
       setLoading(false);
-
-      // Fetch Events in the background without blocking the UI
-      const targetTeamIds = loadedTeams.map(t => t.id).filter(Boolean);
-      if (targetTeamIds.length > 0) {
-        fetchBackgroundEvents(targetTeamIds, eventsRequest);
-      } else {
-        setEventsReady(true);
-      }
-    } catch (err) {
-      console.error("Error fetching standings data:", err);
-      setLoading(false);
+      return () => controller.abort();
     }
-  };
-
-  const fetchBackgroundEvents = async (targetTeamIds, requestId) => {
-    try {
-      let allEvents = [];
-      let page = 0;
-      const PAGE_SIZE = 1000;
-      while (true) {
-        if (requestId !== eventsRequestRef.current) return;
-        const { data: pageData, error: pageError } = await supabase
-          .from('match_events')
-          .select('id, event_type, player_id, team_id, match_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
-          .in('team_id', targetTeamIds)
-          .in('event_type', ['goal', 'assist', 'yellow_card', 'red_card'])
-          .order('id', { ascending: true })
-          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-        if (pageError) throw pageError;
-        if (!pageData || pageData.length === 0) break;
-        allEvents.push(...pageData);
-        if (pageData.length < PAGE_SIZE) break;
-        page++;
-      }
-      if (requestId !== eventsRequestRef.current) return;
-      setEvents(allEvents);
+    loadStandingsData({ orgId, competition, tournament: viewMode === 'tournament', signal: controller.signal,
+      onCore: ({ teams: loadedTeams, matches: loadedMatches, leagues }) => {
+        if (controller.signal.aborted) return;
+        setTeams(loadedTeams);
+        setMatches(loadedMatches);
+        setTournamentLeaguesMap({ [competition.id]: leagues });
+        setPenalties(Object.fromEntries(loadedTeams.map(t => [t.id, t.penalty_points || 0])));
+        setLoading(false);
+      },
+    }).then(loadedEvents => {
+      if (controller.signal.aborted) return;
+      setEvents(loadedEvents);
       setEventsReady(true);
-    } catch (e) {
-      console.error("Error in fetchBackgroundEvents:", e);
-    }
-  };
+    }).catch(error => {
+      if (controller.signal.aborted) return;
+      console.error('Standings load failed:', error);
+      setLoading(false);
+      setDataError("Ma'lumotlarni yuklab bo'lmadi. Yangilash tugmasini bosing.");
+    });
+    return () => controller.abort();
+  }, [orgId, metadataOrgId, viewMode, selectedLeague, selectedTournamentId, activeLeagues, tournaments, refreshVersion]);
 
   // Auto-set selectedRound to max finished round for the SPECIFIC active league
   useEffect(() => {
@@ -719,15 +651,16 @@ export default function Standings() {
   const executeExport = async (type = 'standings') => {
     const isTourn = viewMode === 'tournament';
     const isScorers = type === 'scorers';
-    const targetRef = isScorers ? scorersExportRef.current : exportRef.current;
-    if (!targetRef || isExporting) return;
+    if (isExporting || loading || !eventsReady) return;
     if (isScorers && (!eventsReady || loading || (!isTourn && !selectedLeague))) return;
     if (isTourn && !selectedTournamentId) {
       alert("Iltimos, eksport qilish uchun turnirni tanlang.");
       return;
     }
-    setIsExporting(true);
+    flushSync(() => { setIsExporting(true); setExportType(type); });
     try {
+      const targetRef = isScorers ? scorersExportRef.current : exportRef.current;
+      if (!targetRef) throw new Error('Export template unavailable');
       if (isScorers) await document.fonts.ready;
       const canvas = await html2canvas(targetRef, {
         scale: isScorers ? 1 : 2,
@@ -750,6 +683,7 @@ export default function Standings() {
       alert("Rasmni yuklab olishda xatolik yuz berdi.");
     } finally {
       setIsExporting(false);
+      setExportType(null);
     }
   };
 
@@ -801,7 +735,7 @@ export default function Standings() {
           <button
             type="button"
             className="btn-refresh"
-            onClick={() => loadLeaguesAndData()}
+            onClick={() => setRefreshVersion(v => v + 1)}
             disabled={loading}
             style={{
               display: 'flex',
@@ -926,7 +860,7 @@ export default function Standings() {
         {/* Poster Image Box & Buttons */}
         <div className="poster-banner-section" style={{ justifyContent: 'flex-start', marginTop: '14px' }}>
           <div style={{ display: 'flex', gap: '12px', width: '100%', flexWrap: 'wrap' }}>
-            <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting} style={{ flex: 1, minWidth: '180px' }}>
+            <button className="btn-download" onClick={() => handleExportWithCheck('standings')} disabled={isExporting || loading || !eventsReady} style={{ flex: 1, minWidth: '180px' }}>
               <Download size={18} /> <span>{isExporting ? 'Yuklanmoqda...' : 'Jadvalni yuklab olish (PNG)'}</span>
             </button>
             <button className="btn-download" onClick={() => executeExport('scorers')} disabled={isExporting || loading || !eventsReady || !(viewMode === 'tournament' ? selectedTournamentId : selectedLeague)} style={{ flex: 1, minWidth: '220px' }}>
@@ -936,6 +870,7 @@ export default function Standings() {
         </div>
       </div>
 
+      {dataError && <p role="alert">{dataError}</p>}
       <div className="admin-table-container">
           <table className="admin-table">
             <thead>
@@ -1032,14 +967,14 @@ export default function Standings() {
           </table>
         </div>
 
-      <TopScorersExport
+      {exportType === 'scorers' && <TopScorersExport
         exportRef={scorersExportRef}
         events={events} matches={matches} teams={teams}
         competition={viewMode === 'tournament' ? selectedTournObj : currentLeagueObj}
         organization={currentOrg} tournament={viewMode === 'tournament'}
         round={selectedRound} background={activeExportBg} mainSponsor={mainSponsorLogo}
         sponsors={checkIsShowSponsors(viewMode === 'tournament' ? selectedTournObj : currentLeagueObj, viewMode === 'tournament' ? selectedTournObj?.name : selectedLeague) ? selectedSponsors.filter(s => s.id !== mainSponsor?.id) : []}
-      />
+      />}
 
       {/* STANDINGS EDIT OVERRIDE MODAL */}
       {editingTeam && (
@@ -1152,7 +1087,7 @@ export default function Standings() {
       )}
 
       {/* HIDDEN EXPORT TEMPLATE */}
-      <div style={{ position: 'fixed', left: '-9999px', top: 0, opacity: 1, pointerEvents: 'none', zIndex: -100 }}>
+      {exportType === 'standings' && <div style={{ position: 'fixed', left: '-9999px', top: 0, opacity: 1, pointerEvents: 'none', zIndex: -100 }}>
         {(() => {
           const isTourn = viewMode === 'tournament';
           const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
@@ -1166,7 +1101,7 @@ export default function Standings() {
             const canvasHeight = 1920;
 
             const isShowSponsors = checkIsShowSponsors(currentTournObj, currentTournObj?.name);
-            const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
+            const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id).slice(0, 6);
             const hasSecondarySponsors = isShowSponsors && secondarySponsors.length > 0;
 
             // Dimensions and symmetrical vertical spacing
@@ -1739,18 +1674,7 @@ export default function Standings() {
                     }}>
                       {secondarySponsors.map((s, idx) => (
                         <React.Fragment key={s.id || idx}>
-                          <img
-                            src={s.logo_url}
-                            alt={s.name || ''}
-                            crossOrigin="anonymous"
-                            style={{
-                              height: '38px',
-                              maxWidth: '125px',
-                              objectFit: 'contain',
-                              filter: 'grayscale(100%) brightness(1.25)',
-                              opacity: 0.85
-                            }}
-                          />
+                          <SponsorLogo sponsor={s} />
                           {idx < secondarySponsors.length - 1 && (
                             <div style={{ height: '22px', width: '1.5px', backgroundColor: '#ffffff', opacity: 0.35 }}></div>
                           )}
@@ -2053,14 +1977,14 @@ export default function Standings() {
                     const currentLeagueObj = activeLeagues.find(l => String(l.name || '').trim().toLowerCase() === String(selectedLeague || '').trim().toLowerCase()) || activeLeagues.find(l => l.name === selectedLeague);
                     const isShowSponsors = checkIsShowSponsors(currentLeagueObj, selectedLeague);
                     if (!isShowSponsors) return null;
-                    const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id);
+                    const secondarySponsors = selectedSponsors.filter(s => s.id !== mainSponsor?.id).slice(0, 6);
                     if (secondarySponsors.length === 0) return null;
                     return (
                       <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', boxSizing: 'border-box' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '36px' }}>
                           {secondarySponsors.map((s, idx) => (
                             <React.Fragment key={s.id || idx}>
-                              <img src={s.logo_url} alt={s.name} crossOrigin="anonymous" style={{ height: '44px', maxWidth: '140px', objectFit: 'contain', filter: 'grayscale(100%) brightness(1.2)', opacity: 0.85 }} />
+                              <SponsorLogo sponsor={s} />
                               {idx < secondarySponsors.length - 1 && (
                                 <div style={{ height: '24px', width: '1.5px', backgroundColor: '#ffffff', opacity: 0.4 }}></div>
                               )}
@@ -2076,7 +2000,7 @@ export default function Standings() {
             </div>
           );
         })()}
-      </div>
+      </div>}
 
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Medal } from 'lucide-react';
+import SponsorLogo from './SponsorLogo';
 import './TopScorersExport.css';
 
 export default function TopScorersExport({ exportRef, events, matches, teams, competition, organization, tournament, round, background, mainSponsor, sponsors }) {
@@ -48,7 +49,7 @@ export default function TopScorersExport({ exportRef, events, matches, teams, co
           ))}
         </div>
       </main>
-      <footer className="top-scorers-sponsors">{sponsors.slice(0, 6).map(s => <img key={s.id} src={s.logo_url} crossOrigin="anonymous" alt="" />)}</footer>
+      <footer className="top-scorers-sponsors">{sponsors.slice(0, 6).map(s => <SponsorLogo key={s.id} sponsor={s} />)}</footer>
     </div>
   );
 }
