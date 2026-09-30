@@ -1,5 +1,12 @@
 export const TRANSFER_PAGE_SIZE = 30;
-const columns = 'id,created_at,player_id,player_name,player_photo,old_team_id,old_team_name,old_team_logo,new_team_id,new_team_name,new_team_logo,reason,status,organization_id,requested_by_team_id';
+const columns = 'id,created_at,player_id,player_name,player_photo,old_team_id,old_team_name,old_team_logo,new_team_id,new_team_name,new_team_logo,reason,status,organization_id,requested_by_team_id,app_consent_required,transfer_consents(party,subject_id,decision,decided_at)';
+
+export function hasTransferConsents(transfer) {
+  if (!transfer.app_consent_required) return true;
+  return ['player','old_team','new_team'].every(party => Boolean(transfer[party === 'player' ? 'player_id' : `${party}_id`]) && (transfer.transfer_consents || []).some(consent =>
+    consent.party === party && consent.decision === 'approved' &&
+    consent.subject_id === transfer[party === 'player' ? 'player_id' : `${party}_id`]));
+}
 
 export async function loadAdminTransfers(client, orgId, filter, page) {
   let query = client.from('transfers').select(columns).eq('organization_id', orgId);
@@ -14,6 +21,7 @@ export async function loadAdminTransfers(client, orgId, filter, page) {
 // A single status UPDATE runs the DB membership/career trigger transaction.
 // Status matching rejects stale admin screens; SELECT detects RLS/no-row results.
 export async function saveAdminTransfer(client, orgId, transfer, changes) {
+  if (changes.status === 'approved' && !hasTransferConsents(transfer)) throw new Error('Three-party consent required');
   const { data, error } = await client.from('transfers').update(changes)
     .eq('id', transfer.id).eq('organization_id', orgId).eq('status', transfer.status)
     .select('id').single();
