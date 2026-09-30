@@ -20,7 +20,7 @@ CREATE TABLE otp_codes(phone text PRIMARY KEY,code text,is_used boolean,expires_
 CREATE TABLE transfers(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),created_at timestamptz DEFAULT now(),player_id uuid REFERENCES applications(id),old_team_id uuid,new_team_id uuid,reason text,status text,player_name text,player_photo text,old_team_name text,old_team_logo text,new_team_name text,new_team_logo text,organization_id bigint,player_confirmed boolean,requested_by_team_id uuid);
 CREATE TABLE player_career_history(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),player_id uuid,team_id uuid,team_name text,organization_id bigint,joined_at timestamptz,left_at timestamptz,created_via text);
 `);
-for (const name of ['20260924000100_admin_only_transfer_decisions.sql','20260925000100_transfer_notifications.sql','20260927000100_atomic_admin_transfer.sql','20261001000100_three_party_transfer_consent.sql','20261001000200_transfer_app_decisions.sql','20261001000300_transfer_app_requests.sql','20261001000400_transfer_app_reads.sql','20261001000500_transfer_app_notifications.sql']) {
+for (const name of ['20260924000100_admin_only_transfer_decisions.sql','20260925000100_transfer_notifications.sql','20260927000100_atomic_admin_transfer.sql','20261001000100_three_party_transfer_consent.sql','20261001000200_transfer_app_decisions.sql','20261001000300_transfer_app_requests.sql','20261001000400_transfer_app_reads.sql','20261001000500_transfer_app_notifications.sql','20261001000600_transfer_login_sessions.sql']) {
  try { await db.exec(fs.readFileSync(new URL(name,migrations),'utf8')); } catch(error) { throw new Error(`Migration ${name}: ${error.message}`); }
 }
 const ids={old:'00000000-0000-0000-0000-000000000001',new:'00000000-0000-0000-0000-000000000002',player:'00000000-0000-0000-0000-000000000003',admin:'00000000-0000-0000-0000-000000000004',foreign:'00000000-0000-0000-0000-000000000005'};
@@ -90,5 +90,14 @@ await test('mobile SQL entry points cannot be called by anonymous clients',async
   assert.equal(await rpc("has_function_privilege('authenticated',$1,'EXECUTE')",[signature]),false);
   assert.equal(await rpc("has_function_privilege('service_role',$1,'EXECUTE')",[signature]),true);
  }
+});
+await test('verified login sessions only bind matching phone owners and remain service-only',async()=>{
+ const sessions=[{actor:'player',subject_id:ids.player,token_hash:token('1')},{actor:'captain',subject_id:ids.new,token_hash:token('2')}];
+ const result=await rpc('issue_transfer_login_sessions($1,$2)', ['904444444',JSON.stringify(sessions)]);
+ assert.equal(result.sessions.length,1);assert.equal(result.sessions[0].subject_id,ids.player);
+ assert.equal((await rpc('transfer_app_page($1,$2)',[token('1'),'player'])).status,200);
+ assert.equal(await rpc("has_function_privilege('anon','issue_transfer_login_sessions(text,jsonb)','EXECUTE')"),false);
+ assert.equal(await rpc("has_function_privilege('authenticated','issue_transfer_login_sessions(text,jsonb)','EXECUTE')"),false);
+ await assert.rejects(rpc('issue_transfer_login_sessions($1,$2)',['904444444',JSON.stringify([{subject_id:ids.player,token_hash:token('3')}])]),/Invalid actor/);
 });
 await db.close();
