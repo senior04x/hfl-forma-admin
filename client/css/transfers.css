@@ -12,3 +12,62 @@
 @media(max-width:960px){.team-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.page-nav{gap:14px}.page-nav a{font-size:13px}.team-list{grid-template-columns:1fr}.team-card-action{display:none}.team-select{grid-template-columns:48px minmax(0,1fr)}.account-footer{justify-content:stretch}.account-footer .danger{width:100%}.player-row{align-items:flex-start;flex-direction:column}.player-row .button{width:100%}}
 .person[role=button]{cursor:pointer;border-radius:10px}.person[role=button]:focus-visible{outline:3px solid var(--accent);outline-offset:4px}.player-detail{display:grid;grid-template-columns:150px 1fr;gap:24px;align-items:start}.player-detail-avatar{width:150px;height:180px;object-fit:cover;border-radius:16px;background:rgba(232,80,2,.14);display:grid;place-items:center;color:#ffad82;font-size:32px;font-weight:850}.player-detail dl{display:grid;grid-template-columns:auto 1fr;gap:8px 18px;margin:20px 0 0}.player-detail dt{color:var(--muted);font-size:13px}.player-detail dd{margin:0;font-weight:700;font-size:13px}@media(max-width:560px){.player-detail{grid-template-columns:1fr}.player-detail-avatar{width:100%;height:240px}.player-detail dl{grid-template-columns:1fr;gap:3px}.player-detail dd{margin-bottom:8px}}
+
+/* Transfer-only presentation: cabinet styles remain independent. */
+.transfer-page {
+    --bg: #050505;
+    --panel: rgba(15, 15, 25, .7);
+    --line: rgba(240, 208, 96, .15);
+    --muted: #9ca3af;
+    --accent: #f0d060;
+    background: radial-gradient(ellipse at 50% 0%, rgba(201, 168, 76, .12), transparent 55%), var(--bg);
+    font-family: 'Inter', system-ui, sans-serif;
+}
+.transfer-page .topbar { max-width: 1200px; padding: 20px 24px; }
+.transfer-page .brand, .transfer-page h1, .transfer-page h2 { font-family: 'Outfit', system-ui, sans-serif; }
+.transfer-page main { max-width: 1000px; padding-top: 32px; }
+.transfer-page .intro { margin-bottom: 24px; }
+.transfer-page h1 { font-size: clamp(30px, 5vw, 42px); letter-spacing: -.8px; margin: 0 0 8px; }
+.transfer-page .intro > p { margin: 0; }
+.transfer-page .panel { border-radius: 16px; padding: 24px; }
+.transfer-page .team-bar { padding: 16px 20px; margin-bottom: 20px; }
+.transfer-page .team-bar .eyebrow { color: var(--muted); font-size: 10px; letter-spacing: 1px; margin-bottom: 4px; }
+.transfer-page .team-bar h2 { font-size: 20px; }
+.transfer-page .workspace-grid { display: block; }
+.transfer-page .transfer-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.transfer-page .transfer-tab { min-height: 44px; padding: 10px 20px; border: 1px solid var(--line); border-radius: 22px; background: var(--panel); color: var(--ink); font-weight: 600; font-size: 14px; }
+.transfer-page .transfer-tab[aria-selected=true] { background: linear-gradient(135deg, #f0d060, #c9a84c); color: #111; border-color: var(--accent); }
+.transfer-page .transfer-tab:hover { border-color: var(--accent); }
+.transfer-page .search-panel > label { margin-top: 0; }
+.transfer-page input, .transfer-page textarea { background: rgba(255, 255, 255, .03); border-color: rgba(255, 255, 255, .15); }
+.transfer-page .list { margin-top: 8px; }
+.transfer-page .list li { padding: 14px 0; }
+.transfer-page .list li:last-child { padding-bottom: 0; }
+.transfer-page .player-avatar { color: var(--accent); background: rgba(240, 208, 96, .1); }
+.transfer-page .primary { color: #111; background: var(--accent); border-color: var(--accent); }
+.transfer-page .primary:hover { background: #dfbd4e; }
+.transfer-page .quiet:hover { background: rgba(255, 255, 255, .06); }
+.transfer-page .badge { background: rgba(16, 185, 129, .1); color: #8ce0bd; border-color: rgba(16, 185, 129, .3); }
+.transfer-page .badge.pending { background: rgba(240, 208, 96, .1); color: var(--accent); border-color: rgba(240, 208, 96, .3); }
+.transfer-page .badge.closed, .transfer-page .badge.rejected { background: rgba(239, 68, 68, .1); color: #ffb3b6; border-color: rgba(239, 68, 68, .3); }
+.transfer-page .history-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.transfer-page .history-toolbar h2 { font-size: 20px; margin: 0; }
+.transfer-page .history-toolbar .refresh { margin: 0; flex-shrink: 0; }
+.transfer-page .safety-note { background: rgba(240, 208, 96, .06); border-color: var(--line); }
+.transfer-page .player-detail-avatar { color: var(--accent); background-color: rgba(240, 208, 96, .1); }
+@media (max-width: 760px) {
+    .transfer-page .topbar { padding: 16px; gap: 12px; }
+    .transfer-page .brand { font-size: 19px; }
+    .transfer-page .brand span { font-size: 8px; letter-spacing: 1.5px; }
+    .transfer-page .page-nav { gap: 10px; }
+    .transfer-page main { padding: 24px 16px 40px; }
+    .transfer-page .panel { padding: 16px; }
+    .transfer-page .team-bar { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .transfer-page .team-actions { width: auto; }
+    .transfer-page .transfer-tab { flex: 1; padding: 10px 12px; }
+    .transfer-page .player-row { flex-direction: row; align-items: center; gap: 8px; }
+    .transfer-page .player-row .button { width: auto; padding: 8px 12px; }
+    .transfer-page .person { gap: 8px; }
+    .transfer-page .person strong { font-size: 14px; }
+    .transfer-page .history-toolbar { flex-wrap: wrap; }
+}

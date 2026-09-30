@@ -1,6 +1,29 @@
 import { createTransferApi } from './transfer-api.mjs';
 const api = createTransferApi();
 const $ = id => document.getElementById(id);
+const tabs = [$('search-tab'), $('history-tab')];
+function selectTab(tab) {
+    for (const item of tabs) {
+        const selected = item === tab;
+        item.setAttribute('aria-selected', String(selected));
+        item.tabIndex = selected ? 0 : -1;
+        $(item.getAttribute('aria-controls')).hidden = !selected;
+    }
+}
+for (const [index, tab] of tabs.entries()) {
+    tab.addEventListener('click', () => selectTab(tab));
+    tab.addEventListener('keydown', event => {
+        let next;
+        if (event.key === 'ArrowRight') next = tabs[(index + 1) % tabs.length];
+        else if (event.key === 'ArrowLeft') next = tabs[(index + tabs.length - 1) % tabs.length];
+        else if (event.key === 'Home') next = tabs[0];
+        else if (event.key === 'End') next = tabs[tabs.length - 1];
+        if (!next) return;
+        event.preventDefault();
+        selectTab(next);
+        next.focus();
+    });
+}
 const state = { active:false, epoch:0, windowOpen:false, selected:null, submitting:false,
     searchVersion:0, historyVersion:0, query:'', playersCursor:null, historyCursor:null, preview:null };
 let searchAbort, debounce, expiryTimer;
