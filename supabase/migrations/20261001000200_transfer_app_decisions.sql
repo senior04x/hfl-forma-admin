@@ -111,6 +111,12 @@ BEGIN
     END IF;
     INSERT INTO public.transfer_consents(transfer_id,party,subject_id,decision)
     VALUES(p_transfer_id,p_party,v_subject,p_decision);
+    -- Existing admin transfer subscriptions can invalidate their scoped list.
+    -- This does not change transfer status or queue a duplicate status message.
+    UPDATE public.transfers SET player_confirmed=EXISTS (
+        SELECT 1 FROM public.transfer_consents WHERE transfer_id=p_transfer_id
+            AND party='player' AND subject_id=v_transfer.player_id AND decision='approved'
+    ) WHERE id=p_transfer_id;
     SELECT count(*)=3 INTO v_ready FROM public.transfer_consents
     WHERE transfer_id=p_transfer_id AND decision='approved'
         AND subject_id=CASE party WHEN 'player' THEN v_transfer.player_id

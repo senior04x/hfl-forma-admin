@@ -62,7 +62,9 @@ BEGIN
         ORDER BY tr.created_at DESC,tr.id DESC LIMIT 21
     ) r;
     RETURN jsonb_build_object('status',200,'items',CASE WHEN jsonb_array_length(v_items)>20 THEN v_items-20 ELSE v_items END,
-        'next_cursor',CASE WHEN jsonb_array_length(v_items)>20 THEN v_items->19->>'id' ELSE NULL END);
+        'next_cursor',CASE WHEN jsonb_array_length(v_items)>20 THEN v_items->19->>'id' ELSE NULL END,
+        'transfer_window_open',CASE WHEN p_actor='captain' THEN (SELECT coalesce(o.transfer_window_open,false)
+            FROM public.teams tm JOIN public.organizations o ON o.id=tm.organization_id WHERE tm.id=v_subject) ELSE false END);
 END;
 $$;
 REVOKE ALL ON FUNCTION public.transfer_app_page(text,text,text,uuid,uuid) FROM PUBLIC,anon,authenticated;
