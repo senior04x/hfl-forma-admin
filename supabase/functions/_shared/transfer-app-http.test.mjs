@@ -71,3 +71,27 @@ test('malformed and oversized requests never write to the database', async () =>
     assert.equal((await handler(rawRequest('x'.repeat(4097)))).status, 413);
     assert.equal((await handler(new Request('https://example.test'))).status, 405);
 });
+test('mobile request uses a separate RPC and derives destination from session', async () => {
+    let call;
+    const handler = createTransferAppHandler('request', async (name, params) => {
+        call = { name, params }; return { data: { status: 201, success: true }, error: null };
+    });
+    assert.equal((await handler(request({ player_id: id, reason: ' Join team ', new_team_id: 'forged', app_consent_required: false }))).status, 201);
+    assert.equal(call.name, 'request_transfer_app');
+    assert.equal(call.params.p_team_id, null);
+    assert.equal(call.params.p_reason, 'Join team');
+    assert.equal(call.params.app_consent_required, undefined);
+});
+test('scoped pages only forward a validated actor, direction and cursor', async () => {
+    let call;
+    const handler = createTransferAppHandler('page', async (name, params) => {
+        call = { name, params }; return { data: { status: 200, items: [], next_cursor: null }, error: null };
+    });
+    assert.equal((await handler(request({ actor: 'captain', direction: 'incoming', after: id, team_id: 'forged' }))).status, 200);
+    assert.equal(call.name, 'transfer_app_page');
+    assert.equal(call.params.p_team_id, undefined);
+    assert.equal(call.params.p_after, id);
+    for (const body of [{ actor: 'admin' }, { actor: 'player', after: 'invalid' }, { actor: 'captain', direction: 'public' }]) {
+        assert.equal((await handler(request(body))).status, 400);
+    }
+});
