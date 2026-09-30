@@ -6,6 +6,7 @@ import { getActiveOrgLeagues, applyOrgAndCollabFilter } from '../utils/leagueUti
 import { getActiveOrgTournaments, getTournamentLeagues, getTournamentTeams, getStageDisplayTitle, STAGES, STAGE_LABELS } from '../utils/tournamentUtils';
 import { Calendar, Plus, MapPin, Clock, Video, Trash2, Download, Filter, ChevronDown, Trophy, Layers, Pencil, CheckCircle2, Radio, AlertCircle, Wifi, WifiOff, Award } from 'lucide-react';
 import { obsService } from '../services/obsService';
+import { getYouTubeScheduledStartTime } from '../utils/youtubeSchedule';
 import html2canvas from 'html2canvas';
 import './Schedule.css';
 
@@ -514,12 +515,7 @@ const Schedule = () => {
 
     setYtLoading(true);
     try {
-      let startTime;
-      try {
-        startTime = new Date(`${matchObj.match_date}T${matchObj.match_time}:00`).toISOString();
-      } catch (e) {
-        startTime = new Date().toISOString();
-      }
+      const startTime = getYouTubeScheduledStartTime(matchObj);
 
       const homeTeamObj = teams.find(t => t.id === matchObj.home_team_id) || matchObj.home_team;
       const awayTeamObj = teams.find(t => t.id === matchObj.away_team_id) || matchObj.away_team;
