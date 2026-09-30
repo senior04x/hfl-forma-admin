@@ -71,3 +71,15 @@
     .transfer-page .person strong { font-size: 14px; }
     .transfer-page .history-toolbar { flex-wrap: wrap; }
 }
+.transfer-page .request-player { display: flex; align-items: center; gap: 12px; margin: 16px 0 20px; overflow-wrap: anywhere; }
+.transfer-page .request-player > div:last-child { min-width: 0; }
+.transfer-page .request-player h2 { margin: 0 0 4px; }
+.transfer-page .request-player p { margin: 0; }
+.transfer-page .history-top { cursor: pointer; border-radius: 6px; position: relative; padding-right: 22px; }
+.transfer-page .history-top::after { content: '+'; position: absolute; right: 0; color: var(--muted); }
+.transfer-page details[open] > .history-top::after { content: '−'; }
+.transfer-page .history-top::-webkit-details-marker { display: none; }
+.transfer-page .history-info { min-width: 0; }
+.transfer-page .history-info strong, .transfer-page .history-info .history-meta { display: block; }
+.transfer-page .history-info .history-meta { margin: 4px 0 0; }
+.transfer-page .history-reason { padding-top: 10px; white-space: pre-wrap; }

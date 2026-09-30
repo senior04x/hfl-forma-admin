@@ -2,13 +2,14 @@ import { createTransferApi } from './transfer-api.mjs';
 const api = createTransferApi();
 const $ = id => document.getElementById(id);
 const tabs = [$('search-tab'), $('history-tab')];
-function selectTab(tab) {
+function selectTab(tab, load = true) {
     for (const item of tabs) {
         const selected = item === tab;
         item.setAttribute('aria-selected', String(selected));
         item.tabIndex = selected ? 0 : -1;
         $(item.getAttribute('aria-controls')).hidden = !selected;
     }
+    if (load && tab.id === 'history-tab' && !state.historyLoaded && !state.historyLoading) void history();
 }
 for (const [index, tab] of tabs.entries()) {
     tab.addEventListener('click', () => selectTab(tab));
@@ -25,7 +26,7 @@ for (const [index, tab] of tabs.entries()) {
     });
 }
 const state = { active:false, epoch:0, windowOpen:false, selected:null, submitting:false,
-    searchVersion:0, historyVersion:0, query:'', playersCursor:null, historyCursor:null, preview:null };
+    searchVersion:0, historyVersion:0, query:'', playersCursor:null, historyCursor:null, historyLoaded:false, historyLoading:false };
 let searchAbort, debounce, expiryTimer;
 const el = (tag, text, className) => {
     const node = document.createElement(tag);
@@ -80,30 +81,23 @@ function avatar(player,className='player-avatar') {
         node.addEventListener('error',()=>node.replaceWith(el('span',initials,className)),{once:true});}
     return node;
 }
-function openPlayer(player) {
-    state.preview=player; const name=[player.first_name,player.last_name].filter(Boolean).join(' ')||'Ismi ko‘rsatilmagan';
-    $('player-detail-name').textContent=name; $('player-detail-photo').replaceChildren(avatar(player,'player-detail-avatar'));
-    const fields=[['Jamoasi',player.team_name],['Forma raqami',player.player_number!=null?`#${player.player_number}`:'—'],['Pozitsiyasi',player.position||'—'],['Holati','Tasdiqlangan o‘yinchi']];
-    $('player-detail-fields').replaceChildren(...fields.flatMap(([label,value])=>[el('dt',label),el('dd',value)]));
-    $('choose-player').disabled=!state.windowOpen||player.has_pending; $('choose-player').textContent=player.has_pending?'Ariza mavjud':'Transferga tanlash';
-    $('player-dialog').showModal();
-}
 function openRequest(player) {
-    state.selected=player; $('request-heading').textContent=[player.first_name,player.last_name].filter(Boolean).join(' ');
+    if (!state.active || state.submitting || !state.windowOpen || player.has_pending) return;
+    state.selected=player;
+    $('request-heading').textContent=[player.first_name,player.last_name].filter(Boolean).join(' ') || 'Ismi ko‘rsatilmagan';
+    $('selected-photo').replaceChildren(avatar(player));
     $('selected-team').textContent=[player.team_name,player.player_number!=null?`#${player.player_number}`:'',player.position].filter(Boolean).join(' · ');
-    $('reason').value=''; $('request-error').hidden=true; $('request-dialog').showModal(); $('reason').focus();
+    $('reason').value=''; $('request-error').hidden=true;
+    $('request-dialog').showModal(); $('reason').focus();
 }
-$('close-player').addEventListener('click',()=>$('player-dialog').close());
-$('choose-player').addEventListener('click',()=>{if(!state.preview)return;const player=state.preview;$('player-dialog').close();openRequest(player);});
 function playerRow(player) {
     const row=el('li',null,'player-row'); const person=el('div',null,'person');
     const name=[player.first_name,player.last_name].filter(Boolean).join(' ');
     const meta=[player.player_number!=null?`#${player.player_number}`:'',player.position,player.team_name].filter(Boolean).join(' · ');
     const details=el('div',null,'player-info'); details.append(el('strong',name||'Ismi ko‘rsatilmagan'),el('p',meta)); person.append(avatar(player),details);
-    const button=el('button',player.has_pending ? 'Ariza mavjud' : 'Ko‘rish','button quiet');
+    const button=el('button',player.has_pending ? 'Ariza mavjud' : 'Tanlash','button quiet');
     button.type='button'; button.dataset.pending=String(Boolean(player.has_pending)); button.disabled=!state.windowOpen || player.has_pending;
-    button.addEventListener('click',()=>openPlayer(player)); person.tabIndex=0; person.role='button'; person.addEventListener('click',()=>openPlayer(player));
-    person.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openPlayer(player);}});
+    button.addEventListener('click',()=>openRequest(player));
     row.append(person,button); return row;
 }
 async function search(more = false) {
@@ -129,26 +123,31 @@ $('player-query').addEventListener('input',()=>{
 });
 $('players-more').addEventListener('click',()=>void search(true));
 function historyRow(item) {
-    const row=el('li'); const top=el('div',null,'history-top');
-    const labels={pending:'Admin ko‘rib chiqmoqda',approved:'Tasdiqlangan',rejected:'Rad etilgan'};
-    top.append(el('strong',item.player_name),el('span',labels[item.status]||'Holat noma’lum',`badge ${['pending','approved','rejected'].includes(item.status)?item.status:''}`));
+    const row=el('li'); const detail=el('details'); const top=el('summary',null,'history-top');
+    const labels={pending:'Kutilmoqda',approved:'Tasdiqlangan',rejected:'Rad etilgan'};
     const date=new Date(item.created_at);
-    row.append(top,el('p',`${item.old_team_name || '—'} · ${Number.isNaN(date.getTime())?'—':date.toLocaleDateString('uz-UZ')}`,'history-meta'),el('p',item.reason,'history-reason'));
+    const info=el('span',null,'history-info');
+    info.append(el('strong',item.player_name),el('span',`${item.old_team_name || '—'} · ${Number.isNaN(date.getTime())?'—':date.toLocaleDateString('uz-UZ')}`,'history-meta'));
+    top.append(info,el('span',labels[item.status]||'Holat noma’lum',`badge ${['pending','approved','rejected'].includes(item.status)?item.status:''}`));
+    detail.append(top,el('p',item.reason,'history-reason'));
+    row.append(detail);
     return row;
 }
 async function history(more = false) {
     if (!state.active) return;
+    state.historyLoading=true;
     const version=++state.historyVersion, epoch=state.epoch;
     $('refresh-history').disabled=true; $('history-more').hidden=true; $('history-status').textContent='Yuklanmoqda…';
     if (!more) { $('history').replaceChildren(); state.historyCursor=null; }
     try {
         const data=await api.page('history',{after:more ? state.historyCursor : null});
         if (version!==state.historyVersion || epoch!==state.epoch) return;
+        state.historyLoaded=true;
         $('history').append(...data.items.map(historyRow)); state.historyCursor=data.next_cursor;
         $('history-more').hidden=!data.next_cursor;
         $('history-status').textContent=$('history').children.length ? '' : 'Hozircha ariza yuborilmagan.';
     } catch (error) { if (version===state.historyVersion && epoch===state.epoch) handleError(error,$('history-status')); }
-    finally { if (version===state.historyVersion) $('refresh-history').disabled=false; }
+    finally { if (version===state.historyVersion) { state.historyLoading=false; $('refresh-history').disabled=false; } }
 }
 $('history-more').addEventListener('click',()=>void history(true));
 $('refresh-history').addEventListener('click',async()=>{
@@ -174,6 +173,8 @@ $('request-form').addEventListener('submit',async event=>{
         if (epoch!==state.epoch) return;
         $('request-dialog').close(); state.selected=null;
         notice('Ariza yuborildi. Admin qarorini shu yerda kuzating.');
+        state.historyLoaded=false;
+        selectTab($('history-tab'), false);
         await Promise.all([history(),search()]);
     } catch(error) { if(epoch===state.epoch) handleError(error,$('request-error')); }
     finally { state.submitting=false; $('send-request').disabled=false; $('cancel-request').disabled=false; $('send-request').textContent='Ariza yuborish'; }
@@ -184,7 +185,7 @@ if (org) { const url=new URL($('home-link').href); url.searchParams.set('org',or
 async function boot() {
     if (!api.hasSession()) { reset(); return; }
     state.active=true; $('workspace').hidden=false;
-    try { await context(); if (state.active) await Promise.all([search(false),history(false)]); }
+    try { await context(); if (state.active) await search(false); }
     catch (error) { handleError(error); }
 }
 void boot();

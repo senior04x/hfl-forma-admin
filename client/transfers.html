@@ -45,14 +45,10 @@
         </section>
       </div>
     </section>
-    <dialog id="player-dialog" aria-labelledby="player-detail-name">
-      <div class="player-detail"><div id="player-detail-photo"></div><div><p class="eyebrow">O‘YINCHI MA’LUMOTI</p><h2 id="player-detail-name"></h2><dl id="player-detail-fields"></dl></div></div>
-      <div class="dialog-actions"><button id="close-player" type="button" class="button quiet">Yopish</button><button id="choose-player" type="button" class="button primary">Transferga tanlash</button></div>
-    </dialog>
     <dialog id="request-dialog" aria-labelledby="request-heading">
-      <form id="request-form"><p class="eyebrow">YANGI TRANSFER ARIZASI</p><h2 id="request-heading"></h2><p id="selected-team" class="muted"></p>
-        <label for="reason">Transfer sababi</label><textarea id="reason" rows="4" maxlength="1000" required placeholder="Nega bu o'yinchini jamoangizga olmoqchisiz?"></textarea>
-        <div class="safety-note"><strong>Admin tasdig‘i shart</strong><span>O‘yinchiga bildirishnoma boradi. Jamoa faqat admin tasdiqlagach o‘zgaradi.</span></div>
+      <form id="request-form"><p class="eyebrow">YANGI TRANSFER ARIZASI</p><div class="request-player"><div id="selected-photo"></div><div><h2 id="request-heading"></h2><p id="selected-team" class="muted"></p></div></div>
+        <label for="reason">Transfer sababi</label><textarea id="reason" rows="3" maxlength="1000" required placeholder="Nega bu o'yinchini jamoangizga olmoqchisiz?"></textarea>
+        <div class="safety-note"><span>O‘yinchiga xabar boradi; transfer admin tasdiqlagach amalga oshadi.</span></div>
         <p id="request-error" class="error-text" role="alert" hidden></p>
         <div class="dialog-actions"><button id="cancel-request" type="button" class="button quiet">Bekor qilish</button><button id="send-request" type="submit" class="button primary">Ariza yuborish</button></div>
       </form>
