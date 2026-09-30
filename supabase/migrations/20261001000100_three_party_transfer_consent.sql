@@ -1,6 +1,10 @@
 -- Deploy together with consent delivery/UI. Never send historical requests automatically.
 BEGIN;
 
+-- Existing rows and unchanged web request_team_transfer INSERTs stay legacy.
+-- Only the trusted mobile request RPC explicitly sets this true.
+ALTER TABLE public.transfers ADD COLUMN app_consent_required boolean NOT NULL DEFAULT false;
+
 CREATE TABLE public.transfer_consents (
     transfer_id uuid NOT NULL REFERENCES public.transfers(id) ON DELETE CASCADE,
     party text NOT NULL CHECK (party IN ('player','old_team','new_team')),
@@ -34,7 +38,7 @@ BEGIN
     END IF;
     -- Share the transfer lock with admin approval: a decision cannot race it.
     SELECT * INTO v_transfer FROM public.transfers WHERE id=NEW.transfer_id FOR UPDATE;
-    IF NOT FOUND OR v_transfer.status IS DISTINCT FROM 'pending' THEN
+    IF NOT FOUND OR v_transfer.status IS DISTINCT FROM 'pending' OR NOT v_transfer.app_consent_required THEN
         RAISE EXCEPTION 'Transfer is not pending' USING ERRCODE='23514';
     END IF;
     v_subject:=CASE NEW.party WHEN 'player' THEN v_transfer.player_id
@@ -49,11 +53,14 @@ $$;
 CREATE TRIGGER validate_transfer_consent_subject BEFORE INSERT OR UPDATE ON public.transfer_consents
 FOR EACH ROW EXECUTE FUNCTION public.validate_transfer_consent_subject();
 
--- Applies to every approval path, including both existing admin clients.
+-- Only mobile requests require consent; existing web requests remain unchanged.
 CREATE FUNCTION public.enforce_three_party_transfer_consent()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
 BEGIN
-    IF NEW.status='approved' AND OLD.status IS DISTINCT FROM 'approved' THEN
+    IF NEW.app_consent_required IS DISTINCT FROM OLD.app_consent_required THEN
+        RAISE EXCEPTION 'Transfer workflow cannot be changed after creation' USING ERRCODE='23514';
+    END IF;
+    IF NEW.app_consent_required AND NEW.status='approved' AND OLD.status IS DISTINCT FROM 'approved' THEN
         IF NOT EXISTS (SELECT 1 FROM public.transfer_consents c WHERE c.transfer_id=NEW.id
             AND c.party='player' AND c.subject_id=NEW.player_id AND c.decision='approved')
         OR NOT EXISTS (SELECT 1 FROM public.transfer_consents c WHERE c.transfer_id=NEW.id
