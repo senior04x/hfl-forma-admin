@@ -13,21 +13,21 @@ CREATE FUNCTION public.get_user_org_id() RETURNS bigint LANGUAGE sql AS $$ SELEC
 CREATE FUNCTION public.transfer_phone(value text) RETURNS text LANGUAGE sql IMMUTABLE AS $$ SELECT right(regexp_replace(value,'[^0-9]','','g'),9) $$;
 CREATE TABLE organizations(id bigint PRIMARY KEY,transfer_window_open boolean);
 CREATE TABLE admin_users(id uuid PRIMARY KEY,organization_id bigint,role text);
-CREATE TABLE teams(id uuid PRIMARY KEY,organization_id bigint,name text,logo_url text,captain_phone text);
-CREATE TABLE applications(id uuid PRIMARY KEY,team_id uuid,phone text,status text,first_name text,last_name text,photo_url text);
+CREATE TABLE teams(id uuid PRIMARY KEY,organization_id bigint,name text,logo_url text,captain_phone text,is_archived boolean DEFAULT false);
+CREATE TABLE applications(id uuid PRIMARY KEY,team_id uuid,phone text,status text,first_name text,last_name text,photo_url text,player_number integer,position text,birth_date text,citizenship text,height text,weight text);
 CREATE TABLE team_sessions(token text PRIMARY KEY,team_id uuid,phone text,expires_at timestamptz);
 CREATE TABLE otp_codes(phone text PRIMARY KEY,code text,is_used boolean,expires_at timestamptz,attempts integer);
 CREATE TABLE transfers(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),created_at timestamptz DEFAULT now(),player_id uuid REFERENCES applications(id),old_team_id uuid,new_team_id uuid,reason text,status text,player_name text,player_photo text,old_team_name text,old_team_logo text,new_team_name text,new_team_logo text,organization_id bigint,player_confirmed boolean,requested_by_team_id uuid);
 CREATE TABLE player_career_history(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),player_id uuid,team_id uuid,team_name text,organization_id bigint,joined_at timestamptz,left_at timestamptz,created_via text);
 `);
-for (const name of ['20260924000100_admin_only_transfer_decisions.sql','20260925000100_transfer_notifications.sql','20260927000100_atomic_admin_transfer.sql','20261001000100_three_party_transfer_consent.sql','20261001000200_transfer_app_decisions.sql','20261001000300_transfer_app_requests.sql','20261001000400_transfer_app_reads.sql','20261001000500_transfer_app_notifications.sql','20261001000600_transfer_login_sessions.sql','20261001000700_requesting_team_auto_consent.sql']) {
+for (const name of ['20260924000100_admin_only_transfer_decisions.sql','20260925000100_transfer_notifications.sql','20260927000100_atomic_admin_transfer.sql','20261001000100_three_party_transfer_consent.sql','20261001000200_transfer_app_decisions.sql','20261001000300_transfer_app_requests.sql','20261001000400_transfer_app_reads.sql','20261001000500_transfer_app_notifications.sql','20261001000600_transfer_login_sessions.sql','20261001000700_requesting_team_auto_consent.sql','20261001000800_transfer_player_public_details.sql']) {
  try { await db.exec(fs.readFileSync(new URL(name,migrations),'utf8')); } catch(error) { throw new Error(`Migration ${name}: ${error.message}`); }
 }
 const ids={old:'00000000-0000-0000-0000-000000000001',new:'00000000-0000-0000-0000-000000000002',player:'00000000-0000-0000-0000-000000000003',admin:'00000000-0000-0000-0000-000000000004',foreign:'00000000-0000-0000-0000-000000000005'};
 const token = char => 'sha256:'+char.repeat(64);
 await db.query('INSERT INTO organizations VALUES(1,true),(2,true)');
 await db.query(`INSERT INTO teams(id,organization_id,name,captain_phone) VALUES($1,1,'Old','901111111'),($2,1,'New','902222222'),($3,2,'Foreign','903333333')`,[ids.old,ids.new,ids.foreign]);
-await db.query(`INSERT INTO applications VALUES($1,$2,'904444444','approved','Ali','Player',null)`,[ids.player,ids.old]);
+await db.query(`INSERT INTO applications(id,team_id,phone,status,first_name,last_name,photo_url) VALUES($1,$2,'904444444','approved','Ali','Player',null)`,[ids.player,ids.old]);
 await db.query(`INSERT INTO admin_users VALUES($1,1,'org_admin')`,[ids.admin]);
 await db.query(`INSERT INTO team_sessions VALUES($1,$2,'901111111',now()+interval '1 hour'),($3,$4,'902222222',now()+interval '1 hour'),($5,$6,'903333333',now()+interval '1 hour')`,[token('a'),ids.old,token('b'),ids.new,token('c'),ids.foreign]);
 await db.query(`INSERT INTO transfer_player_sessions VALUES($1,$2,'904444444',now()+interval '1 hour',now())`,[token('d'),ids.player]);
@@ -103,4 +103,19 @@ await test('verified login sessions only bind matching phone owners and remain s
  assert.equal(await rpc("has_function_privilege('authenticated','issue_transfer_login_sessions(text,jsonb)','EXECUTE')"),false);
  await assert.rejects(rpc('issue_transfer_login_sessions($1,$2)',['904444444',JSON.stringify([{subject_id:ids.player,token_hash:token('3')}])]),/Invalid actor/);
 });
+
+
+await test('candidate details expose team branding and public fields without private identifiers', async () => {
+ await db.query("UPDATE teams SET logo_url='https://example.com/team.png' WHERE id=$1",[ids.old]);
+ await db.query("UPDATE applications SET team_id=$2,player_number=10,position='Hujumchi',birth_date='2000-01-02',height='180',weight='75',citizenship='Uzbekistan' WHERE id=$1",[ids.player,ids.old]);
+ const page=await rpc("team_transfer_page($1,'players','',null,null)",[token('b')]);
+ assert.equal(page.status,200);
+ const player=page.items.find(item=>item.id===ids.player);
+ assert.ok(player);assert.equal(player.team_logo,'https://example.com/team.png');
+ assert.equal(player.player_number,10);assert.equal(player.birth_date,'2000-01-02');
+ assert.equal(player.height,'180');assert.equal(player.weight,'75');assert.equal(player.citizenship,'Uzbekistan');
+ assert.equal('phone' in player,false);assert.equal('passport' in player,false);
+ assert.equal((await rpc("team_transfer_page($1,'players','',null,null)",[token('c')])).items.some(item=>item.id===ids.player),false);
+});
+
 await db.close();
