@@ -20,7 +20,7 @@ CREATE TABLE otp_codes(phone text PRIMARY KEY,code text,is_used boolean,expires_
 CREATE TABLE transfers(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),created_at timestamptz DEFAULT now(),player_id uuid REFERENCES applications(id),old_team_id uuid,new_team_id uuid,reason text,status text,player_name text,player_photo text,old_team_name text,old_team_logo text,new_team_name text,new_team_logo text,organization_id bigint,player_confirmed boolean,requested_by_team_id uuid);
 CREATE TABLE player_career_history(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),player_id uuid,team_id uuid,team_name text,organization_id bigint,joined_at timestamptz,left_at timestamptz,created_via text);
 `);
-for (const name of ['20260924000100_admin_only_transfer_decisions.sql','20260925000100_transfer_notifications.sql','20260927000100_atomic_admin_transfer.sql','20261001000100_three_party_transfer_consent.sql','20261001000200_transfer_app_decisions.sql','20261001000300_transfer_app_requests.sql','20261001000400_transfer_app_reads.sql','20261001000500_transfer_app_notifications.sql','20261001000600_transfer_login_sessions.sql']) {
+for (const name of ['20260924000100_admin_only_transfer_decisions.sql','20260925000100_transfer_notifications.sql','20260927000100_atomic_admin_transfer.sql','20261001000100_three_party_transfer_consent.sql','20261001000200_transfer_app_decisions.sql','20261001000300_transfer_app_requests.sql','20261001000400_transfer_app_reads.sql','20261001000500_transfer_app_notifications.sql','20261001000600_transfer_login_sessions.sql','20261001000700_requesting_team_auto_consent.sql']) {
  try { await db.exec(fs.readFileSync(new URL(name,migrations),'utf8')); } catch(error) { throw new Error(`Migration ${name}: ${error.message}`); }
 }
 const ids={old:'00000000-0000-0000-0000-000000000001',new:'00000000-0000-0000-0000-000000000002',player:'00000000-0000-0000-0000-000000000003',admin:'00000000-0000-0000-0000-000000000004',foreign:'00000000-0000-0000-0000-000000000005'};
@@ -43,8 +43,11 @@ await test('mobile workflow, consent authorization and atomic final admin approv
  assert.equal((await consent(id,'player')).status,200);
  assert.equal((await consent(id,'player')).already_recorded,true);
  assert.equal((await consent(id,'player','rejected')).status,409);
- await consent(id,'old_team');await assert.rejects(approve(id),/three transfer parties/);
- assert.equal((await consent(id,'new_team')).ready_for_admin,true);
+ const automatic=(await db.query("SELECT party,subject_id,decision FROM transfer_consents WHERE transfer_id=$1 AND party='new_team'",[id])).rows;
+ assert.deepEqual(automatic,[{party:'new_team',subject_id:ids.new,decision:'approved'}]);
+ await assert.rejects(approve(id),/three transfer parties/);
+ assert.equal((await consent(id,'old_team')).ready_for_admin,true);
+ assert.equal((await consent(id,'new_team')).already_recorded,true);
  await approve(id);
  assert.equal((await db.query('SELECT team_id FROM applications WHERE id=$1',[ids.player])).rows[0].team_id,ids.new);
  const career=(await db.query('SELECT team_id,transfer_id FROM player_career_history WHERE player_id=$1 AND left_at IS NULL',[ids.player])).rows;
