@@ -95,3 +95,13 @@ test('scoped pages only forward a validated actor, direction and cursor', async 
         assert.equal((await handler(request(body))).status, 400);
     }
 });
+
+test('cancel endpoint derives ownership from the hashed session and ignores forged team IDs',async()=>{
+ let call;const handler=createTransferAppHandler('cancel',async(name,params)=>{call={name,params};return {data:{status:200,success:true},error:null};});
+ assert.equal((await handler(request({transfer_id:id,team_id:'forged',actor:'admin'}))).status,200);
+ assert.equal(call.name,'cancel_transfer_app');assert.deepEqual(Object.keys(call.params).sort(),['p_token_hash','p_transfer_id']);
+ assert.match(call.params.p_token_hash,/^sha256:[a-f0-9]{64}$/);
+ const reject=createTransferAppHandler('cancel',async()=>assert.fail('Unexpected write'));
+ assert.equal((await reject(request({transfer_id:id},null))).status,401);
+ assert.equal((await reject(request({transfer_id:'invalid'}))).status,400);
+});

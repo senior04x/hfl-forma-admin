@@ -6,7 +6,7 @@ const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store
 const reply = (status, body) => new Response(JSON.stringify(body), { status, headers });
 
 export function createTransferAppHandler(kind, rpc) {
-    if (!['verify_player', 'consent', 'page', 'request'].includes(kind)) throw new Error('Unknown transfer handler');
+    if (!['verify_player', 'consent', 'page', 'request', 'cancel'].includes(kind)) throw new Error('Unknown transfer handler');
     return async request => {
         if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
         if (request.method !== 'POST') return reply(405, { error: 'Method not allowed' });
@@ -38,6 +38,10 @@ export function createTransferAppHandler(kind, rpc) {
                     name = 'transfer_app_page';
                     params = { p_token_hash: hash, p_actor: body.actor, p_direction: body.direction ?? 'all',
                         p_after: body.after ?? null, p_transfer_id: body.transfer_id ?? null };
+                } else if (kind === 'cancel') {
+                    if (typeof body.transfer_id !== 'string' || !uuid.test(body.transfer_id)) return reply(400, { error: 'Invalid request' });
+                    name = 'cancel_transfer_app';
+                    params = { p_token_hash: hash, p_transfer_id: body.transfer_id };
                 } else if (kind === 'request') {
                     if (typeof body.player_id !== 'string' || !uuid.test(body.player_id)
                         || typeof body.reason !== 'string' || body.reason.trim().length < 1 || body.reason.trim().length > 1000) {

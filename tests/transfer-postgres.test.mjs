@@ -20,7 +20,7 @@ CREATE TABLE otp_codes(phone text PRIMARY KEY,code text,is_used boolean,expires_
 CREATE TABLE transfers(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),created_at timestamptz DEFAULT now(),player_id uuid REFERENCES applications(id),old_team_id uuid,new_team_id uuid,reason text,status text,player_name text,player_photo text,old_team_name text,old_team_logo text,new_team_name text,new_team_logo text,organization_id bigint,player_confirmed boolean,requested_by_team_id uuid);
 CREATE TABLE player_career_history(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),player_id uuid,team_id uuid,team_name text,organization_id bigint,joined_at timestamptz,left_at timestamptz,created_via text);
 `);
-for (const name of ['20260924000100_admin_only_transfer_decisions.sql','20260925000100_transfer_notifications.sql','20260927000100_atomic_admin_transfer.sql','20261001000100_three_party_transfer_consent.sql','20261001000200_transfer_app_decisions.sql','20261001000300_transfer_app_requests.sql','20261001000400_transfer_app_reads.sql','20261001000500_transfer_app_notifications.sql','20261001000600_transfer_login_sessions.sql','20261001000700_requesting_team_auto_consent.sql','20261001000800_transfer_player_public_details.sql']) {
+for (const name of ['20260924000100_admin_only_transfer_decisions.sql','20260925000100_transfer_notifications.sql','20260927000100_atomic_admin_transfer.sql','20261001000100_three_party_transfer_consent.sql','20261001000200_transfer_app_decisions.sql','20261001000300_transfer_app_requests.sql','20261001000400_transfer_app_reads.sql','20261001000500_transfer_app_notifications.sql','20261001000600_transfer_login_sessions.sql','20261001000700_requesting_team_auto_consent.sql','20261001000800_transfer_player_public_details.sql','20261001000900_cancel_mobile_transfer.sql']) {
  try { await db.exec(fs.readFileSync(new URL(name,migrations),'utf8')); } catch(error) { throw new Error(`Migration ${name}: ${error.message}`); }
 }
 const ids={old:'00000000-0000-0000-0000-000000000001',new:'00000000-0000-0000-0000-000000000002',player:'00000000-0000-0000-0000-000000000003',admin:'00000000-0000-0000-0000-000000000004',foreign:'00000000-0000-0000-0000-000000000005'};
@@ -118,4 +118,24 @@ await test('candidate details expose team branding and public fields without pri
  assert.equal((await rpc("team_transfer_page($1,'players','',null,null)",[token('c')])).items.some(item=>item.id===ids.player),false);
 });
 
+await test('only requesting captain may cancel pending mobile requests; retries are idempotent',async()=>{
+ await db.query("UPDATE transfers SET status=status WHERE player_id=$1",[ids.player]);
+ // Clear the pending fixture via the organization admin before a fresh request.
+ await db.query("UPDATE transfers SET status='rejected' WHERE player_id=$1 AND status='pending'",[ids.player]);
+ const created=await request(),id=created.transfer.id;assert.equal(created.status,201);
+ const cancel=key=>rpc('cancel_transfer_app($1,$2)',[token(key),id]);
+ assert.equal((await cancel('a')).status,403);assert.equal((await cancel('c')).status,403);
+ assert.equal((await cancel('b')).status,200);assert.equal((await cancel('b')).already_cancelled,true);
+ assert.equal((await db.query('SELECT team_id FROM applications WHERE id=$1',[ids.player])).rows[0].team_id,ids.old);
+ assert.equal((await db.query('SELECT status FROM transfers WHERE id=$1',[id])).rows[0].status,'rejected');
+ const page=await rpc('transfer_app_page($1,$2,$3,null,$4)',[token('b'),'captain','all',id]);
+ assert.equal(page.items[0].cancelled,true);assert.equal(page.items[0].can_cancel,false);
+ await assert.rejects(approve(id));
+ const next=await request();assert.equal(next.status,201);
+ await consent(next.transfer.id,'player');await consent(next.transfer.id,'old_team');await approve(next.transfer.id);
+ assert.equal((await rpc('cancel_transfer_app($1,$2)',[token('b'),next.transfer.id])).status,409);
+ await db.exec('SET ROLE authenticated');
+ await assert.rejects(db.query('INSERT INTO transfer_app_cancellations(transfer_id,team_id) VALUES($1,$2)',[next.transfer.id,ids.new]),/permission denied/);
+ await db.exec('RESET ROLE');
+});
 await db.close();
