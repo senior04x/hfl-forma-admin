@@ -21,6 +21,12 @@ Run offline gate tests: node --test supabase/functions/_shared/admin-authorizati
 
 Organization creation currently consists of separate organization, Auth identity and membership writes. The next implementation must address partial failures and retry/idempotency before switching the browser to an endpoint. Do not delete an existing organization or Auth identity as generic compensation. Client-writable admin_users remains a prerequisite blocker for both gates; protecting it and server provisioning must be released in a coordinated sequence.
 
+## Atomic organization/membership draft
+
+`security/drafts/provision-organization.sql` combines the organization and admin membership inserts in one PostgreSQL transaction. It checks the supplied UID/email against auth.users, allows service_role execution only, serializes its own calls by UID and slug, returns the existing result only for identical inputs, and rejects conflicting reuse. It never deletes data. The isolated PostgreSQL test verifies repeatability, client denial, conflict rejection and rollback when the membership insert fails. Three database tests pass; fixtures close automatically.
+
+Not deployed or wired to the browser. The live organizations schema/constraints and all other organization writers must be checked before deployment. Advisory locking coordinates this function only; retain a database unique slug constraint. Auth identity creation remains a separate external operation: a durable server request/idempotency record is still needed to retain the newly created UID across process failure and retries. This draft alone does not provide end-to-end provisioning idempotency. Do not infer ownership from an existing email or adopt/delete unrelated Auth users on retry.
+
 ## Verified draft containment
 
 `security/drafts/admin-users-isolation.sql` is a draft, outside the deployment migration directory. It removes the two observed broad policies, rejects unexpected policies transactionally, revokes table and column client grants, and allows authenticated clients to read only their own id/role/organization_id. Backend service access is retained. It must not be deployed before browser account provisioning/settings and legacy mobile login are migrated; those client writes would be denied.
