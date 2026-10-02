@@ -27,6 +27,12 @@ Organization creation currently consists of separate organization, Auth identity
 
 Not deployed or wired to the browser. The live organizations schema/constraints and all other organization writers must be checked before deployment. Advisory locking coordinates this function only; retain a database unique slug constraint. Auth identity creation remains a separate external operation: a durable server request/idempotency record is still needed to retain the newly created UID across process failure and retries. This draft alone does not provide end-to-end provisioning idempotency. Do not infer ownership from an existing email or adopt/delete unrelated Auth users on retry.
 
+## Retry-safe server orchestration (not deployed)
+
+organization-provisioning.mjs verifies global authority, validates input, durably marks auth_creating before createUser, persists the returned UID, then calls atomic provisioning. It does not delete or adopt existing users. Unknown Auth outcomes require review; retry from auth_created skips Auth creation. Six mocked workflow tests passed (17 including authorization). Tests call no external service.
+
+Required store contract BEFORE endpoint wiring: atomic claim keyed by actor UID + request UUID; reject changed canonical payload; serialize email/slug reservations across different keys; never store passwords/tokens; unforgeable backend-only lease; conditional phase updates; persist UID as immutable; completed result immutable. New claims may be reclaimed only before auth_creating. Never automatically reclaim auth_creating to new: a crash may have created an Auth account. A crashed auth_created lease may be reclaimed and repeat the idempotent SQL call. Store methods must reject stale leases, and clients must have no direct table/function access. Implement and test this durable adapter, concurrency and expiry behavior before enabling the endpoint. Current orchestration accepts an injected store only and is not a production-ready endpoint.
+
 ## Verified draft containment
 
 `security/drafts/admin-users-isolation.sql` is a draft, outside the deployment migration directory. It removes the two observed broad policies, rejects unexpected policies transactionally, revokes table and column client grants, and allows authenticated clients to read only their own id/role/organization_id. Backend service access is retained. It must not be deployed before browser account provisioning/settings and legacy mobile login are migrated; those client writes would be denied.
