@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { Building2, Plus, Pencil, Trash2, X, Check, Globe, Mail, Lock, Eye, EyeOff, ShieldAlert, AlertTriangle, Crop } from 'lucide-react';
 import ImageCropperModal from '../components/ImageCropperModal';
-import { submitOrganizationProvisioning } from '../utils/organizationProvisioning';
+import { submitOrganizationProvisioning, submitOrganizationUpdate } from '../utils/organizationProvisioning';
 import './Organizations.css';
 
 const generateRandomCode = (length = 8) => {
@@ -141,11 +141,10 @@ const Organizations = () => {
 
     try {
       if (editingOrg) {
-        const { error } = await supabase
-          .from('organizations')
-          .update({ name: formData.name, slug: formData.slug, logo_url: formData.logo_url || null })
-          .eq('id', editingOrg.id);
-        if (error) { alert('Xato: ' + error.message); return; }
+        await submitOrganizationUpdate(supabase, {
+          organizationId: editingOrg.id, name: formData.name.trim(), slug: formData.slug.trim(), logoUrl: formData.logo_url || null,
+          expected: { name: editingOrg.name, slug: editingOrg.slug, logoUrl: editingOrg.logo_url || null },
+        });
       } else {
         if (!formData.admin_email.trim() || !formData.admin_password.trim()) {
           alert('Admin email va parolni kiriting!');

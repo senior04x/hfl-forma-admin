@@ -1,7 +1,8 @@
 import { AdminAuthorizationError } from './admin-authorization.mjs';
 import { ProvisioningError } from './organization-provisioning.mjs';
 
-export function createProvisioningHandler({ enabled, allowedOrigins, run, consumeRate }) {
+export function createProvisioningHandler({ enabled, allowedOrigins, run, consumeRate,
+  inputFields = ['requestId','name','email','slug','password','logoUrl'], successCode = 'PROVISIONED' }) {
   const origins = new Set(allowedOrigins);
   return async request => {
     const origin = request.headers.get('origin');
@@ -32,7 +33,7 @@ export function createProvisioningHandler({ enabled, allowedOrigins, run, consum
       const bytes=new Uint8Array(size);let offset=0;
       for(const chunk of chunks) {bytes.set(chunk,offset);offset+=chunk.length;}
       input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
-      const fields=new Set(['requestId','name','email','slug','password','logoUrl']);
+      const fields=new Set(inputFields);
       if (!input || typeof input!=='object' || Array.isArray(input) || Object.keys(input).some(key=>!fields.has(key))) return reply(400,'INVALID_INPUT');
     } catch {return reply(400,'INVALID_INPUT');}
     try {
@@ -42,7 +43,7 @@ export function createProvisioningHandler({ enabled, allowedOrigins, run, consum
           try {allowed=await consumeRate(actorId);} catch {throw new ProvisioningError('RATE_LIMIT_UNAVAILABLE');}
           if(allowed!==true) throw new ProvisioningError('RATE_LIMITED');
         }});
-      return reply(200,'PROVISIONED',result);
+      return reply(200,successCode,result);
     } catch(error) {
       if(error instanceof AdminAuthorizationError) return reply(error.status,error.code);
       const statuses={INVALID_INPUT:400,RATE_LIMITED:429,RATE_LIMIT_UNAVAILABLE:503,

@@ -6,15 +6,15 @@ const messages = {
   RATE_LIMITED: 'Urinishlar chegarasiga yetdingiz. 15 daqiqadan keyin qayta urinib ko‘ring.',
   PROVISIONING_REQUIRES_REVIEW: 'Natijani administrator tekshirishi kerak. Yangi ariza yaratmang.',
 };
-export async function submitOrganizationProvisioning(client, body) {
+async function submitOrganizationOperation(client, body, endpoint, successCode) {
   try {
-    const {data,error} = await client.functions.invoke('provision-organization', {body});
+    const {data,error} = await client.functions.invoke(endpoint, {body});
     if (error) {
       let code;
       try { code = (await error.context?.clone().json())?.code; } catch { /* Never expose upstream details. */ }
       throw new Error(messages[code] || 'Natija olinmadi. Shu oynadan qayta urinib ko‘ring; yangi ariza yaratmang.');
     }
-    if (data?.code !== 'PROVISIONED' || !Number.isSafeInteger(data.organizationId) || data.organizationId <= 0) {
+    if (data?.code !== successCode || !Number.isSafeInteger(data.organizationId) || data.organizationId <= 0) {
       throw new Error('Natija tasdiqlanmadi. Administratorga murojaat qiling.');
     }
     return data.organizationId;
@@ -26,3 +26,5 @@ export async function submitOrganizationProvisioning(client, body) {
     throw new Error('Server bilan aloqa uzildi. Shu oynadan qayta urinib ko‘ring; yangi ariza yaratmang.');
   }
 }
+export const submitOrganizationProvisioning = (client,body) => submitOrganizationOperation(client,body,'provision-organization','PROVISIONED');
+export const submitOrganizationUpdate = (client,body) => submitOrganizationOperation(client,body,'update-organization','UPDATED');
