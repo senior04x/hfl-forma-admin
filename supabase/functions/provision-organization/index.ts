@@ -7,12 +7,17 @@ const options = { auth: { persistSession:false, autoRefreshToken:false } };
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, options);
 const auth = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, options);
 const store = createProvisioningStore(admin);
+type ProvisioningRequest = {
+  authorization: string;
+  input: { requestId: string; name: string; email: string; slug: string; password: string; logoUrl?: string | null };
+  beforeProvisioning: (actorId: string) => Promise<void>;
+};
 Deno.serve(createProvisioningHandler({
   // Enable only after protected authority, draft SQL and hosted tests are ready.
   enabled: Deno.env.get('ENABLE_ORGANIZATION_PROVISIONING') === 'true',
   allowedOrigins: (Deno.env.get('ADMIN_PROVISIONING_ORIGINS') || '').split(',').map(s=>s.trim()).filter(Boolean),
-  run: args => provisionOrganization({...args,authClient:auth,adminClient:admin,store}),
-  consumeRate: async actorId => {
+  run: (args: ProvisioningRequest) => provisionOrganization({...args,authClient:auth,adminClient:admin,store}),
+  consumeRate: async (actorId: string) => {
     const {data,error}=await admin.rpc('consume_organization_provisioning_rate',{p_actor:actorId});
     if(error) throw new Error('RATE_LIMIT_UNAVAILABLE');
     return data;
