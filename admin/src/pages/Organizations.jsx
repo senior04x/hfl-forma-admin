@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { Building2, Plus, Pencil, Trash2, X, Check, Globe, Mail, Lock, Eye, EyeOff, ShieldAlert, AlertTriangle, Crop } from 'lucide-react';
 import ImageCropperModal from '../components/ImageCropperModal';
+import { submitOrganizationProvisioning } from '../utils/organizationProvisioning';
 import './Organizations.css';
 
 const generateRandomCode = (length = 8) => {
@@ -22,6 +23,8 @@ const Organizations = () => {
   const [stats, setStats] = useState({});
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const savingRef = useRef(false);
+  const provisioningAttempt = useRef(null);
 
   // Cropper states
   const fileInputRef = useRef(null);
@@ -66,6 +69,7 @@ const Organizations = () => {
   };
 
   const openCreateModal = () => {
+    provisioningAttempt.current = null;
     setEditingOrg(null);
     setFormData({ name: '', slug: '', logo_url: '', admin_email: '', admin_password: '' });
     setShowPassword(false);
@@ -131,7 +135,8 @@ const Organizations = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.slug.trim()) return;
+    if (savingRef.current || !formData.name.trim() || !formData.slug.trim()) return;
+    savingRef.current = true;
     setSaving(true);
 
     try {
@@ -146,44 +151,29 @@ const Organizations = () => {
           alert('Admin email va parolni kiriting!');
           return;
         }
-        if (formData.admin_password.length < 6) {
-          alert('Parol kamida 6 ta belgidan iborat bo\'lishi kerak!');
+        if (formData.admin_password.length < 12 || formData.admin_password.length > 128) {
+          alert('Parol 12–128 ta belgidan iborat bo‘lishi kerak!');
           return;
         }
 
-        const { data: newOrg, error: orgError } = await supabase
-          .from('organizations')
-          .insert({ name: formData.name, slug: formData.slug, logo_url: formData.logo_url || null })
-          .select()
-          .single();
-        if (orgError) { alert('Tashkilot yaratishda xato: ' + orgError.message); return; }
-
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: formData.admin_email.trim(),
-          password: formData.admin_password,
-          email_confirm: true,
-          user_metadata: { role: 'org_admin', organization_id: newOrg.id }
-        });
-        if (authError) { 
-          await supabase.from('organizations').delete().eq('id', newOrg.id);
-          alert('Admin akkaunt yaratishda xato: ' + authError.message); 
-          return; 
+        const payload = { name: formData.name.trim(), slug: formData.slug.trim(),
+          email: formData.admin_email.trim().toLowerCase(), logoUrl: formData.logo_url || null };
+        const fingerprint = JSON.stringify(payload); // No password in retry metadata.
+        if (provisioningAttempt.current && provisioningAttempt.current.fingerprint !== fingerprint) {
+          alert('Avvalgi so‘rov natijasini tekshirmasdan ma’lumotlarni o‘zgartirmang.');
+          return;
         }
-
-        if (authData.user) {
-          await supabase.from('admin_users').insert({
-            id: authData.user.id,
-            email: formData.admin_email.trim(),
-            role: 'org_admin',
-            organization_id: newOrg.id,
-          });
-        }
+        provisioningAttempt.current ??= { fingerprint, requestId: crypto.randomUUID() };
+        await submitOrganizationProvisioning(supabase, { ...payload,
+          requestId: provisioningAttempt.current.requestId, password: formData.admin_password });
       }
       setShowModal(false);
+      setFormData(prev => ({ ...prev, admin_password: '' }));
       fetchOrganizations();
     } catch (err) {
       alert('Kutilmagan xato: ' + err.message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -422,7 +412,7 @@ const Organizations = () => {
                         type={showPassword ? 'text' : 'password'}
                         value={formData.admin_password}
                         onChange={e => setFormData(prev => ({ ...prev, admin_password: e.target.value }))}
-                        placeholder="Kamida 6 belgi"
+                        placeholder="Kamida 12 belgi"
                       />
                       <button
                         type="button"
