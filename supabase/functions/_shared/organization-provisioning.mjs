@@ -8,7 +8,7 @@ export class ProvisioningError extends Error {
 // documented in security/ADMIN-AUTHORIZATION-STAGE.md before any endpoint uses it.
 export async function provisionOrganization({ authorization, authClient, adminClient, store, input }) {
   const actor = await authorizeGlobalAdmin({ authorization, authClient, adminClient });
-  if (!input || !/^[a-f0-9-]{36}$/i.test(input.requestId || '')
+  if (!input || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(input.requestId || '')
     || typeof input.name !== 'string' || input.name.trim().length < 1 || input.name.trim().length > 120
     || typeof input.email !== 'string' || input.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)
     || typeof input.slug !== 'string' || input.slug.length > 80 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(input.slug)
