@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {authorizeOrganizationAdmin, AdminAuthorizationError} from './admin-authorization.mjs';
+import {authorizeOrganizationAdmin, authorizeGlobalAdmin, AdminAuthorizationError} from './admin-authorization.mjs';
 const uid = '00000000-0000-4000-8000-000000000001';
 function fixture({user = {id: uid}, authError = null, admin = {id:uid, role:'org_admin', organization_id:1}, dbError = null} = {}) {
  const calls = [];
@@ -37,4 +37,25 @@ test('self-declared user metadata cannot grant admin access', async () => {
 });
 test('database failure is sanitized and grants no access', async () => {
  await assert.rejects(invoke(fixture({dbError:{message:'sensitive database detail'}})), error => error.status===503 && error.message==='AUTH_UNAVAILABLE');
+});
+
+test('global provisioning rejects organization admins and forged global metadata', async () => {
+ for (const f of [fixture(), fixture({user:{id:uid,user_metadata:{role:'super_admin'}},admin:null}),
+   fixture({admin:{id:'other',role:'super_admin',organization_id:1}})]) {
+  await rejects(authorizeGlobalAdmin({...f, authorization:'Bearer test-token'}),403);
+ }
+});
+
+test('global provisioning grants only the verified database super admin', async () => {
+ const f=fixture({admin:{id:uid,role:'super_admin',organization_id:null}});
+ assert.deepEqual(await authorizeGlobalAdmin({...f,authorization:'Bearer test-token'}),{userId:uid,role:'super_admin'});
+ assert.deepEqual(f.calls.at(-1),['identity','id',uid]);
+});
+
+test('global provisioning denies missing tokens and sanitizes database errors', async () => {
+ const f=fixture();
+ await rejects(authorizeGlobalAdmin({...f,authorization:''}),401);
+ assert.deepEqual(f.calls,[]);
+ await assert.rejects(authorizeGlobalAdmin({...fixture({dbError:{message:'private'}}),authorization:'Bearer test-token'}),
+   error => error.status===503 && error.message==='AUTH_UNAVAILABLE');
 });
