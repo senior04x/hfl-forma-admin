@@ -39,6 +39,10 @@ Required store contract BEFORE endpoint wiring: atomic claim keyed by actor UID 
 
 Four in-memory PostgreSQL tests pass. The store test uses the real adapter against SQL, checks client denial, competing serialized claims, duplicate reservations, payload changes, expired/stale leases, recovery from persisted UID and immutable completion. PGlite serializes connections: this does NOT establish multi-connection hosted concurrency behavior. Production schema/deployment, endpoint rate limiting, timeout/reconciliation procedure and isolated hosted concurrent testing remain outstanding. Fixtures are in memory and closed in finally; production has no test rows to clean.
 
+## HTTP endpoint prepared, disabled
+
+provision-organization/index.ts now wires dedicated Auth/service clients, durable store and workflow. It never forwards caller Authorization to the service client. Provisioning is disabled unless ENABLE_ORGANIZATION_PROVISIONING=true; configured ADMIN_PROVISIONING_ORIGINS allow specific browser origins. The handler bounds streamed bodies to 8192 bytes, requires JSON/Bearer syntax, rejects extra fields, returns sanitized errors and no-store responses. Verified authority precedes the rate check and external writes. consume_organization_provisioning_rate is a required backend RPC, not yet implemented: missing/unavailable limiter fails closed. Twenty mocked/unit tests pass. Deno is unavailable locally, so the Edge entry point still needs runtime/type validation in an isolated environment. No config flags changed, no endpoint deployed, no browser creation flow replaced.
+
 ## Verified draft containment
 
 `security/drafts/admin-users-isolation.sql` is a draft, outside the deployment migration directory. It removes the two observed broad policies, rejects unexpected policies transactionally, revokes table and column client grants, and allows authenticated clients to read only their own id/role/organization_id. Backend service access is retained. It must not be deployed before browser account provisioning/settings and legacy mobile login are migrated; those client writes would be denied.

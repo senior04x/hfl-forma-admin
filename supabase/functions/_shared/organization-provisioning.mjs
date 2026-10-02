@@ -6,7 +6,7 @@ export class ProvisioningError extends Error {
 
 // Server-only orchestration. Store MUST implement the durable, atomic contract
 // documented in security/ADMIN-AUTHORIZATION-STAGE.md before any endpoint uses it.
-export async function provisionOrganization({ authorization, authClient, adminClient, store, input }) {
+export async function provisionOrganization({ authorization, authClient, adminClient, store, input, beforeProvisioning }) {
   const actor = await authorizeGlobalAdmin({ authorization, authClient, adminClient });
   if (!input || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(input.requestId || '')
     || typeof input.name !== 'string' || input.name.trim().length < 1 || input.name.trim().length > 120
@@ -17,6 +17,7 @@ export async function provisionOrganization({ authorization, authClient, adminCl
     throw new ProvisioningError('INVALID_INPUT');
   }
   const payload = { name: input.name.trim(), email: input.email.trim().toLowerCase(), slug: input.slug, logoUrl: input.logoUrl ?? null };
+  if (beforeProvisioning) await beforeProvisioning(actor.userId);
   let claim;
   try { claim = await store.claim({ actorId: actor.userId, requestId: input.requestId, payload }); }
   catch { throw new ProvisioningError('PROVISIONING_UNAVAILABLE'); }
