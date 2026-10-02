@@ -1,8 +1,9 @@
+import { requireOrganizationId } from './organizationId';
 import { supabase } from '../supabaseClient';
 
 export const isTransferWindowOpen = async (orgId) => {
   try {
-    const targetOrgId = orgId || 1;
+    const targetOrgId = requireOrganizationId(orgId);
     const { data, error } = await supabase
       .from('organizations')
       .select('transfer_window_open')

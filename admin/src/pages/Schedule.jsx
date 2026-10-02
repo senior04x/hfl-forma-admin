@@ -1,3 +1,4 @@
+import { requireOrganizationId } from '../utils/organizationId';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
@@ -222,7 +223,7 @@ const Schedule = () => {
       localStorage.setItem(getYtTokensKey(), payloadStr);
 
       // 2. Persist to Supabase so ALL devices of this organization share connection!
-      const currentOrgId = orgId || 1;
+      const currentOrgId = requireOrganizationId(orgId);
       const configName = `YT_OAUTH_TOKENS_${currentOrgId}`;
 
       // a) Try updating organizations table
@@ -273,7 +274,7 @@ const Schedule = () => {
     } catch (e) {}
 
     // 2. If not found in localStorage (new device/phone), fetch from Supabase DB!
-    const currentOrgId = orgId || 1;
+    const currentOrgId = requireOrganizationId(orgId);
 
     // a) Try organizations table
     try {
@@ -404,7 +405,7 @@ const Schedule = () => {
     try { localStorage.removeItem(getYtTokensKey()); } catch (e) {}
     setYtChannelInfo(null);
 
-    const currentOrgId = orgId || 1;
+    const currentOrgId = requireOrganizationId(orgId);
     try {
       await supabase.from('organizations').update({ yt_tokens: null }).eq('id', currentOrgId);
     } catch (e) {}
@@ -1295,7 +1296,7 @@ const Schedule = () => {
 
       // 1. Cascade cleanup: Delete ALL 20s replay video files from Supabase Storage for this match
       try {
-        const orgId = matchToDelete?.organization_id || currentOrg?.id || 1;
+        const orgId = requireOrganizationId(matchToDelete?.organization_id || currentOrg?.id);
         const matchFolder = `${orgId}/${id}`;
 
         // List all files inside replays/<org_id>/<match_id>/

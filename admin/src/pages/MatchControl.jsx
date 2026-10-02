@@ -1,3 +1,4 @@
+import { requireOrganizationId } from '../utils/organizationId';
 import { savePrematchMode } from '../utils/obsPrematchMode';
 import { loadLeagueDuration, loadTournamentDuration, getHalfDurationSecs } from '../utils/matchDuration';
 import React, { useState, useEffect, useRef } from 'react';
@@ -124,7 +125,7 @@ const MatchControl = () => {
   };
 
   const getYtTokens = async (targetOrgId) => {
-    const activeId = targetOrgId || orgId || 1;
+    const activeId = requireOrganizationId(targetOrgId || orgId);
     const key = `hfl_yt_tokens_${activeId}`;
     try {
       const raw = localStorage.getItem(key);
@@ -154,7 +155,7 @@ const MatchControl = () => {
   };
 
   const getValidAccessToken = async (targetOrgId) => {
-    const activeId = targetOrgId || orgId || 1;
+    const activeId = requireOrganizationId(targetOrgId || orgId);
     const tokens = await getYtTokens(activeId);
     if (!tokens || !tokens.refresh_token) return null;
 
@@ -218,7 +219,7 @@ const MatchControl = () => {
     if (!finishedMatchObj) return;
 
     let videoId = extractYtVideoId(finishedMatchObj?.youtube_link);
-    const targetOrgId = finishedMatchObj?.organization_id || orgId || 1;
+    const targetOrgId = requireOrganizationId(finishedMatchObj?.organization_id || orgId);
     const accessToken = await getValidAccessToken(targetOrgId);
 
     if (!accessToken) {
@@ -452,7 +453,7 @@ const MatchControl = () => {
     const isField2 = String(match?.location || '').toLowerCase().includes('2');
     const streamId = isField2 ? 'stream2' : 'stream1';
     
-    const targetOrgId = match?.organization_id || orgId || 1;
+    const targetOrgId = requireOrganizationId(match?.organization_id || orgId);
     const universalObsLink = `${window.location.origin}/obs/scoreboard/${streamId}?org_id=${targetOrgId}`;
 
     navigator.clipboard.writeText(universalObsLink);
@@ -532,7 +533,7 @@ const MatchControl = () => {
     timerStartedAtRef.current = startedAtIso;
 
     const targetId = match?.id || id;
-    const targetOrgId = match?.organization_id || orgId || 1;
+    const targetOrgId = requireOrganizationId(match?.organization_id || orgId);
 
     const timerPayload = {
       timer_seconds: baseSec,

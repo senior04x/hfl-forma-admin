@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { parseOrganizationId } from '../utils/organizationId';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 const OrgContext = createContext(null);
@@ -14,101 +15,78 @@ export const OrgProvider = ({ children }) => {
   const [adminRole, setAdminRole] = useState(null); // 'super_admin' | 'org_admin'
   const [brandColors, setBrandColors] = useState(['#00FF66', '#10B981']);
   const [loading, setLoading] = useState(true);
+  const requestRef = useRef(0);
+  const userIdRef = useRef(null);
+  const [sessionAvailable, setSessionAvailable] = useState(false);
 
   useEffect(() => {
     loadAdminOrg();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadAdminOrg();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || event === 'USER_UPDATED' || session?.user?.id !== userIdRef.current) {
+        loadAdminOrg();
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => { requestRef.current += 1; subscription.unsubscribe(); };
   }, []);
 
-  const loadAdminOrg = async () => {
+  const loadAdminOrg = async (selectedOrgId) => {
+    const requestId = ++requestRef.current;
+    setLoading(true);
+    setCurrentOrg(null);
+    setAdminRole(null);
+    setSessionAvailable(false);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setCurrentOrg(null);
-        setAdminRole(null);
-        setLoading(false);
-        return;
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        if (requestId === requestRef.current) userIdRef.current = null;
+        throw new Error('Admin session unavailable');
       }
-
-      // 1. Get role and orgId from user_metadata or admin_users
-      const metaRole = user.user_metadata?.role;
-      const metaOrgId = user.user_metadata?.organization_id;
-      const metaBrandColors = user.user_metadata?.brand_colors;
-
-      // 2. Fetch admin_users record if available
-      const { data: adminData } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      const effectiveRole = adminData?.role || metaRole || 'org_admin';
-      const defaultOrgId = adminData?.organization_id || metaOrgId || 1;
-
-      setAdminRole(effectiveRole);
-
-      // Check if super_admin previously switched org saved in localStorage
-      const savedOrgId = localStorage.getItem('hfl_active_org_id');
-      const effectiveOrgId = (effectiveRole === 'super_admin' && savedOrgId) ? Number(savedOrgId) : defaultOrgId;
-
-      // 3. Fetch organization details
-      let { data: orgData } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('id', effectiveOrgId)
-        .maybeSingle();
-
-      if (!orgData && effectiveOrgId !== defaultOrgId) {
-        const fallbackRes = await supabase.from('organizations').select('*').eq('id', defaultOrgId).maybeSingle();
-        orgData = fallbackRes.data;
+      if (requestId !== requestRef.current) return;
+      userIdRef.current = user.id;
+      setSessionAvailable(true);
+      const { data: adminData, error: adminError } = await supabase
+        .from('admin_users').select('id,role,organization_id').eq('id', user.id).maybeSingle();
+      if (adminError || !adminData || adminData.id !== user.id || !['org_admin', 'super_admin'].includes(adminData.role)) {
+        throw new Error('Admin identity unavailable');
       }
-
-      if (orgData) {
-        setCurrentOrg(orgData);
-      } else {
-        if (effectiveRole === 'super_admin') {
-          const { data: mainOrg } = await supabase.from('organizations').select('*').eq('id', 1).maybeSingle();
-          setCurrentOrg(mainOrg || { id: 1, name: 'Havas Futbol Ligasi', logo_url: null });
-        } else {
-          setCurrentOrg({ id: effectiveOrgId, name: user.email ? user.email.split('@')[0] : 'Tashkilot', logo_url: null });
-        }
+      const defaultOrgId = parseOrganizationId(adminData.organization_id);
+      const savedOrgId = selectedOrgId === undefined
+        ? parseOrganizationId(localStorage.getItem('hfl_active_org_id'))
+        : parseOrganizationId(selectedOrgId);
+      if (selectedOrgId !== undefined && (adminData.role !== 'super_admin' || !savedOrgId)) {
+        throw new Error('Organization selection unavailable');
       }
-
-      const colors = metaBrandColors || orgData?.brand_colors || ['#00FF66', '#10B981'];
+      const effectiveOrgId = adminData.role === 'super_admin' && savedOrgId ? savedOrgId : defaultOrgId;
+      if (!effectiveOrgId) throw new Error('Organization unresolved');
+      const { data: orgData, error: orgError } = await supabase
+        .from('organizations').select('*').eq('id', effectiveOrgId).maybeSingle();
+      if (orgError || !orgData || parseOrganizationId(orgData.id) !== effectiveOrgId) {
+        throw new Error('Organization unavailable');
+      }
+      if (requestId !== requestRef.current) return;
+      setAdminRole(adminData.role);
+      setCurrentOrg(orgData);
+      if (adminData.role === 'super_admin') localStorage.setItem('hfl_active_org_id', String(effectiveOrgId));
+      const colors = orgData.brand_colors || ['#00FF66', '#10B981'];
       setBrandColors(colors);
-
-      const primaryColor = colors[0] || '#00FF66';
-      const gradientCSS = colors.length > 1
-        ? `linear-gradient(135deg, ${colors.join(', ')})`
-        : primaryColor;
-
-      document.documentElement.style.setProperty('--org-primary', primaryColor);
-      document.documentElement.style.setProperty('--org-gradient', gradientCSS);
-    } catch (err) {
-      console.error('OrgContext load error:', err);
-      setAdminRole('org_admin');
+      document.documentElement.style.setProperty('--org-primary', colors[0] || '#00FF66');
+      document.documentElement.style.setProperty('--org-gradient', colors.length > 1
+        ? 'linear-gradient(135deg, ' + colors.join(', ') + ')' : colors[0] || '#00FF66');
+    } catch {
+      if (requestId !== requestRef.current) return;
+      setAdminRole(null);
       setCurrentOrg(null);
     } finally {
-      setLoading(false);
+      if (requestId === requestRef.current) setLoading(false);
     }
   };
 
-  const switchOrg = (orgOrId, name, logo_url) => {
-    let targetOrg = null;
-    if (typeof orgOrId === 'object' && orgOrId !== null) {
-      targetOrg = orgOrId;
-    } else {
-      targetOrg = { id: orgOrId, name, logo_url };
-    }
-    setCurrentOrg(targetOrg);
-    if (targetOrg && targetOrg.id) {
-      localStorage.setItem('hfl_active_org_id', targetOrg.id);
-    }
+  const switchOrg = (orgOrId) => {
+    if (adminRole !== 'super_admin') return;
+    const id = parseOrganizationId(typeof orgOrId === 'object' && orgOrId !== null ? orgOrId.id : orgOrId);
+    if (id) loadAdminOrg(id);
   };
 
   const updateCurrentOrg = (updatedFields) => {
@@ -116,7 +94,7 @@ export const OrgProvider = ({ children }) => {
   };
 
   const isSuperAdmin = adminRole === 'super_admin';
-  const orgId = currentOrg?.id || 1;
+  const orgId = parseOrganizationId(currentOrg?.id);
   const primaryColor = brandColors[0] || '#00FF66';
   const gradientCSS = brandColors.length > 1
     ? `linear-gradient(135deg, ${brandColors.join(', ')})`
@@ -132,8 +110,10 @@ export const OrgProvider = ({ children }) => {
       primaryColor,
       gradientCSS,
       loading,
+      sessionAvailable,
       switchOrg,
-      updateCurrentOrg
+      updateCurrentOrg,
+      retryOrganization: () => loadAdminOrg()
     }}>
       {children}
     </OrgContext.Provider>

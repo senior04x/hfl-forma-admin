@@ -16,6 +16,7 @@ import ObsScoreboard from './pages/ObsScoreboard';
 import Archive from './pages/Archive';
 import Replays from './pages/Replays';
 import Layout from './components/Layout';
+import OrganizationGuard from './components/OrganizationGuard';
 import ImageViewer from './components/ImageViewer';
 
 function App() {
@@ -34,7 +35,7 @@ function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route element={<Layout />}>
+        <Route element={<OrganizationGuard><Layout /></OrganizationGuard>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/transfers" element={<Transfers />} />
           <Route path="/profile-updates" element={<ProfileUpdates />} />
@@ -49,7 +50,7 @@ function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/tournaments" element={<Settings key="tournaments" section="tournaments" />} />
         </Route>
-        <Route path="/match/:id" element={<MatchControl />} />
+        <Route path="/match/:id" element={<OrganizationGuard><MatchControl /></OrganizationGuard>} />
         <Route path="/obs/scoreboard/:id" element={<ObsScoreboard />} />
       </Routes>
       

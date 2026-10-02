@@ -1,3 +1,4 @@
+import { requireOrganizationId } from '../utils/organizationId';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
@@ -21,7 +22,7 @@ const Dashboard = () => {
 
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(() => {
     try {
-      const saved = localStorage.getItem(`hfl_reg_open_${orgId || 1}`);
+      const saved = localStorage.getItem(`hfl_reg_open_${requireOrganizationId(orgId)}`);
       if (saved === 'false') return false;
       if (saved === 'true') return true;
     } catch (e) {}
@@ -33,7 +34,7 @@ const Dashboard = () => {
     loadLeaguesAndStats();
     fetchRegistrationStatus();
 
-    const activeOrgId = orgId || 1;
+    const activeOrgId = requireOrganizationId(orgId);
     const channel = supabase
       .channel(`web_dashboard_reg_status_${activeOrgId}`)
       .on(
@@ -53,7 +54,7 @@ const Dashboard = () => {
   }, [currentTab, orgId]);
 
   const fetchRegistrationStatus = async () => {
-    const activeOrgId = orgId || 1;
+    const activeOrgId = requireOrganizationId(orgId);
     try {
       const { data: orgData } = await supabase
         .from('organizations')
@@ -75,7 +76,7 @@ const Dashboard = () => {
     setTogglingReg(true);
     const newState = !isRegistrationOpen;
     setIsRegistrationOpen(newState);
-    const activeOrgId = orgId || 1;
+    const activeOrgId = requireOrganizationId(orgId);
 
     // Instantly persist to localStorage for activeOrgId
     try { localStorage.setItem(`hfl_reg_open_${activeOrgId}`, newState ? 'true' : 'false'); } catch (e) {}
