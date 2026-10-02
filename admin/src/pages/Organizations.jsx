@@ -5,15 +5,6 @@ import ImageCropperModal from '../components/ImageCropperModal';
 import { submitOrganizationProvisioning, submitOrganizationUpdate } from '../utils/organizationProvisioning';
 import './Organizations.css';
 
-const generateRandomCode = (length = 8) => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-};
-
 const Organizations = () => {
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,9 +24,6 @@ const Organizations = () => {
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingOrg, setDeletingOrg] = useState(null);
-  const [confirmCode, setConfirmCode] = useState('');
-  const [userInputCode, setUserInputCode] = useState('');
-  const [deletingLoading, setDeletingLoading] = useState(false);
 
   useEffect(() => {
     fetchOrganizations();
@@ -182,47 +170,8 @@ const Organizations = () => {
       alert('Asosiy tashkilotni o\'chirish mumkin emas!');
       return;
     }
-    const code = generateRandomCode(8);
     setDeletingOrg(org);
-    setConfirmCode(code);
-    setUserInputCode('');
     setDeleteModalOpen(true);
-  };
-
-  const confirmDeleteOrganization = async () => {
-    if (!deletingOrg || userInputCode.trim().toUpperCase() !== confirmCode) return;
-    setDeletingLoading(true);
-
-    try {
-      const orgId = deletingOrg.id;
-      const { data: adminUsers } = await supabase.from('admin_users').select('id').eq('organization_id', orgId);
-      if (adminUsers && adminUsers.length > 0) {
-        for (const admin of adminUsers) {
-          await supabase.auth.admin.deleteUser(admin.id).catch(() => {});
-        }
-        await supabase.from('admin_users').delete().eq('organization_id', orgId);
-      }
-
-      await supabase.from('league_collabs').delete().or(`sender_org_id.eq.${orgId},receiver_org_id.eq.${orgId}`);
-      await supabase.from('leagues').delete().eq('organization_id', orgId);
-      await supabase.from('applications').delete().eq('organization_id', orgId);
-      await supabase.from('matches').delete().eq('organization_id', orgId);
-      await supabase.from('teams').delete().eq('organization_id', orgId);
-      await supabase.from('transfers').delete().eq('organization_id', orgId).catch(() => {});
-      await supabase.from('sponsors').delete().eq('organization_id', orgId).catch(() => {});
-
-      const { error: deleteOrgErr } = await supabase.from('organizations').delete().eq('id', orgId);
-      if (deleteOrgErr) throw deleteOrgErr;
-
-      setDeleteModalOpen(false);
-      setDeletingOrg(null);
-      await fetchOrganizations();
-      alert(`"${deletingOrg.name}" tashkiloti va unga tegishli barcha ma'lumotlar muvaffaqiyatli o'chirildi.`);
-    } catch (err) {
-      alert('O\'chirishda xatolik: ' + err.message);
-    } finally {
-      setDeletingLoading(false);
-    }
   };
 
   if (loading) {
@@ -448,7 +397,7 @@ const Organizations = () => {
         />
       )}
 
-      {/* Security Confirmation Delete Modal */}
+      {/* Destructive actions blocked until server workflow is reviewed */}
       {deleteModalOpen && deletingOrg && (
         <div className="org-modal-overlay" onClick={() => setDeleteModalOpen(false)}>
           <div className="org-modal org-delete-modal" onClick={e => e.stopPropagation()}>
@@ -456,7 +405,7 @@ const Organizations = () => {
               <div className="org-delete-icon">
                 <ShieldAlert size={26} />
               </div>
-              <h2>Tashkilotni O'chirish</h2>
+              <h2>O‘chirish vaqtincha yopiq</h2>
               <button className="org-modal-close" onClick={() => setDeleteModalOpen(false)}>
                 <X size={20} />
               </button>
@@ -465,38 +414,18 @@ const Organizations = () => {
             <div className="org-delete-body">
               <div className="org-delete-warning">
                 <AlertTriangle size={16} />
-                <span>Ushbu harakat <strong>qaytarib bo'lmaydi!</strong> Tashkilot va unga tegishli barcha jamoa, o'yinchi hamda ligalar o'chiriladi.</span>
+                <span>Ma’lumotlarni himoyalash uchun tashkilotni o‘chirish vaqtincha yopiq. Xavfsiz server jarayoni va zaxira nusxa tekshirilgach yoqiladi.</span>
               </div>
 
               <p className="org-delete-target">
-                O'chirilayotgan tashkilot: <strong>"{deletingOrg.name}"</strong>
+                Tashkilot: <strong>"{deletingOrg.name}"</strong>
               </p>
 
-              <div className="org-delete-code-box">
-                <label>Tasdiqlash uchun ushbu 8 xonali kodni kiriting:</label>
-                <div className="org-delete-code-badge">{confirmCode}</div>
-                <input
-                  type="text"
-                  className="org-delete-input"
-                  placeholder="Kodni kiriting..."
-                  value={userInputCode}
-                  onChange={e => setUserInputCode(e.target.value.toUpperCase())}
-                  maxLength={8}
-                  autoFocus
-                />
-              </div>
+              <p>Hech qanday ma’lumot o‘chirilmaydi.</p>
             </div>
 
             <div className="org-modal-footer">
-              <button className="org-btn-cancel" onClick={() => setDeleteModalOpen(false)}>Bekor qilish</button>
-              <button
-                className="org-btn-danger"
-                onClick={confirmDeleteOrganization}
-                disabled={userInputCode.trim().toUpperCase() !== confirmCode || deletingLoading}
-              >
-                <Trash2 size={16} />
-                <span>{deletingLoading ? "O'chirilmoqda..." : "O'chirish"}</span>
-              </button>
+              <button className="org-btn-cancel" onClick={() => setDeleteModalOpen(false)}>Tushunarli</button>
             </div>
           </div>
         </div>
