@@ -7,20 +7,23 @@ export default function TeamTransferAccess({orgId,windowOpen=false,windowBusy=fa
  const [items,setItems]=useState([]),[leagues,setLeagues]=useState([]),[more,setMore]=useState(false);
  const [loading,setLoading]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(new Set());
  const [retry,setRetry]=useState(0);
+ const [query,setQuery]=useState(''),[search,setSearch]=useState('');
+ useEffect(()=>{const timer=setTimeout(()=>{setSearch(query.trim());setCursor(null);},400);return()=>clearTimeout(timer);},[query]);
  const version=useRef(0),operations=useRef(new Set());
- useEffect(()=>{setOpen(false);setLeague('');setCursor(null);setItems([]);setLeagues([]);setError('');},[orgId]);
+ useEffect(()=>{setOpen(false);setLeague('');setQuery('');setSearch('');setCursor(null);setItems([]);setLeagues([]);setError('');},[orgId]);
  useEffect(()=>{
   const current=++version.current;
   if(!open) return;
+  if(search.length===1){setItems([]);setMore(false);setLoading(false);setError('');return;}
   setLoading(true);setError('');
-  loadTeamTransferAccess(supabase,orgId,league,cursor).then(result=>{
+  loadTeamTransferAccess(supabase,orgId,league,cursor,search).then(result=>{
    if(current!==version.current)return;
    setItems(result.items);setMore(result.hasMore);
    if(Array.isArray(result.leagues))setLeagues(result.leagues);
   }).catch(error=>{if(current===version.current){setItems([]);setMore(false);setError(error.message==='TEAM_ACCESS_NOT_INSTALLED'?'Jamoaviy transfer ruxsatlari serverda hali o‘rnatilmagan. Server yangilanishi kerak.':'Jamoalar yuklanmadi. Qayta urinib ko‘ring.');}})
    .finally(()=>{if(current===version.current)setLoading(false);});
   return ()=>{version.current++;};
- },[open,orgId,league,cursor,retry,windowOpen,windowBusy]);
+ },[open,orgId,league,cursor,retry,windowOpen,windowBusy,search]);
  const setLeagueAccess=async allowed=>{
   if(!league||!windowOpen||windowBusy||operations.current.size)return;
   const current=version.current;operations.current.add('league');setBusy(new Set(operations.current));setError('');
@@ -47,6 +50,8 @@ export default function TeamTransferAccess({orgId,windowOpen=false,windowBusy=fa
   {open&&<div className="tta-body">
    <p>Umumiy oyna ochilganda barcha jamoalar ochiladi, yopilganda hammasi yopiladi. Keyin liga yoki jamoa ruxsatini alohida o‘zgartiring.</p>
    {!windowOpen&&<p>Ruxsat berish uchun avval umumiy transfer oynasini oching.</p>}
+   <label>Jamoa qidirish <input type="search" placeholder="Jamoa nomini kiriting…" value={query} maxLength={80} disabled={busy.size>0} onChange={e=>setQuery(e.target.value)}/></label>
+   {query.trim().length===1&&<p>Kamida 2 ta belgi kiriting.</p>}
    <label>Liga <select value={league} disabled={busy.size>0} onChange={e=>{setLeague(e.target.value);setCursor(null);}}>
     <option value="">Barcha ligalar</option>{leagues.map(name=><option key={name} value={name}>{name}</option>)}
    </select></label>
@@ -55,7 +60,7 @@ export default function TeamTransferAccess({orgId,windowOpen=false,windowBusy=fa
     <button type="button" disabled={!windowOpen||windowBusy||loading||busy.size>0} onClick={()=>setLeagueAccess(false)}>Ligani yopish</button>
    </div>}
    {error&&<div role="alert">{error} <button type="button" onClick={()=>setRetry(value=>value+1)}>Qayta urinish</button></div>}
-   {loading?<p role="status">Yuklanmoqda…</p>:items.length===0&&!error?<p>Jamoalar topilmadi.</p>:items.map(team=><div className="tta-row" key={team.id}>
+   {loading?<p role="status">Yuklanmoqda…</p>:items.length===0&&!error&&search.length!==1?<p>Jamoalar topilmadi.</p>:items.map(team=><div className="tta-row" key={team.id}>
     <div><strong>{team.name}</strong><small>{team.league||'Liga ko‘rsatilmagan'}</small></div>
     <button type="button" role="switch" aria-checked={windowOpen&&team.allowed} aria-label={`${team.name}: o‘yinchi olishga ruxsat`}
      disabled={!windowOpen||windowBusy||busy.has('league')||busy.has(`${orgId}:${team.id}`)} className={`tta-switch ${windowOpen&&team.allowed?'on':''}`} onClick={()=>toggle(team)}><span/></button>
