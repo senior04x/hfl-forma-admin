@@ -1,0 +1,5 @@
+.team-transfer-access{margin:0 0 24px;border:1px solid rgba(128,128,128,.24);border-radius:12px;overflow:hidden}
+.tta-heading{display:flex;justify-content:space-between;width:100%;padding:16px;background:transparent;color:inherit;border:0;font:inherit;font-weight:600;cursor:pointer}
+.tta-body{padding:0 16px 16px}.tta-body>p{opacity:.75;font-size:13px}.tta-body select{margin:8px;padding:8px;border-radius:8px;background:var(--bg-card,#171b24);color:inherit;border:1px solid rgba(128,128,128,.4)}
+.tta-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(128,128,128,.18)}.tta-row small{display:block;opacity:.65;margin-top:4px}
+.tta-switch{width:46px;min-width:46px;height:28px;border:0;border-radius:20px;padding:3px;background:#677080;cursor:pointer}.tta-switch span{display:block;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .15s}.tta-switch.on{background:var(--accent,#00aa88)}.tta-switch.on span{transform:translateX(18px)}.tta-switch:disabled{opacity:.55;cursor:wait}.tta-pages{display:flex;gap:12px;margin-top:12px}

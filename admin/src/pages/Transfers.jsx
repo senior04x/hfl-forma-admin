@@ -19,6 +19,7 @@ import {
   Trash2
 } from 'lucide-react';
 import './Transfers.css';
+import TeamTransferAccess from '../components/TeamTransferAccess';
 import { loadAdminTransfers, saveAdminTransfer, deleteAdminTransfer } from '../utils/transferAdminService.mjs';
 
 const Transfers = () => {
@@ -322,6 +323,8 @@ const Transfers = () => {
           </div>
         )}
       </div>
+
+      <TeamTransferAccess key={orgId} orgId={orgId} />
 
       {/* Collapsible Filter Dropdown */}
       <div className="filter-dropdown-container" ref={filterRef}>

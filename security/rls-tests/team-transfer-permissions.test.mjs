@@ -18,5 +18,21 @@ test('team overrides never bypass the global window or organization boundary',as
   await db.exec('RESET ROLE;UPDATE organizations SET transfer_window_open=false WHERE id=1;SET ROLE service_role');
   assert.equal(await allowed(),false);await set(true);assert.equal(await allowed(),false);
   assert.equal((await db.query('SELECT team_transfer_allowed(NULL) AS allowed')).rows[0].allowed,false);
+  await db.exec(`RESET ROLE;CREATE SCHEMA auth;
+   CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+   ALTER TABLE teams ADD COLUMN name text,ADD COLUMN league text,ADD COLUMN is_archived boolean DEFAULT false;
+   UPDATE teams SET name='Synthetic team',league='Synthetic league';`);
+  await db.exec(await readFile(new URL('../drafts/admin-team-transfer-access.sql',import.meta.url),'utf8'));
+  await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[actor]);
+  await db.exec('SET ROLE authenticated');
+  const page=await db.query('SELECT admin_team_transfer_access_page(1) AS data');
+  assert.equal(page.rows[0].data.items[0].name,'Synthetic team');
+  assert.deepEqual(page.rows[0].data.leagues,['Synthetic league']);
+  await assert.rejects(db.query('SELECT admin_team_transfer_access_page(2)'),{code:'42501'});
+  await db.query('SELECT admin_set_team_transfer_access(1,$1,false)',[team]);
+  await db.exec('RESET ROLE');
+  await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",['33333333-3333-4333-8333-333333333333']);
+  await db.exec('SET ROLE authenticated');
+  await assert.rejects(db.query('SELECT admin_set_team_transfer_access(1,$1,true)',[team]),{code:'42501'});
  }finally{await db.close();}
 });
