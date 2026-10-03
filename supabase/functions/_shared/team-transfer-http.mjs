@@ -61,6 +61,9 @@ export function createTransferHandler(kind, rpc, options = {}) {
         }
       }
       const { data, error } = await rpc(name, params);
+      if (error?.code === 'P0001' && error.message === 'TEAM_TRANSFER_PAYMENT_REQUIRED') {
+        return reply(403, { error: 'Receiving team transfer access is closed', code: 'TEAM_TRANSFER_PAYMENT_REQUIRED' });
+      }
       if (error || !data || ![200, 201, 400, 401, 403, 409, 429].includes(data.status)) {
         return reply(500, { error: 'Request failed. Please retry' });
       }
