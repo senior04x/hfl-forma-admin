@@ -5,7 +5,8 @@ const from='22222222-2222-4222-8222-222222222222',to='33333333-3333-4333-8333-33
 test('receiving guard blocks incoming requests and approval, never releasing team alone',async()=>{
  const db=new PGlite();try{
   await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role;
-   CREATE TABLE organizations(id bigint PRIMARY KEY,transfer_window_open boolean);INSERT INTO organizations VALUES(1,true);
+   CREATE SCHEMA auth;CREATE TABLE auth.users(id uuid PRIMARY KEY,email text,email_confirmed_at timestamptz);INSERT INTO auth.users VALUES('${actor}','owner@example.test',now());
+   CREATE TABLE organizations(id bigint PRIMARY KEY,transfer_window_open boolean,admin_email text);INSERT INTO organizations VALUES(1,true,'owner@example.test');
    CREATE TABLE teams(id uuid PRIMARY KEY,organization_id bigint);INSERT INTO teams VALUES('${from}',1),('${to}',1);
    CREATE TABLE admin_users(id uuid PRIMARY KEY,role text,organization_id bigint);INSERT INTO admin_users VALUES('${actor}','org_admin',1);
    CREATE TABLE transfers(id serial PRIMARY KEY,old_team_id uuid,new_team_id uuid,organization_id bigint,status text);
