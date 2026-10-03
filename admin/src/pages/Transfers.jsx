@@ -324,7 +324,7 @@ const Transfers = () => {
         )}
       </div>
 
-      <TeamTransferAccess key={orgId} orgId={orgId} />
+      <TeamTransferAccess key={orgId} orgId={orgId} windowOpen={transferWindowOpen} windowBusy={windowToggling} />
 
       {/* Collapsible Filter Dropdown */}
       <div className="filter-dropdown-container" ref={filterRef}>

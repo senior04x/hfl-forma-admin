@@ -2,7 +2,7 @@ import React,{useState,useEffect,useRef} from 'react';
 import {supabase} from '../supabaseClient';
 import {loadTeamTransferAccess,saveTeamTransferAccess} from '../utils/teamTransferAccess.mjs';
 import './TeamTransferAccess.css';
-export default function TeamTransferAccess({orgId}) {
+export default function TeamTransferAccess({orgId,windowOpen=false,windowBusy=false}) {
  const [open,setOpen]=useState(false),[league,setLeague]=useState(''),[cursor,setCursor]=useState(null);
  const [items,setItems]=useState([]),[leagues,setLeagues]=useState([]),[more,setMore]=useState(false);
  const [loading,setLoading]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(new Set());
@@ -20,9 +20,19 @@ export default function TeamTransferAccess({orgId}) {
   }).catch(error=>{if(current===version.current){setItems([]);setMore(false);setError(error.message==='TEAM_ACCESS_NOT_INSTALLED'?'Jamoaviy transfer ruxsatlari serverda hali o‘rnatilmagan. Server yangilanishi kerak.':'Jamoalar yuklanmadi. Qayta urinib ko‘ring.');}})
    .finally(()=>{if(current===version.current)setLoading(false);});
   return ()=>{version.current++;};
- },[open,orgId,league,cursor,retry]);
+ },[open,orgId,league,cursor,retry,windowOpen,windowBusy]);
+ const setLeagueAccess=async allowed=>{
+  if(!league||!windowOpen||windowBusy||operations.current.size)return;
+  const current=version.current;operations.current.add('league');setBusy(new Set(operations.current));setError('');
+  try{
+   const {data,error}=await supabase.rpc('admin_set_league_transfer_access',{p_org:orgId,p_league:league,p_allowed:allowed});
+   if(error||!Number.isInteger(data))throw new Error('SAVE_FAILED');
+   if(current===version.current){setCursor(null);setRetry(value=>value+1);}
+  }catch{if(current===version.current)setError('Liga ruxsati saqlanmadi. Qayta urinib ko‘ring.');}
+  finally{operations.current.delete('league');setBusy(new Set(operations.current));}
+ };
  const toggle=async team=>{
-  const key=`${orgId}:${team.id}`;if(operations.current.has(key))return;
+  const key=`${orgId}:${team.id}`;if(!windowOpen||windowBusy||operations.current.has('league')||operations.current.has(key))return;
   const current=version.current,value=!team.allowed;
   operations.current.add(key);setBusy(new Set(operations.current));setError('');
   setItems(rows=>rows.map(row=>row.id===team.id?{...row,allowed:value}:row));
@@ -35,15 +45,20 @@ export default function TeamTransferAccess({orgId}) {
    <span>Jamoalarga alohida ruxsat</span><span aria-hidden="true">{open?'−':'+'}</span>
   </button>
   {open&&<div className="tta-body">
-   <p>Faqat o‘yinchi olishga ruxsat. Umumiy transfer oynasi ham ochiq bo‘lishi kerak.</p>
+   <p>Umumiy oyna ochilganda barcha jamoalar ochiladi, yopilganda hammasi yopiladi. Keyin liga yoki jamoa ruxsatini alohida o‘zgartiring.</p>
+   {!windowOpen&&<p>Ruxsat berish uchun avval umumiy transfer oynasini oching.</p>}
    <label>Liga <select value={league} disabled={busy.size>0} onChange={e=>{setLeague(e.target.value);setCursor(null);}}>
     <option value="">Barcha ligalar</option>{leagues.map(name=><option key={name} value={name}>{name}</option>)}
    </select></label>
+   {!!league&&<div className="tta-pages">
+    <button type="button" disabled={!windowOpen||windowBusy||loading||busy.size>0} onClick={()=>setLeagueAccess(true)}>Ligani ochish</button>
+    <button type="button" disabled={!windowOpen||windowBusy||loading||busy.size>0} onClick={()=>setLeagueAccess(false)}>Ligani yopish</button>
+   </div>}
    {error&&<div role="alert">{error} <button type="button" onClick={()=>setRetry(value=>value+1)}>Qayta urinish</button></div>}
    {loading?<p role="status">Yuklanmoqda…</p>:items.length===0&&!error?<p>Jamoalar topilmadi.</p>:items.map(team=><div className="tta-row" key={team.id}>
     <div><strong>{team.name}</strong><small>{team.league||'Liga ko‘rsatilmagan'}</small></div>
-    <button type="button" role="switch" aria-checked={team.allowed} aria-label={`${team.name}: o‘yinchi olishga ruxsat`}
-     disabled={busy.has(`${orgId}:${team.id}`)} className={`tta-switch ${team.allowed?'on':''}`} onClick={()=>toggle(team)}><span/></button>
+    <button type="button" role="switch" aria-checked={windowOpen&&team.allowed} aria-label={`${team.name}: o‘yinchi olishga ruxsat`}
+     disabled={!windowOpen||windowBusy||busy.has('league')||busy.has(`${orgId}:${team.id}`)} className={`tta-switch ${windowOpen&&team.allowed?'on':''}`} onClick={()=>toggle(team)}><span/></button>
    </div>)}
    <div className="tta-pages">
     {cursor&&<button type="button" disabled={busy.size>0||loading} onClick={()=>setCursor(null)}>Boshiga</button>}
