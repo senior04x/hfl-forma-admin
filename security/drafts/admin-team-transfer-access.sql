@@ -1,4 +1,4 @@
--- DRAFT after team-transfer-permissions.sql AND protected admin_users authority.
+-- DRAFT after team-transfer-permissions.sql AND protected organizations.admin_email authority.
 BEGIN;
 CREATE INDEX teams_transfer_access_page_idx ON public.teams(organization_id,league,id);
 CREATE FUNCTION public.admin_team_transfer_access_page(p_org bigint,p_league text DEFAULT NULL,p_after uuid DEFAULT NULL)
@@ -6,7 +6,7 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,publi
 DECLARE items jsonb; filters jsonb;
 BEGIN
  IF p_org IS NULL OR p_org<=0 OR (p_league IS NOT NULL AND length(p_league)>120) THEN RAISE EXCEPTION 'INVALID_INPUT' USING ERRCODE='22023'; END IF;
- IF NOT EXISTS(SELECT 1 FROM public.admin_users WHERE id=auth.uid() AND organization_id=p_org AND role IN ('org_admin','super_admin')) THEN
+ IF NOT public.organization_owner_matches(auth.uid(),p_org) THEN
   RAISE EXCEPTION 'ADMIN_ACCESS_DENIED' USING ERRCODE='42501'; END IF;
  SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY r.id),'[]'::jsonb) INTO items FROM (
   SELECT t.id,t.name,t.league,coalesce(p.allowed,true) AS allowed FROM public.teams t

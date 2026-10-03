@@ -1,4 +1,4 @@
--- DRAFT: deploy only with verified admin endpoint and all transfer guards.
+-- DRAFT: requires protected organizations.admin_email authority, verified Auth and all transfer guards.
 -- Explicit override; absent row preserves existing team access.
 BEGIN;
 CREATE TABLE public.team_transfer_permissions (
@@ -11,13 +11,24 @@ ALTER TABLE public.team_transfer_permissions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.team_transfer_permissions FROM PUBLIC,anon,authenticated;
 GRANT SELECT,INSERT,UPDATE ON public.team_transfer_permissions TO service_role;
 CREATE POLICY team_transfer_backend ON public.team_transfer_permissions TO service_role USING(true) WITH CHECK(true);
+-- Backend-only authority lookup; clients cannot choose an email or an actor.
+CREATE FUNCTION public.organization_owner_matches(p_actor uuid,p_org bigint)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog,public AS $$
+ SELECT EXISTS (
+  SELECT 1 FROM auth.users u JOIN public.organizations o ON lower(o.admin_email)=lower(u.email)
+  WHERE u.id=p_actor AND u.email_confirmed_at IS NOT NULL AND o.id=p_org
+   AND (SELECT count(*) FROM public.organizations other WHERE lower(other.admin_email)=lower(u.email))=1
+ )
+$$;
+REVOKE ALL ON FUNCTION public.organization_owner_matches(uuid,bigint) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.organization_owner_matches(uuid,bigint) TO service_role;
 CREATE FUNCTION public.set_team_transfer_permission(p_actor uuid,p_org bigint,p_team uuid,p_allowed boolean)
 RETURNS boolean LANGUAGE plpgsql SECURITY INVOKER SET search_path=public,pg_temp AS $$
 BEGIN
  IF p_allowed IS NULL OR p_org IS NULL OR p_org<=0 OR p_team IS NULL OR p_actor IS NULL THEN
   RAISE EXCEPTION 'INVALID_INPUT' USING ERRCODE='22023';
  END IF;
- IF NOT EXISTS(SELECT 1 FROM admin_users WHERE id=p_actor AND organization_id=p_org AND role IN ('org_admin','super_admin')) THEN
+ IF NOT public.organization_owner_matches(p_actor,p_org) THEN
   RAISE EXCEPTION 'ADMIN_ACCESS_DENIED' USING ERRCODE='42501';
  END IF;
  PERFORM 1 FROM teams WHERE id=p_team AND organization_id=p_org FOR UPDATE;
