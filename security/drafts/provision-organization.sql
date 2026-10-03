@@ -15,13 +15,12 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = p_user_id AND lower(email) = lower(p_email)) THEN
     RAISE EXCEPTION 'AUTH_IDENTITY_MISMATCH' USING ERRCODE = '22023';
   END IF;
-  PERFORM pg_advisory_xact_lock(hashtextextended('provision-user:' || p_user_id::text, 0));
+  PERFORM pg_advisory_xact_lock(hashtextextended('provision-email:' || lower(p_email), 0));
   PERFORM pg_advisory_xact_lock(hashtextextended('provision-slug:' || p_slug, 0));
-  SELECT au.role, au.email, o.id, o.name, o.slug, o.logo_url INTO existing
-    FROM public.admin_users au LEFT JOIN public.organizations o ON o.id = au.organization_id
-    WHERE au.id = p_user_id;
+  SELECT o.admin_email, o.id, o.name, o.slug, o.logo_url INTO existing
+    FROM public.organizations o WHERE lower(o.admin_email)=lower(p_email);
   IF FOUND THEN
-    IF existing.role = 'org_admin' AND lower(existing.email) = lower(p_email)
+    IF (SELECT count(*) FROM public.organizations WHERE lower(admin_email)=lower(p_email))=1
       AND existing.name = trim(p_name) AND existing.slug = p_slug
       AND existing.logo_url IS NOT DISTINCT FROM p_logo_url THEN
       RETURN existing.id;
@@ -31,10 +30,8 @@ BEGIN
   IF EXISTS (SELECT 1 FROM public.organizations WHERE slug = p_slug) THEN
     RAISE EXCEPTION 'PROVISIONING_CONFLICT' USING ERRCODE = '23505';
   END IF;
-  INSERT INTO public.organizations(name, slug, logo_url) VALUES(trim(p_name), p_slug, p_logo_url)
+  INSERT INTO public.organizations(name, slug, logo_url, admin_email) VALUES(trim(p_name), p_slug, p_logo_url, lower(p_email))
     RETURNING id INTO created_id;
-  INSERT INTO public.admin_users(id, email, role, organization_id)
-    VALUES(p_user_id, lower(p_email), 'org_admin', created_id);
   RETURN created_id;
 END $$;
 REVOKE ALL ON FUNCTION public.provision_organization(uuid,text,text,text,text) FROM PUBLIC, anon, authenticated;
