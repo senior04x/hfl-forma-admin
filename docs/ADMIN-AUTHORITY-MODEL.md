@@ -17,3 +17,13 @@ Frontend tashkilot tanlashi backend vakolatini almashtirmaydi. Backend va RLS ha
 Tashkilot adminlari uchun `admin_users` yozuvini majburiy qilgan mahalliy o‘zgarishlar noto‘g‘ri taxminga asoslangan. `azamat@havas.uz` uchun bu jadvalga yozuv yaratilmadi. Web/mobile organization context, transfer access RPC draftlari, shared admin authorization yordamchilari va ularning testlari ushbu model asosida qayta ko‘rib chiqilishi kerak. Oldingi `admin_users` asosidagi draftlarni tashkilot admini uchun productionga qo‘llamang.
 
 Bu hujjat xavfsizlik tekshiruvlari yakunlanganini yoki productionga tayyorlikni bildirmaydi.
+# Transfer permission authority
+
+Per-team transfer administration additionally requires a protected
+`organization_transfer_admin_bindings` row. Bootstrap reads the unique verified
+Auth user matching `organizations.admin_email`; browser roles cannot create or
+edit bindings. Changing an organization email cannot transfer this authority.
+New organizations and legitimate owner changes must be explicitly provisioned
+through a trusted server workflow. Missing/ambiguous bindings fail closed.
+This is scoped to transfer permissions; it does not repair the existing general
+organization write policies or change the superadmin application.
