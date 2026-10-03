@@ -48,28 +48,25 @@ export const OrgProvider = ({ children }) => {
       if (requestId !== requestRef.current) return;
       userIdRef.current = user.id;
       setSessionAvailable(true);
-      const { data: adminData, error: adminError } = await supabase
-        .from('admin_users').select('id,role,organization_id').eq('id', user.id).maybeSingle();
-      if (adminError) throw new Error('ADMIN_LOOKUP_FAILED');
-      if (!adminData || adminData.id !== user.id || !['org_admin', 'super_admin'].includes(adminData.role)) throw new Error('ADMIN_BINDING_MISSING');
-      const defaultOrgId = parseOrganizationId(adminData.organization_id);
-      const savedOrgId = selectedOrgId === undefined
-        ? parseOrganizationId(localStorage.getItem('hfl_active_org_id'))
-        : parseOrganizationId(selectedOrgId);
-      if (selectedOrgId !== undefined && (adminData.role !== 'super_admin' || !savedOrgId)) {
+      // Organization administrators belong to organizations, not ecosystem admin_users.
+      const email = typeof user.email === 'string' ? user.email.trim().toLowerCase() : '';
+      if (!email || !user.email_confirmed_at) throw new Error('ADMIN_BINDING_MISSING');
+      const escapedEmail = email.replace(/[\\%_]/g, character => '\\' + character);
+      const { data: organizations, error: orgError } = await supabase
+        .from('organizations').select('*').ilike('admin_email', escapedEmail).limit(2);
+      if (orgError) throw new Error('ORGANIZATION_LOOKUP_FAILED');
+      if (!Array.isArray(organizations) || organizations.length !== 1) throw new Error('ADMIN_BINDING_MISSING');
+      const orgData = organizations[0];
+      const effectiveOrgId = parseOrganizationId(orgData.id);
+      if (!effectiveOrgId || typeof orgData.admin_email !== 'string' || orgData.admin_email.toLowerCase() !== email) {
+        throw new Error('ADMIN_ORGANIZATION_MISSING');
+      }
+      if (selectedOrgId !== undefined && parseOrganizationId(selectedOrgId) !== effectiveOrgId) {
         throw new Error('Organization selection unavailable');
       }
-      const effectiveOrgId = adminData.role === 'super_admin' && savedOrgId ? savedOrgId : defaultOrgId;
-      if (!effectiveOrgId) throw new Error('ADMIN_ORGANIZATION_MISSING');
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations').select('*').eq('id', effectiveOrgId).maybeSingle();
-      if (orgError || !orgData || parseOrganizationId(orgData.id) !== effectiveOrgId) {
-        throw new Error('ORGANIZATION_LOOKUP_FAILED');
-      }
       if (requestId !== requestRef.current) return;
-      setAdminRole(adminData.role);
+      setAdminRole('org_admin');
       setCurrentOrg(orgData);
-      if (adminData.role === 'super_admin') localStorage.setItem('hfl_active_org_id', String(effectiveOrgId));
       const colors = orgData.brand_colors || ['#00FF66', '#10B981'];
       setBrandColors(colors);
       document.documentElement.style.setProperty('--org-primary', colors[0] || '#00FF66');
