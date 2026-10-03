@@ -18,6 +18,7 @@ export const OrgProvider = ({ children }) => {
   const requestRef = useRef(0);
   const userIdRef = useRef(null);
   const [sessionAvailable, setSessionAvailable] = useState(false);
+  const [organizationError, setOrganizationError] = useState('');
 
   useEffect(() => {
     loadAdminOrg();
@@ -37,6 +38,7 @@ export const OrgProvider = ({ children }) => {
     setCurrentOrg(null);
     setAdminRole(null);
     setSessionAvailable(false);
+    setOrganizationError('');
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
@@ -48,9 +50,8 @@ export const OrgProvider = ({ children }) => {
       setSessionAvailable(true);
       const { data: adminData, error: adminError } = await supabase
         .from('admin_users').select('id,role,organization_id').eq('id', user.id).maybeSingle();
-      if (adminError || !adminData || adminData.id !== user.id || !['org_admin', 'super_admin'].includes(adminData.role)) {
-        throw new Error('Admin identity unavailable');
-      }
+      if (adminError) throw new Error('ADMIN_LOOKUP_FAILED');
+      if (!adminData || adminData.id !== user.id || !['org_admin', 'super_admin'].includes(adminData.role)) throw new Error('ADMIN_BINDING_MISSING');
       const defaultOrgId = parseOrganizationId(adminData.organization_id);
       const savedOrgId = selectedOrgId === undefined
         ? parseOrganizationId(localStorage.getItem('hfl_active_org_id'))
@@ -59,11 +60,11 @@ export const OrgProvider = ({ children }) => {
         throw new Error('Organization selection unavailable');
       }
       const effectiveOrgId = adminData.role === 'super_admin' && savedOrgId ? savedOrgId : defaultOrgId;
-      if (!effectiveOrgId) throw new Error('Organization unresolved');
+      if (!effectiveOrgId) throw new Error('ADMIN_ORGANIZATION_MISSING');
       const { data: orgData, error: orgError } = await supabase
         .from('organizations').select('*').eq('id', effectiveOrgId).maybeSingle();
       if (orgError || !orgData || parseOrganizationId(orgData.id) !== effectiveOrgId) {
-        throw new Error('Organization unavailable');
+        throw new Error('ORGANIZATION_LOOKUP_FAILED');
       }
       if (requestId !== requestRef.current) return;
       setAdminRole(adminData.role);
@@ -74,10 +75,17 @@ export const OrgProvider = ({ children }) => {
       document.documentElement.style.setProperty('--org-primary', colors[0] || '#00FF66');
       document.documentElement.style.setProperty('--org-gradient', colors.length > 1
         ? 'linear-gradient(135deg, ' + colors.join(', ') + ')' : colors[0] || '#00FF66');
-    } catch {
+    } catch (error) {
       if (requestId !== requestRef.current) return;
       setAdminRole(null);
       setCurrentOrg(null);
+      const messages = {
+        ADMIN_BINDING_MISSING: 'Hisobingiz uchun admin ruxsati topilmadi. Tizim egasi hisobingizni tegishli tashkilotga bog‘lashi kerak.',
+        ADMIN_ORGANIZATION_MISSING: 'Admin hisobingizga tashkilot biriktirilmagan. Tizim egasi bog‘lanishni tekshirishi kerak.',
+        ADMIN_LOOKUP_FAILED: 'Admin ruxsatini tekshirib bo‘lmadi. Internet yoki serverdagi kirish ruxsatini tekshiring.',
+        ORGANIZATION_LOOKUP_FAILED: 'Hisobga biriktirilgan tashkilotni yuklab bo‘lmadi. Serverdagi kirish ruxsatini tekshiring.'
+      };
+      setOrganizationError(messages[error?.message] || 'Hisobingiz va tashkilot ruxsatini tekshiring.');
     } finally {
       if (requestId === requestRef.current) setLoading(false);
     }
@@ -103,6 +111,7 @@ export const OrgProvider = ({ children }) => {
   return (
     <OrgContext.Provider value={{
       currentOrg,
+      organizationError,
       orgId,
       adminRole,
       isSuperAdmin,
