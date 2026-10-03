@@ -22,21 +22,20 @@ test('invalid organization stops before authentication', async () => {
 test('rejected token cannot query authoritative membership', async () => {
  const f=fixture({authError:{message:'private upstream error'}}); await rejects(invoke(f),401); assert.equal(f.calls.length,1);
 });
-test('verified owner of organization one retains access and only profile authority columns are read', async () => {
- const f=fixture(); assert.deepEqual(await invoke(f),{userId:uid, organizationId:1, role:'org_admin'});
- assert.deepEqual(f.calls,[['verify','test-token'],['table','admin_users'],['columns','id,role,organization_id'],['identity','id',uid]]);
+function ownerFixture(rows=[{id:1,admin_email:'owner@example.test'}],user={id:uid,email:'owner@example.test',email_confirmed_at:'2026-01-01'},error=null) {
+ return {authClient:{auth:{getUser:async()=>({data:{user}})}},adminClient:{from:table=>{
+  assert.equal(table,'organizations');return {select:columns=>{assert.equal(columns,'id,admin_email');return {ilike:()=>({limit:async()=>({data:rows,error})})};}};
+ }}};
+}
+test('verified organization owner retains exact access without admin_users membership',async()=>{
+ assert.deepEqual(await invoke(ownerFixture()),{userId:uid,organizationId:1,role:'org_admin'});
 });
-test('no admin record, ordinary role and wrong identity are denied', async () => {
- for(const admin of [null,{id:uid,role:'user',organization_id:1},{id:'other',role:'org_admin',organization_id:1}]) await rejects(invoke(fixture({admin})),403);
+test('other organization, duplicates, missing and unverified owner are denied',async()=>{
+ for(const rows of [[],[{id:2,admin_email:'owner@example.test'}],[{id:1,admin_email:'wrong@example.test'}],[{id:1},{id:2}]]) await rejects(invoke(ownerFixture(rows)),403);
+ await rejects(invoke(ownerFixture(undefined,{id:uid,email:'owner@example.test'})),403);
 });
-test('other organization is denied even for a super admin', async () => {
- for(const role of ['org_admin','super_admin']) await rejects(invoke(fixture({admin:{id:uid,role,organization_id:2}})),403);
-});
-test('self-declared user metadata cannot grant admin access', async () => {
- await rejects(invoke(fixture({user:{id:uid,user_metadata:{role:'super_admin',organization_id:1}},admin:null})),403);
-});
-test('database failure is sanitized and grants no access', async () => {
- await assert.rejects(invoke(fixture({dbError:{message:'sensitive database detail'}})), error => error.status===503 && error.message==='AUTH_UNAVAILABLE');
+test('owner lookup errors do not disclose upstream details',async()=>{
+ await assert.rejects(invoke(ownerFixture(undefined,undefined,{message:'private'})),e=>e.status===503&&e.message==='AUTH_UNAVAILABLE');
 });
 
 test('global provisioning rejects organization admins and forged global metadata', async () => {
