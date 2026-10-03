@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex"><meta name="referrer" content="no-referrer"><meta name="theme-color" content="#080b10">
+  <title>Jamoa kabineti — AMATORA</title>
+  <link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/css/transfers.css">
+  <script type="module" src="/js/kabinet.mjs"></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/index.html">AMATORA<span>JAMOA KABINETI</span></a><nav class="page-nav"><a href="/index.html">Bosh sahifa</a><a href="/transfers.html">Transferlar</a></nav></header>
+  <main>
+    <div id="login-intro" class="intro"><p class="eyebrow">JAMOA KABINETI</p><h1>Tizimga kirish<span>.</span></h1><p>Telefon raqamingizni bir marta tasdiqlang.</p></div>
+    <p id="notice" class="notice error" role="alert" hidden></p>
+    <section id="login-panel" class="panel login-card">
+      <h2>Sardor sifatida kiring</h2>
+      <form id="login-form">
+        <div id="phone-step">
+          <label for="phone">Telefon raqami</label><input id="phone" type="tel" autocomplete="tel" placeholder="+998 90 123 45 67" maxlength="25" required>
+          <button id="request-code" class="button primary full-button" type="button">Tasdiqlash kodini olish →</button>
+        </div>
+        <div id="code-step" hidden>
+          <p id="code-status" class="muted"></p>
+          <div id="bot-help" class="bot-help" hidden>
+            <strong>Bot hali telefoningizga ulanmagan</strong>
+            <p>Telegram botni ochib Start bosing va telefon raqamingizni yuboring. Bu kodni xavfsiz yetkazish uchun kerak.</p>
+            <a id="bot-link" class="button telegram" href="https://t.me/amatora_bot?start=login" target="_blank" rel="noopener noreferrer">Telegram botni ochish ↗</a>
+          </div>
+          <label for="otp">Tasdiqlash kodi</label><input id="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4}" maxlength="4" placeholder="4 xonali kod">
+          <div id="team-choice" hidden><label for="captain-team">Jamoangiz</label><select id="captain-team"></select></div>
+          <button id="login-submit" class="button primary full-button" type="submit">Tizimga kirish →</button>
+          <button id="change-phone" class="text-button" type="button">Telefon raqamini o‘zgartirish</button>
+        </div>
+      </form>
+      <a class="register-link" href="/apply.html">Yangi jamoani ro‘yxatdan o‘tkazish</a>
+    </section>
+    <section id="account-panel" class="cabinet-dashboard" hidden>
+      <div class="panel cabinet-header">
+        <div><p class="eyebrow">SIZNING JAMOANGIZ</p><h1 id="team-name"></h1><span id="window-status" class="badge"></span></div>
+      </div>
+      <div class="cabinet-grid">
+        <a class="panel action-card primary-card" href="/transfers.html"><span class="action-icon">↔</span><div><p class="eyebrow">TRANSFER</p><h2>O‘yinchi tanlash</h2><p>Boshqa jamoadagi o‘yinchi uchun adminga ariza yuboring.</p></div><strong>Ochish →</strong></a>
+        <a id="add-player" class="panel action-card" href="/apply-individual.html"><span class="action-icon">＋</span><div><p class="eyebrow">TARKIB</p><h2>O‘yinchi qo‘shish</h2><p>Yangi o‘yinchini jamoangizga ro‘yxatdan o‘tkazing.</p></div><strong>Qo‘shish →</strong></a>
+        <div class="panel security-card"><span class="action-icon">✓</span><div><p class="eyebrow">XAVFSIZ KIRISH</p><h2>Sardor tasdiqlangan</h2><p>Har bir transfer serverda jamoangiz va tashkilotingiz bo‘yicha tekshiriladi. Yakuniy qarorni admin beradi.</p></div></div>
+      </div>
+      <div class="account-footer"><button id="logout" class="button quiet danger" type="button">Tizimdan chiqish</button></div>
+    </section>
+  </main>
+  <footer>AMATORA · O'yin davom etadi.</footer>
+</body>
+</html>

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import './Transfers.css';
 import TeamTransferAccess from '../components/TeamTransferAccess';
-import { loadAdminTransfers, saveAdminTransfer, deleteAdminTransfer } from '../utils/transferAdminService.mjs';
+import { loadAdminTransfers, saveAdminTransfer, deleteAdminTransfer, hasTransferConsents } from '../utils/transferAdminService.mjs';
 
 const Transfers = () => {
   const [transfers, setTransfers] = useState([]);
@@ -415,14 +415,14 @@ const Transfers = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button 
                     className="card-edit-btn" 
-                    disabled={busyIds.has(transfer.id)} onClick={() => handleOpenEditModal(transfer)}
+                    disabled={busyIds.has(transfer.id) || transfer.app_consent_required} onClick={() => handleOpenEditModal(transfer)}
                     title="Transferni tahrirlash"
                   >
                     <Pencil size={14} />
                   </button>
                   <button 
                     className="card-edit-btn card-delete-btn" 
-                    disabled={busyIds.has(transfer.id)} onClick={() => handleDeleteTransfer(transfer)}
+                    disabled={busyIds.has(transfer.id) || transfer.app_consent_required} onClick={() => handleDeleteTransfer(transfer)}
                     title="Transferni o'chirish"
                   >
                     <Trash2 size={14} />
@@ -466,13 +466,26 @@ const Transfers = () => {
                 </div>
               </div>
               
+              {transfer.app_consent_required && <div style={{ padding: '8px 16px 12px', fontSize: 12 }}>
+                <strong style={{ color: '#E85002' }}>Mobil ariza · Uch tomon roziligi</strong>
+                {['player','old_team','new_team'].map(party => {
+                  const consent = (transfer.transfer_consents || []).find(value => value.party === party &&
+                    value.subject_id === transfer[party === 'player' ? 'player_id' : `${party}_id`]);
+                  return <div key={party} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 6 }}>
+                    <span>{{player:'Futbolchi',old_team:'Eski jamoa sardori',new_team:'Yangi jamoa sardori'}[party]}</span>
+                    <span style={{ color: consent?.decision === 'rejected' ? '#EF4444' : undefined }}>
+                      {consent ? consent.decision === 'approved' ? 'Rozi' : 'Rad etdi' : 'Kutilmoqda'}
+                    </span>
+                  </div>;
+                })}
+              </div>}
               <div className="card-bottom">
                 {transfer.status === 'pending' && (
                   <>
                     <button className="action-btn reject" disabled={busyIds.has(transfer.id)} onClick={() => handleReject(transfer)} title="Rad etish">
                       <X size={18} /> Rad etish
                     </button>
-                    <button className="action-btn approve" disabled={busyIds.has(transfer.id)} onClick={() => handleApprove(transfer)} title="Tasdiqlash">
+                    <button className="action-btn approve" disabled={busyIds.has(transfer.id) || !hasTransferConsents(transfer)} onClick={() => handleApprove(transfer)} title={hasTransferConsents(transfer) ? 'Tasdiqlash' : 'Uch tomon roziligi kutilmoqda'}>
                       <Check size={18} /> Tasdiqlash
                     </button>
                   </>

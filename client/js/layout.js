@@ -19,6 +19,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const applyUrl = getUrl('apply.html');
     const transferOrg = window.orgSlug || new URLSearchParams(window.location.search).get('org');
     const transfersUrl = '/transfers.html' + (transferOrg ? '?org=' + encodeURIComponent(transferOrg) : '');
+    const cabinetUrl = '/kabinet.html' + (transferOrg ? '?org=' + encodeURIComponent(transferOrg) : '');
+    let captainLoggedIn = false;
+    let captainTeamId = '';
+    try {
+        const session = JSON.parse(sessionStorage.getItem('amatora_captain_session') || 'null');
+        captainLoggedIn = /^[0-9a-f]{64}$/.test(session?.token || '') && Number.isFinite(session?.expires) && session.expires > Date.now();
+        captainTeamId = captainLoggedIn && /^[0-9a-f-]{36}$/.test(session?.teamId || '') ? session.teamId : '';
+    } catch { sessionStorage.removeItem('amatora_captain_session'); }
+    const playerApplyUrl = new URL(getUrl('apply-individual.html'), location.origin);
+    if (captainTeamId) playerApplyUrl.searchParams.set('team', captainTeamId);
+    const applyActionUrl = captainLoggedIn ? `${playerApplyUrl.pathname}${playerApplyUrl.search}` : applyUrl;
+    const applyActionLabel = captainLoggedIn ? "O'yinchi qo'shish" : "Ro'yxatdan o'tish";
 
     // Insert Navbar at the top of the body (without Havas Liga text)
     const navbarHTML = `
@@ -41,8 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <a href="${teamsUrl}" class="${window.location.pathname.includes('teams') || window.location.pathname.includes('team-details') ? 'active' : ''}">Jamoalar</a>
                 <a href="${matchesUrl}" class="${window.location.pathname.includes('matches') || window.location.pathname.includes('match-details') ? 'active' : ''}">O'yinlar</a>
                 <a href="${standingsUrl}" class="${window.location.pathname.includes('standings') ? 'active' : ''}">Turnir jadvali</a>
-                <a href="${transfersUrl}">Transferlar</a>
-                <a href="${applyUrl}" class="nav-btn">Ro'yxatdan o'tish</a>
+                ${captainLoggedIn ? `<a href="${transfersUrl}">Transferlar</a><a href="${cabinetUrl}">Kabinet</a>` : ''}
+                <a href="${captainLoggedIn ? applyActionUrl : cabinetUrl}" class="nav-btn">${captainLoggedIn ? applyActionLabel : "Kirish / Ro'yxatdan o'tish"}</a>
             </div>
             
             <button class="mobile-menu-btn" id="mobileMenuBtn">

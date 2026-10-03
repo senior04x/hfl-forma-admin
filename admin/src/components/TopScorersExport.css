@@ -1,0 +1,28 @@
+.top-scorers-poster { position: absolute; left: -9999px; top: 0; width: 1080px; height: 1080px; overflow: hidden; display: flex; flex-direction: column; background: #101824 center / cover no-repeat; color: white; font-family: 'Inter', sans-serif; }
+.top-scorers-poster * { box-sizing: border-box; }
+.top-scorers-header { height: 180px; flex-shrink: 0; padding: 65px 45px 5px; display: flex; align-items: center; justify-content: space-between; }
+.top-scorers-brand, .top-scorers-main-sponsor { width: 210px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; }
+.top-scorers-brand strong { color: #00ff66; font-size: 32px; letter-spacing: 1.5px; }
+.top-scorers-brand img { max-width: 190px; height: 105px; object-fit: contain; min-width: 0; }
+.top-scorers-brand img:not(:only-child) { max-width: 90px; }
+.top-scorers-league { flex: 1; min-width: 0; text-align: center; font-size: 36px; font-weight: 900; text-transform: uppercase; overflow-wrap: anywhere; }
+.top-scorers-league img { width: 100%; height: 125px; object-fit: contain; display: block; margin: 0 auto; }
+.top-scorers-main-sponsor { justify-content: flex-end; color: #ffffff99; font-size: 20px; font-weight: 900; }
+.top-scorers-main-sponsor img { max-width: 190px; height: 105px; object-fit: contain; }
+.top-scorers-content { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 45px; }
+.top-scorers-table { width: 86%; border: 1px solid #ffffff40; border-radius: 18px; overflow: hidden; background: #ffffff1f; }
+.top-scorers-heading { padding: 14px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #ffffff29; border-bottom: 1px solid #ffffff40; font-size: 22px; font-weight: 900; }
+.top-scorers-heading > :last-child { font-size: 18px; }
+.top-scorers-row { display: flex; align-items: center; padding: 8px 20px; border-bottom: 1px solid #ffffff1f; min-height: 65px; }
+.top-scorers-row:last-child { border-bottom: 0; }
+.top-scorers-rank { width: 40px; flex-shrink: 0; display: flex; justify-content: center; font-size: 22px; font-weight: 900; }
+.top-scorers-avatar { position: relative; width: 48px; height: 48px; flex-shrink: 0; border-radius: 50%; overflow: hidden; margin-right: 14px; background: #ffffff33; display: grid; place-items: center; font-size: 20px; font-weight: 900; }
+.top-scorers-avatar img { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+.top-scorers-player { flex: 1; min-width: 0; padding-right: 12px; }
+.top-scorers-player strong, .top-scorers-player span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-scorers-player strong { font-size: 21px; font-weight: 800; text-transform: uppercase; }
+.top-scorers-player span { font-size: 15px; color: #ffffffb3; font-weight: 600; }
+.top-scorers-goals { padding: 5px 16px; border-radius: 10px; background: #ffffff29; border: 1px solid #ffffff4d; font-size: 20px; font-weight: 900; white-space: nowrap; }
+.top-scorers-empty { padding: 40px; text-align: center; color: #ffffff99; font-size: 18px; }
+.top-scorers-sponsors { height: 75px; flex-shrink: 0; padding: 5px 45px 25px; display: flex; align-items: center; justify-content: center; gap: 32px; }
+.top-scorers-sponsors img { width: 110px; height: 40px; object-fit: contain; }
