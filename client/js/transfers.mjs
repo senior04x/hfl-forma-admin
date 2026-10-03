@@ -1,7 +1,7 @@
 import { createTransferApi } from './transfer-api.mjs';
 const api = createTransferApi();
 const $ = id => document.getElementById(id);
-const state = { active:false, epoch:0, windowOpen:false, selected:null, submitting:false,
+const state = { active:false, epoch:0, windowOpen:false, teamAllowed:true, contactPhone:'', selected:null, submitting:false,
     searchVersion:0, historyVersion:0, query:'', playersCursor:null, historyCursor:null };
 let searchAbort, debounce, expiryTimer;
 const el = (tag, text, className) => {
@@ -16,9 +16,9 @@ function notice(text, error = false) {
 }
 function reset(message = '') {
     api.clear(); state.active=false; state.epoch++; state.searchVersion++; state.historyVersion++;
-    state.selected=null; state.windowOpen=false; searchAbort?.abort(); clearTimeout(debounce); clearTimeout(expiryTimer);
+    state.selected=null; state.windowOpen=false; state.teamAllowed=true; state.contactPhone=''; searchAbort?.abort(); clearTimeout(debounce); clearTimeout(expiryTimer);
     $('workspace').hidden=true; $('login-panel').hidden=false;
-    $('request-dialog').close(); $('otp').value=''; $('reason').value=''; $('player-query').value='';
+    $('request-dialog').close(); $('payment-dialog').close(); $('otp').value=''; $('reason').value=''; $('player-query').value='';
     $('players').replaceChildren(); $('history').replaceChildren();
     $('team-choice').hidden=true; $('captain-team').replaceChildren(); notice(message, Boolean(message));
 }
@@ -33,6 +33,9 @@ function errorText(error, login = false) {
 }
 function handleError(error, target) {
     if (error.name === 'AbortError') return;
+    if (error.status===403 && error.data?.code==='TEAM_TRANSFER_PAYMENT_REQUIRED') {
+        state.teamAllowed=false; showPaymentDialog(); return;
+    }
     if (error.status === 401 && state.active) { reset(errorText(error)); return; }
     if (target) { target.textContent=errorText(error); target.hidden=false; }
     else notice(errorText(error),true);
@@ -43,11 +46,25 @@ async function context() {
     if (!state.active || epoch!==state.epoch) return false;
     $('team-name').textContent=data.team.name;
     state.windowOpen=data.transfer_window_open===true;
+    state.teamAllowed=data.team_transfer_allowed!==false;
+    state.contactPhone=typeof data.organization_contact_phone==='string' ? data.organization_contact_phone : '';
     $('window-status').textContent=state.windowOpen ? '● Transfer oynasi ochiq' : '● Transfer oynasi yopiq';
     $('window-status').classList.toggle('closed',!state.windowOpen);
     for (const button of $('players').querySelectorAll('button')) button.disabled=!state.windowOpen || button.dataset.pending==='true';
     return state.windowOpen;
 }
+function showPaymentDialog() {
+    $('request-dialog').close();
+    const phone=state.contactPhone.trim();
+    $('organization-phone').textContent=phone || 'Telefon ko‘rsatilmagan. Tashkilotchi bilan bog‘laning.';
+    const dial=phone.replace(/[\s().-]/g,'');
+    const callable=/^\+?[0-9]{7,15}$/.test(dial);
+    $('call-organization').hidden=!callable;
+    $('call-organization').removeAttribute('href');
+    if (callable) $('call-organization').href='tel:'+dial;
+    if (!$('payment-dialog').open) $('payment-dialog').showModal();
+}
+$('close-payment').addEventListener('click',()=>$('payment-dialog').close());
 $('login-form').addEventListener('submit', async event => {
     event.preventDefault(); if ($('login-submit').disabled) return;
     const epoch=state.epoch; $('login-submit').disabled=true; $('login-submit').textContent='Tekshirilmoqda…'; notice('');
@@ -83,6 +100,7 @@ function playerRow(player) {
     button.type='button'; button.dataset.pending=String(Boolean(player.has_pending)); button.disabled=!state.windowOpen || player.has_pending;
     button.addEventListener('click',()=>{
         if (!state.active || !state.windowOpen || state.submitting) return;
+        if (!state.teamAllowed) { showPaymentDialog(); return; }
         state.selected=player; $('request-heading').textContent=[player.first_name,player.last_name].filter(Boolean).join(' ');
         $('selected-team').textContent=player.team_name; $('reason').value=''; $('request-error').hidden=true;
         $('request-dialog').showModal(); $('reason').focus();
@@ -153,6 +171,7 @@ $('request-form').addEventListener('submit',async event=>{
             return;
         }
         if (epoch!==state.epoch) return;
+        if (!state.teamAllowed) { showPaymentDialog(); return; }
         await api.request(state.selected.id,reason);
         if (epoch!==state.epoch) return;
         $('request-dialog').close(); state.selected=null;
