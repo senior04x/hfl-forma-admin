@@ -17,7 +17,7 @@ export default function TeamTransferAccess({orgId}) {
    if(current!==version.current)return;
    setItems(result.items);setMore(result.hasMore);
    if(Array.isArray(result.leagues))setLeagues(result.leagues);
-  }).catch(()=>{if(current===version.current){setItems([]);setMore(false);setError('Jamoalar yuklanmadi. Qayta urinib ko‘ring.');}})
+  }).catch(error=>{if(current===version.current){setItems([]);setMore(false);setError(error.message==='TEAM_ACCESS_NOT_INSTALLED'?'Jamoaviy transfer ruxsatlari serverda hali o‘rnatilmagan. Server yangilanishi kerak.':'Jamoalar yuklanmadi. Qayta urinib ko‘ring.');}})
    .finally(()=>{if(current===version.current)setLoading(false);});
   return ()=>{version.current++;};
  },[open,orgId,league,cursor,retry]);
