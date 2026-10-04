@@ -21,7 +21,7 @@ export async function loadAdminTransfers(client, orgId, filter, page) {
 // A single status UPDATE runs the DB membership/career trigger transaction.
 // Status matching rejects stale admin screens; SELECT detects RLS/no-row results.
 export async function saveAdminTransfer(client, orgId, transfer, changes) {
-  if (changes.status === 'approved' && !hasTransferConsents(transfer)) throw new Error('Three-party consent required');
+  if (changes.status === 'approved' && !hasTransferConsents(transfer)) throw new Error('Both teams consent required');
   const { data, error } = await client.from('transfers').update(changes)
     .eq('id', transfer.id).eq('organization_id', orgId).eq('status', transfer.status)
     .select('id').single();

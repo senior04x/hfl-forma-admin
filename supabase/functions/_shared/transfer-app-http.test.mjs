@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createTransferAppHandler } from './transfer-app-http.mjs';
 const id = '12345678-1234-1234-1234-123456789abc';
 const token = 'a'.repeat(64);
-const consent = { transfer_id: id, party: 'player', decision: 'approved' };
+const consent = { transfer_id: id, party: 'old_team', decision: 'approved' };
 const request = (body, bearer = token) => new Request('https://example.test/transfer-consent', {
     method: 'POST', headers: bearer ? { Authorization: `Bearer ${bearer}` } : {}, body: JSON.stringify(body)
 });
@@ -23,9 +23,25 @@ test('missing sessions, invalid IDs and admin decisions never invoke the databas
     const handler = createTransferAppHandler('consent', async () => assert.fail('Unexpected database write'));
     assert.equal((await handler(request(consent, null))).status, 401);
     assert.equal((await handler(request(consent, 'invalid'))).status, 401);
-    for (const body of [{ ...consent, transfer_id: 'invalid' }, { ...consent, party: 'admin' }, { ...consent, decision: 'pending' }, null, []]) {
+    for (const body of [{ ...consent, transfer_id: 'invalid' }, { ...consent, party: 'admin' }, { ...consent, party: 'player' }, { ...consent, decision: 'pending' }, null, []]) {
         assert.equal((await handler(request(body))).status, 400);
     }
+});
+
+test('both team parties can record consent, while player pages remain read-only', async () => {
+    const calls=[];
+    const handler=createTransferAppHandler('consent',async(name,params)=>{
+        calls.push(params); return {data:{status:200,success:true},error:null};
+    });
+    for(const party of ['old_team','new_team']) {
+        assert.equal((await handler(request({...consent,party}))).status,200);
+        assert.equal(calls.at(-1).p_party,party);
+    }
+    const page=createTransferAppHandler('page',async(name,params)=>{
+        assert.equal(name,'transfer_app_page'); assert.equal(params.p_actor,'player');
+        return {data:{status:200,items:[],next_cursor:null},error:null};
+    });
+    assert.equal((await page(request({actor:'player'}))).status,200);
 });
 test('server ownership and immutable-decision failures reach the application', async () => {
     for (const status of [401,403,404,409,429]) {

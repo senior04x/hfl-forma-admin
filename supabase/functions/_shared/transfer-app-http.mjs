@@ -51,7 +51,7 @@ export function createTransferAppHandler(kind, rpc) {
                     params = { p_token_hash: hash, p_player_id: body.player_id, p_reason: body.reason.trim(), p_team_id: null };
                 } else {
                 if (typeof body.transfer_id !== 'string' || !uuid.test(body.transfer_id)
-                    || !['player', 'old_team', 'new_team'].includes(body.party)
+                    || !['old_team', 'new_team'].includes(body.party)
                     || !['approved', 'rejected'].includes(body.decision)) return reply(400, { error: 'Invalid decision' });
                 name = 'record_transfer_app_consent';
                 params = { p_token_hash: hash, p_transfer_id: body.transfer_id, p_party: body.party, p_decision: body.decision };
