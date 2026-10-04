@@ -3,9 +3,9 @@ const columns = 'id,created_at,player_id,player_name,player_photo,old_team_id,ol
 
 export function hasTransferConsents(transfer) {
   if (!transfer.app_consent_required) return true;
-  return ['player','old_team','new_team'].every(party => Boolean(transfer[party === 'player' ? 'player_id' : `${party}_id`]) && (transfer.transfer_consents || []).some(consent =>
+  return ['old_team','new_team'].every(party => Boolean(transfer[`${party}_id`]) && (transfer.transfer_consents || []).some(consent =>
     consent.party === party && consent.decision === 'approved' &&
-    consent.subject_id === transfer[party === 'player' ? 'player_id' : `${party}_id`]));
+    consent.subject_id === transfer[`${party}_id`]));
 }
 
 export async function loadAdminTransfers(client, orgId, filter, page) {
