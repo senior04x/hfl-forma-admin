@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createTransferAppHandler } from './transfer-app-http.mjs';
+test('request reason is optional; non-text and oversized reasons remain rejected', async () => {
+    const calls=[];
+    const handler=createTransferAppHandler('request',async(name,params)=>{calls.push(params);return {data:{status:201,success:true}};});
+    for(const reason of [undefined,null,'','  ']) assert.equal((await handler(request({player_id:id,reason}))).status,201);
+    assert.ok(calls.every(call=>call.p_reason===''));
+    for(const reason of [1,{},'x'.repeat(1001)]) assert.equal((await handler(request({player_id:id,reason}))).status,400);
+});
 const id = '12345678-1234-1234-1234-123456789abc';
 const token = 'a'.repeat(64);
 const consent = { transfer_id: id, party: 'old_team', decision: 'approved' };

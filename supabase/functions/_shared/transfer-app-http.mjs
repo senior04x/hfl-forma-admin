@@ -44,11 +44,11 @@ export function createTransferAppHandler(kind, rpc) {
                     params = { p_token_hash: hash, p_transfer_id: body.transfer_id };
                 } else if (kind === 'request') {
                     if (typeof body.player_id !== 'string' || !uuid.test(body.player_id)
-                        || typeof body.reason !== 'string' || body.reason.trim().length < 1 || body.reason.trim().length > 1000) {
+                        || (body.reason != null && (typeof body.reason !== 'string' || body.reason.trim().length > 1000))) {
                         return reply(400, { error: 'Invalid request' });
                     }
                     name = 'request_transfer_app';
-                    params = { p_token_hash: hash, p_player_id: body.player_id, p_reason: body.reason.trim(), p_team_id: null };
+                    params = { p_token_hash: hash, p_player_id: body.player_id, p_reason: (body.reason ?? '').trim(), p_team_id: null };
                 } else {
                 if (typeof body.transfer_id !== 'string' || !uuid.test(body.transfer_id)
                     || !['old_team', 'new_team'].includes(body.party)

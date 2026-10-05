@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import {hasTransferConsents,saveAdminTransfer,loadAdminTransfers} from './transferAdminService.mjs';
 const transfer={id:'request',organization_id:7,status:'pending',app_consent_required:true,player_id:'p',old_team_id:'o',new_team_id:'n'};
 const consents=['old_team','new_team'].map(party=>({party,decision:'approved',subject_id:transfer[party==='player'?'player_id':`${party}_id`]}));
+test('free agents waive only the old team requirement',()=>{
+ assert.equal(hasTransferConsents({...transfer,old_team_consent_required:false,transfer_consents:[consents[1]]}),true);
+ assert.equal(hasTransferConsents({...transfer,old_team_consent_required:false,transfer_consents:[consents[0]]}),false);
+ assert.equal(hasTransferConsents({...transfer,transfer_consents:[consents[1]]}),false);
+});
 test('legacy web approvals require no mobile consent',()=>assert.equal(hasTransferConsents({status:'pending'}),true));
 test('approval requires both current teams, never the player',()=>{assert.equal(hasTransferConsents(transfer),false);assert.equal(hasTransferConsents({...transfer,transfer_consents:consents}),true);for(let i=0;i<2;i++){for(const replacement of [{...consents[i],decision:'rejected'},{...consents[i],subject_id:'foreign'}]){const list=[...consents];list[i]=replacement;assert.equal(hasTransferConsents({...transfer,transfer_consents:list}),false);}}assert.equal(hasTransferConsents({app_consent_required:true,transfer_consents:consents.map(c=>({...c,subject_id:undefined}))}),false);});
 test('missing consent stops approval before any database write',async()=>{await assert.rejects(saveAdminTransfer({from(){assert.fail('Unexpected write')}},7,transfer,{status:'approved'}),/consent/)});

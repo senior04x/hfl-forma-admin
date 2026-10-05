@@ -467,14 +467,14 @@ const Transfers = () => {
               </div>
               
               {transfer.app_consent_required && <div style={{ padding: '8px 16px 12px', fontSize: 12 }}>
-                <strong style={{ color: '#E85002' }}>Transfer arizasi · Ikki jamoa roziligi</strong>
+                <strong style={{ color: '#E85002' }}>{transfer.old_team_consent_required === false ? 'Erkin agent · Yangi jamoa roziligi' : 'Transfer arizasi · Ikki jamoa roziligi'}</strong>
                 {['old_team','new_team'].map(party => {
                   const consent = (transfer.transfer_consents || []).find(value => value.party === party &&
                     value.subject_id === transfer[`${party}_id`]);
                   return <div key={party} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 6 }}>
                     <span>{{old_team:'Eski jamoa sardori',new_team:'Yangi jamoa sardori'}[party]}</span>
-                    <span style={{ color: consent?.decision === 'rejected' ? '#EF4444' : undefined }}>
-                      {consent ? consent.decision === 'approved' ? 'Rozi' : 'Rad etdi' : 'Kutilmoqda'}
+                    <span style={{ color: party === 'old_team' && transfer.old_team_consent_required === false ? '#E85002' : consent?.decision === 'rejected' ? '#EF4444' : undefined }}>
+                      {party === 'old_team' && transfer.old_team_consent_required === false ? 'Talab qilinmaydi' : consent ? consent.decision === 'approved' ? 'Rozi' : 'Rad etdi' : 'Kutilmoqda'}
                     </span>
                   </div>;
                 })}

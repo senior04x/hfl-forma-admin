@@ -1,9 +1,9 @@
 export const TRANSFER_PAGE_SIZE = 30;
-const columns = 'id,created_at,player_id,player_name,player_photo,old_team_id,old_team_name,old_team_logo,new_team_id,new_team_name,new_team_logo,reason,status,organization_id,requested_by_team_id,app_consent_required,transfer_consents(party,subject_id,decision,decided_at)';
+const columns = 'id,created_at,player_id,player_name,player_photo,old_team_id,old_team_name,old_team_logo,new_team_id,new_team_name,new_team_logo,reason,status,organization_id,requested_by_team_id,app_consent_required,old_team_consent_required,transfer_consents(party,subject_id,decision,decided_at)';
 
 export function hasTransferConsents(transfer) {
   if (!transfer.app_consent_required) return true;
-  return ['old_team','new_team'].every(party => Boolean(transfer[`${party}_id`]) && (transfer.transfer_consents || []).some(consent =>
+  return (transfer.old_team_consent_required === false ? ['new_team'] : ['old_team','new_team']).every(party => Boolean(transfer[`${party}_id`]) && (transfer.transfer_consents || []).some(consent =>
     consent.party === party && consent.decision === 'approved' &&
     consent.subject_id === transfer[`${party}_id`]));
 }

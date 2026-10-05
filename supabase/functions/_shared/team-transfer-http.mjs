@@ -51,13 +51,13 @@ export function createTransferHandler(kind, rpc, options = {}) {
             p_query: body.query ?? '', p_after: body.after ?? null, p_team_id: body.team_id ?? null };
         } else {
           if (typeof body.player_id !== 'string' || !uuid.test(body.player_id)
-              || typeof body.reason !== 'string' || !body.reason.trim() || body.reason.trim().length > 1000
+              || (body.reason != null && (typeof body.reason !== 'string' || body.reason.trim().length > 1000))
               || (body.new_team_id != null && (typeof body.new_team_id !== 'string' || !uuid.test(body.new_team_id)))) {
             return reply(400, { error: 'Invalid request' });
           }
           name = 'request_team_transfer';
           params = { p_token_hash: await tokenHash(bearer[1]), p_player_id: body.player_id,
-            p_reason: body.reason.trim(), p_team_id: body.new_team_id ?? null };
+            p_reason: (body.reason ?? '').trim(), p_team_id: body.new_team_id ?? null };
         }
       }
       const { data, error } = await rpc(name, params);
