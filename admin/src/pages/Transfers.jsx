@@ -21,6 +21,7 @@ import {
 import './Transfers.css';
 import TeamTransferAccess from '../components/TeamTransferAccess';
 import { loadAdminTransfers, saveAdminTransfer, deleteAdminTransfer, hasTransferConsents } from '../utils/transferAdminService.mjs';
+import { notifyTransferStatus } from '../utils/transferNotificationService.mjs';
 
 const Transfers = () => {
   const [transfers, setTransfers] = useState([]);
@@ -202,6 +203,11 @@ const Transfers = () => {
     try {
       await saveAdminTransfer(supabase, orgId, transfer, { status: newStatus });
       if (currentOrgId.current === orgId) setReloadVersion(v => v + 1);
+      if (['approved', 'rejected'].includes(newStatus)) {
+        void notifyTransferStatus(transfer, newStatus).catch(() =>
+          console.warn('Transfer status notification was not delivered')
+        );
+      }
     } catch {
       alert('Transfer saqlanmadi. Holat yoki jamoa o‘zgargan bo‘lishi mumkin. Ro‘yxatni yangilang.');
     } finally { endOperation(transfer.id); }
