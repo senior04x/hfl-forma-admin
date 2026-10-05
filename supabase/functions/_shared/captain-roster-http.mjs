@@ -13,7 +13,7 @@ export function createCaptainRosterHandler(rpc){return async req=>{
   if(!body||!uuid.test(body.team_id||'')||!['context','archive','number'].includes(body.action)
    ||(body.action!=='context'&&!uuid.test(body.player_id||''))
    ||(body.action==='number'&&(!Number.isInteger(body.number)||body.number<1||body.number>99)))return reply(400,{error:'Invalid request'});
-  const {data,error}=await rpc('captain_roster_manage',{p_token_hash:await tokenHash(token[1]),p_team_id:body.team_id,p_player_id:body.player_id??null,p_action:body.action,p_number:body.action==='number'?body.number:null});
+  const {data,error}=await rpc('captain_roster_manage',{p_token_hash:await tokenHash(token[1]),p_team_id:body.team_id,p_player_id:body.action==='context'?null:body.player_id,p_action:body.action,p_number:body.action==='number'?body.number:null});
   if(error||!data||![200,400,401,403,409,429].includes(data.status))return reply(500,{error:'Request failed'});
   const {status,...result}=data;return reply(status,result);
  }catch{return reply(500,{error:'Request failed'});}

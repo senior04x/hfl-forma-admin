@@ -62,7 +62,8 @@ BEGIN
   IF p_number IS NULL OR p_number NOT BETWEEN 1 AND 99 THEN RETURN jsonb_build_object('status',400,'error','Invalid number'); END IF;
   IF player.is_archived THEN RETURN jsonb_build_object('status',409,'error','Player archived'); END IF;
   IF EXISTS(SELECT 1 FROM applications WHERE team_id=team.id AND id<>player.id
-   AND status='approved' AND coalesce(is_archived,false)=false AND player_number::text=p_number::text) THEN
+   AND status='approved' AND coalesce(is_archived,false)=false
+   AND regexp_replace(btrim(player_number::text),'^0+','')=p_number::text) THEN
    RETURN jsonb_build_object('status',409,'error','Number already used'); END IF;
   UPDATE applications SET player_number=p_number::text WHERE id=player.id;
  END IF;

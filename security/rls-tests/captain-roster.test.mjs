@@ -27,7 +27,7 @@ test('captain archive preserves history; window, identity, numbers and transfer 
    CREATE TABLE match_events(id uuid,player_id uuid,event_type text);
    INSERT INTO organizations VALUES(1,false);
    INSERT INTO teams VALUES('${team}','Old',1,'901234567'),('${other}','New',1,'901234568');
-   INSERT INTO applications VALUES('${player}','${team}',1,'approved',false,'10'),('${teammate}','${team}',1,'approved',NULL,'11');
+   INSERT INTO applications VALUES('${player}','${team}',1,'approved',false,'10'),('${teammate}','${team}',1,'approved',NULL,'011');
    INSERT INTO team_sessions VALUES('${hash}','${team}','901234567',now()+interval '1 hour');
    INSERT INTO transfers VALUES('${transfer}','${player}','${team}','${other}',1,'pending',true,'${other}');
    INSERT INTO match_events VALUES('${id(7)}','${player}','goal');`);
