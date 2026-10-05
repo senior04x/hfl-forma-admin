@@ -491,7 +491,7 @@ export default function Standings() {
     // 2. Top Scorers, Assists & Cards - cumulative across ALL relevant matches
     const playerStats = {};
     filteredEvents.forEach(e => {
-      if (!e.player || !e.player_id) return;
+      if (!e.player || !e.player_id || e.player.is_archived || e.player.status === 'archived') return;
       if (!playerStats[e.player_id]) {
         playerStats[e.player_id] = {
           id: e.player_id,

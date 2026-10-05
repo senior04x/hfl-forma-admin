@@ -75,6 +75,6 @@ export async function loadStandingsData({ orgId, competition, tournament, signal
   onCore({ teams: [...teamMap.values()], matches, leagues: tournament ? leagues : [] });
   // Only these finished matches are relevant; never fetch a team's full history.
   return batches(matches.map(m => m.id), ids => supabase.from('match_events')
-    .select('id, event_type, player_id, team_id, match_id, player:player_id(first_name, last_name, photo_url), team:team_id(name, logo_url, league)')
+    .select('id, event_type, player_id, team_id, match_id, player:player_id(first_name, last_name, photo_url, is_archived, status), team:team_id(name, logo_url, league)')
     .in('match_id', ids).in('event_type', ['goal', 'penalty_goal', 'assist', 'yellow_card', 'red_card']), signal);
 }

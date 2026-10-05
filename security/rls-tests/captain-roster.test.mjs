@@ -1,0 +1,86 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {PGlite} from '@electric-sql/pglite';
+import {createCaptainRosterHandler} from '../../supabase/functions/_shared/captain-roster-http.mjs';
+
+const id=n=>`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
+const team=id(1), other=id(2), player=id(3), teammate=id(4), transfer=id(5);
+const hash=`sha256:${'a'.repeat(64)}`;
+const sql=await readFile(new URL('../drafts/transfer-archive-roster-controls.sql',import.meta.url),'utf8');
+
+test('captain archive preserves history; window, identity, numbers and transfer guards hold',async()=>{
+ const db=new PGlite();
+ try {
+  await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
+   CREATE SCHEMA auth;
+   CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql AS $$ SELECT current_setting('request.jwt.claim.role',true) $$;
+   CREATE FUNCTION transfer_admin_authorized(bigint) RETURNS boolean LANGUAGE sql AS $$ SELECT coalesce(current_setting('test.admin',true),'')='yes' $$;
+   CREATE FUNCTION transfer_phone(text) RETURNS text LANGUAGE sql AS $$ SELECT $1 $$;
+   CREATE TABLE organizations(id bigint PRIMARY KEY,transfer_window_open boolean);
+   CREATE TABLE teams(id uuid PRIMARY KEY,name text,organization_id bigint,captain_phone text);
+   CREATE TABLE applications(id uuid PRIMARY KEY,team_id uuid,organization_id bigint,status text,is_archived boolean,player_number varchar);
+   CREATE TABLE team_sessions(token text PRIMARY KEY,team_id uuid,phone text,expires_at timestamptz);
+   CREATE TABLE transfers(id uuid PRIMARY KEY,player_id uuid,old_team_id uuid,new_team_id uuid,organization_id bigint,status text,app_consent_required boolean,requested_by_team_id uuid);
+   CREATE TABLE transfer_app_cancellations(transfer_id uuid,team_id uuid);
+   CREATE TABLE player_career_history(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),player_id uuid,team_id uuid,team_name text,organization_id bigint,joined_at timestamptz,left_at timestamptz,created_via text,transfer_id uuid);
+   CREATE TABLE match_events(id uuid,player_id uuid,event_type text);
+   INSERT INTO organizations VALUES(1,false);
+   INSERT INTO teams VALUES('${team}','Old',1,'901234567'),('${other}','New',1,'901234568');
+   INSERT INTO applications VALUES('${player}','${team}',1,'approved',false,'10'),('${teammate}','${team}',1,'approved',NULL,'11');
+   INSERT INTO team_sessions VALUES('${hash}','${team}','901234567',now()+interval '1 hour');
+   INSERT INTO transfers VALUES('${transfer}','${player}','${team}','${other}',1,'pending',true,'${other}');
+   INSERT INTO match_events VALUES('${id(7)}','${player}','goal');`);
+  const old=await readFile(new URL('../../supabase/migrations/20261001000900_cancel_mobile_transfer.sql',import.meta.url),'utf8');
+  let member=old.slice(old.indexOf('CREATE OR REPLACE FUNCTION public.apply_transfer_membership()'),old.indexOf('CREATE FUNCTION public.cancel_transfer_app'));
+  member=member.replace(/NOT EXISTS \(\s*SELECT 1 FROM public.admin_users[\s\S]*?\n    \)/,'NOT public.transfer_admin_authorized(OLD.organization_id)');
+  await db.exec(member);
+  const before=(await db.query("SELECT pg_get_functiondef('apply_transfer_membership()'::regprocedure) AS body")).rows[0].body;
+  await db.exec(sql);
+  const after=(await db.query("SELECT pg_get_functiondef('apply_transfer_membership()'::regprocedure) AS body")).rows[0].body;
+  assert.equal(after,before.replace('UPDATE public.applications SET team_id=v_to.id WHERE id=v_player.id;',"UPDATE public.applications SET team_id=v_to.id, is_archived=CASE WHEN NEW.status='approved' THEN false ELSE is_archived END WHERE id=v_player.id;"));
+  const call=async(action,number=null,subject=player,teamId=team,token=hash)=>(await db.query('SELECT captain_roster_manage($1,$2,$3,$4,$5) AS result',[token,teamId,subject,action,number])).rows[0].result;
+  assert.equal((await call('context')).transfer_window_open,false);
+  assert.equal((await call('archive')).status,403);
+  assert.equal((await call('number',12)).status,403);
+  await db.exec('UPDATE organizations SET transfer_window_open=true');
+  assert.equal((await call('number',12,player,other)).status,403);
+  assert.equal((await call('number',12,player,team,`sha256:${'b'.repeat(64)}`)).status,401);
+  assert.equal((await call('number',11)).status,409);
+  assert.equal((await call('number',100)).status,400);
+  assert.equal((await call('number',12)).status,200);
+  assert.equal((await call('archive')).status,409);
+  await db.exec("UPDATE transfers SET status='rejected'");
+  assert.equal((await call('archive')).status,200);
+  assert.equal((await db.query('SELECT is_archived FROM applications WHERE id=$1',[player])).rows[0].is_archived,true);
+  assert.equal((await db.query('SELECT count(*)::int n FROM match_events')).rows[0].n,1);
+  assert.equal((await call('number',13)).status,409);
+  await db.exec("SET request.jwt.claim.role='anon'");
+  await assert.rejects(db.query('UPDATE applications SET is_archived=false WHERE id=$1',[player]),{code:'42501'});
+  await db.exec("SET request.jwt.claim.role='authenticated'; SET test.admin='yes'; CREATE TRIGGER membership BEFORE UPDATE ON transfers FOR EACH ROW EXECUTE FUNCTION apply_transfer_membership();");
+  await db.exec("UPDATE transfers SET status='approved'");
+  assert.deepEqual((await db.query('SELECT team_id,is_archived FROM applications WHERE id=$1',[player])).rows[0],{team_id:other,is_archived:false});
+  assert.equal((await db.query('SELECT count(*)::int n FROM match_events')).rows[0].n,1);
+  assert.equal((await db.query('SELECT count(*)::int n FROM player_career_history WHERE left_at IS NULL')).rows[0].n,1);
+  await db.exec("UPDATE teams SET captain_phone='999999999'");
+  assert.equal((await call('context')).status,403);
+  await db.exec('UPDATE captain_roster_rate SET attempts=60');
+  assert.equal((await call('context')).status,429);
+  await db.exec("UPDATE captain_roster_rate SET window_started=now()-interval '2 minutes'");
+  assert.equal((await call('context')).status,403);
+ } finally {await db.close();}
+});
+
+test('HTTP validates before RPC and sends hashed opaque credentials',async()=>{
+ const calls=[];
+ const handler=createCaptainRosterHandler(async(name,args)=>{calls.push({name,args});return {data:{status:200,success:true}};});
+ const request=(body,token='a'.repeat(64))=>new Request('https://test.invalid',{method:'POST',headers:{Authorization:`Bearer ${token}`},body:JSON.stringify(body)});
+ assert.equal((await handler(request({team_id:team,player_id:player,action:'number',number:0}))).status,400);
+ assert.equal((await handler(request({team_id:team,action:'archive'}))).status,400);
+ assert.equal((await handler(request({team_id:team,action:'context'},'bad'))).status,401);
+ assert.equal(calls.length,0);
+ assert.equal((await handler(request({team_id:team,player_id:player,action:'archive',phone:'attacker'}))).status,200);
+ assert.match(calls[0].args.p_token_hash,/^sha256:[a-f0-9]{64}$/);
+ assert.notEqual(calls[0].args.p_token_hash,hash);
+ assert.equal(calls[0].args.phone,undefined);
+});
