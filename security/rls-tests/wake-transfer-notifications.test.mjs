@@ -20,6 +20,7 @@ test('verified captain link wakes only its delayed old-team requests and closes 
     await db.exec(await load('../../supabase/migrations/20260925000100_transfer_notifications.sql'));
     await db.exec(await load('../../supabase/migrations/20261001000500_transfer_app_notifications.sql'));
     await db.exec(await load('../../supabase/migrations/20261006000100_wake_pending_transfer_notifications.sql'));
+    await db.exec(await load('../../supabase/migrations/20261006000200_recover_captain_transfer_telegram_403.sql'));
 
     const insertTransfer = n => db.exec(`INSERT INTO transfers VALUES
       ('${id(n)}','${id(100)}','${id(200)}','${id(101)}','${id(102)}','pending',true,'Player','New','Old')`);
@@ -44,6 +45,15 @@ test('verified captain link wakes only its delayed old-team requests and closes 
     const finished = (await db.query(`SELECT finish_transfer_notification(${jobId},'${claim}','pending',NULL,'no_private_chat',3600) AS result`)).rows[0].result;
     assert.equal(finished, true);
     assert.equal((await db.query(`SELECT available_at<=clock_timestamp() AS due FROM transfer_notifications WHERE id=${jobId}`)).rows[0].due, true);
+
+    await insertTransfer(3);
+    await db.exec(`UPDATE transfer_notifications SET state='failed',failure_code='telegram_403',
+      resolved_chat_id='123' WHERE transfer_id='${id(3)}' AND recipient_type='old_team'`);
+    assert.equal((await db.query("SELECT wake_pending_transfer_notifications('123') AS count")).rows[0].count, 1);
+    assert.deepEqual((await db.query(`SELECT state,failure_code,resolved_chat_id,
+      available_at<=clock_timestamp() AS due FROM transfer_notifications
+      WHERE transfer_id='${id(3)}' AND recipient_type='old_team'`)).rows,
+      [{ state: 'pending', failure_code: null, resolved_chat_id: null, due: true }]);
 
     await db.exec(`UPDATE transfer_notifications SET state='sent',available_at=clock_timestamp()+interval '1 hour'
       WHERE transfer_id='${id(1)}' AND recipient_type='old_team'`);
