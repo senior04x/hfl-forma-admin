@@ -37,6 +37,11 @@ test('captain archive preserves history; window, identity, numbers and transfer 
   await db.exec(member);
   const before=(await db.query("SELECT pg_get_functiondef('apply_transfer_membership()'::regprocedure) AS body")).rows[0].body;
   await db.exec(sql);
+  await db.exec(`ALTER TABLE teams ADD COLUMN logo_url text, ADD COLUMN captain_name text, ADD COLUMN coach_name text, ADD COLUMN coach_phone text, ADD COLUMN president_name text, ADD COLUMN president_phone text;
+   ALTER TABLE applications ADD COLUMN phone text, ADD COLUMN photo_url text;`);
+  await db.exec(await readFile(new URL('../drafts/captain-profile-window.sql',import.meta.url),'utf8'));
+  const edit=async(action,data,subject=player)=>(await db.query('SELECT captain_profile_edit($1,$2,$3,$4,$5) AS result',[hash,team,subject,action,data])).rows[0].result;
+  assert.equal((await edit('player_edit',{phone:'901234560',player_number:'12'})).status,403);
   const after=(await db.query("SELECT pg_get_functiondef('apply_transfer_membership()'::regprocedure) AS body")).rows[0].body;
   assert.equal(after,before.replace('UPDATE public.applications SET team_id=v_to.id WHERE id=v_player.id;',"UPDATE public.applications SET team_id=v_to.id, is_archived=CASE WHEN NEW.status='approved' THEN false ELSE is_archived END WHERE id=v_player.id;"));
   const call=async(action,number=null,subject=player,teamId=team,token=hash)=>(await db.query('SELECT captain_roster_manage($1,$2,$3,$4,$5) AS result',[token,teamId,subject,action,number])).rows[0].result;
@@ -49,6 +54,16 @@ test('captain archive preserves history; window, identity, numbers and transfer 
   assert.equal((await call('number',11)).status,409);
   assert.equal((await call('number',100)).status,400);
   assert.equal((await call('number',12)).status,200);
+  assert.equal((await edit('player_edit',{phone:'901234560',player_number:'11'})).status,409);
+  assert.equal((await db.query('SELECT phone FROM applications WHERE id=$1',[player])).rows[0].phone,null);
+  assert.equal((await edit('player_edit',{phone:'901234560',player_number:'15'})).status,200);
+  assert.equal((await edit('player_edit',{organization_id:'2'})).status,400);
+  assert.equal((await edit('player_edit',{phone:'invalid'})).status,400);
+  assert.equal((await edit('team_edit',{coach_name:'Coach'})).status,200);
+  await db.exec('UPDATE organizations SET transfer_window_open=false');
+  assert.equal((await edit('team_edit',{coach_name:'Blocked'})).status,403);
+  await db.exec('UPDATE organizations SET transfer_window_open=true');
+
   assert.equal((await call('archive')).status,409);
   await db.exec("UPDATE transfers SET status='rejected'");
   assert.equal((await call('archive')).status,200);
@@ -57,6 +72,8 @@ test('captain archive preserves history; window, identity, numbers and transfer 
   assert.equal((await call('number',13)).status,409);
   await db.exec("SET request.jwt.claim.role='anon'");
   await assert.rejects(db.query('UPDATE applications SET is_archived=false WHERE id=$1',[player]),{code:'42501'});
+  await assert.rejects(db.query("UPDATE applications SET phone='901000000' WHERE id=$1",[player]),{code:'42501'});
+  await assert.rejects(db.query("UPDATE teams SET coach_name='hacked' WHERE id=$1",[team]),{code:'42501'});
   await db.exec("SET request.jwt.claim.role='authenticated'; SET test.admin='yes'; CREATE TRIGGER membership BEFORE UPDATE ON transfers FOR EACH ROW EXECUTE FUNCTION apply_transfer_membership();");
   await db.exec("UPDATE transfers SET status='approved'");
   assert.deepEqual((await db.query('SELECT team_id,is_archived FROM applications WHERE id=$1',[player])).rows[0],{team_id:other,is_archived:false});
@@ -83,4 +100,7 @@ test('HTTP validates before RPC and sends hashed opaque credentials',async()=>{
  assert.match(calls[0].args.p_token_hash,/^sha256:[a-f0-9]{64}$/);
  assert.notEqual(calls[0].args.p_token_hash,hash);
  assert.equal(calls[0].args.phone,undefined);
+ assert.equal((await handler(request({team_id:team,action:'team_edit',data:{coach_name:'Coach'}}))).status,200);
+ assert.equal(calls[1].name,'captain_profile_edit');
+ assert.deepEqual(calls[1].args.p_data,{coach_name:'Coach'});
 });
