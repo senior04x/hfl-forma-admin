@@ -58,6 +58,15 @@ const Replays = () => {
   const [copiedId, setCopiedId] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
 
+  const goalEvents = useMemo(
+    () => matchEvents.filter((event) => ['goal', 'penalty_goal', 'own_goal'].includes(event.event_type)),
+    [matchEvents]
+  );
+  const replayVideoEvents = useMemo(
+    () => matchEvents.filter((event) => Boolean(event.replay_video_url)),
+    [matchEvents]
+  );
+
   // 1. Initial Data Load (Matches, Teams, Leagues, Tournaments)
   useEffect(() => {
     if (!orgId) return;
@@ -448,11 +457,80 @@ const Replays = () => {
               </div>
             )}
 
-            {/* Replay Videos Section Header */}
+            {/* Match goal history */}
+            <section className="match-history-panel" aria-labelledby="match-history-title">
+              <div className="match-history-header">
+                <div>
+                  <span className="match-history-eyebrow">O‘YIN VOQEALARI</span>
+                  <h2 id="match-history-title">Gol tarixi</h2>
+                  <p>Har bir gol jamoa, futbolchi va daqiqasi bilan.</p>
+                </div>
+                <span className="match-history-count">
+                  {goalEvents.length} ta gol
+                </span>
+              </div>
+
+              {loadingEvents ? (
+                <div className="history-empty-state"><RefreshCw size={18} className="spinning" /> Gol tarixi yuklanmoqda…</div>
+              ) : goalEvents.length === 0 ? (
+                <div className="history-empty-state">
+                  <Clock size={18} /> Bu o‘yinda hali gol voqeasi qayd etilmagan.
+                </div>
+              ) : (
+                <ol className="match-history-list">
+                  {goalEvents.map((event) => {
+                      const player = event.player;
+                      const team = event.team || teamsMap.get(event.team_id);
+                      const hasVideo = Boolean(event.replay_video_url);
+                      const eventLabel = event.event_type === 'own_goal'
+                        ? 'Avtogol'
+                        : event.event_type === 'penalty_goal'
+                          ? 'Penalti goli'
+                          : 'Gol';
+                      const timestamp = event.created_at ? new Date(event.created_at) : null;
+                      const clockLabel = timestamp && !Number.isNaN(timestamp.getTime())
+                        ? timestamp.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
+                        : null;
+
+                      return (
+                        <li className={`match-history-item ${event.event_type}`} key={event.id}>
+                          <div className="history-minute-column">
+                            <span className="history-minute">{event.minute !== null && event.minute !== undefined ? `${event.minute}′` : '—'}</span>
+                            <span className="history-timeline-line" aria-hidden="true" />
+                          </div>
+                          <div className="history-event-copy">
+                            <div className="history-event-heading">
+                              <span className={`history-event-type ${event.event_type}`}>{eventLabel}</span>
+                              {clockLabel && <time dateTime={event.created_at}>{clockLabel}</time>}
+                            </div>
+                            <div className="history-player-row">
+                              <span className="history-player-number">
+                                {player?.player_number !== null && player?.player_number !== undefined ? `#${player.player_number}` : '#—'}
+                              </span>
+                              <div className="history-player-details">
+                                <strong>{player ? `${player.first_name || ''} ${player.last_name || ''}`.trim() : 'Futbolchi belgilanmagan'}</strong>
+                                <span className="history-team-name">
+                                  {team?.logo_url && <img src={team.logo_url} alt="" />}
+                                  {team?.name || 'Jamoa belgilanmagan'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <span className={`history-video-state ${hasVideo ? 'available' : 'waiting'}`}>
+                            {hasVideo ? <><Check size={14} /> Video mavjud</> : <><Clock size={14} /> Video biriktirilmagan</>}
+                          </span>
+                        </li>
+                      );
+                    })}
+                </ol>
+              )}
+            </section>
+
+            {/* Replay videos */}
             <div className="replays-section-header-compact">
               <div className="section-title-compact">
                 <Video size={18} className="text-emerald" />
-                <h2>Gollar & Replay Videolari ({matchEvents.length})</h2>
+                <h2>Replay videolari ({replayVideoEvents.length})</h2>
               </div>
             </div>
 
@@ -461,15 +539,15 @@ const Replays = () => {
                 <RefreshCw size={26} className="spinning" />
                 <p>Replaylar yuklanmoqda...</p>
               </div>
-            ) : matchEvents.length === 0 ? (
+            ) : replayVideoEvents.length === 0 ? (
               <div className="empty-state-box">
                 <Film size={40} className="text-muted" />
-                <h3>Ushbu o'yinda hozircha replay videosi yo'q</h3>
-                <p>OBS orqali gol urilganda replay videolari shu yerda paydo bo'ladi.</p>
+                <h3>Hozircha tayyor replay videosi yo‘q</h3>
+                <p>Gol tarixi yuqorida ko‘rinadi. Video yuklanib golga biriktirilgach, shu yerda ochiladi.</p>
               </div>
             ) : (
               <div className="replay-cards-grid">
-                {matchEvents.map((event, idx) => {
+                {replayVideoEvents.map((event, idx) => {
                   const hasVideo = Boolean(event.replay_video_url);
                   const player = event.player;
                   const team = event.team || teamsMap.get(event.team_id);
