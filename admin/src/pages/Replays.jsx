@@ -47,7 +47,7 @@ const Replays = () => {
   const [selectedTournament, setSelectedTournament] = useState('all');
   const [selectedRound, setSelectedRound] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [onlyWithReplays, setOnlyWithReplays] = useState(true);
+  const [onlyWithReplays, setOnlyWithReplays] = useState(false);
 
   // Selected Match Detail state
   const [currentMatch, setCurrentMatch] = useState(null);
@@ -324,7 +324,7 @@ const Replays = () => {
     setSelectedTournament('all');
     setSelectedRound('all');
     setSearchQuery('');
-    setOnlyWithReplays(true);
+    setOnlyWithReplays(false);
   };
 
   return (
@@ -747,7 +747,7 @@ const Replays = () => {
                         checked={onlyWithReplays} 
                         onChange={(e) => setOnlyWithReplays(e.target.checked)} 
                       />
-                      <span>Faqat Replayli o'yinlar</span>
+                      <span>Faqat replay videosi bor o'yinlar</span>
                     </label>
 
                     <button className="btn-reset-filters" onClick={resetFilters}>
