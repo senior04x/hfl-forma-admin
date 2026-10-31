@@ -626,7 +626,7 @@ const Replays = () => {
                           <div className="player-text-info">
                             <div className="player-name-row">
                               <span className="player-name">
-                                {player ? `${player.first_name} ${player.last_name}` : 'Muallif belgilanmagan'}
+                                {player ? `${player.first_name} ${player.last_name}` : 'Muallifsiz gol'}
                               </span>
                               {event.minute && (
                                 <span className="minute-tag">{event.minute}'</span>

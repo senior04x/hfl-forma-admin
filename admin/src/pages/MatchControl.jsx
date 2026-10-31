@@ -70,6 +70,7 @@ const MatchControl = () => {
   const timerRef = useRef(null);
   const timerStartedAtRef = useRef(null);
   const baseTimerSecondsRef = useRef(0);
+  const quickGoalWriteRef = useRef(false);
   // Operator o'yinni yakunlashni unutib, taymer pauza qilinmagan holda
   // (is_timer_running=true) davomiy ishlab qolib ketishining oldini olish
   // uchun — bitta marta avtomatik yakunlash ishga tushishini kafolatlaydi
@@ -950,17 +951,16 @@ const MatchControl = () => {
     updateTimerDBAndState(defaultSec, nowIso, isTimerRunning);
   };
 
-  // Quick Score Adjuster (+1 / -1).
-  // Tepadagi tablo tugmalari (+ / -) faqat match hisobini (home_score / away_score)
-  // to'g'ridan-to'g'ri o'zgartirish uchun mo'ljallangan.
-  // match_events jadvaliga muallifsiz bo'sh qator yozilmaydi (chunki player_id NOT NULL
-  // va statistikaga xalaqit bermasligi kerak). Haqiqiy gol o'yinchilar ro'yxatidagi
-  // yoki "Voqea qo'shish" tugmasi orqali kiritiladi.
+  // Quick + creates a real unattributed goal event; - remains a score correction.
   const adjustScore = async (teamType, delta) => {
-    if (!match) return;
+    if (!match || quickGoalWriteRef.current) return;
+    quickGoalWriteRef.current = true;
     const isHome = teamType === 'home';
     const currentScore = isHome ? (match.home_score || 0) : (match.away_score || 0);
     const newScore = Math.max(0, currentScore + delta);
+    if (newScore === currentScore) { quickGoalWriteRef.current = false; return; }
+    const eventTeamId = isHome ? match.home_team_id : match.away_team_id;
+    let insertedEventId = null;
 
     // Optimistik UI yangilash
     setMatch(prev => ({
@@ -968,27 +968,37 @@ const MatchControl = () => {
       [isHome ? 'home_score' : 'away_score']: newScore
     }));
 
-    // Asosiy hisobni matches jadvalida yangilash
-    const updatePayload = {
-      [isHome ? 'home_score' : 'away_score']: newScore,
-      updated_at: new Date().toISOString(),
-    };
-
     try {
+      if (delta > 0) {
+        const { data: event, error: eventError } = await supabase.from('match_events').insert({
+          match_id: id,
+          team_id: eventTeamId,
+          player_id: null,
+          event_type: 'goal',
+          type: 'goal',
+          minute: getCurrentMinute(),
+        }).select('id').single();
+        if (eventError) throw eventError;
+        insertedEventId = event?.id || null;
+      }
+
       const { error: matchUpdateErr } = await supabase
         .from('matches')
-        .update(updatePayload)
+        .update({
+          [isHome ? 'home_score' : 'away_score']: newScore,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', id);
 
-      if (matchUpdateErr) {
-        console.error('adjustScore matches update error:', matchUpdateErr);
-        setMatch(prev => ({ ...prev, [isHome ? 'home_score' : 'away_score']: currentScore }));
-        alert("Hisobni saqlashda xatolik yuz berdi");
-      }
+      if (matchUpdateErr) throw matchUpdateErr;
+      if (delta > 0) await fetchEvents(id);
     } catch (err) {
       console.error('adjustScore matches catch error:', err);
+      if (insertedEventId) await supabase.from('match_events').delete().eq('id', insertedEventId);
       setMatch(prev => ({ ...prev, [isHome ? 'home_score' : 'away_score']: currentScore }));
-      alert("Hisobni saqlashda xatolik yuz berdi");
+      alert(delta > 0 ? "Gol voqeasini saqlab bo'lmadi. Hisob o'zgartirilmadi." : "Hisobni saqlashda xatolik yuz berdi");
+    } finally {
+      quickGoalWriteRef.current = false;
     }
   };
 
@@ -1452,7 +1462,7 @@ const MatchControl = () => {
             <span className="scoreboard-team-name">{homeTeam?.name}</span>
             <div className="score-adjuster-group">
               <button className="score-btn minus" onClick={() => adjustScore('home', -1)} title="Golni kamaytirish">-</button>
-              <button className="score-btn plus" onClick={() => adjustScore('home', 1)} title="Gol qo'shish">+</button>
+              <button className="score-btn plus" onClick={() => adjustScore('home', 1)} title="Muallifsiz golni qayd etish">+</button>
             </div>
           </div>
 
@@ -1509,7 +1519,7 @@ const MatchControl = () => {
             <span className="scoreboard-team-name">{awayTeam?.name}</span>
             <div className="score-adjuster-group">
               <button className="score-btn minus" onClick={() => adjustScore('away', -1)} title="Golni kamaytirish">-</button>
-              <button className="score-btn plus" onClick={() => adjustScore('away', 1)} title="Gol qo'shish">+</button>
+              <button className="score-btn plus" onClick={() => adjustScore('away', 1)} title="Muallifsiz golni qayd etish">+</button>
             </div>
           </div>
         </div>
@@ -1521,6 +1531,10 @@ const MatchControl = () => {
             {STATUS_LABELS[match.status] || match.status}
           </span>
         </div>
+      </div>
+
+      <div className="header-info-subtext" role="note" style={{ marginTop: 8 }}>
+        Replaylar ketma-ket bog'lanadi: gol bo'lishi bilan tegishli jamoaga + bosing va gollarni o'yindagi tartibda kiriting.
       </div>
 
       {/* Match Status Controls */}
@@ -1687,7 +1701,7 @@ const MatchControl = () => {
                         {event.player?.first_name} {event.player?.last_name}
                       </>
                     ) : (
-                      'Jamoa goli (o\'yinchisiz)'
+                      (String(event.event_type || event.type || '').includes('goal') ? 'Muallifsiz gol' : "O'yinchi kiritilmagan")
                     )}
                   </div>
                   <div className="timeline-team">{event.team?.name}</div>
