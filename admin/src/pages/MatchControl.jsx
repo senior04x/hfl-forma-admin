@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { obsService } from '../services/obsService';
 import { generateStingerWebM, downloadBlob, ensureAutoStingerSynced } from '../utils/stingerGenerator';
+import { hasServerClockSync, serverNowIso, serverNowMs, startServerClockSync, syncServerClock } from '../utils/serverClock';
 import './MatchControl.css';
 
 const EVENT_TYPES = {
@@ -75,6 +76,24 @@ const MatchControl = () => {
   // (is_timer_running=true) davomiy ishlab qolib ketishining oldini olish
   // uchun — bitta marta avtomatik yakunlash ishga tushishini kafolatlaydi
   const autoFinishTriggeredRef = useRef(false);
+
+  useEffect(() => startServerClockSync(), []);
+
+  const ensureServerClock = async () => {
+    try {
+      await syncServerClock();
+      return true;
+    } catch (error) {
+      if (hasServerClockSync()) return true;
+      if (import.meta.env.DEV) {
+        console.warn('Development rejimida lokal soatdan foydalanilmoqda:', error);
+        return true;
+      }
+      console.error('Server soatini sinxronlash imkoni bo‘lmadi:', error);
+      alert('Taymerni boshlashdan oldin server vaqti bilan sinxronlab bo‘lmadi. Internet ulanishini tekshirib, qayta urinib ko‘ring.');
+      return false;
+    }
+  };
 
   // Penalty Shootout State
   const [homePenalties, setHomePenalties] = useState(0);
@@ -486,7 +505,7 @@ const MatchControl = () => {
     if (isRunning && startedAt) {
       const startedMs = new Date(startedAt).getTime();
       if (!isNaN(startedMs)) {
-        const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
+        const elapsedSec = Math.max(0, Math.floor((serverNowMs() - startedMs) / 1000));
         const remaining = Math.max(0, baseSec - elapsedSec);
         setTimerSeconds(remaining);
       } else {
@@ -526,88 +545,64 @@ const MatchControl = () => {
     };
   }, [id, match?.location]);
 
-  // Helper to update persistent timer state across all devices with zero latency (Non-blocking background DB write)
-  const updateTimerDBAndState = (baseSec, startedAtIso, isRunning, newStatus) => {
+  // Persist the authoritative match timer before updating this screen or broadcasting it.
+  const updateTimerDBAndState = async (baseSec, startedAtIso, isRunning, newStatus) => {
+    const targetId = match?.id || id;
+    const targetOrgId = requireOrganizationId(match?.organization_id || orgId);
+    if (!targetId) throw new Error('Match ID topilmadi');
+
+    const updatedAt = serverNowIso();
+    const matchUpdate = {
+      timer_seconds: baseSec,
+      timer_started_at: startedAtIso,
+      is_timer_running: isRunning,
+      updated_at: updatedAt
+    };
+    if (newStatus) matchUpdate.status = newStatus;
+
+    const { data: savedMatch, error } = await supabase
+      .from('matches')
+      .update(matchUpdate)
+      .eq('id', targetId)
+      .select('id, timer_seconds, timer_started_at, is_timer_running, status, updated_at')
+      .maybeSingle();
+    if (error) throw error;
+    if (!savedMatch) throw new Error('Taymer bazaga yozilmadi; ruxsat va internetni tekshiring.');
+
+    const timerPayload = { ...savedMatch, match_id: targetId };
+    setMatch(prev => prev?.id === targetId ? { ...prev, ...savedMatch } : prev);
     setTimerSeconds(baseSec);
     setIsTimerRunning(isRunning);
     baseTimerSecondsRef.current = baseSec;
     timerStartedAtRef.current = startedAtIso;
 
-    const targetId = match?.id || id;
-    const targetOrgId = requireOrganizationId(match?.organization_id || orgId);
-
-    const timerPayload = {
-      match_id: targetId,
-      timer_seconds: baseSec,
-      timer_started_at: startedAtIso,
-      is_timer_running: isRunning,
-      status: newStatus || match?.status,
-      updated_at: new Date().toISOString()
-    };
-
-    // 1. Instant Fast Broadcast across ALL local & cloud channels (0ms latency!)
+    // Legacy timer consumers still receive a copy after the canonical row commits.
     try {
-      if (broadcastChannelRef.current?.bcMatch) {
-        broadcastChannelRef.current.bcMatch.postMessage(timerPayload);
-      }
-      if (broadcastChannelRef.current?.bcStream) {
-        broadcastChannelRef.current.bcStream.postMessage(timerPayload);
-      }
-    } catch (bcErr) {}
+      broadcastChannelRef.current?.bcMatch?.postMessage(timerPayload);
+      broadcastChannelRef.current?.bcStream?.postMessage(timerPayload);
+      broadcastChannelRef.current?.fastMatchChannel?.send({ type: 'broadcast', event: 'timer_update', payload: timerPayload });
+      broadcastChannelRef.current?.fastStreamChannel?.send({ type: 'broadcast', event: 'timer_update', payload: timerPayload });
+    } catch (broadcastError) {
+      console.warn('Fast timer broadcast error:', broadcastError);
+    }
 
-    try {
-      if (broadcastChannelRef.current?.fastMatchChannel) {
-        broadcastChannelRef.current.fastMatchChannel.send({
-          type: 'broadcast',
-          event: 'timer_update',
-          payload: timerPayload
-        });
-      }
-      if (broadcastChannelRef.current?.fastStreamChannel) {
-        broadcastChannelRef.current.fastStreamChannel.send({
-          type: 'broadcast',
-          event: 'timer_update',
-          payload: timerPayload
-        });
-      }
-    } catch (rtErr) {}
-
-    // 2. Non-blocking Background DB Persistence directly to matches table
-    (async () => {
+    void (async () => {
       try {
-        const matchUpdate = {
-          timer_seconds: baseSec,
-          timer_started_at: startedAtIso,
-          is_timer_running: isRunning,
-          updated_at: new Date().toISOString()
-        };
-        if (newStatus) matchUpdate.status = newStatus;
-
-        const payloadStr = JSON.stringify(timerPayload);
         const nameKey = `MATCH_TIMER_${targetId}`;
-
-        if (targetId) {
-          await supabase.from('matches').update(matchUpdate).eq('id', targetId);
-        }
-
-        const { data: existingTimer } = await supabase
+        const { data: existingTimer, error: lookupError } = await supabase
           .from('sponsors')
           .select('id')
           .eq('name', nameKey)
           .maybeSingle();
+        if (lookupError) throw lookupError;
 
-        if (existingTimer) {
-          await supabase.from('sponsors').update({ logo_url: payloadStr }).eq('id', existingTimer.id);
-        } else {
-          await supabase.from('sponsors').insert([{ 
-            name: nameKey, 
-            logo_url: payloadStr, 
-            organization_id: targetOrgId, 
-            is_main: false 
-          }]);
-        }
-      } catch (e) {
-        console.warn('Fast timer sync error:', e);
+        const mirror = { logo_url: JSON.stringify(timerPayload) };
+        const result = existingTimer
+          ? await supabase.from('sponsors').update(mirror).eq('id', existingTimer.id)
+          : await supabase.from('sponsors').insert([{ ...mirror, name: nameKey, organization_id: targetOrgId, is_main: false }]);
+        if (result.error) throw result.error;
+      } catch (mirrorError) {
+        console.warn('Legacy timer mirror could not be updated:', mirrorError);
       }
     })();
   };
@@ -619,12 +614,14 @@ const MatchControl = () => {
         if (timerStartedAtRef.current) {
           const startedMs = new Date(timerStartedAtRef.current).getTime();
           if (!isNaN(startedMs)) {
-            const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
+            const elapsedSec = Math.max(0, Math.floor((serverNowMs() - startedMs) / 1000));
             const remaining = Math.max(0, baseTimerSecondsRef.current - elapsedSec);
             setTimerSeconds(remaining);
             if (remaining === 0) {
               setIsTimerRunning(false);
-              updateTimerDBAndState(0, null, false);
+              void updateTimerDBAndState(0, null, false).catch((error) => {
+                console.warn('Taymerning nol holatini bazaga saqlab bo‘lmadi:', error);
+              });
             }
             return;
           }
@@ -632,7 +629,9 @@ const MatchControl = () => {
         setTimerSeconds(prev => {
           if (prev <= 1) {
             setIsTimerRunning(false);
-            updateTimerDBAndState(0, null, false);
+            void updateTimerDBAndState(0, null, false).catch((error) => {
+              console.warn('Taymerning nol holatini bazaga saqlab bo‘lmadi:', error);
+            });
             return 0;
           }
           return prev - 1;
@@ -704,15 +703,7 @@ const MatchControl = () => {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
         setMatch(prev => ({ ...prev, ...payload.new }));
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sponsors', filter: `name=eq.MATCH_TIMER_${id}` }, (payload) => {
-        const record = payload.new || payload.record;
-        if (record?.logo_url) {
-          try {
-            const parsed = JSON.parse(record.logo_url);
-            applyTimerPayload(parsed);
-          } catch (e) {}
-        }
+        if (payload.new) applyTimerPayload(payload.new);
       })
       .subscribe();
 
@@ -776,23 +767,8 @@ const MatchControl = () => {
       setHomePlayers((hp || []).filter(p => !p.is_archived));
       setAwayPlayers((ap || []).filter(p => !p.is_archived));
 
-      // Fetch persistent timer state from sponsors or match
-      const { data: timerSp } = await supabase
-        .from('sponsors')
-        .select('logo_url')
-        .eq('name', `MATCH_TIMER_${id}`)
-        .maybeSingle();
-
-      if (timerSp?.logo_url) {
-        try {
-          const parsed = JSON.parse(timerSp.logo_url);
-          applyTimerPayload(parsed);
-        } catch (e) {
-          applyTimerPayload(matchData);
-        }
-      } else {
-        applyTimerPayload(matchData);
-      }
+      // matches is the single source of truth for Match Control and OBS.
+      applyTimerPayload(matchData);
 
       // Fetch events
       await fetchEvents(matchData.id);
@@ -932,24 +908,42 @@ const MatchControl = () => {
     }
   };
 
-  const toggleTimerManual = () => {
+  const toggleTimerManual = async () => {
+    if (!(await ensureServerClock())) return;
     const newRunning = !isTimerRunning;
     let curRemaining = timerSeconds;
     if (curRemaining <= 0) curRemaining = halfDurationSecs;
-    const nowIso = newRunning ? new Date().toISOString() : null;
-    updateTimerDBAndState(curRemaining, nowIso, newRunning);
+    const nowIso = newRunning ? serverNowIso() : null;
+    try {
+      await updateTimerDBAndState(curRemaining, nowIso, newRunning);
+    } catch (error) {
+      console.error('Taymerni saqlashda xatolik:', error);
+      alert('Taymer bazaga saqlanmadi. Internet yoki match ruxsatini tekshiring. Ekrandagi vaqt o‘zgartirilmadi.');
+    }
   };
 
-  const adjustTimerSeconds = (deltaSec) => {
+  const adjustTimerSeconds = async (deltaSec) => {
+    if (!(await ensureServerClock())) return;
     const newSec = Math.max(0, Math.min(halfDurationSecs, timerSeconds + deltaSec));
-    const nowIso = isTimerRunning ? new Date().toISOString() : null;
-    updateTimerDBAndState(newSec, nowIso, isTimerRunning);
+    const nowIso = isTimerRunning ? serverNowIso() : null;
+    try {
+      await updateTimerDBAndState(newSec, nowIso, isTimerRunning);
+    } catch (error) {
+      console.error('Taymerni saqlashda xatolik:', error);
+      alert('Taymer bazaga saqlanmadi. Internet yoki match ruxsatini tekshiring. Ekrandagi vaqt o‘zgartirilmadi.');
+    }
   };
 
-  const resetTimerManual = () => {
+  const resetTimerManual = async () => {
+    if (!(await ensureServerClock())) return;
     const defaultSec = halfDurationSecs;
-    const nowIso = isTimerRunning ? new Date().toISOString() : null;
-    updateTimerDBAndState(defaultSec, nowIso, isTimerRunning);
+    const nowIso = isTimerRunning ? serverNowIso() : null;
+    try {
+      await updateTimerDBAndState(defaultSec, nowIso, isTimerRunning);
+    } catch (error) {
+      console.error('Taymerni saqlashda xatolik:', error);
+      alert('Taymer bazaga saqlanmadi. Internet yoki match ruxsatini tekshiring. Ekrandagi vaqt o‘zgartirilmadi.');
+    }
   };
 
   // Quick + creates a real unattributed goal event; - remains a score correction.
@@ -987,7 +981,7 @@ const MatchControl = () => {
         .from('matches')
         .update({
           [isHome ? 'home_score' : 'away_score']: newScore,
-          updated_at: new Date().toISOString(),
+          updated_at: serverNowIso(),
         })
         .eq('id', id);
 
@@ -1019,11 +1013,12 @@ const MatchControl = () => {
     } catch (e) {}
   };
 
-  const executeStatusChange = (newStatus) => {
+  const executeStatusChange = async (newStatus) => {
+    if (!(await ensureServerClock())) return;
     const halfSec = halfDurationSecs || 1500;
     let newBaseSec = timerSeconds;
     let newRunning = isTimerRunning;
-    let nowIso = new Date().toISOString();
+    let nowIso = serverNowIso();
 
     if (newStatus === 'first_half') {
       newBaseSec = halfSec;
@@ -1041,20 +1036,7 @@ const MatchControl = () => {
       nowIso = null;
     }
 
-    const updatedState = {
-      status: newStatus,
-      timer_seconds: newBaseSec,
-      timer_started_at: nowIso,
-      is_timer_running: newRunning,
-    };
-
-    // 1. Optimistically update local state immediately (0ms instant UI change)
-    setMatch(prev => ({ ...prev, ...updatedState }));
-    setIsTimerRunning(newRunning);
-    setTimerSeconds(newBaseSec);
-
-    // 2. Persist in a single consolidated lightweight call (0 lag!)
-    updateTimerDBAndState(newBaseSec, nowIso, newRunning, newStatus);
+    await updateTimerDBAndState(newBaseSec, nowIso, newRunning, newStatus);
   };
 
   const requestStatusUpdate = (newStatus, message) => {
@@ -1066,6 +1048,7 @@ const MatchControl = () => {
           await executeStatusChange(newStatus);
         } catch (err) {
           console.error('Error updating match status:', err);
+          alert('O‘yin holati va taymer bazaga saqlanmadi. Qayta urinib ko‘ring.');
         } finally {
           setConfirmModal({ isOpen: false, action: null, message: '' });
         }
@@ -1078,6 +1061,7 @@ const MatchControl = () => {
   // tomonidan avtomatik ham chaqiriladi. Modalga bog'liq emas.
   const finishMatchNow = async () => {
     try {
+      if (!(await ensureServerClock())) return;
       const homeGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.home_team_id).length;
       const awayGoals = events.filter(e => e.event_type === 'goal' && e.team_id === match.away_team_id).length;
 
@@ -1097,29 +1081,16 @@ const MatchControl = () => {
         status: 'finished',
         home_score: finalHomeScore,
         away_score: finalAwayScore,
-        updated_at: new Date().toISOString()
+        updated_at: serverNowIso()
       };
 
       const targetId = match?.id || id;
 
-      setMatch(prev => ({
-        ...prev,
-        ...baseFinishData,
-        timer_seconds: timerSeconds,
-        timer_started_at: null,
-        is_timer_running: false,
-        home_team: homeTeam,
-        away_team: awayTeam
-      }));
-      setIsTimerRunning(false);
-
       await updateTimerDBAndState(timerSeconds, null, false, 'finished');
 
-      try {
-        await supabase.from('matches').update(baseFinishData).eq('id', targetId);
-      } catch (errAdmin) {
-        console.warn('Admin finish update error:', errAdmin);
-      }
+      const { error: finishUpdateError } = await supabase.from('matches').update(baseFinishData).eq('id', targetId);
+      if (finishUpdateError) throw finishUpdateError;
+      setMatch(prev => ({ ...prev, ...baseFinishData, home_team: homeTeam, away_team: awayTeam }));
 
       const updatedMatch = {
         ...match,
@@ -1192,7 +1163,7 @@ const MatchControl = () => {
       if (!match.timer_started_at) return;
       const startedMs = new Date(match.timer_started_at).getTime();
       if (isNaN(startedMs)) return;
-      const runningForSec = (Date.now() - startedMs) / 1000;
+      const runningForSec = (serverNowMs() - startedMs) / 1000;
       const limitSec = (matchDurationMins + 30) * 60;
       if (runningForSec >= limitSec) {
         autoFinishTriggeredRef.current = true;
@@ -1276,7 +1247,7 @@ const MatchControl = () => {
           await supabase.from('matches').update({
             home_score: newHomeScore,
             away_score: newAwayScore,
-            updated_at: new Date().toISOString(),
+            updated_at: serverNowIso(),
           }).eq('id', id);
 
           setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
@@ -1324,7 +1295,7 @@ const MatchControl = () => {
           await supabase.from('matches').update({
             home_score: newHomeScore,
             away_score: newAwayScore,
-            updated_at: new Date().toISOString(),
+            updated_at: serverNowIso(),
           }).eq('id', id);
 
           setMatch(prev => ({ ...prev, home_score: newHomeScore, away_score: newAwayScore }));
@@ -1373,7 +1344,7 @@ const MatchControl = () => {
         await supabase.from('matches').update({
           home_score: newHomeScore,
           away_score: newAwayScore,
-          updated_at: new Date().toISOString()
+          updated_at: serverNowIso()
         }).eq('id', id);
       }
     } catch (err) {

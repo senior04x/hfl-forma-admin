@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient';
 import './ObsScoreboard.css';
 import ObsPrematch from '../components/ObsPrematch';
 import { LIVE_STATUSES, readPages, selectStreamMatch } from '../utils/obsPrematch';
+import { serverNowMs, startServerClockSync } from '../utils/serverClock';
 
 const DEFAULT_LEAGUE_LOGOS = {
   'Super liga': '/super-liga.PNG',
@@ -27,7 +28,11 @@ const ObsScoreboard = () => {
   const [prematch, setPrematch] = useState(null);
   const activeMatchRef = useRef(null);
   const fetchVersion = useRef(0);
+  const timerPollInFlightRef = useRef(false);
+  const timerSourceVersionRef = useRef(0);
   activeMatchRef.current = activeMatchId;
+
+  useEffect(() => startServerClockSync(), []);
 
   useEffect(() => {
     setPrematch(previous => match?.status === 'scheduled' ? match
@@ -177,7 +182,7 @@ const ObsScoreboard = () => {
     if (isRunning && startedAt) {
       const startedMs = new Date(startedAt).getTime();
       if (!isNaN(startedMs)) {
-        const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
+        const elapsedSec = Math.max(0, Math.floor((serverNowMs() - startedMs) / 1000));
         const remaining = Math.max(0, baseSec - elapsedSec);
         setTimerSeconds(remaining);
       } else {
@@ -195,7 +200,7 @@ const ObsScoreboard = () => {
         if (timerStartedAtRef.current) {
           const startedMs = new Date(timerStartedAtRef.current).getTime();
           if (!isNaN(startedMs)) {
-            const elapsedSec = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
+            const elapsedSec = Math.max(0, Math.floor((serverNowMs() - startedMs) / 1000));
             const remaining = Math.max(0, baseTimerSecondsRef.current - elapsedSec);
             setTimerSeconds(remaining);
             if (remaining === 0) {
@@ -227,79 +232,30 @@ const ObsScoreboard = () => {
 
     fetchData(activeMatchId);
 
-    const queryParams = new URLSearchParams(window.location.search);
-    const rawFieldParam = (queryParams.get('field') || queryParams.get('field_id') || queryParams.get('stream') || queryParams.get('maydon') || '').toLowerCase();
-    const idLower = String(id || '').toLowerCase();
-
-    let fieldNum = 1;
-    if (idLower.includes('4') || rawFieldParam.includes('4')) fieldNum = 4;
-    else if (idLower.includes('3') || rawFieldParam.includes('3')) fieldNum = 3;
-    else if (idLower.includes('2') || rawFieldParam.includes('2')) fieldNum = 2;
-    else if (idLower.includes('1') || rawFieldParam.includes('1')) fieldNum = 1;
-
-    const streamKey = `stream${fieldNum}`;
-
-    // 1. Web BroadcastChannel for local 0ms instant sync (same PC / OBS)
-    let bcMatch = null;
-    let bcStream = null;
-    try {
-      bcMatch = new BroadcastChannel(`amatora_timer_${activeMatchId}`);
-      bcMatch.onmessage = (e) => {
-        if (e.data) applyTimerPayload(e.data);
-      };
-
-      bcStream = new BroadcastChannel(`amatora_${streamKey}_timer`);
-      bcStream.onmessage = (e) => {
-        if (e.data) applyTimerPayload(e.data);
-      };
-    } catch (e) {}
-
-    // 2. Fast Supabase Broadcast Channels (Match-level + Stream-level for 0ms cross-network sync)
-    const fastTimerChannel = supabase
-      .channel(`obs_fast_timer_${activeMatchId}`)
-      .on('broadcast', { event: 'timer_update' }, (msg) => {
-        if (msg.payload) applyTimerPayload(msg.payload);
-      })
-      .subscribe();
-
-    const fastStreamChannel = supabase
-      .channel(`obs_fast_${streamKey}`)
-      .on('broadcast', { event: 'timer_update' }, (msg) => {
-        if (msg.payload) applyTimerPayload(msg.payload);
-      })
-      .subscribe();
-
-    // 3. High-Frequency Lightweight Fallback Polling (Every 1s for resilience)
+    // Timer holati uchun matches jadvali yagona manba; eski xabarlarni qabul qilmaymiz.
     const fallbackPollInterval = setInterval(async () => {
+      if (timerPollInFlightRef.current) return;
+      timerPollInFlightRef.current = true;
+      const sourceVersion = timerSourceVersionRef.current;
       try {
         const { data: matchRow } = await supabase
           .from('matches')
-          .select('timer_seconds, timer_started_at, is_timer_running, status, home_score, away_score')
+          .select('id, timer_seconds, timer_started_at, is_timer_running, status, home_score, away_score')
           .eq('id', activeMatchId)
           .maybeSingle();
 
-        if (matchRow) {
+        if (matchRow && sourceVersion === timerSourceVersionRef.current) {
           applyTimerPayload(matchRow);
           if (matchRow.home_score !== undefined || matchRow.away_score !== undefined) {
             setMatch((prev) => prev?.id === activeMatchId ? { ...prev, ...matchRow } : prev);
           }
         }
 
-        if (!matchRow) {
-          const { data: timerRow } = await supabase
-            .from('sponsors')
-            .select('logo_url')
-            .eq('name', `MATCH_TIMER_${activeMatchId}`)
-            .maybeSingle();
-
-          if (timerRow?.logo_url) {
-            try {
-              const parsed = JSON.parse(timerRow.logo_url);
-              applyTimerPayload(parsed);
-            } catch (pe) {}
-          }
-        }
-      } catch (pollErr) {}
+      } catch (pollErr) {
+        // Realtime kanal vaqtinchalik so'rov xatosida ham ishlashda davom etadi.
+      } finally {
+        timerPollInFlightRef.current = false;
+      }
     }, 1000);
 
     // 4. Subscribe to real-time match changes
@@ -314,32 +270,10 @@ const ObsScoreboard = () => {
           filter: `id=eq.${activeMatchId}`
         },
         (payload) => {
+          timerSourceVersionRef.current += 1;
           setMatch((prev) => prev?.id === activeMatchId ? { ...prev, ...payload.new } : prev);
           if (payload.new) {
             applyTimerPayload(payload.new);
-          }
-        }
-      )
-      .subscribe();
-
-    // 5. Subscribe to timer changes via sponsors table realtime
-    const timerSubscription = supabase
-      .channel(`obs-timer-${activeMatchId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sponsors',
-          filter: `name=eq.MATCH_TIMER_${activeMatchId}`
-        },
-        (payload) => {
-          const record = payload.new || payload.record;
-          if (record?.logo_url) {
-            try {
-              const parsed = JSON.parse(record.logo_url);
-              applyTimerPayload(parsed);
-            } catch (e) {}
           }
         }
       )
@@ -401,13 +335,8 @@ const ObsScoreboard = () => {
       .subscribe();
 
     return () => {
-      try { if (bcMatch) bcMatch.close(); } catch (e) {}
-      try { if (bcStream) bcStream.close(); } catch (e) {}
       clearInterval(fallbackPollInterval);
-      supabase.removeChannel(fastTimerChannel);
-      supabase.removeChannel(fastStreamChannel);
       supabase.removeChannel(matchSubscription);
-      supabase.removeChannel(timerSubscription);
       supabase.removeChannel(eventsSubscription);
     };
   }, [activeMatchId]);
@@ -501,24 +430,8 @@ const ObsScoreboard = () => {
         setHomeTeam(homeObj);
         setAwayTeam(awayObj);
 
-        // Fetch timer state
-        const { data: timerSp } = await supabase
-          .from('sponsors')
-          .select('logo_url')
-          .eq('name', `MATCH_TIMER_${matchId}`)
-          .maybeSingle();
-
         if (activeMatchRef.current !== matchId || version !== fetchVersion.current) return;
-        if (timerSp?.logo_url) {
-          try {
-            const parsed = JSON.parse(timerSp.logo_url);
-            applyTimerPayload(parsed);
-          } catch (e) {
-            applyTimerPayload(matchData);
-          }
-        } else {
-          applyTimerPayload(matchData);
-        }
+        applyTimerPayload(matchData);
       }
     } catch (err) {
       console.error('Error fetching OBS data:', err);
