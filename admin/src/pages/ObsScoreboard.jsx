@@ -142,6 +142,9 @@ const ObsScoreboard = () => {
   // Helper to apply persistent timer payload in OBS (Countdown Mode)
   const applyTimerPayload = (payload) => {
     if (!payload) return;
+    const payloadMatchId = payload.match_id || payload.id;
+    if (payloadMatchId && activeMatchId && payloadMatchId !== activeMatchId) return;
+
     const isRunning = String(payload.is_timer_running) === 'true' || payload.is_timer_running === true;
     const startedAt = payload.timer_started_at;
     const defaultSec = getHalfDurationSecs(payload || match, leagueData);
@@ -152,6 +155,19 @@ const ObsScoreboard = () => {
 
     if (baseSec === 0 && (payload.status === 'scheduled' || !isRunning)) {
       baseSec = defaultSec;
+    }
+
+    if (typeof payload.status === 'string' && payload.status) {
+      setMatch((previous) => previous?.id === activeMatchId
+        ? {
+            ...previous,
+            status: payload.status,
+            timer_seconds: baseSec,
+            timer_started_at: startedAt || null,
+            is_timer_running: isRunning,
+            ...(payload.updated_at ? { updated_at: payload.updated_at } : {})
+          }
+        : previous);
     }
 
     setIsTimerRunning(isRunning);
@@ -269,17 +285,19 @@ const ObsScoreboard = () => {
           }
         }
 
-        const { data: timerRow } = await supabase
-          .from('sponsors')
-          .select('logo_url')
-          .eq('name', `MATCH_TIMER_${activeMatchId}`)
-          .maybeSingle();
+        if (!matchRow) {
+          const { data: timerRow } = await supabase
+            .from('sponsors')
+            .select('logo_url')
+            .eq('name', `MATCH_TIMER_${activeMatchId}`)
+            .maybeSingle();
 
-        if (timerRow?.logo_url) {
-          try {
-            const parsed = JSON.parse(timerRow.logo_url);
-            applyTimerPayload(parsed);
-          } catch (pe) {}
+          if (timerRow?.logo_url) {
+            try {
+              const parsed = JSON.parse(timerRow.logo_url);
+              applyTimerPayload(parsed);
+            } catch (pe) {}
+          }
         }
       } catch (pollErr) {}
     }, 1000);

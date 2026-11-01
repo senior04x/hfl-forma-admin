@@ -537,6 +537,7 @@ const MatchControl = () => {
     const targetOrgId = requireOrganizationId(match?.organization_id || orgId);
 
     const timerPayload = {
+      match_id: targetId,
       timer_seconds: baseSec,
       timer_started_at: startedAtIso,
       is_timer_running: isRunning,
