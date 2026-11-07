@@ -36,14 +36,24 @@ export async function loadMatchLeague(supabase, match) {
   return loadLeagueDuration(supabase, sharedLeagues.values().next().value);
 }
 
-export async function loadTournamentDuration(supabase, match) {
+export async function loadTournamentDuration(supabase, match, includeReplayMetadata = false) {
   if (!match?.tournament_id) return match;
-  const { data, error } = await supabase.from('tournaments').select('match_duration')
+  const query = columns => supabase.from('tournaments').select(columns)
     .eq('id', match.tournament_id).maybeSingle();
+  let { data, error } = await query(includeReplayMetadata ? 'match_duration,tier,description' : 'match_duration');
+  if (includeReplayMetadata && error?.code === '42703') {
+    ({ data, error } = await query('match_duration,description'));
+  }
+  if (includeReplayMetadata && error) {
+    ({ data, error } = await query('match_duration'));
+  }
   if (error) throw error;
   const duration = Number(data?.match_duration);
-  if (!Number.isFinite(duration) || duration <= 0) return match;
-  return { ...match, tournamentDuration: duration };
+  let resolvedMatch = Number.isFinite(duration) && duration > 0 ? { ...match, tournamentDuration: duration } : match;
+  if (includeReplayMetadata && data) {
+    resolvedMatch = { ...resolvedMatch, tournamentReplayMetadata: { tier: data.tier, description: data.description } };
+  }
+  return resolvedMatch;
 }
 
 export function getHalfDurationSecs(match, league) {

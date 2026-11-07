@@ -8,6 +8,7 @@ import { LIVE_STATUSES, readPages, selectStreamMatch } from '../utils/obsPrematc
 import { startServerClockSync } from '../utils/serverClock';
 import { getElapsedMatchSeconds } from '../utils/matchTimer';
 import { useMatchTimer } from '../utils/useMatchTimer';
+import { getObsEventDelayMs } from '../utils/obsEventDelay';
 
 const DEFAULT_LEAGUE_LOGOS = {
   'Super liga': '/super-liga.PNG',
@@ -32,6 +33,7 @@ const ObsScoreboard = () => {
   const fetchVersion = useRef(0);
   const timerPollInFlightRef = useRef(false);
   const latestLiveMatchRef = useRef(null);
+  const eventCompetitionRef = useRef(null);
   activeMatchRef.current = activeMatchId;
 
   useEffect(() => startServerClockSync(), []);
@@ -141,11 +143,30 @@ const ObsScoreboard = () => {
 
   // 2. Fetch match details & subscribe to live updates
   useEffect(() => {
+    setActiveEvent(null);
+    setIsEventExiting(false);
     if (!activeMatchId) return;
 
     let active = true;
+    let exitTimer;
+    let hideTimer;
+    const pendingEvents = new Set();
     latestLiveMatchRef.current = null;
-    fetchData(activeMatchId);
+    eventCompetitionRef.current = null;
+    const initialMatchLoad = fetchData(activeMatchId);
+
+    const showEvent = (event) => {
+      if (!active || activeMatchRef.current !== activeMatchId) return;
+      clearTimeout(exitTimer);
+      clearTimeout(hideTimer);
+      setActiveEvent(event);
+      setIsEventExiting(false);
+      exitTimer = setTimeout(() => setIsEventExiting(true), 7000);
+      hideTimer = setTimeout(() => {
+        setActiveEvent(null);
+        setIsEventExiting(false);
+      }, 8000);
+    };
 
     const acceptMatchRow = (row) => {
       if (!active || row?.id !== activeMatchRef.current) return;
@@ -226,22 +247,21 @@ const ObsScoreboard = () => {
               eventType: newEvent.event_type 
             };
 
-            // All events (goals, yellow cards, red cards) wait 25 seconds (20s replay + 5s delay after replay finishes)
-            const delayMs = 25000;
-
-            setTimeout(() => {
-              setActiveEvent(eventPayload);
-              setIsEventExiting(false);
-              
-              setTimeout(() => {
-                setIsEventExiting(true);
-              }, 7000);
-
-              setTimeout(() => {
-                setActiveEvent(null);
-                setIsEventExiting(false);
-              }, 8000);
+            if (newEvent.event_type === 'goal' && !eventCompetitionRef.current) {
+              await initialMatchLoad;
+            }
+            if (!active || activeMatchRef.current !== activeMatchId) return;
+            const { match: eventMatch, league } = eventCompetitionRef.current ?? {};
+            const delayMs = getObsEventDelayMs(newEvent.event_type, eventMatch, league);
+            if (!delayMs) {
+              showEvent(eventPayload);
+              return;
+            }
+            const timer = setTimeout(() => {
+              pendingEvents.delete(timer);
+              showEvent(eventPayload);
             }, delayMs);
+            pendingEvents.add(timer);
           }
         }
       )
@@ -250,6 +270,9 @@ const ObsScoreboard = () => {
     return () => {
       active = false;
       clearInterval(fallbackPollInterval);
+      clearTimeout(exitTimer);
+      clearTimeout(hideTimer);
+      for (const timer of pendingEvents) clearTimeout(timer);
       supabase.removeChannel(matchSubscription);
       supabase.removeChannel(eventsSubscription);
     };
@@ -291,7 +314,7 @@ const ObsScoreboard = () => {
       
       if (matchData) {
         if (activeMatchRef.current !== matchId || version !== fetchVersion.current) return;
-        matchData = await loadTournamentDuration(supabase, matchData);
+        matchData = await loadTournamentDuration(supabase, matchData, true);
         if (activeMatchRef.current !== matchId || version !== fetchVersion.current) return;
 
         let resolvedLeague = null;
@@ -301,7 +324,9 @@ const ObsScoreboard = () => {
 
         if (activeMatchRef.current !== matchId || version !== fetchVersion.current) return;
         const liveMatch = latestLiveMatchRef.current;
-        setMatch(liveMatch?.id === matchId && liveMatch !== liveMatchAtRequest ? { ...matchData, ...liveMatch } : matchData);
+        const resolvedMatch = liveMatch?.id === matchId && liveMatch !== liveMatchAtRequest ? { ...matchData, ...liveMatch } : matchData;
+        eventCompetitionRef.current = { match: resolvedMatch, league: resolvedLeague };
+        setMatch(resolvedMatch);
         setLeagueData(resolvedLeague);
 
         let homeObj = null;

@@ -93,3 +93,18 @@ test('league fixtures need no tournament query and absent duration keeps fallbac
   const cup = { tournament_id: 'cup' };
   assert.equal(await loadTournamentDuration(db, cup), cup);
 });
+
+test('OBS reads legacy tournament replay metadata with the same duration lookup', async () => {
+  const selections = [];
+  const db = { from: () => ({ select(columns) {
+    selections.push(columns);
+    return { eq: () => ({ maybeSingle: async () => columns.includes('tier')
+      ? { error: { code: '42703' } }
+      : { data: { match_duration: 50, description: '[TIER:1|PARENT:]' } },
+    }) };
+  } }) };
+  const match = await loadTournamentDuration(db, { tournament_id: 9 }, true);
+  assert.deepEqual(selections, ['match_duration,tier,description', 'match_duration,description']);
+  assert.equal(getHalfDurationSecs(match, null), 1500);
+  assert.equal(match.tournamentReplayMetadata.description, '[TIER:1|PARENT:]');
+});
