@@ -7,21 +7,33 @@ export async function loadLeagueDuration(supabase, league) {
   if (!full && league.id) {
     const { data } = await supabase.from('sponsors').select('logo_url')
       .eq('name', `LEAGUE_DURATION_${league.id}`).maybeSingle();
-    if (data?.logo_url) {
-      full = Number(data.logo_url);
+    const savedDuration = Number(data?.logo_url);
+    if (Number.isFinite(savedDuration) && savedDuration > 0) {
+      full = savedDuration;
       half = Math.round(full / 2);
     }
   }
-  if (!full && league.id) {
-    try {
-      const saved = localStorage.getItem(`hfl_league_duration_${league.id}`);
-      if (saved) {
-        full = Number(saved);
-        half = Math.round(full / 2);
-      }
-    } catch { /* Storage may be unavailable in OBS. */ }
-  }
   return { ...league, half_duration: half || 30, match_duration: full || ((half || 30) * 2) };
+}
+
+export async function loadMatchLeague(supabase, match) {
+  const leagueName = match?.league?.trim();
+  if (!leagueName) return null;
+  const namePattern = leagueName.replace(/[\\%_]/g, '\\$&');
+  const orgId = match.organization_id;
+  let query = supabase.from('leagues').select('*').ilike('name', namePattern);
+  if (orgId != null) query = query.eq('organization_id', orgId);
+  const { data: league, error } = await query.maybeSingle();
+  if (error || league || orgId == null) return loadLeagueDuration(supabase, league);
+
+  const { data: collaborations } = await supabase.from('league_collabs')
+    .select('league:league_id!inner(*)')
+    .eq('status', 'accepted')
+    .or(`sender_org_id.eq.${orgId},receiver_org_id.eq.${orgId}`)
+    .ilike('league.name', namePattern);
+  const sharedLeagues = new Map((collaborations ?? []).filter(row => row.league).map(({ league }) => [league.id, league]));
+  if (sharedLeagues.size !== 1) return null;
+  return loadLeagueDuration(supabase, sharedLeagues.values().next().value);
 }
 
 export async function loadTournamentDuration(supabase, match) {

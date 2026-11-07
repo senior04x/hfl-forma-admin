@@ -1,11 +1,13 @@
-import { loadLeagueDuration, loadTournamentDuration, getHalfDurationSecs } from '../utils/matchDuration';
+import { loadMatchLeague, loadTournamentDuration, getHalfDurationSecs } from '../utils/matchDuration';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import './ObsScoreboard.css';
 import ObsPrematch from '../components/ObsPrematch';
 import { LIVE_STATUSES, readPages, selectStreamMatch } from '../utils/obsPrematch';
-import { serverNowMs, startServerClockSync } from '../utils/serverClock';
+import { startServerClockSync } from '../utils/serverClock';
+import { getElapsedMatchSeconds } from '../utils/matchTimer';
+import { useMatchTimer } from '../utils/useMatchTimer';
 
 const DEFAULT_LEAGUE_LOGOS = {
   'Super liga': '/super-liga.PNG',
@@ -29,7 +31,7 @@ const ObsScoreboard = () => {
   const activeMatchRef = useRef(null);
   const fetchVersion = useRef(0);
   const timerPollInFlightRef = useRef(false);
-  const timerSourceVersionRef = useRef(0);
+  const latestLiveMatchRef = useRef(null);
   activeMatchRef.current = activeMatchId;
 
   useEffect(() => startServerClockSync(), []);
@@ -38,13 +40,6 @@ const ObsScoreboard = () => {
     setPrematch(previous => match?.status === 'scheduled' ? match
       : !match || (previous && match.id !== previous.id) ? null : previous);
   }, [match]);
-
-  // Realtime Timer State for OBS
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const timerRef = useRef(null);
-  const timerStartedAtRef = useRef(null);
-  const baseTimerSecondsRef = useRef(0);
 
   // 1. Identify active match ID (Direct Match ID vs. Stream + Organization)
   useEffect(() => {
@@ -144,111 +139,35 @@ const ObsScoreboard = () => {
     };
   }, [id]);
 
-  // Helper to apply persistent timer payload in OBS (Countdown Mode)
-  const applyTimerPayload = (payload) => {
-    if (!payload) return;
-    const payloadMatchId = payload.match_id || payload.id;
-    if (payloadMatchId && activeMatchId && payloadMatchId !== activeMatchId) return;
-
-    const isRunning = String(payload.is_timer_running) === 'true' || payload.is_timer_running === true;
-    const startedAt = payload.timer_started_at;
-    const defaultSec = getHalfDurationSecs(payload || match, leagueData);
-    
-    let baseSec = payload.timer_seconds !== undefined && payload.timer_seconds !== null 
-      ? Number(payload.timer_seconds) 
-      : defaultSec;
-
-    if (baseSec === 0 && (payload.status === 'scheduled' || !isRunning)) {
-      baseSec = defaultSec;
-    }
-
-    if (typeof payload.status === 'string' && payload.status) {
-      setMatch((previous) => previous?.id === activeMatchId
-        ? {
-            ...previous,
-            status: payload.status,
-            timer_seconds: baseSec,
-            timer_started_at: startedAt || null,
-            is_timer_running: isRunning,
-            ...(payload.updated_at ? { updated_at: payload.updated_at } : {})
-          }
-        : previous);
-    }
-
-    setIsTimerRunning(isRunning);
-    baseTimerSecondsRef.current = baseSec;
-    timerStartedAtRef.current = startedAt || null;
-
-    if (isRunning && startedAt) {
-      const startedMs = new Date(startedAt).getTime();
-      if (!isNaN(startedMs)) {
-        const elapsedSec = Math.max(0, Math.floor((serverNowMs() - startedMs) / 1000));
-        const remaining = Math.max(0, baseSec - elapsedSec);
-        setTimerSeconds(remaining);
-      } else {
-        setTimerSeconds(baseSec);
-      }
-    } else {
-      setTimerSeconds(baseSec);
-    }
-  };
-
-  // Realtime Countdown Timer interval for OBS display (25:00 -> 00:00)
-  useEffect(() => {
-    if (isTimerRunning) {
-      timerRef.current = setInterval(() => {
-        if (timerStartedAtRef.current) {
-          const startedMs = new Date(timerStartedAtRef.current).getTime();
-          if (!isNaN(startedMs)) {
-            const elapsedSec = Math.max(0, Math.floor((serverNowMs() - startedMs) / 1000));
-            const remaining = Math.max(0, baseTimerSecondsRef.current - elapsedSec);
-            setTimerSeconds(remaining);
-            if (remaining === 0) {
-              setIsTimerRunning(false);
-            }
-            return;
-          }
-        }
-        setTimerSeconds(prev => {
-          if (prev <= 1) {
-            setIsTimerRunning(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isTimerRunning]);
-
   // 2. Fetch match details & subscribe to live updates
   useEffect(() => {
     if (!activeMatchId) return;
 
+    let active = true;
+    latestLiveMatchRef.current = null;
     fetchData(activeMatchId);
 
-    // Timer holati uchun matches jadvali yagona manba; eski xabarlarni qabul qilmaymiz.
+    const acceptMatchRow = (row) => {
+      if (!active || row?.id !== activeMatchRef.current) return;
+      latestLiveMatchRef.current = row;
+      setMatch(previous => previous?.id === row.id ? { ...previous, ...row } : previous);
+    };
+
+    // Ignore a poll response if realtime has already supplied a newer row.
     const fallbackPollInterval = setInterval(async () => {
       if (timerPollInFlightRef.current) return;
       timerPollInFlightRef.current = true;
-      const sourceVersion = timerSourceVersionRef.current;
+      const liveMatchAtRequest = latestLiveMatchRef.current;
       try {
         const { data: matchRow } = await supabase
           .from('matches')
-          .select('id, timer_seconds, timer_started_at, is_timer_running, status, home_score, away_score')
+          .select('id, timer_seconds, timer_started_at, is_timer_running, status, home_score, away_score, updated_at')
           .eq('id', activeMatchId)
           .maybeSingle();
 
-        if (matchRow && sourceVersion === timerSourceVersionRef.current) {
-          applyTimerPayload(matchRow);
-          if (matchRow.home_score !== undefined || matchRow.away_score !== undefined) {
-            setMatch((prev) => prev?.id === activeMatchId ? { ...prev, ...matchRow } : prev);
-          }
+        if (matchRow && latestLiveMatchRef.current === liveMatchAtRequest &&
+            !Object.keys(matchRow).every(key => matchRow[key] === liveMatchAtRequest?.[key])) {
+          acceptMatchRow(matchRow);
         }
 
       } catch (pollErr) {
@@ -269,13 +188,7 @@ const ObsScoreboard = () => {
           table: 'matches',
           filter: `id=eq.${activeMatchId}`
         },
-        (payload) => {
-          timerSourceVersionRef.current += 1;
-          setMatch((prev) => prev?.id === activeMatchId ? { ...prev, ...payload.new } : prev);
-          if (payload.new) {
-            applyTimerPayload(payload.new);
-          }
-        }
+        (payload) => acceptMatchRow(payload.new)
       )
       .subscribe();
 
@@ -335,6 +248,7 @@ const ObsScoreboard = () => {
       .subscribe();
 
     return () => {
+      active = false;
       clearInterval(fallbackPollInterval);
       supabase.removeChannel(matchSubscription);
       supabase.removeChannel(eventsSubscription);
@@ -367,6 +281,7 @@ const ObsScoreboard = () => {
 
   const fetchData = async (matchId) => {
     const version = ++fetchVersion.current;
+    const liveMatchAtRequest = latestLiveMatchRef.current;
     try {
       let { data: matchData } = await supabase
         .from('matches')
@@ -378,28 +293,16 @@ const ObsScoreboard = () => {
         if (activeMatchRef.current !== matchId || version !== fetchVersion.current) return;
         matchData = await loadTournamentDuration(supabase, matchData);
         if (activeMatchRef.current !== matchId || version !== fetchVersion.current) return;
-        setMatch(matchData);
-        setHomeTeam(null);
-        setAwayTeam(null);
-        setLeagueData(null);
 
-        // Fetch League Data (logo & background image) for THIS specific organization
-        if (matchData.league || matchData.organization_id) {
-          try {
-            let lQuery = supabase.from('leagues').select('*');
-            if (matchData.organization_id) {
-              lQuery = lQuery.eq('organization_id', matchData.organization_id);
-            }
-            const { data: lDataList } = await lQuery;
-            if (lDataList && lDataList.length > 0) {
-              const matchedL = lDataList.find(
-                (l) => l.name?.trim().toLowerCase() === matchData.league?.trim().toLowerCase()
-              );
-              const resolvedLeague = await loadLeagueDuration(supabase, matchedL);
-              if (activeMatchRef.current === matchId && version === fetchVersion.current) setLeagueData(resolvedLeague);
-            }
-          } catch (e) {}
-        }
+        let resolvedLeague = null;
+        try {
+          resolvedLeague = await loadMatchLeague(supabase, matchData);
+        } catch { /* Keep the match duration fallback if league metadata is unavailable. */ }
+
+        if (activeMatchRef.current !== matchId || version !== fetchVersion.current) return;
+        const liveMatch = latestLiveMatchRef.current;
+        setMatch(liveMatch?.id === matchId && liveMatch !== liveMatchAtRequest ? { ...matchData, ...liveMatch } : matchData);
+        setLeagueData(resolvedLeague);
 
         let homeObj = null;
         let awayObj = null;
@@ -429,15 +332,14 @@ const ObsScoreboard = () => {
         if (activeMatchRef.current !== matchId || version !== fetchVersion.current) return;
         setHomeTeam(homeObj);
         setAwayTeam(awayObj);
-
-        if (activeMatchRef.current !== matchId || version !== fetchVersion.current) return;
-        applyTimerPayload(matchData);
       }
     } catch (err) {
       console.error('Error fetching OBS data:', err);
     }
   };
 
+  const halfSeconds = getHalfDurationSecs(match, leagueData);
+  const { timerSeconds, isTimerRunning } = useMatchTimer(match?.id === activeMatchId ? match : null, halfSeconds);
   const isDirectMatch = Boolean(id && id !== 'stream1' && id !== 'stream2');
   const isPlayingStatus = Boolean(
     match && ['first_half', 'second_half'].includes(match.status) && !prematch
@@ -452,15 +354,18 @@ const ObsScoreboard = () => {
       setRenderMatch(match);
       setShouldRender(true);
       setIsExiting(false);
-    } else if (shouldRender && !isExiting) {
-      setIsExiting(true);
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-        setIsExiting(false);
-      }, 2000);
-      return () => clearTimeout(timer);
     }
   }, [isPlayingStatus, match]);
+
+  useEffect(() => {
+    if (isPlayingStatus || !shouldRender) return;
+    setIsExiting(true);
+    const timer = setTimeout(() => {
+      setShouldRender(false);
+      setIsExiting(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [isPlayingStatus, shouldRender]);
 
   const showPrematch = prematch && match?.id === prematch.id;
   if (!activeMatchId || !match || (!showPrematch && (!renderMatch || !shouldRender))) {
@@ -495,29 +400,8 @@ const ObsScoreboard = () => {
     return '';
   };
 
-  // Calculate elapsed time (Count-UP: to'g'ri sanash) for OBS Scoreboard Display
-  const getElapsedSeconds = () => {
-    const halfSec = getHalfDurationSecs(match, leagueData);
-    if (!match || match.status === 'scheduled' || match.status === 'not_started' || match.status === 'pending') {
-      return 0;
-    }
-    if (match.status === 'half_time' || match.status === 'break') {
-      return halfSec;
-    }
-    if (match.status === 'second_half' || match.status === 'extra_time') {
-      const secondHalfElapsed = Math.max(0, halfSec - timerSeconds);
-      return halfSec + secondHalfElapsed;
-    }
-    if (match.status === 'finished') {
-      return halfSec * 2;
-    }
-    // first_half / default
-    return Math.max(0, halfSec - timerSeconds);
-  };
-
-  // Format Timer MM:SS (Count-UP display for OBS)
-  const formatTimer = (rawSeconds) => {
-    const totalSeconds = getElapsedSeconds();
+  const formatTimer = () => {
+    const totalSeconds = getElapsedMatchSeconds(match?.status, timerSeconds, halfSeconds);
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -574,7 +458,7 @@ const ObsScoreboard = () => {
               {displayMatch.league ? displayMatch.league.toUpperCase() : 'HFL'}
               {statusText && (
                 <span className="obs-status-text">
-                  {' '}• {statusText} (<span className={`obs-timer-display ${!isTimerRunning ? 'obs-timer-paused' : ''}`}>{formatTimer(timerSeconds)}</span>)
+                  {' '}• {statusText} (<span className={`obs-timer-display ${!isTimerRunning ? 'obs-timer-paused' : ''}`}>{formatTimer()}</span>)
                 </span>
               )}
             </div>

@@ -1,6 +1,6 @@
 import { requireOrganizationId } from '../utils/organizationId';
 import { savePrematchMode } from '../utils/obsPrematchMode';
-import { loadLeagueDuration, loadTournamentDuration, getHalfDurationSecs } from '../utils/matchDuration';
+import { loadMatchLeague, loadTournamentDuration, getHalfDurationSecs } from '../utils/matchDuration';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
@@ -13,6 +13,8 @@ import {
 import { obsService } from '../services/obsService';
 import { generateStingerWebM, downloadBlob, ensureAutoStingerSynced } from '../utils/stingerGenerator';
 import { hasServerClockSync, serverNowIso, serverNowMs, startServerClockSync, syncServerClock } from '../utils/serverClock';
+import { canRunMatchTimer, getElapsedMatchSeconds, parseTimerStartMs } from '../utils/matchTimer';
+import { useMatchTimer } from '../utils/useMatchTimer';
 import './MatchControl.css';
 
 const EVENT_TYPES = {
@@ -65,12 +67,11 @@ const MatchControl = () => {
   // Active Team Roster Switcher ('home' or 'away')
   const [activeRosterTeam, setActiveRosterTeam] = useState('home');
 
-  // Live Timer State & Refs for Cross-Device / Background Sync
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const timerRef = useRef(null);
-  const timerStartedAtRef = useRef(null);
-  const baseTimerSecondsRef = useRef(0);
+  const halfDurationSecs = getHalfDurationSecs(match, leagueData);
+  const halfDurationMins = halfDurationSecs / 60;
+  const matchDurationMins = Number(match?.tournamentDuration || match?.match_duration || leagueData?.match_duration || halfDurationMins * 2);
+  const { timerSeconds, isTimerRunning, readRemaining } = useMatchTimer(match?.id === id ? match : null, halfDurationSecs);
+  const latestLiveMatchRef = useRef(null);
   const quickGoalWriteRef = useRef(false);
   // Operator o'yinni yakunlashni unutib, taymer pauza qilinmagan holda
   // (is_timer_running=true) davomiy ishlab qolib ketishining oldini olish
@@ -80,6 +81,7 @@ const MatchControl = () => {
   useEffect(() => startServerClockSync(), []);
 
   const ensureServerClock = async () => {
+    if (hasServerClockSync()) return true;
     try {
       await syncServerClock();
       return true;
@@ -486,36 +488,6 @@ const MatchControl = () => {
     alert("Boshqaruv paneli havolasi nusxalandi!\n\n" + link);
   };
 
-  // Helper to apply persistent timer payload in countdown mode (30:00 -> 00:00)
-  const applyTimerPayload = (payload) => {
-    if (!payload) return;
-    const isRunning = !!payload.is_timer_running;
-    const startedAt = payload.timer_started_at;
-    const halfSec = halfDurationSecs || 1800;
-    let baseSec = payload.timer_seconds !== undefined && payload.timer_seconds !== null ? Number(payload.timer_seconds) : halfSec;
-
-    if (baseSec === 0 && (payload.status === 'scheduled' || !isRunning)) {
-      baseSec = halfSec;
-    }
-
-    setIsTimerRunning(isRunning);
-    baseTimerSecondsRef.current = baseSec;
-    timerStartedAtRef.current = startedAt || null;
-
-    if (isRunning && startedAt) {
-      const startedMs = new Date(startedAt).getTime();
-      if (!isNaN(startedMs)) {
-        const elapsedSec = Math.max(0, Math.floor((serverNowMs() - startedMs) / 1000));
-        const remaining = Math.max(0, baseSec - elapsedSec);
-        setTimerSeconds(remaining);
-      } else {
-        setTimerSeconds(baseSec);
-      }
-    } else {
-      setTimerSeconds(baseSec);
-    }
-  };
-
   // Multi-tier fast broadcast setup (Local BroadcastChannel + Supabase Realtime Broadcast)
   useEffect(() => {
     if (!id) return;
@@ -546,7 +518,7 @@ const MatchControl = () => {
   }, [id, match?.location]);
 
   // Persist the authoritative match timer before updating this screen or broadcasting it.
-  const updateTimerDBAndState = async (baseSec, startedAtIso, isRunning, newStatus) => {
+  const updateTimerDBAndState = async (baseSec, startedAtIso, isRunning, newStatus, expiredTimer) => {
     const targetId = match?.id || id;
     const targetOrgId = requireOrganizationId(match?.organization_id || orgId);
     if (!targetId) throw new Error('Match ID topilmadi');
@@ -560,21 +532,26 @@ const MatchControl = () => {
     };
     if (newStatus) matchUpdate.status = newStatus;
 
-    const { data: savedMatch, error } = await supabase
-      .from('matches')
-      .update(matchUpdate)
-      .eq('id', targetId)
+    const liveMatchAtWrite = latestLiveMatchRef.current;
+    let update = supabase.from('matches').update(matchUpdate).eq('id', targetId);
+    if (expiredTimer) {
+      // A delayed zero write must not overwrite a resume, adjustment, or new half.
+      update = update.eq('status', expiredTimer.status)
+        .eq('is_timer_running', true)
+        .eq('timer_seconds', expiredTimer.timer_seconds)
+        .eq('timer_started_at', expiredTimer.timer_started_at);
+    }
+    const { data: savedMatch, error } = await update
       .select('id, timer_seconds, timer_started_at, is_timer_running, status, updated_at')
       .maybeSingle();
     if (error) throw error;
+    if (!savedMatch && expiredTimer) return;
     if (!savedMatch) throw new Error('Taymer bazaga yozilmadi; ruxsat va internetni tekshiring.');
 
     const timerPayload = { ...savedMatch, match_id: targetId };
-    setMatch(prev => prev?.id === targetId ? { ...prev, ...savedMatch } : prev);
-    setTimerSeconds(baseSec);
-    setIsTimerRunning(isRunning);
-    baseTimerSecondsRef.current = baseSec;
-    timerStartedAtRef.current = startedAtIso;
+    if (latestLiveMatchRef.current === liveMatchAtWrite) {
+      setMatch(prev => prev?.id === targetId ? { ...prev, ...savedMatch } : prev);
+    }
 
     // Legacy timer consumers still receive a copy after the canonical row commits.
     try {
@@ -607,44 +584,17 @@ const MatchControl = () => {
     })();
   };
 
-  // Realtime Accurate Countdown Timer Interval (30:00 -> 00:00)
+  // Persist zero only for the exact running command that reached the end.
   useEffect(() => {
-    if (isTimerRunning) {
-      timerRef.current = setInterval(() => {
-        if (timerStartedAtRef.current) {
-          const startedMs = new Date(timerStartedAtRef.current).getTime();
-          if (!isNaN(startedMs)) {
-            const elapsedSec = Math.max(0, Math.floor((serverNowMs() - startedMs) / 1000));
-            const remaining = Math.max(0, baseTimerSecondsRef.current - elapsedSec);
-            setTimerSeconds(remaining);
-            if (remaining === 0) {
-              setIsTimerRunning(false);
-              void updateTimerDBAndState(0, null, false).catch((error) => {
-                console.warn('Taymerning nol holatini bazaga saqlab bo‘lmadi:', error);
-              });
-            }
-            return;
-          }
-        }
-        setTimerSeconds(prev => {
-          if (prev <= 1) {
-            setIsTimerRunning(false);
-            void updateTimerDBAndState(0, null, false).catch((error) => {
-              console.warn('Taymerning nol holatini bazaga saqlab bo‘lmadi:', error);
-            });
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
+    if (match?.id !== id || match?.is_timer_running !== true || !canRunMatchTimer(match.status)) return;
+    if (match.timer_seconds == null || !Number.isFinite(parseTimerStartMs(match.timer_started_at))) return;
+    if (!hasServerClockSync() && !import.meta.env.DEV) return;
+    if (timerSeconds !== 0 || readRemaining() !== 0) return;
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isTimerRunning]);
+    void updateTimerDBAndState(0, null, false, undefined, match).catch((error) => {
+      console.warn('Taymerning nol holatini bazaga saqlab bo‘lmadi:', error);
+    });
+  }, [id, match?.id, match?.status, match?.is_timer_running, match?.timer_seconds, match?.timer_started_at, timerSeconds, readRemaining]);
 
   // OBS WebSocket Auto-Connect Effect (Strictly routed per field: 1-maydon vs 2-maydon)
   useEffect(() => {
@@ -681,41 +631,33 @@ const MatchControl = () => {
   const broadcastChannelRef = useRef(null);
 
   useEffect(() => {
-    fetchMatchData();
+    let active = true;
+    latestLiveMatchRef.current = null;
+    fetchMatchData(() => active);
 
-    // 1. Web BroadcastChannel for 0ms local tab/OBS sync
-    let bc = null;
-    try {
-      bc = new BroadcastChannel(`amatora_timer_${id}`);
-    } catch (e) {}
-
-    // 2. Supabase Fast Broadcast Channel
-    const fastChannel = supabase.channel(`obs_fast_timer_${id}`);
-    fastChannel.subscribe();
-
-    broadcastChannelRef.current = { bc, fastChannel };
-
-    // 3. Supabase Realtime Postgres Subscriptions
+    // Match timer and scores follow the persisted match row.
     const matchChannel = supabase
       .channel(`match_control_${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter: `match_id=eq.${id}` }, () => {
         fetchEvents();
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
-        setMatch(prev => ({ ...prev, ...payload.new }));
-        if (payload.new) applyTimerPayload(payload.new);
+        if (!active || payload.new?.id !== id) return;
+        latestLiveMatchRef.current = payload.new;
+        setMatch(prev => prev?.id === id ? { ...prev, ...payload.new } : prev);
       })
       .subscribe();
 
     return () => {
-      if (bc) bc.close();
-      supabase.removeChannel(fastChannel);
+      active = false;
       supabase.removeChannel(matchChannel);
     };
   }, [id]);
 
-  const fetchMatchData = async () => {
+  const fetchMatchData = async (isActive) => {
+    const liveMatchAtRequest = latestLiveMatchRef.current;
     setLoading(true);
+    setLeagueData(null);
     try {
       // Fetch match using supabase to bypass RLS for shared control panel links
       let { data: matchData } = await supabase
@@ -724,19 +666,16 @@ const MatchControl = () => {
         .eq('id', id)
         .single();
 
-      if (!matchData) return;
+      if (!matchData || !isActive()) return;
       matchData = await loadTournamentDuration(supabase, matchData);
-      setMatch(matchData);
+      if (!isActive()) return;
+      const liveMatch = latestLiveMatchRef.current;
+      setMatch(liveMatch?.id === id && liveMatch !== liveMatchAtRequest ? { ...matchData, ...liveMatch } : matchData);
 
       if (matchData.league) {
         try {
-          const { data: lData } = await supabase
-            .from('leagues')
-            .select('*')
-            .ilike('name', matchData.league.trim())
-            .maybeSingle();
-            
-          if (lData) setLeagueData(await loadLeagueDuration(supabase, lData));
+          const league = await loadMatchLeague(supabase, matchData);
+          if (isActive()) setLeagueData(league);
         } catch (lErr) {}
       }
 
@@ -767,15 +706,12 @@ const MatchControl = () => {
       setHomePlayers((hp || []).filter(p => !p.is_archived));
       setAwayPlayers((ap || []).filter(p => !p.is_archived));
 
-      // matches is the single source of truth for Match Control and OBS.
-      applyTimerPayload(matchData);
-
       // Fetch events
       await fetchEvents(matchData.id);
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (isActive()) setLoading(false);
     }
   };
 
@@ -789,29 +725,7 @@ const MatchControl = () => {
     setEvents(data || []);
   };
 
-  // Dynamic Match Duration calculation from League / Match settings
-  const halfDurationMins = getHalfDurationSecs(match, leagueData) / 60;
-  const matchDurationMins = Number(match?.tournamentDuration || match?.match_duration || leagueData?.match_duration || (halfDurationMins * 2) || 60);
-  const halfDurationSecs = halfDurationMins * 60;
-
-  // Calculate elapsed time (Count-UP: to'g'ri sanash) for Admin Panel Display
-  const getElapsedSeconds = () => {
-    if (!match || match.status === 'scheduled' || match.status === 'not_started' || match.status === 'pending' || match.status === 'upcoming') {
-      return 0;
-    }
-    if (match.status === 'half_time' || match.status === 'break') {
-      return halfDurationSecs;
-    }
-    if (match.status === 'second_half' || match.status === 'extra_time') {
-      const secondHalfElapsed = Math.max(0, halfDurationSecs - timerSeconds);
-      return halfDurationSecs + secondHalfElapsed;
-    }
-    if (match.status === 'finished') {
-      return matchDurationMins * 60;
-    }
-    // first_half / default
-    return Math.max(0, halfDurationSecs - timerSeconds);
-  };
+  const getElapsedSeconds = () => getElapsedMatchSeconds(match?.status, timerSeconds, halfDurationSecs);
 
   // Current calculated match minute (Count-UP: 1' dan 60' gacha)
   const getCurrentMinute = () => {
@@ -821,9 +735,8 @@ const MatchControl = () => {
   };
 
   // Format Timer MM:SS (Count-UP display for Admin Panel)
-  const formatTimer = (rawSeconds) => {
-    const totalSeconds = rawSeconds !== undefined && rawSeconds !== null ? getElapsedSeconds() : getElapsedSeconds();
-    const validSec = Math.max(0, Number(totalSeconds) || 0);
+  const formatTimer = () => {
+    const validSec = getElapsedSeconds();
     const mins = Math.floor(validSec / 60);
     const secs = validSec % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -910,9 +823,10 @@ const MatchControl = () => {
 
   const toggleTimerManual = async () => {
     if (!(await ensureServerClock())) return;
+    if (!canRunMatchTimer(match?.status)) return;
+    const remaining = readRemaining();
     const newRunning = !isTimerRunning;
-    let curRemaining = timerSeconds;
-    if (curRemaining <= 0) curRemaining = halfDurationSecs;
+    const curRemaining = newRunning && remaining === 0 ? halfDurationSecs : remaining;
     const nowIso = newRunning ? serverNowIso() : null;
     try {
       await updateTimerDBAndState(curRemaining, nowIso, newRunning);
@@ -924,10 +838,11 @@ const MatchControl = () => {
 
   const adjustTimerSeconds = async (deltaSec) => {
     if (!(await ensureServerClock())) return;
-    const newSec = Math.max(0, Math.min(halfDurationSecs, timerSeconds + deltaSec));
-    const nowIso = isTimerRunning ? serverNowIso() : null;
+    const newSec = Math.max(0, Math.min(halfDurationSecs, readRemaining() + deltaSec));
+    const shouldRun = isTimerRunning && newSec > 0;
+    const nowIso = shouldRun ? serverNowIso() : null;
     try {
-      await updateTimerDBAndState(newSec, nowIso, isTimerRunning);
+      await updateTimerDBAndState(newSec, nowIso, shouldRun);
     } catch (error) {
       console.error('Taymerni saqlashda xatolik:', error);
       alert('Taymer bazaga saqlanmadi. Internet yoki match ruxsatini tekshiring. Ekrandagi vaqt o‘zgartirilmadi.');
@@ -1016,7 +931,7 @@ const MatchControl = () => {
   const executeStatusChange = async (newStatus) => {
     if (!(await ensureServerClock())) return;
     const halfSec = halfDurationSecs || 1500;
-    let newBaseSec = timerSeconds;
+    let newBaseSec = readRemaining();
     let newRunning = isTimerRunning;
     let nowIso = serverNowIso();
 
@@ -1024,7 +939,6 @@ const MatchControl = () => {
       newBaseSec = halfSec;
       newRunning = true;
     } else if (newStatus === 'half_time') {
-      newBaseSec = timerSeconds;
       newRunning = false;
       nowIso = null;
     } else if (newStatus === 'second_half') {
@@ -1068,11 +982,12 @@ const MatchControl = () => {
       const finalHomeScore = homeGoals > 0 ? homeGoals : (match.home_score || 0);
       const finalAwayScore = awayGoals > 0 ? awayGoals : (match.away_score || 0);
 
+      const remaining = readRemaining();
       const finishData = {
         status: 'finished',
         home_score: finalHomeScore,
         away_score: finalAwayScore,
-        timer_seconds: timerSeconds,
+        timer_seconds: remaining,
         timer_started_at: null,
         is_timer_running: false,
       };
@@ -1086,7 +1001,7 @@ const MatchControl = () => {
 
       const targetId = match?.id || id;
 
-      await updateTimerDBAndState(timerSeconds, null, false, 'finished');
+      await updateTimerDBAndState(remaining, null, false, 'finished');
 
       const { error: finishUpdateError } = await supabase.from('matches').update(baseFinishData).eq('id', targetId);
       if (finishUpdateError) throw finishUpdateError;
@@ -1160,8 +1075,9 @@ const MatchControl = () => {
 
     const checkAutoFinish = () => {
       if (autoFinishTriggeredRef.current) return;
+      if (!hasServerClockSync() && !import.meta.env.DEV) return;
       if (!match.timer_started_at) return;
-      const startedMs = new Date(match.timer_started_at).getTime();
+      const startedMs = parseTimerStartMs(match.timer_started_at);
       if (isNaN(startedMs)) return;
       const runningForSec = (serverNowMs() - startedMs) / 1000;
       const limitSec = (matchDurationMins + 30) * 60;
@@ -1449,7 +1365,7 @@ const MatchControl = () => {
             {/* Live Stopwatch Badge */}
             <div className="live-timer-badge">
               <Clock size={16} className={isTimerRunning ? 'timer-icon-pulsing' : ''} />
-              <span className="timer-display">{formatTimer(timerSeconds)}</span>
+              <span className="timer-display">{formatTimer()}</span>
               <span className="timer-minute">({getCurrentMinute()}')</span>
               <span style={{ fontSize: '11px', color: '#60a5fa', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 6px', borderRadius: '6px', marginLeft: '6px', fontWeight: '800' }} title="Liga bo'yicha belgilangan o'yin vaqti">
                 ⏱️ {matchDurationMins} daq ({halfDurationMins}x2)
@@ -1696,7 +1612,7 @@ const MatchControl = () => {
       <div className="sticky-bottom-timer-bar">
         <div className="sticky-timer-info">
           <Clock size={20} className={isTimerRunning ? 'timer-icon-pulsing' : ''} style={{ color: isTimerRunning ? '#22c55e' : '#f59e0b' }} />
-          <span className="sticky-timer-time">{formatTimer(timerSeconds)}</span>
+          <span className="sticky-timer-time">{formatTimer()}</span>
           <span className="sticky-timer-min">({getCurrentMinute()}')</span>
           <span className={`match-status-badge ${match.status}`} style={{ margin: 0, padding: '4px 10px', fontSize: '12px' }}>
             {STATUS_LABELS[match.status] || match.status}

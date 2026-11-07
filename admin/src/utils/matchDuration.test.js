@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadLeagueDuration, loadTournamentDuration, getHalfDurationSecs } from './matchDuration.js';
+import { loadLeagueDuration, loadMatchLeague, loadTournamentDuration, getHalfDurationSecs } from './matchDuration.js';
 
 test('50-minute sponsor setting resolves to a 25-minute half on both displays', async () => {
   const db = { from(table) {
@@ -25,6 +25,42 @@ test('half_minutes is honored without an extra database query', async () => {
   const league = await loadLeagueDuration(null, { half_minutes: 25 });
   assert.equal(getHalfDurationSecs({}, league), 1500);
   assert.equal(league.match_duration, 50);
+});
+
+test('league duration is scoped to the match organization when names overlap', async () => {
+  const db = { from(table) {
+    assert.equal(table, 'leagues');
+    return { select: () => ({ ilike(column, value) {
+      assert.equal(column, 'name');
+      assert.equal(value, 'Super Liga');
+      return { eq(key, id) {
+        assert.equal(key, 'organization_id');
+        assert.equal(id, 7);
+        return { maybeSingle: async () => ({ data: { match_duration: 70 } }) };
+      } };
+    } }) };
+  } };
+  const league = await loadMatchLeague(db, { league: 'Super Liga', organization_id: 7 });
+  assert.equal(getHalfDurationSecs({}, league), 2100);
+});
+
+test('an accepted shared league supplies duration when there is no local league', async () => {
+  const db = { from(table) {
+    if (table === 'leagues') {
+      return { select: () => ({ ilike: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) };
+    }
+    assert.equal(table, 'league_collabs');
+    return { select: () => ({ eq(column, value) {
+      assert.equal(column, 'status');
+      assert.equal(value, 'accepted');
+      return { or(filter) {
+        assert.equal(filter, 'sender_org_id.eq.7,receiver_org_id.eq.7');
+        return { ilike: async () => ({ data: [{ league: { id: 23, half_duration: 25 } }] }) };
+      } };
+    } }) };
+  } };
+  const league = await loadMatchLeague(db, { league: 'Shared Liga', organization_id: 7 });
+  assert.equal(getHalfDurationSecs({}, league), 1500);
 });
 
 test('match duration overrides and default remain consistent', () => {
