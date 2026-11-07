@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canRunMatchTimer, getElapsedMatchSeconds, getRemainingSeconds, getTimerBaseSeconds, parseTimerStartMs } from './matchTimer.js';
+import { canRunMatchTimer, getElapsedMatchSeconds, getRemainingSeconds, getTimerBaseSeconds, isRunningTimerSnapshot, parseTimerStartMs } from './matchTimer.js';
 
 test('zero seconds stay zero when a running half ends and the page reloads', () => {
   for (const [status, elapsed] of [['first_half', 1500], ['second_half', 3000]]) {
@@ -35,4 +35,13 @@ test('old timestamps without an offset are read as UTC', () => {
   const utc = Date.parse('2026-11-07T12:00:00.123Z');
   assert.equal(parseTimerStartMs('2026-11-07T12:00:00.123'), utc);
   assert.equal(parseTimerStartMs('2026-11-07T17:00:00.123+05:00'), utc);
+});
+
+test('only a running snapshot with a valid start can start the countdown', () => {
+  const start = parseTimerStartMs('2026-11-08T12:00:00Z');
+  assert.equal(isRunningTimerSnapshot(true, 'first_half', parseTimerStartMs(null)), false);
+  assert.equal(isRunningTimerSnapshot(true, 'first_half', parseTimerStartMs('invalid')), false);
+  assert.equal(isRunningTimerSnapshot(false, 'first_half', start), false);
+  assert.equal(isRunningTimerSnapshot(true, 'half_time', start), false);
+  assert.equal(isRunningTimerSnapshot(true, 'first_half', start), true);
 });

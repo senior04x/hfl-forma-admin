@@ -13,6 +13,10 @@ export function canRunMatchTimer(status) {
   return !WAITING.has(status) && !BREAK.has(status) && status !== 'finished';
 }
 
+export function isRunningTimerSnapshot(running, status, startedMs) {
+  return (running === true || running === 'true') && canRunMatchTimer(status) && Number.isFinite(startedMs);
+}
+
 export function parseTimerStartMs(timestamp) {
   if (!timestamp) return NaN;
   // Older rows may omit the UTC offset. Interpret those the same way as the Windows scoreboard.
