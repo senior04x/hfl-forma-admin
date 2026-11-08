@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canRunMatchTimer, getElapsedMatchSeconds, getRemainingSeconds, getTimerBaseSeconds, isRunningTimerSnapshot, parseTimerStartMs } from './matchTimer.js';
+import { canRunMatchTimer, getElapsedMatchSeconds, getPauseSeconds, getRemainingSeconds, getTimerBaseSeconds, isRunningTimerSnapshot, matchTimerSnapshot, parseTimerStartMs } from './matchTimer.js';
 
 test('zero seconds stay zero when a running half ends and the page reloads', () => {
   for (const [status, elapsed] of [['first_half', 1500], ['second_half', 3000]]) {
@@ -44,4 +44,27 @@ test('only a running snapshot with a valid start can start the countdown', () =>
   assert.equal(isRunningTimerSnapshot(false, 'first_half', start), false);
   assert.equal(isRunningTimerSnapshot(true, 'half_time', start), false);
   assert.equal(isRunningTimerSnapshot(true, 'first_half', start), true);
+});
+
+test('pause freezes the displayed second and rejects a display that is minutes out of sync', () => {
+  assert.equal(getPauseSeconds(1490, 1489), 1490);
+  assert.equal(getPauseSeconds(1490, 1491), 1490);
+  assert.equal(getPauseSeconds(1490, 1370), null);
+  assert.equal(getPauseSeconds(1490, 1610), null);
+});
+
+test('a timer write matches all observed timer fields including nullable start time', () => {
+  const paused = { status: 'first_half', timer_seconds: 1490, timer_started_at: null, is_timer_running: false };
+  const filters = [];
+  const query = {
+    eq(field, value) { filters.push(['eq', field, value]); return this; },
+    is(field, value) { filters.push(['is', field, value]); return this; },
+  };
+  assert.equal(matchTimerSnapshot(query, paused), query);
+  assert.deepEqual(filters, [
+    ['eq', 'status', 'first_half'],
+    ['eq', 'timer_seconds', 1490],
+    ['is', 'timer_started_at', null],
+    ['eq', 'is_timer_running', false],
+  ]);
 });

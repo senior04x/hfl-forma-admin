@@ -1,5 +1,19 @@
 const WAITING = new Set(['scheduled', 'not_started', 'pending', 'upcoming']);
 const BREAK = new Set(['half_time', 'break']);
+const TIMER_SNAPSHOT_FIELDS = ['status', 'timer_seconds', 'timer_started_at', 'is_timer_running'];
+
+export function matchTimerSnapshot(query, snapshot) {
+  for (const field of TIMER_SNAPSHOT_FIELDS) {
+    const value = snapshot[field];
+    query = value == null ? query.is(field, null) : query.eq(field, value);
+  }
+  return query;
+}
+
+export function getPauseSeconds(displayedSeconds, currentSeconds) {
+  // Normal UI ticks can straddle a second boundary. A larger difference means the display needs to catch up first.
+  return Math.abs(displayedSeconds - currentSeconds) <= 2 ? displayedSeconds : null;
+}
 
 export function getTimerBaseSeconds(seconds, status, halfSeconds) {
   const value = Number(seconds);

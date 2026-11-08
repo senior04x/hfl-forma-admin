@@ -13,7 +13,7 @@ import {
 import { obsService } from '../services/obsService';
 import { generateStingerWebM, downloadBlob, ensureAutoStingerSynced } from '../utils/stingerGenerator';
 import { hasServerClockSync, serverNowIso, serverNowMs, startServerClockSync, syncServerClock } from '../utils/serverClock';
-import { canRunMatchTimer, getElapsedMatchSeconds, parseTimerStartMs } from '../utils/matchTimer';
+import { canRunMatchTimer, getElapsedMatchSeconds, getPauseSeconds, matchTimerSnapshot, parseTimerStartMs } from '../utils/matchTimer';
 import { useMatchTimer } from '../utils/useMatchTimer';
 import './MatchControl.css';
 
@@ -72,6 +72,7 @@ const MatchControl = () => {
   const matchDurationMins = Number(match?.tournamentDuration || match?.match_duration || leagueData?.match_duration || halfDurationMins * 2);
   const { timerSeconds, isTimerRunning, readRemaining } = useMatchTimer(match?.id === id ? match : null, halfDurationSecs);
   const latestLiveMatchRef = useRef(null);
+  const manualTimerWritePendingRef = useRef(false);
   const quickGoalWriteRef = useRef(false);
   // Operator o'yinni yakunlashni unutib, taymer pauza qilinmagan holda
   // (is_timer_running=true) davomiy ishlab qolib ketishining oldini olish
@@ -518,7 +519,7 @@ const MatchControl = () => {
   }, [id, match?.location]);
 
   // Persist the authoritative match timer before updating this screen or broadcasting it.
-  const updateTimerDBAndState = async (baseSec, startedAtIso, isRunning, newStatus, expiredTimer) => {
+  const updateTimerDBAndState = async (baseSec, startedAtIso, isRunning, newStatus, expectedTimer) => {
     const targetId = match?.id || id;
     const targetOrgId = requireOrganizationId(match?.organization_id || orgId);
     if (!targetId) throw new Error('Match ID topilmadi');
@@ -534,18 +535,12 @@ const MatchControl = () => {
 
     const liveMatchAtWrite = latestLiveMatchRef.current;
     let update = supabase.from('matches').update(matchUpdate).eq('id', targetId);
-    if (expiredTimer) {
-      // A delayed zero write must not overwrite a resume, adjustment, or new half.
-      update = update.eq('status', expiredTimer.status)
-        .eq('is_timer_running', true)
-        .eq('timer_seconds', expiredTimer.timer_seconds)
-        .eq('timer_started_at', expiredTimer.timer_started_at);
-    }
+    if (expectedTimer) update = matchTimerSnapshot(update, expectedTimer);
     const { data: savedMatch, error } = await update
       .select('id, timer_seconds, timer_started_at, is_timer_running, status, updated_at')
       .maybeSingle();
     if (error) throw error;
-    if (!savedMatch && expiredTimer) return;
+    if (!savedMatch && expectedTimer) return false;
     if (!savedMatch) throw new Error('Taymer bazaga yozilmadi; ruxsat va internetni tekshiring.');
 
     const timerPayload = { ...savedMatch, match_id: targetId };
@@ -582,6 +577,7 @@ const MatchControl = () => {
         console.warn('Legacy timer mirror could not be updated:', mirrorError);
       }
     })();
+    return true;
   };
 
   // Persist zero only for the exact running command that reached the end.
@@ -821,19 +817,40 @@ const MatchControl = () => {
     }
   };
 
-  const toggleTimerManual = async () => {
-    if (!(await ensureServerClock())) return;
-    if (!canRunMatchTimer(match?.status)) return;
-    const remaining = readRemaining();
-    const newRunning = !isTimerRunning;
-    const curRemaining = newRunning && remaining === 0 ? halfDurationSecs : remaining;
-    const nowIso = newRunning ? serverNowIso() : null;
+  const saveManualTimer = async (seconds, startedAt, running) => {
+    if (manualTimerWritePendingRef.current || match?.id !== id) return;
+    manualTimerWritePendingRef.current = true;
     try {
-      await updateTimerDBAndState(curRemaining, nowIso, newRunning);
+      if (await updateTimerDBAndState(seconds, startedAt, running, undefined, match)) return;
+
+      const liveMatchAtRead = latestLiveMatchRef.current;
+      const { data, error } = await supabase.from('matches')
+        .select('id, timer_seconds, timer_started_at, is_timer_running, status, updated_at')
+        .eq('id', id)
+        .maybeSingle();
+      if (error || !data) throw error || new Error('Taymer holati topilmadi');
+      if (latestLiveMatchRef.current === liveMatchAtRead) {
+        setMatch(prev => prev?.id === id ? { ...prev, ...data } : prev);
+      }
+      alert('Taymer holati o‘zgargan. Ekrandagi yangi vaqtni tekshirib, tugmani qayta bosing.');
     } catch (error) {
       console.error('Taymerni saqlashda xatolik:', error);
       alert('Taymer bazaga saqlanmadi. Internet yoki match ruxsatini tekshiring. Ekrandagi vaqt o‘zgartirilmadi.');
+    } finally {
+      manualTimerWritePendingRef.current = false;
     }
+  };
+
+  const toggleTimerManual = async () => {
+    if (!canRunMatchTimer(match?.status) || !(await ensureServerClock())) return;
+    const remaining = readRemaining();
+    const newRunning = !isTimerRunning;
+    const curRemaining = newRunning ? (remaining || halfDurationSecs) : getPauseSeconds(timerSeconds, remaining);
+    if (curRemaining == null) {
+      alert('Ekrandagi vaqt yangilanmoqda. Joriy vaqtni ko‘rib, pauzani qayta bosing.');
+      return;
+    }
+    await saveManualTimer(curRemaining, newRunning ? serverNowIso() : null, newRunning);
   };
 
   const adjustTimerSeconds = async (deltaSec) => {
@@ -841,24 +858,14 @@ const MatchControl = () => {
     const newSec = Math.max(0, Math.min(halfDurationSecs, readRemaining() + deltaSec));
     const shouldRun = isTimerRunning && newSec > 0;
     const nowIso = shouldRun ? serverNowIso() : null;
-    try {
-      await updateTimerDBAndState(newSec, nowIso, shouldRun);
-    } catch (error) {
-      console.error('Taymerni saqlashda xatolik:', error);
-      alert('Taymer bazaga saqlanmadi. Internet yoki match ruxsatini tekshiring. Ekrandagi vaqt o‘zgartirilmadi.');
-    }
+    await saveManualTimer(newSec, nowIso, shouldRun);
   };
 
   const resetTimerManual = async () => {
     if (!(await ensureServerClock())) return;
     const defaultSec = halfDurationSecs;
     const nowIso = isTimerRunning ? serverNowIso() : null;
-    try {
-      await updateTimerDBAndState(defaultSec, nowIso, isTimerRunning);
-    } catch (error) {
-      console.error('Taymerni saqlashda xatolik:', error);
-      alert('Taymer bazaga saqlanmadi. Internet yoki match ruxsatini tekshiring. Ekrandagi vaqt o‘zgartirilmadi.');
-    }
+    await saveManualTimer(defaultSec, nowIso, isTimerRunning);
   };
 
   // Quick + creates a real unattributed goal event; - remains a score correction.
